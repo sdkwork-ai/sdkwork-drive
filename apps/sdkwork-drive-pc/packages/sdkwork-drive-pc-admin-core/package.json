@@ -1,0 +1,54 @@
+{
+  "name": "sdkwork-drive-pc-admin-core",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": {
+      "import": "./src/index.ts",
+      "types": "./src/index.ts"
+    },
+    "./sdk": {
+      "types": "./src/sdk/index.ts",
+      "import": "./src/sdk/index.ts",
+      "default": "./src/sdk/index.ts"
+    },
+    "./modules": {
+      "types": "./src/modules/index.ts",
+      "import": "./src/modules/index.ts",
+      "default": "./src/modules/index.ts"
+    },
+    "./host": {
+      "types": "./src/host/index.ts",
+      "import": "./src/host/index.ts",
+      "default": "./src/host/index.ts"
+    },
+    "./session": {
+      "types": "./src/session/index.ts",
+      "import": "./src/session/index.ts",
+      "default": "./src/session/index.ts"
+    },
+    "./composition": {
+      "types": "./src/composition/index.ts",
+      "import": "./src/composition/index.ts",
+      "default": "./src/composition/index.ts"
+    }
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit --project ../../tsconfig.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@sdkwork/drive-admin-storage-sdk": "workspace:*",
+    "@sdkwork/drive-backend-sdk": "workspace:*",
+    "sdkwork-drive-pc-core": "workspace:*"
+  },
+  "peerDependencies": {
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "vitest": "^3.2.6"
+  }
+}

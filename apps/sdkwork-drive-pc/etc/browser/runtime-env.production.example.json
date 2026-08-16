@@ -1,0 +1,37 @@
+{
+  "environment": "production",
+  "configProfile": "prod",
+  "buildMode": "production",
+  "deploymentMode": "saas",
+  "runtimeTarget": "browser",
+  "appKey": "sdkwork-drive-pc",
+  "appApiBaseUrl": "https://drive.sdkwork.com/app/v3/api",
+  "backendApiBaseUrl": "https://drive.sdkwork.com/backend/v3/api",
+  "sdkBaseUrls": {
+    "appApiBaseUrl": "https://drive.sdkwork.com/app/v3/api",
+    "backendApiBaseUrl": "https://drive.sdkwork.com/backend/v3/api",
+    "dependencySdkBaseUrls": {
+      "sdkwork-iam-app-sdk": {
+        "appApiBaseUrl": "https://drive.sdkwork.com/app/v3/api"
+      },
+      "sdkwork-drive-app-sdk": {
+        "appApiBaseUrl": "https://drive.sdkwork.com/app/v3/api"
+      },
+      "sdkwork-drive-admin-storage-sdk": {
+        "backendApiBaseUrl": "https://drive.sdkwork.com/backend/v3/api"
+      }
+    }
+  },
+  "auth": {
+    "tokenManagerMode": "appbase-global",
+    "tokenStorage": "browser-local",
+    "accessTokenHeader": "Access-Token",
+    "authTokenHeader": "Authorization",
+    "refreshEnabled": true
+  },
+  "publicRuntime": {
+    "runtimeEnvFile": "/runtime-env.json",
+    "appApiBaseUrl": "https://drive.sdkwork.com/app/v3/api",
+    "backendApiBaseUrl": "https://drive.sdkwork.com/backend/v3/api"
+  }
+}

@@ -1,0 +1,17 @@
+schemaVersion: 1
+kind: sdkwork.docs.index
+repository: sdkwork-drive-pc
+canon:
+  prd: docs/product/prd/PRD.md
+  techArchitecture: docs/architecture/tech/TECH_ARCHITECTURE.md
+entries:
+  - id: repo-prd
+    path: ../../../../docs/product/prd/PRD.md
+    kind: requirement
+  - id: repo-tech-architecture
+    path: ../../../../docs/architecture/tech/TECH_ARCHITECTURE.md
+    kind: architecture
+  - id: pre-launch-checklist
+    path: ../../../../docs/guides/operator/pre-launch-checklist.md
+    kind: guide
+domains: []

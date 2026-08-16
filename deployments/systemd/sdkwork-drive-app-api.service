@@ -1,0 +1,20 @@
+[Unit]
+Description=SDKWork Drive App API
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=sdkwork
+Group=sdkwork
+EnvironmentFile=-/etc/sdkwork-drive/app-api.env
+Environment=SDKWORK_DRIVE_APP_API_BIND=0.0.0.0:18080
+Environment=SDKWORK_DRIVE_RUNTIME_PROFILE=production
+Environment=SDKWORK_DRIVE_DEPLOYMENT_PROFILE=cloud
+ExecStart=/usr/local/bin/sdkwork-routes-drive-app-api
+Restart=on-failure
+RestartSec=5
+LimitNOFILE=65535
+
+[Install]
+WantedBy=multi-user.target

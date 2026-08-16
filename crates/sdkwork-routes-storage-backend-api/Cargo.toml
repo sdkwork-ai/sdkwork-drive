@@ -1,0 +1,35 @@
+[package]
+name = "sdkwork-routes-storage-backend-api"
+version.workspace = true
+edition.workspace = true
+
+[features]
+default = []
+opendal-s3-plugin = ["dep:sdkwork-drive-storage-opendal"]
+
+[dependencies]
+axum.workspace = true
+http.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+sdkwork-drive-contract.workspace = true
+sdkwork-drive-config.workspace = true
+sdkwork-drive-http = { workspace = true, features = ["redis-rate-limit"] }
+sdkwork-drive-observability = { workspace = true, features = ["otlp"] }
+sdkwork-drive-workspace-service.workspace = true
+sdkwork-drive-security.workspace = true
+sdkwork-drive-storage-contract.workspace = true
+sdkwork-utils-rust.workspace = true
+sdkwork-web-axum.workspace = true
+sdkwork-web-core.workspace = true
+sdkwork-iam-web-adapter.workspace = true
+sdkwork-drive-storage-opendal = { workspace = true, optional = true }
+sdkwork-drive-storage-s3.workspace = true
+sqlx.workspace = true
+tokio.workspace = true
+tower.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+
+[dev-dependencies]
+sdkwork-drive-test-support.workspace = true

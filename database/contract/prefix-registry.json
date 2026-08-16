@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "kind": "sdkwork.database.prefix-registry",
+  "prefixes": [
+    {
+      "prefix": "dr_",
+      "owner": "drive-platform",
+      "domain": "drive"
+    }
+  ]
+}

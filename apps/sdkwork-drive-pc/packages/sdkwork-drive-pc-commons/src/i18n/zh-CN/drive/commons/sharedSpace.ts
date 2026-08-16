@@ -1,0 +1,16 @@
+export default {
+  createTitle: '创建全新共享空间',
+  createSubtitle: '为团队文件创建一个共享工作区。',
+  nameLabel: '空间名称',
+  namePlaceholder: '例如：技术研发部，核心运营项目档',
+  descriptionLabel: '描述内容 (可选)',
+  descriptionPlaceholder: '空间主要放置的文件，以及适用的部门或项目成员简介...',
+  themeColorLabel: '主题色',
+  iconLabel: '专属标识图标',
+  cancel: '放弃',
+  confirmCreate: '确认新建共享空间',
+  createSuccess: '已创建共享空间「{name}」',
+  createFailed: '创建共享空间失败',
+  deleteSuccess: '已删除共享空间',
+  deleteFailed: '删除共享空间失败',
+};

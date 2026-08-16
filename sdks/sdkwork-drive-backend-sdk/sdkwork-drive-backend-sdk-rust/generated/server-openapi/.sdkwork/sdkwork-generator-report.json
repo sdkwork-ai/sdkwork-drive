@@ -1,0 +1,190 @@
+{
+  "schemaVersion": 1,
+  "generator": "@sdkwork/sdk-generator",
+  "artifacts": {
+    "stateDir": ".sdkwork",
+    "manifestPath": ".sdkwork/sdkwork-generator-manifest.json",
+    "changeSummaryPath": ".sdkwork/sdkwork-generator-changes.json",
+    "executionReportPath": ".sdkwork/sdkwork-generator-report.json",
+    "manualBackupDir": ".sdkwork/manual-backups"
+  },
+  "status": "ok",
+  "mode": "apply",
+  "hasChanges": false,
+  "hasDestructiveChanges": false,
+  "changeFingerprint": "00bee77b92bd9447eddcaa58b843609530c9ac50b8a0a50a09d32d60ad7609ac",
+  "changeImpact": {
+    "schemaVersion": 1,
+    "areas": [],
+    "details": [],
+    "requiresVerification": false,
+    "summary": "No generated, scaffold, or backup changes detected. Verification can be skipped."
+  },
+  "executionDecision": {
+    "schemaVersion": 1,
+    "riskLevel": "low",
+    "nextAction": "skip",
+    "requiresManualReview": false,
+    "applyRequiresExpectedFingerprint": false,
+    "summary": "No actionable changes were detected. No apply or verification step is required.",
+    "reasons": [
+      "no-actionable-changes"
+    ]
+  },
+  "executionHandoff": {
+    "schemaVersion": 1,
+    "summary": "No further commands are required.",
+    "steps": []
+  },
+  "verificationPlan": {
+    "shouldRun": false,
+    "runPhase": "skip",
+    "summary": "No generated, scaffold, or backup changes detected. Verification can be skipped.",
+    "steps": []
+  },
+  "sdk": {
+    "name": "sdkwork-drive-backend-sdk",
+    "version": "0.1.0",
+    "language": "rust",
+    "sdkType": "backend",
+    "protocol": "http",
+    "outputPath": "E:\\sdkwork-space\\sdkwork-drive\\sdks\\sdkwork-drive-backend-sdk\\sdkwork-drive-backend-sdk-rust\\generated\\server-openapi",
+    "packageName": "sdkwork-drive-backend-sdk-generated-rust"
+  },
+  "versioning": {
+    "resolvedVersion": "0.1.0",
+    "localVersions": []
+  },
+  "stats": {
+    "totalFiles": 78,
+    "models": 59,
+    "apis": 1,
+    "types": 61
+  },
+  "warnings": [],
+  "syncSummary": {
+    "dryRun": false,
+    "controlPlaneEnabled": true,
+    "writtenFiles": 0,
+    "skippedScaffoldFiles": 1,
+    "skippedUnchangedGeneratedFiles": 77,
+    "deletedGeneratedFiles": 0,
+    "changeSummaryPath": ".sdkwork/sdkwork-generator-changes.json",
+    "changeFingerprint": "00bee77b92bd9447eddcaa58b843609530c9ac50b8a0a50a09d32d60ad7609ac",
+    "changes": {
+      "createdGeneratedFiles": [],
+      "updatedGeneratedFiles": [],
+      "unchangedGeneratedFiles": [
+        "bin/publish-core.mjs",
+        "bin/publish.ps1",
+        "bin/publish.sh",
+        "Cargo.toml",
+        "CHANGELOG.md",
+        "LICENSE",
+        "README.md",
+        "sdkwork-sdk.json",
+        "src/api/base.rs",
+        "src/api/drive.rs",
+        "src/api/mod.rs",
+        "src/api/paths.rs",
+        "src/client.rs",
+        "src/http/client.rs",
+        "src/http/mod.rs",
+        "src/lib.rs",
+        "src/models/audit_event_list_http_response.rs",
+        "src/models/audit_event.rs",
+        "src/models/audit_events_list_response.rs",
+        "src/models/common.rs",
+        "src/models/create_label_request.rs",
+        "src/models/create_sandbox_grant_request.rs",
+        "src/models/create_sandbox_volume_request.rs",
+        "src/models/download_package_list_http_response.rs",
+        "src/models/download_package.rs",
+        "src/models/download_packages_list_response.rs",
+        "src/models/drive_label_list_http_response.rs",
+        "src/models/drive_label.rs",
+        "src/models/drive_space_list_http_response.rs",
+        "src/models/drive_space.rs",
+        "src/models/field_error.rs",
+        "src/models/initial_sandbox_user_grant_request.rs",
+        "src/models/labels_create_response201.rs",
+        "src/models/labels_list_response.rs",
+        "src/models/labels_retrieve_response.rs",
+        "src/models/labels_update_response.rs",
+        "src/models/maintenance_abandoned_upload_task_sweep_response.rs",
+        "src/models/maintenance_expired_upload_content_sweep_response.rs",
+        "src/models/maintenance_job_list_http_response.rs",
+        "src/models/maintenance_job.rs",
+        "src/models/maintenance_jobs_list_response.rs",
+        "src/models/maintenance_object_sweep_response.rs",
+        "src/models/maintenance_upload_session_sweep_response.rs",
+        "src/models/mod.rs",
+        "src/models/page_info.rs",
+        "src/models/problem_detail.rs",
+        "src/models/quota_summary.rs",
+        "src/models/quotas_retrieve_response.rs",
+        "src/models/quotas_update_response.rs",
+        "src/models/sandbox_grant_list_http_response.rs",
+        "src/models/sandbox_grant_resource_http_response.rs",
+        "src/models/sandbox_grant.rs",
+        "src/models/sandbox_grants_create_response201.rs",
+        "src/models/sandbox_grants_list_response.rs",
+        "src/models/sandbox_grants_retrieve_response.rs",
+        "src/models/sandbox_grants_update_response.rs",
+        "src/models/sandbox_volume_list_http_response.rs",
+        "src/models/sandbox_volume_resource_http_response.rs",
+        "src/models/sandbox_volume.rs",
+        "src/models/sandbox_volumes_create_response201.rs",
+        "src/models/sandbox_volumes_list_response.rs",
+        "src/models/sandbox_volumes_retrieve_response.rs",
+        "src/models/sandbox_volumes_update_response.rs",
+        "src/models/sdk_work_api_response.rs",
+        "src/models/sdk_work_command_data.rs",
+        "src/models/sdk_work_command_response.rs",
+        "src/models/sdk_work_page_data.rs",
+        "src/models/sdk_work_resource_data.rs",
+        "src/models/sdk_work_resource_response.rs",
+        "src/models/spaces_admin_list_response.rs",
+        "src/models/sweep_object_store_request.rs",
+        "src/models/sweep_response.rs",
+        "src/models/sweep_upload_sessions_request.rs",
+        "src/models/update_label_request.rs",
+        "src/models/update_quota_policy_request.rs",
+        "src/models/update_sandbox_grant_request.rs",
+        "src/models/update_sandbox_volume_request.rs"
+      ],
+      "deletedGeneratedFiles": [],
+      "scaffoldedFiles": [],
+      "preservedScaffoldFiles": [
+        "custom/README.md"
+      ],
+      "backedUpFiles": []
+    },
+    "impact": {
+      "schemaVersion": 1,
+      "areas": [],
+      "details": [],
+      "requiresVerification": false,
+      "summary": "No generated, scaffold, or backup changes detected. Verification can be skipped."
+    },
+    "verificationPlan": {
+      "shouldRun": false,
+      "runPhase": "skip",
+      "summary": "No generated, scaffold, or backup changes detected. Verification can be skipped.",
+      "steps": []
+    },
+    "executionDecision": {
+      "schemaVersion": 1,
+      "riskLevel": "low",
+      "nextAction": "skip",
+      "requiresManualReview": false,
+      "applyRequiresExpectedFingerprint": false,
+      "summary": "No actionable changes were detected. No apply or verification step is required.",
+      "reasons": [
+        "no-actionable-changes"
+      ]
+    },
+    "backedUpFiles": [],
+    "preservedLegacyFiles": false
+  }
+}

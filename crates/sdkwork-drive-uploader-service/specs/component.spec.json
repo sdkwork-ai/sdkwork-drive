@@ -1,0 +1,55 @@
+{
+  "schemaVersion": 1,
+  "kind": "sdkwork.component.spec",
+  "component": {
+    "name": "sdkwork-drive-uploader-service",
+    "displayName": "Sdkwork Drive Uploader Service",
+    "version": "0.1.0",
+    "type": "domain-service",
+    "root": ".",
+    "domain": "drive",
+    "capability": "uploader",
+    "languages": [
+      "rust"
+    ],
+    "generated": false,
+    "manifests": [
+      "Cargo.toml"
+    ]
+  },
+  "canonicalSpecs": [
+    {
+      "file": "DRIVE_SPEC.md",
+      "path": "../../../sdkwork-specs/DRIVE_SPEC.md",
+      "purpose": "Drive uploader server-side entrypoint rules."
+    },
+    {
+      "file": "RUST_CODE_SPEC.md",
+      "path": "../../../sdkwork-specs/RUST_CODE_SPEC.md",
+      "purpose": "Rust crate and module rules."
+    },
+    {
+      "file": "MODULE_SPEC.md",
+      "path": "../../../sdkwork-specs/MODULE_SPEC.md",
+      "purpose": "Reusable module and package boundary rules."
+    }
+  ],
+  "contracts": {
+    "publicExports": [
+      "service"
+    ],
+    "runtimeEntrypoints": [],
+    "routeManifest": null,
+    "sdkClients": [],
+    "events": [],
+    "configKeys": [],
+    "sdkDependencies": [],
+    "dependencyApiExports": [],
+    "dependencyApiSurfaces": []
+  },
+  "verification": {
+    "commands": [
+      "cargo test -p sdkwork-drive-uploader-service"
+    ]
+  }
+}

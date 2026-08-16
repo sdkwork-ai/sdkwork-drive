@@ -1,0 +1,303 @@
+{
+  "schemaVersion": 3,
+  "kind": "sdkwork.app",
+  "app": {
+    "key": "sdkwork-drive-pc",
+    "name": "SDKWork Drive PC",
+    "displayName": "SDKWork Drive",
+    "description": "PC browser and desktop application for SDKWork Drive file, transfer, storage, and sharing workflows.",
+    "vendor": "SDKWork",
+    "officialWebsiteUrl": "https://sdkwork.com/apps/sdkwork-drive-pc",
+    "supportUrl": "https://sdkwork.com/support",
+    "privacyPolicyUrl": "https://sdkwork.com/privacy",
+    "termsOfServiceUrl": "https://sdkwork.com/terms",
+    "iconUrl": "https://cdn.sdkwork.com/apps/sdkwork-drive-pc/assets/icon-1024.png",
+    "appType": "APP_REACT",
+    "versionSource": "package.json",
+    "identifiers": {
+      "packageName": null,
+      "bundleId": null,
+      "desktopAppId": "com.sdkwork.drive.pc",
+      "containerImage": "registry.sdkwork.com/apps/sdkwork-drive-pc"
+    }
+  },
+  "backend": {
+    "profileKey": "backend-root-admin",
+    "ownerMode": "tenant",
+    "grantMode": "current",
+    "platform": "WEB",
+    "appId": "sdkwork-drive-pc",
+    "tenantId": "100001",
+    "organizationId": "0",
+    "accessTokenPermissionScope": [
+      "iam.users.read",
+      "iam.organizations.read",
+      "iam.roles.read",
+      "iam.permissions.read"
+    ]
+  },
+  "runtime": {
+    "family": "desktop",
+    "framework": "react-tauri",
+    "runtimes": [
+      "WEB",
+      "TAURI"
+    ],
+    "deliveryModes": [
+      "WEB_URL",
+      "DIRECT_DOWNLOAD"
+    ],
+    "defaultPlatform": "WEB",
+    "defaultArchitecture": "x64",
+    "supportedDeploymentProfiles": [
+      "cloud",
+      "standalone"
+    ],
+    "defaultDeploymentProfile": "cloud"
+  },
+  "media": {
+    "icons": {
+      "primary": {
+        "id": "sdkwork-drive-pc-primary-icon",
+        "type": "ICON",
+        "purpose": "PRIMARY",
+        "url": "https://cdn.sdkwork.com/apps/sdkwork-drive-pc/assets/icon-1024.png",
+        "platform": "WEB",
+        "locale": "en-US",
+        "width": 1024,
+        "height": 1024,
+        "format": "PNG",
+        "fileSizeBytes": 5337,
+        "alphaChannel": false,
+        "sortOrder": 0,
+        "enabled": true,
+        "metadata": {
+          "assetOwner": "sdkwork-drive",
+          "source": "drive-media-governed",
+          "generatedPlaceholder": true,
+          "catalogMediaDeferred": true,
+          "stagedArtifactPath": "dist/release/STABLE/0.1.0/media/icon-1024.png",
+          "stagedChecksumAlgorithm": "SHA-256",
+          "stagedChecksum": "c1e82f5f8e535e870d64fab14b8df9c60d890f3232758bf36cec724e4eba91a1",
+          "catalogMediaStagedAt": "2026-07-08T03:35:46.239Z"
+        }
+      },
+      "platform": []
+    },
+    "screenshots": [
+      {
+        "id": "sdkwork-drive-pc-desktop-screenshot",
+        "type": "SCREENSHOT",
+        "purpose": "CATALOG_SCREENSHOT",
+        "url": "https://cdn.sdkwork.com/apps/sdkwork-drive-pc/media/desktop-screenshot.png",
+        "platform": "DESKTOP_WINDOWS",
+        "locale": "en-US",
+        "deviceClass": "DESKTOP",
+        "displayType": "DESKTOP_16_10",
+        "width": 1920,
+        "height": 1080,
+        "format": "PNG",
+        "fileSizeBytes": 8565,
+        "alphaChannel": false,
+        "caption": "SDKWork Drive PC file workspace.",
+        "sortOrder": 0,
+        "enabled": true,
+        "metadata": {
+          "altText": "SDKWork Drive PC file browser and transfer workspace.",
+          "generatedPlaceholder": true,
+          "catalogMediaDeferred": true,
+          "stagedArtifactPath": "dist/release/STABLE/0.1.0/media/desktop_windows-screenshot.png",
+          "stagedChecksumAlgorithm": "SHA-256",
+          "stagedChecksum": "878e85a25e9358068b35e81add3f4ea2e2ca31a891864183f6548de317634c78",
+          "catalogMediaStagedAt": "2026-07-08T03:35:46.239Z"
+        }
+      }
+    ],
+    "previews": [
+      {
+        "id": "sdkwork-drive-pc-catalog-preview",
+        "type": "PREVIEW_IMAGE",
+        "purpose": "CATALOG_PREVIEW",
+        "url": "https://cdn.sdkwork.com/apps/sdkwork-drive-pc/media/preview-cover.png",
+        "platform": "WEB",
+        "locale": "en-US",
+        "width": 1600,
+        "height": 900,
+        "format": "PNG",
+        "fileSizeBytes": 6400,
+        "alphaChannel": false,
+        "caption": "SDKWork Drive PC preview.",
+        "sortOrder": 0,
+        "enabled": true,
+        "metadata": {
+          "altText": "SDKWork Drive PC preview cover.",
+          "generatedPlaceholder": true,
+          "catalogMediaDeferred": true,
+          "stagedArtifactPath": "dist/release/STABLE/0.1.0/media/preview-cover.png",
+          "stagedChecksumAlgorithm": "SHA-256",
+          "stagedChecksum": "1727302af4e20b3ee22e5ee569a7113fda90aebc70cc9153fe2f0b8183d5d499",
+          "catalogMediaStagedAt": "2026-07-08T03:35:46.239Z"
+        }
+      }
+    ],
+    "metadata": {
+      "assetVersion": "0.1.0",
+      "defaultLocale": "en-US"
+    }
+  },
+  "publish": {
+    "status": "DRAFT",
+    "installSkill": {
+      "name": "sdkwork-skills-app"
+    },
+    "platforms": [
+      "WEB",
+      "DESKTOP",
+      "DESKTOP_WINDOWS",
+      "DESKTOP_MACOS",
+      "DESKTOP_LINUX"
+    ],
+    "installPlatforms": [
+      "WEB",
+      "DESKTOP_WINDOWS",
+      "DESKTOP_MACOS",
+      "DESKTOP_LINUX"
+    ],
+    "defaultPackageId": "web-universal-cloud-browser-other",
+    "storeUrl": "https://sdkwork.com/apps/sdkwork-drive-pc",
+    "stores": [],
+    "config": {
+      "workspaceRoot": "apps/sdkwork-drive-pc",
+      "framework": "react-tauri",
+      "managedBy": "sdkwork-drive"
+    }
+  },
+  "artifacts": {
+    "installConfig": {
+      "defaultPackageId": "web-universal-cloud-browser-other",
+      "installCommand": "sdkwork install sdkwork-drive-pc",
+      "launchCommand": "sdkwork open sdkwork-drive-pc",
+      "uninstallCommand": "sdkwork uninstall sdkwork-drive-pc",
+      "packages": [
+        {
+          "id": "web-universal-cloud-browser-other",
+          "name": "SDKWork Drive PC Web",
+          "sourceType": "WEB_URL",
+          "packageFormat": "OTHER",
+          "platform": "WEB",
+          "architecture": "universal",
+          "profileBinding": "fixed",
+          "url": "https://drive.sdkwork.com",
+          "enabled": true,
+          "metadata": {
+            "runtimeTarget": "browser",
+            "releaseArtifact": "web-url"
+          },
+          "deploymentProfile": "cloud",
+          "runtimeTarget": "browser",
+          "targetPlatform": "web",
+          "clientArchitecture": "pc-web"
+        },
+        {
+          "id": "windows-x64-standalone-desktop-zip",
+          "name": "SDKWork Drive PC Windows",
+          "sourceType": "BINARY_URL",
+          "packageFormat": "ZIP",
+          "platform": "DESKTOP_WINDOWS",
+          "architecture": "x64",
+          "profileBinding": "fixed",
+          "deploymentProfile": "standalone",
+          "runtimeTarget": "desktop",
+          "targetPlatform": "windows",
+          "clientArchitecture": "tauri",
+          "url": "https://cdn.sdkwork.com/apps/sdkwork-drive/STABLE/0.1.0/windows/x64/app.zip",
+          "enabled": true
+        }
+      ],
+      "metadata": {
+        "workspaceRoot": "apps/sdkwork-drive-pc",
+        "framework": "react-tauri",
+        "packageManager": "pnpm@10.33.0"
+      }
+    }
+  },
+  "release": {
+    "currentVersion": "0.1.0",
+    "defaultChannel": "DEV",
+    "latest": {
+      "DEV": "0.1.0"
+    },
+    "notes": [
+      {
+        "version": "0.1.0",
+        "releaseChannel": "DEV",
+        "title": "SDKWork Drive PC 0.1.0",
+        "summary": "Initial SDKWork App Manifest v3 identity for the Drive PC app root.",
+        "content": "Defines the official PC application root, package identity, runtime family, and safe web access package metadata.",
+        "highlights": [
+          "SDKWork App Manifest v3 identity",
+          "PC browser and desktop runtime family",
+          "Standard package and config ownership"
+        ],
+        "packageIds": [
+          "web-universal-cloud-browser-other"
+        ],
+        "publishedAt": "2026-06-06T00:00:00Z",
+        "current": true,
+        "forceUpdate": false,
+        "minSupportedVersion": "0.1.0",
+        "metadata": {
+          "releaseState": "development"
+        }
+      }
+    ]
+  },
+  "security": {
+    "checksumRequired": false,
+    "signatureRequired": false,
+    "sbomRequired": true
+  },
+  "devApp": {
+    "enabled": true,
+    "sourceRoot": "apps/sdkwork-drive-pc",
+    "build": {
+      "targets": [
+        {
+          "id": "web-development",
+          "command": "pnpm dev",
+          "outputs": [
+            "dist"
+          ]
+        },
+        {
+          "id": "desktop-cloud-release",
+          "command": "pnpm build:desktop",
+          "outputs": [
+            "apps/sdkwork-drive-pc/packages/sdkwork-drive-pc-desktop/src-tauri/target"
+          ]
+        },
+        {
+          "id": "desktop-standalone-release",
+          "command": "pnpm build:standalone",
+          "outputs": [
+            "apps/sdkwork-drive-pc/packages/sdkwork-drive-pc-desktop/src-tauri/target"
+          ]
+        },
+        {
+          "id": "desktop-local-debug",
+          "command": "pnpm build:debug",
+          "outputs": [
+            "packages/sdkwork-drive-pc-desktop/src-tauri/target"
+          ]
+        }
+      ]
+    }
+  },
+  "metadata": {
+    "standardOwner": "sdkwork-platform",
+    "component": "sdkwork-drive-pc",
+    "surface": "pc",
+    "initializedAt": "2026-06-06T00:00:00Z",
+    "deploymentConfig": "etc/sdkwork.deployment.config.json"
+  }
+}

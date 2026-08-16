@@ -1,0 +1,162 @@
+{
+  "schemaVersion": 1,
+  "kind": "sdkwork.component.spec",
+  "component": {
+    "name": "sdkwork-drive",
+    "displayName": "SDKWork Drive",
+    "version": "0.1.0",
+    "type": "app",
+    "root": ".",
+    "domain": "drive",
+    "capability": "workspace",
+    "surface": "backend",
+    "languages": ["rust", "typescript"],
+    "generated": false,
+    "manifests": ["Cargo.toml", "package.json"]
+  },
+  "canonicalSpecs": [
+    {
+      "file": "SDKWORK_WORKSPACE_SPEC.md",
+      "path": "../sdkwork-specs/SDKWORK_WORKSPACE_SPEC.md",
+      "purpose": "Repository root directory dictionary and workspace metadata."
+    },
+    {
+      "file": "CODE_STYLE_SPEC.md",
+      "path": "../sdkwork-specs/CODE_STYLE_SPEC.md",
+      "purpose": "Cross-language code organization and focused file boundaries."
+    },
+    {
+      "file": "NAMING_SPEC.md",
+      "path": "../sdkwork-specs/NAMING_SPEC.md",
+      "purpose": "Canonical domain, capability, package, and component naming."
+    },
+    {
+      "file": "RUST_CODE_SPEC.md",
+      "path": "../sdkwork-specs/RUST_CODE_SPEC.md",
+      "purpose": "Rust crate/module layout, errors, async, and verification."
+    },
+    {
+      "file": "TYPESCRIPT_CODE_SPEC.md",
+      "path": "../sdkwork-specs/TYPESCRIPT_CODE_SPEC.md",
+      "purpose": "TypeScript package structure and typed SDK ports."
+    },
+    {
+      "file": "DRIVE_SPEC.md",
+      "path": "../sdkwork-specs/DRIVE_SPEC.md",
+      "purpose": "Drive spaces, nodes, upload, download, and storage lifecycle."
+    },
+    {
+      "file": "API_SPEC.md",
+      "path": "../sdkwork-specs/API_SPEC.md",
+      "purpose": "HTTP API and OpenAPI contract standard."
+    },
+    {
+      "file": "WEB_FRAMEWORK_SPEC.md",
+      "path": "../sdkwork-specs/WEB_FRAMEWORK_SPEC.md",
+      "purpose": "Mandatory sdkwork-web-framework integration for HTTP route crates."
+    },
+    {
+      "file": "WEB_BACKEND_SPEC.md",
+      "path": "../sdkwork-specs/WEB_BACKEND_SPEC.md",
+      "purpose": "Web backend implementation boundaries."
+    },
+    {
+      "file": "SDK_SPEC.md",
+      "path": "../sdkwork-specs/SDK_SPEC.md",
+      "purpose": "Primary SDK standard and generated client integration."
+    },
+    {
+      "file": "DATABASE_SPEC.md",
+      "path": "../sdkwork-specs/DATABASE_SPEC.md",
+      "purpose": "Database contract, table naming, and schema evolution."
+    },
+    {
+      "file": "DATABASE_FRAMEWORK_SPEC.md",
+      "path": "../sdkwork-specs/DATABASE_FRAMEWORK_SPEC.md",
+      "purpose": "Application database lifecycle and SPI orchestration."
+    },
+    {
+      "file": "DEPLOYMENT_SPEC.md",
+      "path": "../sdkwork-specs/DEPLOYMENT_SPEC.md",
+      "purpose": "Standalone/cloud deployment profile parity."
+    },
+    {
+      "file": "IAM_SPEC.md",
+      "path": "../sdkwork-specs/IAM_SPEC.md",
+      "purpose": "Tenants, users, sessions, and dual-token claims."
+    },
+    {
+      "file": "SECURITY_SPEC.md",
+      "path": "../sdkwork-specs/SECURITY_SPEC.md",
+      "purpose": "Token model, authn/authz, and tenant isolation."
+    },
+    {
+      "file": "TEST_SPEC.md",
+      "path": "../sdkwork-specs/TEST_SPEC.md",
+      "purpose": "Contract tests, module tests, and parity tests."
+    },
+    {
+      "file": "PNPM_SCRIPT_SPEC.md",
+      "path": "../sdkwork-specs/PNPM_SCRIPT_SPEC.md",
+      "purpose": "Uniform public command surfaces for pnpm scripts."
+    },
+    {
+      "file": "GITHUB_WORKFLOW_SPEC.md",
+      "path": "../sdkwork-specs/GITHUB_WORKFLOW_SPEC.md",
+      "purpose": "GitHub Actions packaging and release workflow standard."
+    }
+  ],
+  "contracts": {
+    "layerRole": "runtime-composition",
+    "publicExports": [
+      "crates/sdkwork-drive-contract",
+      "crates/sdkwork-drive-config",
+      "crates/sdkwork-drive-security",
+      "crates/sdkwork-drive-storage-contract",
+      "crates/sdkwork-drive-workspace-service"
+    ],
+    "providedPorts": [],
+    "requiredPorts": [],
+    "runtimeEntrypoints": [
+      "crates/sdkwork-api-drive-standalone-gateway/src/main.rs",
+      "crates/sdkwork-routes-drive-app-api/src/main.rs",
+      "crates/sdkwork-routes-drive-backend-api/src/main.rs",
+      "crates/sdkwork-routes-drive-open-api/src/main.rs",
+      "crates/sdkwork-routes-storage-backend-api/src/main.rs",
+      "crates/sdkwork-drive-install-worker/src/main.rs"
+    ],
+    "routeManifest": null,
+    "sdkClients": [],
+    "sdkDependencies": [],
+    "dependencyApiExports": [],
+    "dependencyApiSurfaces": [],
+    "events": [],
+    "configKeys": [
+      "Cargo.toml#workspace",
+      "package.json#scripts",
+      "sdkwork.workflow.json",
+      "SDKWORK_DRIVE_ROOT_SCOPE_EVENT_CALLER_APP_ID",
+      "SDKWORK_DRIVE_KNOWLEDGEBASE_EVENT_CALLBACK_URL",
+      "SDKWORK_DRIVE_KNOWLEDGEBASE_EVENT_INGRESS_TOKEN_FILE"
+    ]
+  },
+  "integration": {
+    "authority": "Root SDKWork specs remain authoritative. Local specs may extend but must not contradict them.",
+    "defaultConnectivityPlane": "application",
+    "defaultRuntimeMode": "same-origin-embedded",
+    "permissionManifest": "../sdkwork-iam/iam/modules/drive/iam.module.manifest.json",
+    "dependencyPolicy": "Consumers integrate Drive through generated SDK families, Drive Uploader facades, or declared service ports. Consumers must not copy Drive routes, upload DTOs, storage schemas, or permission catalogs.",
+    "sdkPolicy": "Generated Drive SDK clients are injected through service/runtime boundaries; frontend packages must not use raw Drive HTTP or manual auth headers.",
+    "languagePolicy": "Language-specific packages follow native manifests while preserving the same Drive component contract.",
+    "webFramework": "Drive HTTP route crates integrate through sdkwork-web-framework.",
+    "database": "Drive database lifecycle is managed by sdkwork-database contracts and migrations.",
+    "utils": "Drive TypeScript and Rust code use @sdkwork/utils and sdkwork-utils-rust for shared helpers."
+  },
+  "verification": {
+    "commands": [
+      "cargo test --workspace",
+      "pnpm check",
+      "pnpm verify"
+    ]
+  }
+}

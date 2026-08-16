@@ -1,0 +1,321 @@
+{
+  "schemaVersion": 5,
+  "kind": "sdkwork.app.topology",
+  "appId": "sdkwork-drive",
+  "applicationCode": "drive",
+  "archetype": "application-http-gateway",
+  "profileRoot": "etc/topology",
+  "profilePattern": "{deploymentProfile}.{environment}.env",
+  "vocabulary": {
+    "deploymentProfile": {
+      "allowed": [
+        "standalone",
+        "cloud"
+      ]
+    },
+    "environment": {
+      "allowed": [
+        "development",
+        "test",
+        "staging",
+        "production"
+      ]
+    }
+  },
+  "defaults": {
+    "developmentProfileId": "standalone.development",
+    "productionProfileId": "cloud.production",
+    "desktopBuildProfileId": "standalone.production",
+    "gatewayBind": "127.0.0.1:3900"
+  },
+  "profileFiles": {
+    "standalone.development": "etc/topology/standalone.development.env",
+    "standalone.test": "etc/topology/standalone.test.env",
+    "standalone.staging": "etc/topology/standalone.staging.env",
+    "standalone.production": "etc/topology/standalone.production.env",
+    "cloud.development": "etc/topology/cloud.development.env",
+    "cloud.test": "etc/topology/cloud.test.env",
+    "cloud.staging": "etc/topology/cloud.staging.env",
+    "cloud.production": "etc/topology/cloud.production.env"
+  },
+  "envKeys": {
+    "deploymentProfile": "SDKWORK_DRIVE_DEPLOYMENT_PROFILE",
+    "environment": "SDKWORK_DRIVE_ENVIRONMENT",
+    "profileId": "SDKWORK_DRIVE_PROFILE_ID",
+    "clientDeploymentProfile": "VITE_DRIVE_PC_DEPLOYMENT_PROFILE",
+    "standaloneGatewayBind": "SDKWORK_DRIVE_APPLICATION_PUBLIC_INGRESS_BIND",
+    "standaloneGatewayConfig": "SDKWORK_DRIVE_STANDALONE_GATEWAY_CONFIG",
+    "standaloneGatewayEnvironment": "SDKWORK_DRIVE_STANDALONE_GATEWAY_ENVIRONMENT",
+    "clientApiGatewayBaseUrl": "VITE_DRIVE_PC_PLATFORM_API_GATEWAY_HTTP_URL",
+    "apiGatewayBaseUrl": "SDKWORK_DRIVE_PLATFORM_API_GATEWAY_HTTP_URL"
+  },
+  "surfaces": {
+    "application.public-ingress": {
+      "connectivityPlane": "application",
+      "protocols": [
+        "http"
+      ],
+      "bindEnv": "SDKWORK_DRIVE_APPLICATION_PUBLIC_INGRESS_BIND",
+      "httpUrlEnv": "SDKWORK_DRIVE_APPLICATION_PUBLIC_HTTP_URL",
+      "clientHttpEnv": "VITE_DRIVE_PC_APPLICATION_PUBLIC_HTTP_URL"
+    },
+    "platform.api-gateway": {
+      "connectivityPlane": "platform",
+      "protocols": [
+        "http"
+      ],
+      "httpUrlEnv": "SDKWORK_DRIVE_PLATFORM_API_GATEWAY_HTTP_URL",
+      "clientHttpEnv": "VITE_DRIVE_PC_PLATFORM_API_GATEWAY_HTTP_URL"
+    }
+  },
+  "cloudPublicHosts": {
+    "application.public-ingress": {
+      "httpHost": "drive.sdkwork.com",
+      "environments": {
+        "development": { "httpHost": "drive-dev.sdkwork.com" },
+        "test": { "httpHost": "drive-test.sdkwork.com" },
+        "staging": { "httpHost": "drive-staging.sdkwork.com" }
+      }
+    },
+    "platform.api-gateway": {
+      "httpHost": "api.sdkwork.com",
+      "environments": {
+        "development": { "httpHost": "api-dev.sdkwork.com" },
+        "test": { "httpHost": "api-test.sdkwork.com" },
+        "staging": { "httpHost": "api-staging.sdkwork.com" }
+      }
+    }
+  },
+  "components": {
+    "standaloneGateway": {
+      "crate": "sdkwork-api-drive-standalone-gateway",
+      "binary": "sdkwork-api-drive-standalone-gateway",
+      "configGlob": "etc/sdkwork-api-drive-standalone-gateway.{profile}.toml"
+    }
+  },
+  "orchestration": {
+    "profiles": {
+      "standalone.development": {
+        "processes": [
+          {
+            "id": "standalone-gateway",
+            "role": "api-standalone-gateway",
+            "script": "_sdkwork:gateway:standalone",
+            "required": true
+          },
+          {
+            "id": "drive-browser",
+            "role": "client",
+            "script": "_sdkwork:client:browser:standalone",
+            "runtimeTargets": [
+              "browser"
+            ],
+            "required": true
+          },
+          {
+            "id": "drive-desktop",
+            "role": "client",
+            "script": "_sdkwork:client:desktop:standalone",
+            "runtimeTargets": [
+              "desktop"
+            ],
+            "required": true
+          }
+        ],
+        "healthSurfaces": [
+          "application.public-ingress"
+        ]
+      },
+      "standalone.test": {
+        "processes": [],
+        "healthSurfaces": []
+      },
+      "standalone.staging": {
+        "processes": [],
+        "healthSurfaces": []
+      },
+      "cloud.development": {
+        "processes": [
+          {
+            "id": "drive-browser",
+            "role": "client",
+            "script": "_sdkwork:client:browser:cloud",
+            "runtimeTargets": [
+              "browser"
+            ],
+            "required": true
+          },
+          {
+            "id": "drive-desktop",
+            "role": "client",
+            "script": "_sdkwork:client:desktop:cloud",
+            "runtimeTargets": [
+              "desktop"
+            ],
+            "required": true
+          }
+        ],
+        "healthSurfaces": [
+          "application.public-ingress",
+          "platform.api-gateway"
+        ]
+      },
+      "cloud.test": {
+        "processes": [],
+        "healthSurfaces": []
+      },
+      "cloud.staging": {
+        "processes": [],
+        "healthSurfaces": []
+      },
+      "cloud.production": {
+        "processes": [],
+        "healthSurfaces": []
+      },
+      "standalone.production": {
+        "processes": [],
+        "healthSurfaces": []
+      }
+    }
+  },
+  "packaging": {
+    "cloudConfigFiles": [],
+    "targets": [
+      {
+        "id": "linux-x64-application-public-ingress-tar-gz",
+        "profile": "application-public-ingress",
+        "platform": "linux",
+        "architecture": "x64",
+        "formats": [
+          "tar.gz"
+        ],
+        "runner": "ubuntu-24.04",
+        "rustTarget": "x86_64-unknown-linux-gnu",
+        "outputGlob": "dist/standalone-gateway/sdkwork-api-drive-standalone-gateway-*-linux-x64-standalone-gateway.tar.gz"
+      },
+      {
+        "id": "linux-arm64-application-public-ingress-tar-gz",
+        "profile": "application-public-ingress",
+        "platform": "linux",
+        "architecture": "arm64",
+        "formats": [
+          "tar.gz"
+        ],
+        "runner": "ubuntu-24.04",
+        "rustTarget": "aarch64-unknown-linux-gnu",
+        "outputGlob": "dist/standalone-gateway/sdkwork-api-drive-standalone-gateway-*-linux-arm64-standalone-gateway.tar.gz"
+      },
+      {
+        "id": "windows-x64-application-public-ingress-tar-gz",
+        "profile": "application-public-ingress",
+        "platform": "windows",
+        "architecture": "x64",
+        "formats": [
+          "tar.gz"
+        ],
+        "runner": "windows-latest",
+        "rustTarget": "x86_64-pc-windows-msvc",
+        "outputGlob": "dist/standalone-gateway/sdkwork-api-drive-standalone-gateway-*-windows-x64-standalone-gateway.tar.gz"
+      },
+      {
+        "id": "windows-arm64-application-public-ingress-tar-gz",
+        "profile": "application-public-ingress",
+        "platform": "windows",
+        "architecture": "arm64",
+        "formats": [
+          "tar.gz"
+        ],
+        "runner": "windows-latest",
+        "rustTarget": "aarch64-pc-windows-msvc",
+        "outputGlob": "dist/standalone-gateway/sdkwork-api-drive-standalone-gateway-*-windows-arm64-standalone-gateway.tar.gz"
+      },
+      {
+        "id": "macos-x64-application-public-ingress-tar-gz",
+        "profile": "application-public-ingress",
+        "platform": "macos",
+        "architecture": "x64",
+        "formats": [
+          "tar.gz"
+        ],
+        "runner": "macos-14",
+        "rustTarget": "x86_64-apple-darwin",
+        "outputGlob": "dist/standalone-gateway/sdkwork-api-drive-standalone-gateway-*-macos-x64-standalone-gateway.tar.gz"
+      },
+      {
+        "id": "macos-arm64-application-public-ingress-tar-gz",
+        "profile": "application-public-ingress",
+        "platform": "macos",
+        "architecture": "arm64",
+        "formats": [
+          "tar.gz"
+        ],
+        "runner": "macos-14",
+        "rustTarget": "aarch64-apple-darwin",
+        "outputGlob": "dist/standalone-gateway/sdkwork-api-drive-standalone-gateway-*-macos-arm64-standalone-gateway.tar.gz"
+      },
+      {
+        "id": "platform-config-bundle-tar-gz",
+        "profile": "platform-config-bundle",
+        "platform": "all",
+        "architecture": "all",
+        "formats": [
+          "tar.gz"
+        ],
+        "runner": "ubuntu-24.04",
+        "outputGlob": "dist/cloud-config/sdkwork-drive-api-gateway-config-*.tar.gz"
+      }
+    ]
+  },
+  "scripts": {
+    "driveDev": "scripts/drive-dev.mjs",
+    "driveBuild": "scripts/drive-build.mjs",
+    "gatewayStandaloneRun": "scripts/gateway-standalone-run.mjs",
+    "gatewayStandalonePack": "scripts/gateway-standalone-pack.mjs"
+  },
+  "retired": {
+    "vocabulary": {
+      "hosting": [
+        "self-hosted",
+        "cloud-hosted"
+      ],
+      "deploymentMode": [
+        "web",
+        "desktop",
+        "tablet-ipados",
+        "tablet-android",
+        "server",
+        "container",
+        "saas",
+        "private",
+        "local",
+        "test"
+      ]
+    },
+    "envKeys": [
+      "SDKWORK_DRIVE_HOSTING",
+      "SDKWORK_DRIVE_TOPOLOGY",
+      "VITE_DRIVE_PC_HOSTING",
+      "VITE_DRIVE_PC_TOPOLOGY",
+      "VITE_DRIVE_PC_DEPLOYMENT_MODE",
+      "VITE_DRIVE_PC_API_GATEWAY_BASE_URL"
+    ],
+    "profileIds": [
+      "self-hosted.unified-process.development",
+      "self-hosted.split-services.development",
+      "self-hosted.unified-process.production",
+      "cloud-hosted.split-services.development",
+      "cloud-hosted.split-services.production"
+    ],
+    "packagingProfiles": [
+      "standalone",
+      "cloud-config"
+    ],
+    "specFiles": [
+      "specs/drive-topology.spec.json"
+    ],
+    "cliFlags": [
+      "--hosting",
+      "--topology"
+    ]
+  }
+}

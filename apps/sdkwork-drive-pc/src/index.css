@@ -1,0 +1,358 @@
+﻿@import "tailwindcss";
+@source "../../../../sdkwork-iam/apps/sdkwork-iam-pc/packages/sdkwork-auth-pc-react/src";
+@source "../packages/sdkwork-drive-pc-drive/src";
+@source "../packages/sdkwork-drive-pc-file/src";
+@source "../packages/sdkwork-drive-pc-transfer/src";
+@source "../packages/sdkwork-drive-pc-commons/src";
+@source "../packages/sdkwork-drive-pc-core/src";
+
+@variant dark (&:is(.dark *));
+
+html,
+body,
+#root {
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  width: 100%;
+}
+
+#root {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Global scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background-color: #d1d5db;
+  border-radius: 10px;
+}
+.dark ::-webkit-scrollbar-thumb {
+  background-color: #4b5563;
+}
+::-webkit-scrollbar-thumb:hover {
+  background-color: #9ca3af;
+}
+.dark ::-webkit-scrollbar-thumb:hover {
+  background-color: #6b7280;
+}
+
+/* Drive Auth Shell - Login Page Styles (Dark Mode Default) */
+.sdkwork-drive-auth-shell {
+  --sdkwork-drive-auth-bg: #0c0d11;
+  --sdkwork-drive-auth-header-bg: #0e0e11;
+  --sdkwork-drive-auth-header-border: rgba(255, 255, 255, 0.08);
+  --sdkwork-drive-auth-header-text: #f4f4f5;
+  --sdkwork-drive-auth-header-muted: #a1a1aa;
+  --sdkwork-drive-auth-header-hover: rgba(255, 255, 255, 0.1);
+  --sdkwork-drive-auth-content-bg: rgba(17, 18, 24, 0.96);
+  --sdkwork-drive-auth-content-border: rgba(255, 255, 255, 0.1);
+  --sdkwork-drive-auth-content-text: #f8fafc;
+  --sdkwork-drive-auth-muted-text: #a1a1aa;
+  --sdkwork-drive-auth-field-bg: rgba(255, 255, 255, 0.06);
+  --sdkwork-drive-auth-field-border: rgba(255, 255, 255, 0.14);
+  --sdkwork-drive-auth-divider: rgba(255, 255, 255, 0.12);
+  --sdkwork-drive-auth-tab-bg: rgba(255, 255, 255, 0.06);
+  --sdkwork-drive-auth-tab-active-bg: rgba(255, 255, 255, 0.12);
+  --sdkwork-drive-auth-aside-bg: #101114;
+  --sdkwork-drive-auth-aside-border: rgba(255, 255, 255, 0.08);
+  --sdkwork-drive-auth-aside-text: #f5f5f5;
+  --sdkwork-drive-auth-aside-card-bg: rgba(255, 255, 255, 0.08);
+  --sdkwork-drive-auth-aside-card-border: rgba(255, 255, 255, 0.1);
+  --sdkwork-drive-auth-aside-badge-bg: rgba(96, 165, 250, 0.12);
+  --sdkwork-drive-auth-aside-badge-text: #93c5fd;
+  --sdkwork-drive-auth-qr-bg: rgba(8, 11, 18, 0.94);
+  --sdkwork-drive-auth-qr-border: rgba(255, 255, 255, 0.12);
+  background:
+    radial-gradient(circle at 18% 24%, rgba(37, 99, 235, 0.16), transparent 30%),
+    radial-gradient(circle at 82% 72%, rgba(16, 185, 129, 0.12), transparent 32%),
+    linear-gradient(180deg, #111217 0%, #0c0d11 100%);
+  color: var(--sdkwork-drive-auth-content-text);
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.sdkwork-drive-auth-header {
+  align-items: center;
+  background: var(--sdkwork-drive-auth-header-bg);
+  border-bottom: 1px solid var(--sdkwork-drive-auth-header-border);
+  color: var(--sdkwork-drive-auth-header-text);
+  display: grid;
+  flex: 0 0 44px;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  height: 40px;
+  padding: 0 8px;
+  touch-action: none;
+  user-select: none;
+  z-index: 50;
+}
+
+.sdkwork-drive-auth-header-brand {
+  align-items: center;
+  display: inline-flex;
+  font-size: 11px;
+  font-weight: 600;
+  gap: 9px;
+  height: 32px;
+  letter-spacing: 0.16em;
+  min-width: 148px;
+  padding: 0 10px;
+  text-transform: uppercase;
+}
+
+.sdkwork-drive-auth-header-mark {
+  align-items: center;
+  background: linear-gradient(135deg, #2563eb, #10b981);
+  border-radius: 6px;
+  box-shadow: 0 8px 18px rgba(37, 99, 235, 0.22);
+  color: #ffffff;
+  display: inline-flex;
+  height: 20px;
+  justify-content: center;
+  width: 20px;
+}
+
+.sdkwork-drive-auth-header-center {
+  height: 100%;
+  min-width: 0;
+}
+
+.sdkwork-drive-auth-header-actions {
+  align-items: center;
+  display: inline-flex;
+  height: 100%;
+  justify-content: flex-end;
+  min-width: 0;
+}
+
+.sdkwork-drive-auth-theme-button {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
+  color: var(--sdkwork-drive-auth-header-muted);
+  cursor: pointer;
+  display: inline-flex;
+  height: 32px;
+  justify-content: center;
+  margin-right: 4px;
+  padding: 0;
+  width: 34px;
+}
+
+.sdkwork-drive-auth-theme-button:hover {
+  background: var(--sdkwork-drive-auth-header-hover);
+  color: var(--sdkwork-drive-auth-header-text);
+}
+
+.sdkwork-drive-auth-window-controls {
+  align-items: center;
+  display: inline-flex;
+  height: 100%;
+}
+
+.sdkwork-drive-auth-window-button {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
+  color: var(--sdkwork-drive-auth-header-muted);
+  cursor: pointer;
+  display: inline-flex;
+  height: 100%;
+  justify-content: center;
+  padding: 0;
+  transition: background-color 120ms ease, color 120ms ease;
+  width: 38px;
+}
+
+.sdkwork-drive-auth-window-button:hover {
+  background: var(--sdkwork-drive-auth-header-hover);
+  color: var(--sdkwork-drive-auth-header-text);
+}
+
+.sdkwork-drive-auth-window-button-danger:hover {
+  background: #dc2626;
+  color: #ffffff;
+}
+
+.sdkwork-drive-auth-main {
+  align-items: stretch;
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.sdkwork-drive-auth-main > * {
+  flex: 1 1 auto;
+  min-height: 0;
+  min-width: 0;
+}
+
+.sdkwork-drive-auth-main .sdkwork-iam-auth-routes {
+  height: 100%;
+  min-height: 0;
+}
+
+.sdkwork-drive-auth-page {
+  background: transparent;
+  height: 100%;
+  min-height: 100%;
+  overflow: hidden;
+  padding: clamp(16px, 2vw, 24px);
+}
+
+.sdkwork-drive-auth-background {
+  background: transparent;
+}
+
+.sdkwork-drive-auth-background > * {
+  display: none;
+}
+
+.sdkwork-drive-auth-card-shell {
+  background: var(--sdkwork-drive-auth-content-bg);
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  height: auto;
+  max-height: 100%;
+  min-height: 0;
+}
+
+.sdkwork-drive-auth-content,
+.sdkwork-drive-auth-body {
+  letter-spacing: 0;
+}
+
+.sdkwork-drive-auth-content {
+  overflow: visible;
+}
+
+.sdkwork-drive-auth-content > .mx-auto {
+  min-height: 0;
+}
+
+.sdkwork-drive-auth-loading {
+  align-items: center;
+  background: var(--sdkwork-drive-auth-bg, #0c0d11);
+  color: var(--sdkwork-drive-auth-content-text, #f8fafc);
+  display: flex;
+  height: 100dvh;
+  justify-content: center;
+  overflow: hidden;
+  padding: 0 24px;
+  width: 100%;
+}
+
+/* Light mode overrides */
+html.light-mode .sdkwork-drive-auth-shell {
+  --sdkwork-drive-auth-bg: #eef5fb;
+  --sdkwork-drive-auth-header-bg: rgba(255, 255, 255, 0.94);
+  --sdkwork-drive-auth-header-border: rgba(71, 85, 105, 0.16);
+  --sdkwork-drive-auth-header-text: #0f172a;
+  --sdkwork-drive-auth-header-muted: #475569;
+  --sdkwork-drive-auth-header-hover: rgba(37, 99, 235, 0.08);
+  --sdkwork-drive-auth-content-bg: rgba(255, 255, 255, 0.97);
+  --sdkwork-drive-auth-content-border: rgba(100, 116, 139, 0.2);
+  --sdkwork-drive-auth-content-text: #0f172a;
+  --sdkwork-drive-auth-muted-text: #64748b;
+  --sdkwork-drive-auth-field-bg: #ffffff;
+  --sdkwork-drive-auth-field-border: rgba(71, 85, 105, 0.18);
+  --sdkwork-drive-auth-divider: rgba(100, 116, 139, 0.18);
+  --sdkwork-drive-auth-tab-bg: #eef4fb;
+  --sdkwork-drive-auth-tab-active-bg: #ffffff;
+  --sdkwork-drive-auth-aside-bg: #f8fbff;
+  --sdkwork-drive-auth-aside-border: rgba(37, 99, 235, 0.12);
+  --sdkwork-drive-auth-aside-text: #0f172a;
+  --sdkwork-drive-auth-aside-card-bg: #ffffff;
+  --sdkwork-drive-auth-aside-card-border: rgba(37, 99, 235, 0.12);
+  --sdkwork-drive-auth-aside-badge-bg: rgba(37, 99, 235, 0.1);
+  --sdkwork-drive-auth-aside-badge-text: #1d4ed8;
+  --sdkwork-drive-auth-qr-bg: #ffffff;
+  --sdkwork-drive-auth-qr-border: rgba(37, 99, 235, 0.18);
+  background:
+    radial-gradient(circle at 18% 22%, rgba(37, 99, 235, 0.12), transparent 28%),
+    radial-gradient(circle at 82% 78%, rgba(14, 165, 233, 0.1), transparent 32%),
+    linear-gradient(180deg, #f8fbff 0%, #eef5fb 54%, #e8f0f7 100%);
+}
+
+html.light-mode .sdkwork-drive-auth-card-shell {
+  box-shadow: none;
+}
+
+html.light-mode .sdkwork-drive-auth-aside-panel .text-white {
+  color: var(--sdkwork-drive-auth-aside-text) !important;
+}
+
+html.light-mode .sdkwork-drive-auth-aside-panel .text-zinc-300 {
+  color: var(--sdkwork-drive-auth-muted-text) !important;
+}
+
+html.light-mode .sdkwork-drive-auth-aside-panel .text-zinc-400 {
+  color: var(--sdkwork-drive-auth-muted-text) !important;
+}
+
+/* Responsive adjustments */
+@media (max-height: 760px) {
+  .sdkwork-drive-auth-page {
+    padding: 4px 12px;
+  }
+
+  .sdkwork-drive-auth-content {
+    padding: 20px 24px;
+  }
+
+  .sdkwork-drive-auth-content > .mx-auto > :first-child {
+    margin-bottom: 12px;
+  }
+
+  .sdkwork-drive-auth-body .space-y-6 > :not([hidden]) ~ :not([hidden]),
+  .sdkwork-drive-auth-body .space-y-5 > :not([hidden]) ~ :not([hidden]) {
+    margin-top: 0.75rem;
+  }
+
+  .sdkwork-drive-auth-body .mt-8 {
+    margin-top: 0.75rem;
+  }
+}
+
+@media (max-height: 680px) {
+  .sdkwork-drive-auth-page {
+    padding: 4px 8px;
+  }
+
+  .sdkwork-drive-auth-content {
+    padding: 16px 20px;
+  }
+
+  .sdkwork-drive-auth-content > .mx-auto > :first-child {
+    margin-bottom: 10px;
+  }
+
+  .sdkwork-drive-auth-body .space-y-6 > :not([hidden]) ~ :not([hidden]),
+  .sdkwork-drive-auth-body .space-y-5 > :not([hidden]) ~ :not([hidden]) {
+    margin-top: 0.625rem;
+  }
+}
+
+@import "../packages/sdkwork-drive-pc-drive/src/driveWorkspaceChrome.css";
+
+/* Drag region for desktop */
+.drag-region {
+  -webkit-app-region: drag;
+}
+.no-drag {
+  -webkit-app-region: no-drag;
+}

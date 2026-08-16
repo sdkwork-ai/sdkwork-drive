@@ -1,0 +1,65 @@
+{
+  "kind": "sdkwork.api.assembly",
+  "schemaVersion": 1,
+  "applicationCode": "drive",
+  "apiMode": "served",
+  "packageName": "sdkwork-api-drive-assembly",
+  "crateDir": "crates/sdkwork-api-drive-assembly",
+  "routeCrates": [
+    {
+      "packageName": "sdkwork-routes-drive-app-api",
+      "memberDir": "crates/sdkwork-routes-drive-app-api",
+      "libName": "sdkwork_routes_drive_app_api",
+      "surface": "app-api",
+      "pathPrefix": null,
+      "mountOrder": 0,
+      "componentRef": "crates/sdkwork-routes-drive-app-api/specs/component.spec.json",
+      "routeManifestRef": "apis/app-api/drive/drive-app-api.openapi.json",
+      "sourceRef": "crates/sdkwork-routes-drive-app-api/Cargo.toml"
+    },
+    {
+      "packageName": "sdkwork-routes-drive-backend-api",
+      "memberDir": "crates/sdkwork-routes-drive-backend-api",
+      "libName": "sdkwork_routes_drive_backend_api",
+      "surface": "backend-api",
+      "pathPrefix": null,
+      "mountOrder": 1,
+      "componentRef": "crates/sdkwork-routes-drive-backend-api/specs/component.spec.json",
+      "routeManifestRef": "apis/backend-api/drive/drive-backend-api.openapi.json",
+      "sourceRef": "crates/sdkwork-routes-drive-backend-api/Cargo.toml"
+    },
+    {
+      "packageName": "sdkwork-routes-drive-internal-api",
+      "memberDir": "crates/sdkwork-routes-drive-internal-api",
+      "libName": "sdkwork_routes_drive_internal_api",
+      "surface": "internal-api",
+      "pathPrefix": null,
+      "mountOrder": 2,
+      "componentRef": "crates/sdkwork-routes-drive-internal-api/specs/component.spec.json",
+      "routeManifestRef": "apis/internal-api/drive/sdkwork-drive-internal-api.openapi.yaml",
+      "sourceRef": "crates/sdkwork-routes-drive-internal-api/Cargo.toml"
+    },
+    {
+      "packageName": "sdkwork-routes-drive-open-api",
+      "memberDir": "crates/sdkwork-routes-drive-open-api",
+      "libName": "sdkwork_routes_drive_open_api",
+      "surface": "open-api",
+      "pathPrefix": null,
+      "mountOrder": 3,
+      "componentRef": "crates/sdkwork-routes-drive-open-api/specs/component.spec.json",
+      "routeManifestRef": "apis/open-api/drive/drive-open-api.openapi.json",
+      "sourceRef": "crates/sdkwork-routes-drive-open-api/Cargo.toml"
+    },
+    {
+      "packageName": "sdkwork-routes-storage-backend-api",
+      "memberDir": "crates/sdkwork-routes-storage-backend-api",
+      "libName": "sdkwork_routes_storage_backend_api",
+      "surface": "backend-api",
+      "pathPrefix": null,
+      "mountOrder": 4,
+      "componentRef": "crates/sdkwork-routes-storage-backend-api/specs/component.spec.json",
+      "routeManifestRef": "apis/backend-api/drive/drive-admin-storage-api.openapi.json",
+      "sourceRef": "crates/sdkwork-routes-storage-backend-api/Cargo.toml"
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "kind": "sdkwork.browser-runtime-bindings",
+  "application": "sdkwork-drive-pc",
+  "runtimeTargets": [
+    "browser",
+    "desktop"
+  ],
+  "bindings": {
+    "deploymentProfile": "VITE_DRIVE_PC_DEPLOYMENT_PROFILE",
+    "environment": "VITE_DRIVE_PC_ENVIRONMENT",
+    "applicationPublicUrl": "VITE_DRIVE_PC_APPLICATION_PUBLIC_HTTP_URL",
+    "platformGatewayUrl": "VITE_DRIVE_PC_PLATFORM_API_GATEWAY_HTTP_URL"
+  }
+}

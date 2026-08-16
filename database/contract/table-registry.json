@@ -1,0 +1,264 @@
+{
+  "schemaVersion": 1,
+  "kind": "sdkwork.database.table-registry",
+  "tables": [
+    {
+      "table_name": "dr_drive_space",
+      "owner": "drive-platform",
+      "compliance_level": "L2",
+      "lifecycle_status": "active"
+    },
+    {
+      "table_name": "dr_drive_space_knowledge_profile",
+      "owner": "drive-platform",
+      "compliance_level": "L2",
+      "lifecycle_status": "active"
+    },
+    {
+      "table_name": "dr_drive_space_ai_generation_profile",
+      "owner": "drive-platform",
+      "compliance_level": "L2",
+      "lifecycle_status": "active"
+    },
+    {
+      "table_name": "dr_drive_space_app_upload_profile",
+      "owner": "drive-platform",
+      "compliance_level": "L2",
+      "lifecycle_status": "active"
+    },
+    {
+      "table_name": "dr_drive_space_rtc_profile",
+      "owner": "drive-platform",
+      "compliance_level": "L2",
+      "lifecycle_status": "active"
+    },
+    {
+      "table_name": "dr_drive_node",
+      "owner": "drive-platform",
+      "compliance_level": "L2",
+      "lifecycle_status": "active"
+    },
+    {
+      "table_name": "dr_drive_website_root",
+      "owner": "drive-platform",
+      "compliance_level": "L2",
+      "lifecycle_status": "active"
+    },
+    {
+      "table_name": "dr_drive_website_root_generation",
+      "owner": "drive-platform",
+      "compliance_level": "L2",
+      "lifecycle_status": "active"
+    },
+    {
+      "table_name": "dr_drive_space_website_profile",
+      "owner": "drive-platform",
+      "compliance_level": "L2",
+      "lifecycle_status": "active"
+    },
+    {
+      "table_name": "dr_drive_website_sync",
+      "owner": "drive-platform",
+      "compliance_level": "L2",
+      "lifecycle_status": "active"
+    },
+    {
+      "table_name": "dr_drive_root_scope_subscription",
+      "owner": "drive-platform",
+      "compliance_level": "L2",
+      "lifecycle_status": "active"
+    },
+    {
+      "table_name": "dr_drive_node_permission",
+      "owner": "drive-platform",
+      "compliance_level": "L2",
+      "lifecycle_status": "active"
+    },
+    {
+      "table_name": "dr_drive_node_share_link",
+      "owner": "drive-platform",
+      "compliance_level": "L2",
+      "lifecycle_status": "active"
+    },
+    {
+      "table_name": "dr_drive_node_comment",
+      "owner": "drive-platform",
+      "compliance_level": "L2",
+      "lifecycle_status": "active"
+    },
+    {
+      "table_name": "dr_drive_node_comment_reply",
+      "owner": "drive-platform",
+      "compliance_level": "L2",
+      "lifecycle_status": "active"
+    },
+    {
+      "table_name": "dr_drive_node_favorite",
+      "owner": "drive-platform",
+      "compliance_level": "L2",
+      "lifecycle_status": "active"
+    },
+    {
+      "table_name": "dr_drive_node_property",
+      "owner": "drive-platform",
+      "compliance_level": "L2",
+      "lifecycle_status": "active"
+    },
+    {
+      "table_name": "dr_drive_label",
+      "owner": "drive-platform",
+      "compliance_level": "L2",
+      "lifecycle_status": "active"
+    },
+    {
+      "table_name": "dr_drive_node_label",
+      "owner": "drive-platform",
+      "compliance_level": "L2",
+      "lifecycle_status": "active"
+    },
+    {
+      "table_name": "dr_drive_watch_channel",
+      "owner": "drive-platform",
+      "compliance_level": "L2",
+      "lifecycle_status": "active"
+    },
+    {
+      "table_name": "dr_drive_change_cursor",
+      "owner": "drive-platform",
+      "compliance_level": "L2",
+      "lifecycle_status": "active"
+    },
+    {
+      "table_name": "dr_drive_change_log",
+      "owner": "drive-platform",
+      "compliance_level": "L2",
+      "lifecycle_status": "active"
+    },
+    {
+      "table_name": "dr_drive_upload_session",
+      "owner": "drive-platform",
+      "compliance_level": "L2",
+      "lifecycle_status": "active"
+    },
+    {
+      "table_name": "dr_drive_storage_provider",
+      "owner": "drive-platform",
+      "compliance_level": "L2",
+      "lifecycle_status": "active"
+    },
+    {
+      "table_name": "dr_drive_storage_provider_binding",
+      "owner": "drive-platform",
+      "compliance_level": "L2",
+      "lifecycle_status": "active"
+    },
+    {
+      "table_name": "dr_drive_download_package",
+      "owner": "drive-platform",
+      "compliance_level": "L2",
+      "lifecycle_status": "active"
+    },
+    {
+      "table_name": "dr_drive_audit_event",
+      "owner": "drive-platform",
+      "compliance_level": "L2",
+      "lifecycle_status": "active"
+    },
+    {
+      "table_name": "dr_drive_maintenance_job",
+      "owner": "drive-platform",
+      "compliance_level": "L2",
+      "lifecycle_status": "active"
+    },
+    {
+      "table_name": "dr_drive_storage_object",
+      "owner": "drive-platform",
+      "compliance_level": "L2",
+      "lifecycle_status": "active"
+    },
+    {
+      "table_name": "dr_drive_node_version",
+      "owner": "drive-platform",
+      "compliance_level": "L2",
+      "lifecycle_status": "active"
+    },
+    {
+      "table_name": "dr_drive_space_version_policy",
+      "owner": "drive-platform",
+      "compliance_level": "L2",
+      "lifecycle_status": "active"
+    },
+    {
+      "table_name": "dr_drive_node_version_policy",
+      "owner": "drive-platform",
+      "compliance_level": "L2",
+      "lifecycle_status": "active"
+    },
+    {
+      "table_name": "dr_drive_upload_item",
+      "owner": "drive-platform",
+      "compliance_level": "L2",
+      "lifecycle_status": "active"
+    },
+    {
+      "table_name": "dr_drive_upload_part",
+      "owner": "drive-platform",
+      "compliance_level": "L2",
+      "lifecycle_status": "active"
+    },
+    {
+      "table_name": "dr_drive_file_sensitive_operation",
+      "owner": "drive-platform",
+      "compliance_level": "L2",
+      "lifecycle_status": "active"
+    },
+    {
+      "table_name": "dr_drive_domain_outbox",
+      "owner": "drive-platform",
+      "compliance_level": "L2",
+      "lifecycle_status": "active"
+    },
+    {
+      "table_name": "dr_drive_tenant_quota",
+      "owner": "drive-platform",
+      "compliance_level": "L2",
+      "lifecycle_status": "active"
+    },
+    {
+      "table_name": "dr_drive_maintenance_leader",
+      "owner": "drive-platform",
+      "compliance_level": "L2",
+      "lifecycle_status": "active"
+    },
+    {
+      "table_name": "dr_drive_domain_outbox_channel_delivery",
+      "owner": "drive-platform",
+      "compliance_level": "L2",
+      "lifecycle_status": "active"
+    },
+    {
+      "table_name": "dr_drive_sandbox_volume",
+      "owner": "drive-platform",
+      "compliance_level": "L2",
+      "lifecycle_status": "active"
+    },
+    {
+      "table_name": "dr_drive_sandbox_grant",
+      "owner": "drive-platform",
+      "compliance_level": "L2",
+      "lifecycle_status": "active"
+    },
+    {
+      "table_name": "dr_drive_sandbox_mutation_operation",
+      "owner": "drive-platform",
+      "compliance_level": "L2",
+      "lifecycle_status": "active"
+    },
+    {
+      "table_name": "dr_drive_storage_provider_kind",
+      "owner": "drive-platform",
+      "compliance_level": "L2",
+      "lifecycle_status": "active"
+    }
+  ]
+}

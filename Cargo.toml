@@ -1,0 +1,103 @@
+[workspace]
+members = [
+    "crates/sdkwork-api-drive-assembly",
+    "crates/sdkwork-drive-contract",
+    "crates/sdkwork-drive-config",
+    "crates/sdkwork-drive-database-host",
+    "crates/sdkwork-drive-http",
+    "crates/sdkwork-drive-security",
+    "crates/sdkwork-drive-observability",
+    "crates/sdkwork-drive-object-runtime",
+    "crates/sdkwork-drive-storage-contract",
+    "crates/sdkwork-drive-storage-local",
+    "crates/sdkwork-drive-sandbox-local",
+    "crates/sdkwork-drive-storage-opendal",
+    "crates/sdkwork-drive-storage-s3",
+    "crates/sdkwork-drive-test-support",
+    "crates/sdkwork-drive-workspace-service",
+    "crates/sdkwork-drive-uploader-service",
+    "crates/sdkwork-routes-drive-open-api",
+    "crates/sdkwork-routes-drive-internal-api",
+    "crates/sdkwork-routes-drive-app-api",
+    "crates/sdkwork-routes-storage-backend-api",
+    "crates/sdkwork-routes-drive-backend-api",
+    "crates/sdkwork-drive-install-worker",
+    "crates/sdkwork-api-drive-standalone-gateway",
+]
+resolver = "2"
+
+[workspace.package]
+edition = "2021"
+version = "0.1.0"
+
+[workspace.dependencies]
+sdkwork-api-iam-assembly = { path = "../sdkwork-iam/crates/sdkwork-api-iam-assembly" }
+anyhow = "1.0"
+async-trait = "0.1"
+cap-std = "4.0.2"
+axum = { version = "0.8", features = ["macros"] }
+http = "1.4"
+httpdate = "1.0"
+futures-util = "0.3"
+opendal = { version = "0.57.0", default-features = false, features = ["services-s3", "reqwest-rustls-tls", "executors-tokio"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+jsonwebtoken = { version = "9", default-features = false, features = ["use_pem"] }
+sqlx = { version = "0.9", default-features = false, features = ["runtime-tokio", "tls-rustls", "postgres", "chrono"] }
+tempfile = "3.12"
+tokio = { version = "1.48", features = ["macros", "rt-multi-thread"] }
+toml = "0.8"
+tower = { version = "0.5", features = ["util"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["fmt", "env-filter", "registry"] }
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
+url = "2.5"
+uuid = { version = "1", features = ["v4"] }
+zip = { version = "8.6.0", default-features = false, features = ["deflate-flate2-zlib-rs"] }
+
+# AWS SDK dependencies
+aws-config = "1.8"
+aws-credential-types = "1.2"
+aws-sdk-s3 = "1.79"
+aws-types = "1.3"
+
+# SDKWork workspace members - declared once at workspace root
+sdkwork-drive-contract = { path = "crates/sdkwork-drive-contract" }
+sdkwork-drive-config = { path = "crates/sdkwork-drive-config" }
+sdkwork-drive-database-host = { path = "crates/sdkwork-drive-database-host" }
+sdkwork-drive-http = { path = "crates/sdkwork-drive-http" }
+sdkwork-drive-observability = { path = "crates/sdkwork-drive-observability" }
+sdkwork-drive-object-runtime = { path = "crates/sdkwork-drive-object-runtime" }
+sdkwork-drive-security = { path = "crates/sdkwork-drive-security" }
+sdkwork-drive-storage-contract = { path = "crates/sdkwork-drive-storage-contract" }
+sdkwork-drive-storage-local = { path = "crates/sdkwork-drive-storage-local" }
+sdkwork-drive-sandbox-local = { path = "crates/sdkwork-drive-sandbox-local" }
+sdkwork-drive-storage-opendal = { path = "crates/sdkwork-drive-storage-opendal" }
+sdkwork-drive-storage-s3 = { path = "crates/sdkwork-drive-storage-s3" }
+sdkwork-drive-test-support = { path = "crates/sdkwork-drive-test-support" }
+sdkwork-drive-workspace-service = { path = "crates/sdkwork-drive-workspace-service" }
+sdkwork-drive-uploader-service = { path = "crates/sdkwork-drive-uploader-service" }
+sdkwork-drive-install-worker = { path = "crates/sdkwork-drive-install-worker" }
+sdkwork-api-drive-assembly = { path = "crates/sdkwork-api-drive-assembly" }
+sdkwork-api-drive-standalone-gateway = { path = "crates/sdkwork-api-drive-standalone-gateway" }
+sdkwork-routes-drive-open-api = { path = "crates/sdkwork-routes-drive-open-api" }
+sdkwork-routes-drive-internal-api = { path = "crates/sdkwork-routes-drive-internal-api" }
+sdkwork-routes-drive-app-api = { path = "crates/sdkwork-routes-drive-app-api" }
+sdkwork-routes-drive-backend-api = { path = "crates/sdkwork-routes-drive-backend-api" }
+sdkwork-routes-storage-backend-api = { path = "crates/sdkwork-routes-storage-backend-api" }
+
+# SDKWork database dependencies
+sdkwork-database-config = { path = "../sdkwork-database/crates/sdkwork-database-config" }
+sdkwork-database-lifecycle = { path = "../sdkwork-database/crates/sdkwork-database-lifecycle" }
+sdkwork-database-spi = { path = "../sdkwork-database/crates/sdkwork-database-spi" }
+sdkwork-database-sqlx = { path = "../sdkwork-database/crates/sdkwork-database-sqlx" }
+sdkwork-database-repository = { path = "../sdkwork-database/crates/sdkwork-database-repository" }
+sdkwork-database-id = { path = "../sdkwork-database/crates/sdkwork-database-id", package = "sdkwork-database-id" }
+sdkwork-utils-rust = { path = "../sdkwork-utils/packages/sdkwork-utils-rust" }
+
+# SDKWork web framework dependencies
+sdkwork-web-bootstrap = { path = "../sdkwork-web-framework/crates/sdkwork-web-bootstrap" }
+sdkwork-web-core = { path = "../sdkwork-web-framework/crates/sdkwork-web-core" }
+sdkwork-web-axum = { path = "../sdkwork-web-framework/crates/sdkwork-web-axum" }
+sdkwork-web-contract = { path = "../sdkwork-web-framework/crates/sdkwork-web-contract" }
+sdkwork-iam-web-adapter = { path = "../sdkwork-iam/crates/sdkwork-iam-web-adapter" }

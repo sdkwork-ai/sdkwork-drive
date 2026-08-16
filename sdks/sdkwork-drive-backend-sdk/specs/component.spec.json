@@ -1,0 +1,142 @@
+{
+  "schemaVersion": 1,
+  "kind": "sdkwork.component.spec",
+  "component": {
+    "name": "sdkwork-drive-backend-sdk",
+    "displayName": "SDKWork Drive Backend API SDK",
+    "version": "0.1.0",
+    "type": "sdk-family",
+    "root": ".",
+    "domain": "drive",
+    "capability": "drive",
+    "status": "standardized",
+    "languages": [
+      "typescript",
+      "rust",
+      "java",
+      "python",
+      "go"
+    ],
+    "generated": true,
+    "private": false,
+    "manifests": [
+      "sdk-manifest.json"
+    ]
+  },
+  "canonicalSpecs": [
+    {
+      "file": "API_SPEC.md",
+      "path": "../../../sdkwork-specs/API_SPEC.md",
+      "purpose": "HTTP/OpenAPI and generated SDK contract rules."
+    },
+    {
+      "file": "SDK_SPEC.md",
+      "path": "../../../sdkwork-specs/SDK_SPEC.md",
+      "purpose": "SDK generation, SDK dependency, and SDK integration rules."
+    },
+    {
+      "file": "SDK_WORKSPACE_GENERATION_SPEC.md",
+      "path": "../../../sdkwork-specs/SDK_WORKSPACE_GENERATION_SPEC.md",
+      "purpose": "SDK workspace, SDK family naming, API authority naming, and OpenAPI generation rules."
+    },
+    {
+      "file": "COMPONENT_SPEC.md",
+      "path": "../../../sdkwork-specs/COMPONENT_SPEC.md",
+      "purpose": "Component-local contract and discovery rules."
+    },
+    {
+      "file": "CODE_STYLE_SPEC.md",
+      "path": "../../../sdkwork-specs/CODE_STYLE_SPEC.md",
+      "purpose": "Authored source structure and generated code boundaries."
+    },
+    {
+      "file": "NAMING_SPEC.md",
+      "path": "../../../sdkwork-specs/NAMING_SPEC.md",
+      "purpose": "Canonical SDKWork naming rules."
+    },
+    {
+      "file": "MODULE_SPEC.md",
+      "path": "../../../sdkwork-specs/MODULE_SPEC.md",
+      "purpose": "Reusable module and package boundary rules."
+    },
+    {
+      "file": "TEST_SPEC.md",
+      "path": "../../../sdkwork-specs/TEST_SPEC.md",
+      "purpose": "Verification and contract testing expectations."
+    },
+    {
+      "file": "TYPESCRIPT_CODE_SPEC.md",
+      "path": "../../../sdkwork-specs/TYPESCRIPT_CODE_SPEC.md",
+      "purpose": "TypeScript and Node package rules."
+    },
+    {
+      "file": "RUST_CODE_SPEC.md",
+      "path": "../../../sdkwork-specs/RUST_CODE_SPEC.md",
+      "purpose": "Rust crate and module rules."
+    },
+    {
+      "file": "JAVA_CODE_SPEC.md",
+      "path": "../../../sdkwork-specs/JAVA_CODE_SPEC.md",
+      "purpose": "Java and Maven module rules."
+    }
+  ],
+  "contracts": {
+    "apiAuthority": {
+      "name": "sdkwork-drive.backend",
+      "prefix": "/backend/v3/api",
+      "authorityOpenApi": "../../apis/backend-api/drive/drive-backend-api.openapi.json",
+      "derivedOpenApi": [
+        "../../apis/backend-api/drive/drive-backend-api.openapi.json"
+      ],
+      "owner": "sdkwork-drive",
+      "standard": "../../../../sdkwork-specs/SDK_WORKSPACE_GENERATION_SPEC.md"
+    },
+    "publicExports": [],
+    "runtimeEntrypoints": [
+      "sdk-manifest.json"
+    ],
+    "sdkDependencies": [
+      {
+        "workspace": "sdkwork-iam-backend-sdk",
+        "role": "appbase-backend-management-capability",
+        "required": true,
+        "dependencyMode": "consumer-sdk",
+        "apiPrefix": "/backend/v3/api",
+        "apiAuthority": "sdkwork-iam-backend-api",
+        "generatedTransportImportPolicy": "forbidden",
+        "packageByLanguage": {
+          "typescript": "@sdkwork/iam-backend-sdk",
+          "rust": "sdkwork-iam-backend-sdk",
+          "java": "com.sdkwork:sdkwork-iam-backend-sdk",
+          "python": "sdkwork-iam-backend-sdk",
+          "go": "github.com/sdkwork/sdkwork-iam-backend-sdk"
+        }
+      }
+    ],
+    "sdkClients": [
+      "SdkworkDriveBackendClient"
+    ],
+    "events": [],
+    "configKeys": [
+      "sdk-manifest.json"
+    ],
+    "routeManifest": null,
+    "dependencyApiExports": [],
+    "dependencyApiSurfaces": []
+  },
+  "integration": {
+    "authority": "Root SDKWork specs remain authoritative. Local specs may extend but must not contradict them.",
+    "dependencyPolicy": "Appbase backend capabilities are consumed through declared dependency SDKs, not copied into generated drive transports.",
+    "sdkPolicy": "Generated SDK clients are injected through service/runtime boundaries; consumers must not create raw HTTP clients or manual auth headers.",
+    "languagePolicy": "Additional languages must use the same owner-only OpenAPI input and sdkDependencies."
+  },
+  "verification": {
+    "commands": [
+      "node sdks/test/verify-sdk-ownership-boundaries.test.mjs"
+    ]
+  },
+  "metadata": {
+    "managedBy": "sdk-ownership-standard",
+    "standardVersion": "2026-06-06"
+  }
+}

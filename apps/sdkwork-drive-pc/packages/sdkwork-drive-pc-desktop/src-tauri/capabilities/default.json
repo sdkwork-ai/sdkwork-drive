@@ -1,0 +1,27 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Least-privilege SDKWork Drive desktop renderer permissions.",
+  "windows": [
+    "main"
+  ],
+  "permissions": [
+    "core:default",
+    "allow-window-control",
+    "allow-local-filesystem-list",
+    "allow-local-filesystem-open",
+    "allow-local-upload-pick-files",
+    "allow-local-upload-describe-file",
+    "allow-local-upload-read-range",
+    "allow-local-upload-checksum-file",
+    "allow-local-download-save",
+    "allow-local-download-begin",
+    "allow-local-download-write-chunk",
+    "allow-local-download-finish",
+    "allow-local-download-abort",
+    "allow-write-secure-session-value",
+    "allow-remove-secure-session-value",
+    "allow-clear-secure-session-values",
+    "allow-read-secure-session-snapshot"
+  ]
+}

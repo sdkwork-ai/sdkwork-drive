@@ -1,0 +1,92 @@
+package generated
+
+type Operation struct {
+	Method string
+	Path   string
+}
+
+const (
+	SdkName         = "sdkwork-drive-app-sdk"
+	PackageName     = "sdkwork-drive-app-sdk-generated-go"
+	StandardProfile = "sdkwork-v3"
+	BaseURL         = "http://127.0.0.1:18080"
+	ApiPrefix       = "/app/v3/api"
+)
+
+var Operations = map[string]Operation{
+	"changes.list": {Method: "GET", Path: "/app/v3/api/drive/changes"},
+	"changes.startPageToken.get": {Method: "GET", Path: "/app/v3/api/drive/changes/start_page_token"},
+	"changes.watch": {Method: "POST", Path: "/app/v3/api/drive/changes/watch"},
+	"commentReplies.create": {Method: "POST", Path: "/app/v3/api/drive/nodes/{nodeId}/comments/{commentId}/replies"},
+	"commentReplies.delete": {Method: "DELETE", Path: "/app/v3/api/drive/nodes/{nodeId}/comments/{commentId}/replies/{replyId}"},
+	"commentReplies.get": {Method: "GET", Path: "/app/v3/api/drive/nodes/{nodeId}/comments/{commentId}/replies/{replyId}"},
+	"commentReplies.list": {Method: "GET", Path: "/app/v3/api/drive/nodes/{nodeId}/comments/{commentId}/replies"},
+	"commentReplies.update": {Method: "PATCH", Path: "/app/v3/api/drive/nodes/{nodeId}/comments/{commentId}/replies/{replyId}"},
+	"comments.create": {Method: "POST", Path: "/app/v3/api/drive/nodes/{nodeId}/comments"},
+	"comments.delete": {Method: "DELETE", Path: "/app/v3/api/drive/nodes/{nodeId}/comments/{commentId}"},
+	"comments.get": {Method: "GET", Path: "/app/v3/api/drive/nodes/{nodeId}/comments/{commentId}"},
+	"comments.list": {Method: "GET", Path: "/app/v3/api/drive/nodes/{nodeId}/comments"},
+	"comments.update": {Method: "PATCH", Path: "/app/v3/api/drive/nodes/{nodeId}/comments/{commentId}"},
+	"downloadPackages.create": {Method: "POST", Path: "/app/v3/api/drive/download_packages"},
+	"downloadPackages.downloadUrls.get": {Method: "GET", Path: "/app/v3/api/drive/download_packages/{packageId}/download_url"},
+	"downloadTokens.resolve": {Method: "GET", Path: "/app/v3/api/drive/download_tokens/{token}"},
+	"downloadUrls.create": {Method: "POST", Path: "/app/v3/api/drive/download_urls"},
+	"favorites.delete": {Method: "DELETE", Path: "/app/v3/api/drive/nodes/{nodeId}/favorite"},
+	"favorites.list": {Method: "GET", Path: "/app/v3/api/drive/favorites"},
+	"favorites.set": {Method: "PUT", Path: "/app/v3/api/drive/nodes/{nodeId}/favorite"},
+	"nodeLabels.apply": {Method: "PUT", Path: "/app/v3/api/drive/nodes/{nodeId}/labels/{labelId}"},
+	"nodeLabels.list": {Method: "GET", Path: "/app/v3/api/drive/nodes/{nodeId}/labels"},
+	"nodeLabels.remove": {Method: "DELETE", Path: "/app/v3/api/drive/nodes/{nodeId}/labels/{labelId}"},
+	"nodeProperties.delete": {Method: "DELETE", Path: "/app/v3/api/drive/nodes/{nodeId}/properties/{propertyKey}"},
+	"nodeProperties.list": {Method: "GET", Path: "/app/v3/api/drive/nodes/{nodeId}/properties"},
+	"nodeProperties.set": {Method: "PUT", Path: "/app/v3/api/drive/nodes/{nodeId}/properties/{propertyKey}"},
+	"nodes.capabilities.get": {Method: "GET", Path: "/app/v3/api/drive/nodes/{nodeId}/capabilities"},
+	"nodes.copy": {Method: "POST", Path: "/app/v3/api/drive/nodes/{nodeId}/copy"},
+	"nodes.delete": {Method: "DELETE", Path: "/app/v3/api/drive/nodes/{nodeId}"},
+	"nodes.downloadUrls.create": {Method: "GET", Path: "/app/v3/api/drive/nodes/{nodeId}/download_url"},
+	"nodes.files.create": {Method: "POST", Path: "/app/v3/api/drive/nodes/files"},
+	"nodes.folders.create": {Method: "POST", Path: "/app/v3/api/drive/nodes/folders"},
+	"nodes.get": {Method: "GET", Path: "/app/v3/api/drive/nodes/{nodeId}"},
+	"nodes.list": {Method: "GET", Path: "/app/v3/api/drive/spaces/{spaceId}/nodes"},
+	"nodes.move": {Method: "POST", Path: "/app/v3/api/drive/nodes/{nodeId}/move"},
+	"nodes.path.get": {Method: "GET", Path: "/app/v3/api/drive/nodes/{nodeId}/path"},
+	"nodes.shortcuts.create": {Method: "POST", Path: "/app/v3/api/drive/nodes/shortcuts"},
+	"nodes.update": {Method: "PATCH", Path: "/app/v3/api/drive/nodes/{nodeId}"},
+	"nodes.watch": {Method: "POST", Path: "/app/v3/api/drive/nodes/{nodeId}/watch"},
+	"permissions.create": {Method: "POST", Path: "/app/v3/api/drive/nodes/{nodeId}/permissions"},
+	"permissions.delete": {Method: "DELETE", Path: "/app/v3/api/drive/nodes/{nodeId}/permissions/{permissionId}"},
+	"permissions.effective.list": {Method: "GET", Path: "/app/v3/api/drive/nodes/{nodeId}/permissions/effective"},
+	"permissions.get": {Method: "GET", Path: "/app/v3/api/drive/nodes/{nodeId}/permissions/{permissionId}"},
+	"permissions.list": {Method: "GET", Path: "/app/v3/api/drive/nodes/{nodeId}/permissions"},
+	"permissions.update": {Method: "PATCH", Path: "/app/v3/api/drive/nodes/{nodeId}/permissions/{permissionId}"},
+	"recent.list": {Method: "GET", Path: "/app/v3/api/drive/recent"},
+	"search.query": {Method: "GET", Path: "/app/v3/api/drive/search"},
+	"sharedWithMe.list": {Method: "GET", Path: "/app/v3/api/drive/shared_with_me"},
+	"shareLinks.create": {Method: "POST", Path: "/app/v3/api/drive/nodes/{nodeId}/share_links"},
+	"shareLinks.claim": {Method: "POST", Path: "/app/v3/api/drive/share_links/{token}/claim"},
+	"shareLinks.get": {Method: "GET", Path: "/app/v3/api/drive/share_links/{shareLinkId}"},
+	"shareLinks.list": {Method: "GET", Path: "/app/v3/api/drive/nodes/{nodeId}/share_links"},
+	"shareLinks.revoke": {Method: "DELETE", Path: "/app/v3/api/drive/share_links/{shareLinkId}"},
+	"shareLinks.update": {Method: "PATCH", Path: "/app/v3/api/drive/share_links/{shareLinkId}"},
+	"spaces.create": {Method: "POST", Path: "/app/v3/api/drive/spaces"},
+	"spaces.delete": {Method: "DELETE", Path: "/app/v3/api/drive/spaces/{spaceId}"},
+	"spaces.get": {Method: "GET", Path: "/app/v3/api/drive/spaces/{spaceId}"},
+	"spaces.list": {Method: "GET", Path: "/app/v3/api/drive/spaces"},
+	"spaces.update": {Method: "PATCH", Path: "/app/v3/api/drive/spaces/{spaceId}"},
+	"trash.empty": {Method: "POST", Path: "/app/v3/api/drive/trash/empty"},
+	"trash.list": {Method: "GET", Path: "/app/v3/api/drive/trash"},
+	"trash.move": {Method: "POST", Path: "/app/v3/api/drive/nodes/{nodeId}/trash"},
+	"trash.restore": {Method: "POST", Path: "/app/v3/api/drive/trash/{nodeId}/restore"},
+	"uploadSessions.abort": {Method: "POST", Path: "/app/v3/api/drive/upload_sessions/{uploadSessionId}/abort"},
+	"uploadSessions.complete": {Method: "POST", Path: "/app/v3/api/drive/upload_sessions/{uploadSessionId}/complete"},
+	"uploadSessions.create": {Method: "POST", Path: "/app/v3/api/drive/upload_sessions"},
+	"uploadSessions.get": {Method: "GET", Path: "/app/v3/api/drive/upload_sessions/{uploadSessionId}"},
+	"uploadSessions.parts.presign": {Method: "PUT", Path: "/app/v3/api/drive/upload_sessions/{uploadSessionId}/parts/{partNo}"},
+	"versions.delete": {Method: "DELETE", Path: "/app/v3/api/drive/nodes/{nodeId}/versions/{versionId}"},
+	"versions.get": {Method: "GET", Path: "/app/v3/api/drive/nodes/{nodeId}/versions/{versionId}"},
+	"versions.list": {Method: "GET", Path: "/app/v3/api/drive/nodes/{nodeId}/versions"},
+	"versions.restore": {Method: "POST", Path: "/app/v3/api/drive/nodes/{nodeId}/versions/{versionId}/restore"},
+	"watchChannels.get": {Method: "GET", Path: "/app/v3/api/drive/watch_channels/{channelId}"},
+	"watchChannels.list": {Method: "GET", Path: "/app/v3/api/drive/watch_channels"},
+	"watchChannels.stop": {Method: "POST", Path: "/app/v3/api/drive/watch_channels/{channelId}/stop"},
+}

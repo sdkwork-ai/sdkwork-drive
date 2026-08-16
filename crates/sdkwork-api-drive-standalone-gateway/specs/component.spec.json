@@ -1,0 +1,134 @@
+{
+  "schemaVersion": 1,
+  "kind": "sdkwork.component.spec",
+  "component": {
+    "name": "sdkwork-api-drive-standalone-gateway",
+    "displayName": "SDKWork Drive Standalone Gateway",
+    "version": "0.1.0",
+    "type": "rust-api-standalone-gateway",
+    "root": ".",
+    "domain": "application",
+    "capability": "api-gateway",
+    "surface": "gateway-api",
+    "languages": ["rust"],
+    "generated": false,
+    "private": true,
+    "manifests": ["Cargo.toml"]
+  },
+  "canonicalSpecs": [
+    {
+      "file": "COMPONENT_SPEC.md",
+      "path": "../../../sdkwork-specs/COMPONENT_SPEC.md",
+      "purpose": "Component-local contract and public port rules."
+    },
+    {
+      "file": "CODE_STYLE_SPEC.md",
+      "path": "../../../sdkwork-specs/CODE_STYLE_SPEC.md",
+      "purpose": "Focused authored source and process-host boundaries."
+    },
+    {
+      "file": "NAMING_SPEC.md",
+      "path": "../../../sdkwork-specs/NAMING_SPEC.md",
+      "purpose": "Canonical standalone gateway naming."
+    },
+    {
+      "file": "RUST_CODE_SPEC.md",
+      "path": "../../../sdkwork-specs/RUST_CODE_SPEC.md",
+      "purpose": "Rust runtime-gateway dependency direction."
+    },
+    {
+      "file": "API_ASSEMBLY_SPEC.md",
+      "path": "../../../sdkwork-specs/API_ASSEMBLY_SPEC.md",
+      "purpose": "Complete owner and dependency contribution composition."
+    },
+    {
+      "file": "APPLICATION_GATEWAY_SPEC.md",
+      "path": "../../../sdkwork-specs/APPLICATION_GATEWAY_SPEC.md",
+      "purpose": "Thin standalone host and single-ingress rules."
+    },
+    {
+      "file": "WEB_FRAMEWORK_SPEC.md",
+      "path": "../../../sdkwork-specs/WEB_FRAMEWORK_SPEC.md",
+      "purpose": "One process-wide framework pipeline and request context."
+    },
+    {
+      "file": "APP_RUNTIME_TOPOLOGY_SPEC.md",
+      "path": "../../../sdkwork-specs/APP_RUNTIME_TOPOLOGY_SPEC.md",
+      "purpose": "Standalone profile and public-ingress binding."
+    },
+    {
+      "file": "DATABASE_SPEC_PROCESS_SHARED_POOL.md",
+      "path": "../../../sdkwork-specs/DATABASE_SPEC_PROCESS_SHARED_POOL.md",
+      "purpose": "One process-shared PostgreSQL pool for Drive and IAM."
+    },
+    {
+      "file": "TEST_SPEC.md",
+      "path": "../../../sdkwork-specs/TEST_SPEC.md",
+      "purpose": "Gateway composition and runtime parity evidence."
+    }
+  ],
+  "contracts": {
+    "layerRole": "runtime-gateway",
+    "publicExports": [],
+    "providedPorts": [],
+    "requiredPorts": [
+      {
+        "name": "driveApiAssembly",
+        "export": "sdkwork_api_drive_assembly::assemble_api_router_from_env",
+        "provider": "sdkwork-api-drive-assembly"
+      },
+      {
+        "name": "iamAppApiContribution",
+        "export": "sdkwork_api_iam_assembly::assemble_app_api_contribution_with_pool",
+        "provider": "sdkwork-api-iam-assembly"
+      }
+    ],
+    "runtimeEntrypoints": [
+      "src/main.rs",
+      "Cargo.toml[[bin]].sdkwork-api-drive-standalone-gateway"
+    ],
+    "routeManifest": null,
+    "sdkClients": [],
+    "sdkDependencies": [],
+    "permissionComposition": {},
+    "dependencyApiExports": [],
+    "dependencyApiSurfaces": [
+      {
+        "workspace": "sdkwork-iam",
+        "sdkFamily": "sdkwork-iam-app-sdk",
+        "apiAuthority": "sdkwork-iam-app-api",
+        "surface": "app-api",
+        "apiPrefixes": [
+          "/app/v3/api/auth",
+          "/app/v3/api/iam",
+          "/app/v3/api/oauth",
+          "/app/v3/api/system/iam"
+        ],
+        "runtimeMode": "same-origin",
+        "sameOriginAllowed": true,
+        "cargoDependency": "sdkwork-api-iam-assembly",
+        "embeddedExecutableExport": "sdkwork_api_iam_assembly::assemble_app_api_contribution_with_pool",
+        "profileCoverage": ["standalone"],
+        "coverageEvidence": ["src/main.rs"]
+      }
+    ],
+    "events": [],
+    "configKeys": [
+      "SDKWORK_DATABASE_URL",
+      "SDKWORK_DATABASE_SCHEMA",
+      "SDKWORK_DATABASE_MAX_CONNECTIONS",
+      "SDKWORK_DRIVE_CONFIG_FILE",
+      "SDKWORK_DRIVE_STANDALONE_GATEWAY_CONFIG",
+      "SDKWORK_DRIVE_STANDALONE_GATEWAY_ENVIRONMENT",
+      "SDKWORK_ENVIRONMENT",
+      "SDKWORK_CORS_ALLOWED_ORIGINS"
+    ]
+  },
+  "verification": {
+    "commands": [
+      "cargo check -p sdkwork-api-drive-standalone-gateway",
+      "node ../sdkwork-specs/tools/audit-gateway-alignment-repo.mjs --root . --strict",
+      "node ../sdkwork-specs/tools/check-process-shared-database-pool.mjs --root ."
+    ]
+  }
+}

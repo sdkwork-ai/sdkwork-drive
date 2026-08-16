@@ -1,0 +1,36 @@
+[package]
+name = "sdkwork-drive-workspace-service"
+version.workspace = true
+edition.workspace = true
+
+[features]
+default = ["postgres"]
+postgres = ["sdkwork-database-repository/postgres"]
+sqlite = ["postgres", "sdkwork-database-repository/sqlite"]
+
+[dependencies]
+sdkwork-drive-database-host.workspace = true
+sdkwork-database-config.workspace = true
+sdkwork-database-sqlx.workspace = true
+sdkwork-database-repository.workspace = true
+sdkwork-database-id.workspace = true
+async-trait.workspace = true
+sdkwork-drive-config.workspace = true
+sdkwork-drive-contract.workspace = true
+sdkwork-drive-security.workspace = true
+sdkwork-drive-observability.workspace = true
+sdkwork-drive-storage-contract.workspace = true
+sdkwork-utils-rust.workspace = true
+sqlx.workspace = true
+tokio.workspace = true
+tracing.workspace = true
+serde = { workspace = true }
+serde_json = { workspace = true }
+chrono = { version = "0.4", features = ["serde"] }
+reqwest.workspace = true
+uuid = { version = "1", features = ["v4"] }
+
+[dev-dependencies]
+sdkwork-drive-test-support.workspace = true
+sdkwork-drive-storage-local.workspace = true
+tempfile.workspace = true

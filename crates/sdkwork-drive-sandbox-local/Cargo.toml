@@ -1,0 +1,20 @@
+[package]
+name = "sdkwork-drive-sandbox-local"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+async-trait.workspace = true
+cap-std.workspace = true
+sdkwork-drive-workspace-service.workspace = true
+sdkwork-utils-rust.workspace = true
+thiserror = "2"
+tokio.workspace = true
+tracing.workspace = true
+uuid = { version = "1", features = ["v4"] }
+
+[dev-dependencies]
+sdkwork-drive-test-support.workspace = true
+sdkwork-drive-config.workspace = true
+sqlx.workspace = true
+tempfile.workspace = true

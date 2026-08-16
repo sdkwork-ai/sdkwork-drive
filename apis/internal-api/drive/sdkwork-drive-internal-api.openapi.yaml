@@ -1,0 +1,828 @@
+openapi: 3.1.2
+info:
+  title: SDKWork Drive Internal API
+  version: 0.1.0
+  description: >-
+    Application-ingress provider API for root-qualified Drive publication resources.
+    Object-store coordinates, credentials, and presigned URLs are never exposed.
+servers:
+  - url: "{applicationPublicIngressOrigin}"
+    description: Drive application public ingress.
+    variables:
+      applicationPublicIngressOrigin:
+        default: http://127.0.0.1:18080
+tags:
+  - name: driveInternalPublishing
+    description: Trusted Drive root registration, resource resolution, and content streaming.
+paths:
+  /internal/v3/api/drive/root_scope_subscriptions:
+    post:
+      tags: [driveInternalPublishing]
+      summary: Register a Knowledgebase sources/raw root scope
+      operationId: rootScopeSubscriptions.create
+      x-sdkwork-owner: sdkwork-drive
+      x-sdkwork-api-authority: sdkwork-drive-internal-api
+      x-sdkwork-source-route-crate: sdkwork-routes-drive-internal-api
+      x-sdkwork-api-surface: internal-api
+      x-sdkwork-auth-mode: ingress-token
+      x-sdkwork-request-context: WebRequestContext
+      x-sdkwork-tenant-scope: current
+      x-sdkwork-rate-limit-tier: internal
+      security:
+        - ApiKey: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateRootScopeSubscriptionRequest"
+      responses:
+        "200":
+          description: Existing registration replayed without retargeting.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RootScopeSubscriptionResponse"
+        "201":
+          description: Root scope subscription created.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RootScopeSubscriptionResponse"
+        default:
+          $ref: "#/components/responses/Problem"
+  /internal/v3/api/drive/root_scope_subscriptions/{subscriptionUuid}:
+    get:
+      tags: [driveInternalPublishing]
+      summary: Retrieve a root scope subscription
+      operationId: rootScopeSubscriptions.retrieve
+      x-sdkwork-owner: sdkwork-drive
+      x-sdkwork-api-authority: sdkwork-drive-internal-api
+      x-sdkwork-source-route-crate: sdkwork-routes-drive-internal-api
+      x-sdkwork-api-surface: internal-api
+      x-sdkwork-auth-mode: ingress-token
+      x-sdkwork-request-context: WebRequestContext
+      x-sdkwork-tenant-scope: current
+      x-sdkwork-rate-limit-tier: internal
+      security:
+        - ApiKey: []
+      parameters:
+        - $ref: "#/components/parameters/SubscriptionUuid"
+      responses:
+        "200":
+          description: Root scope subscription.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RootScopeSubscriptionResponse"
+        default:
+          $ref: "#/components/responses/Problem"
+  /internal/v3/api/drive/root_scope_subscriptions/{subscriptionUuid}/event_delivery:
+    put:
+      tags: [driveInternalPublishing]
+      summary: Ensure the signed Knowledgebase event delivery channel for a root scope
+      description: >-
+        Creates or replaces the deterministic Drive-to-Knowledgebase webhook channel for a
+        root scope. The verification token is write-only and is never returned or logged.
+        Drive stores only its SHA-256 derived signing key and signs the exact event body bytes.
+      operationId: rootScopeEventDeliveries.replace
+      x-sdkwork-owner: sdkwork-drive
+      x-sdkwork-api-authority: sdkwork-drive-internal-api
+      x-sdkwork-source-route-crate: sdkwork-routes-drive-internal-api
+      x-sdkwork-api-surface: internal-api
+      x-sdkwork-auth-mode: ingress-token
+      x-sdkwork-request-context: WebRequestContext
+      x-sdkwork-tenant-scope: current
+      x-sdkwork-rate-limit-tier: internal
+      x-sdkwork-idempotent: true
+      security:
+        - ApiKey: []
+      parameters:
+        - $ref: "#/components/parameters/SubscriptionUuid"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EnsureRootScopeEventDeliveryRequest"
+      responses:
+        "200":
+          description: Existing delivery channel reconciled.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RootScopeEventDeliveryResponse"
+        "201":
+          description: Delivery channel created.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RootScopeEventDeliveryResponse"
+        default:
+          $ref: "#/components/responses/Problem"
+  /internal/v3/api/drive/website_roots/{websiteRootUuid}:
+    get:
+      tags: [driveInternalPublishing]
+      summary: Retrieve a website delivery root
+      description: >-
+        Returns the tenant-scoped WebsiteRoot lifecycle, generation, selection mode, and
+        delivery capabilities required by trusted website runtimes. Drive node identities,
+        selected folder identities, object-store coordinates, credentials, and presigned URLs
+        never cross this boundary.
+      operationId: websiteRoots.retrieve
+      x-sdkwork-owner: sdkwork-drive
+      x-sdkwork-api-authority: sdkwork-drive-internal-api
+      x-sdkwork-source-route-crate: sdkwork-routes-drive-internal-api
+      x-sdkwork-api-surface: internal-api
+      x-sdkwork-auth-mode: ingress-token
+      x-sdkwork-request-context: WebRequestContext
+      x-sdkwork-tenant-scope: current
+      x-sdkwork-rate-limit-tier: internal
+      security:
+        - ApiKey: []
+      parameters:
+        - $ref: "#/components/parameters/WebsiteRootUuid"
+      responses:
+        "200":
+          description: Tenant-scoped website delivery root.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebsiteRootResponse"
+        default:
+          $ref: "#/components/responses/Problem"
+  /internal/v3/api/drive/website_roots/{websiteRootUuid}/event_deliveries/{channelId}:
+    put:
+      tags: [driveInternalPublishing]
+      summary: Ensure a signed WebsiteRoot event delivery channel
+      description: >-
+        Creates or reconciles one root-scoped Drive-to-Web-Server webhook channel for a Web Node.
+        The channel receives only typed events that affect this stable WebsiteRoot UUID. The
+        verification token is write-only; Drive stores only its SHA-256 derived signing key.
+      operationId: websiteRootEventDeliveries.replace
+      x-sdkwork-owner: sdkwork-drive
+      x-sdkwork-api-authority: sdkwork-drive-internal-api
+      x-sdkwork-source-route-crate: sdkwork-routes-drive-internal-api
+      x-sdkwork-api-surface: internal-api
+      x-sdkwork-auth-mode: ingress-token
+      x-sdkwork-request-context: WebRequestContext
+      x-sdkwork-tenant-scope: current
+      x-sdkwork-rate-limit-tier: internal
+      x-sdkwork-idempotent: true
+      security:
+        - ApiKey: []
+      parameters:
+        - $ref: "#/components/parameters/WebsiteRootUuid"
+        - $ref: "#/components/parameters/ChannelId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EnsureWebsiteRootEventDeliveryRequest"
+      responses:
+        "200":
+          description: Existing WebsiteRoot delivery channel reconciled.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebsiteRootEventDeliveryResponse"
+        "201":
+          description: WebsiteRoot delivery channel created.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebsiteRootEventDeliveryResponse"
+        default:
+          $ref: "#/components/responses/Problem"
+  /internal/v3/api/drive/resource_resolutions:
+    post:
+      tags: [driveInternalPublishing]
+      summary: Resolve a root-qualified Drive resource
+      description: >-
+        Resolves an eligible file below a WebsiteRoot or RootScopeSubscription. The response
+        contains logical Drive identity and cache validators but no object-store coordinates.
+      operationId: driveResources.resolve
+      x-sdkwork-owner: sdkwork-drive
+      x-sdkwork-api-authority: sdkwork-drive-internal-api
+      x-sdkwork-source-route-crate: sdkwork-routes-drive-internal-api
+      x-sdkwork-api-surface: internal-api
+      x-sdkwork-auth-mode: ingress-token
+      x-sdkwork-request-context: WebRequestContext
+      x-sdkwork-tenant-scope: current
+      x-sdkwork-rate-limit-tier: internal
+      security:
+        - ApiKey: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ResolveDriveResourceRequest"
+      responses:
+        "200":
+          description: Eligible root-qualified Drive resource.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DriveResourceResolutionResponse"
+        default:
+          $ref: "#/components/responses/Problem"
+  /internal/v3/api/drive/node_versions/{nodeVersionId}/content:
+    get:
+      tags: [driveInternalPublishing]
+      summary: Stream root-qualified immutable Drive content
+      description: >-
+        Streams one logical node version only after re-resolving its scope and path binding.
+        Supports one RFC 9110 byte range and ETag/date preconditions. Bucket, object key,
+        credentials, and presigned URLs never cross this API boundary.
+      operationId: driveResourceContent.retrieve
+      x-sdkwork-owner: sdkwork-drive
+      x-sdkwork-api-authority: sdkwork-drive-internal-api
+      x-sdkwork-source-route-crate: sdkwork-routes-drive-internal-api
+      x-sdkwork-api-surface: internal-api
+      x-sdkwork-auth-mode: ingress-token
+      x-sdkwork-request-context: WebRequestContext
+      x-sdkwork-tenant-scope: current
+      x-sdkwork-rate-limit-tier: internal
+      security:
+        - ApiKey: []
+      parameters:
+        - $ref: "#/components/parameters/NodeVersionId"
+        - $ref: "#/components/parameters/ScopeType"
+        - $ref: "#/components/parameters/ScopeUuid"
+        - $ref: "#/components/parameters/RelativePath"
+        - $ref: "#/components/parameters/PinnedGeneration"
+        - $ref: "#/components/parameters/Range"
+        - $ref: "#/components/parameters/IfMatch"
+        - $ref: "#/components/parameters/IfNoneMatch"
+        - $ref: "#/components/parameters/IfRange"
+        - $ref: "#/components/parameters/IfModifiedSince"
+        - $ref: "#/components/parameters/IfUnmodifiedSince"
+      responses:
+        "200":
+          description: Complete immutable content.
+          headers:
+            Accept-Ranges:
+              schema: { type: string, const: bytes }
+            ETag:
+              schema: { type: string }
+            Last-Modified:
+              schema: { type: string }
+            Content-Length:
+              schema: { type: string, pattern: "^[0-9]+$" }
+            X-Content-Type-Options:
+              schema: { type: string, const: nosniff }
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        "206":
+          description: One satisfiable byte range.
+          headers:
+            Accept-Ranges:
+              schema: { type: string, const: bytes }
+            Content-Range:
+              schema: { type: string }
+            ETag:
+              schema: { type: string }
+            Last-Modified:
+              schema: { type: string }
+            Content-Length:
+              schema: { type: string, pattern: "^[0-9]+$" }
+            X-Content-Type-Options:
+              schema: { type: string, const: nosniff }
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        "304":
+          description: Current representation matches the conditional validator.
+          headers:
+            ETag:
+              schema: { type: string }
+            Last-Modified:
+              schema: { type: string }
+        "412":
+          description: A representation precondition failed.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetail"
+        "416":
+          description: Requested range is not satisfiable.
+          headers:
+            Content-Range:
+              schema: { type: string }
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetail"
+        default:
+          $ref: "#/components/responses/Problem"
+components:
+  securitySchemes:
+    ApiKey:
+      type: apiKey
+      in: header
+      name: X-API-Key
+      description: Application ingress token. Bearer and X-SDKWork-Access-Token aliases are accepted by the runtime.
+  parameters:
+    WebsiteRootUuid:
+      name: websiteRootUuid
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    SubscriptionUuid:
+      name: subscriptionUuid
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    ChannelId:
+      name: channelId
+      in: path
+      required: true
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 64
+        pattern: "^[A-Za-z0-9._:-]+$"
+    NodeVersionId:
+      name: nodeVersionId
+      in: path
+      required: true
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 64
+    ScopeType:
+      name: scopeType
+      in: query
+      required: true
+      schema:
+        $ref: "#/components/schemas/DriveResourceScopeType"
+    ScopeUuid:
+      name: scopeUuid
+      in: query
+      required: true
+      schema:
+        type: string
+        format: uuid
+    RelativePath:
+      name: relativePath
+      in: query
+      required: true
+      allowReserved: false
+      schema:
+        $ref: "#/components/schemas/NormalizedRelativePath"
+    PinnedGeneration:
+      name: pinnedGeneration
+      in: query
+      required: false
+      schema:
+        $ref: "#/components/schemas/PositiveInt64String"
+    Range:
+      name: Range
+      in: header
+      required: false
+      schema:
+        type: string
+        pattern: "^bytes=[0-9]*-[0-9]*$"
+    IfMatch:
+      name: If-Match
+      in: header
+      required: false
+      schema: { type: string }
+    IfNoneMatch:
+      name: If-None-Match
+      in: header
+      required: false
+      schema: { type: string }
+    IfRange:
+      name: If-Range
+      in: header
+      required: false
+      schema: { type: string }
+    IfModifiedSince:
+      name: If-Modified-Since
+      in: header
+      required: false
+      schema: { type: string }
+    IfUnmodifiedSince:
+      name: If-Unmodified-Since
+      in: header
+      required: false
+      schema: { type: string }
+  responses:
+    Problem:
+      description: RFC 9457 problem response.
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/ProblemDetail"
+  schemas:
+    CreateRootScopeSubscriptionRequest:
+      type: object
+      additionalProperties: false
+      required: [spaceId, knowledgeBaseId]
+      properties:
+        spaceId:
+          type: string
+          minLength: 1
+          maxLength: 64
+        knowledgeBaseId:
+          type: string
+          minLength: 1
+          maxLength: 128
+    EnsureRootScopeEventDeliveryRequest:
+      type: object
+      additionalProperties: false
+      required: [address, verificationToken, expirationEpochMs]
+      properties:
+        address:
+          type: string
+          format: uri
+          pattern: "^https://.+"
+          minLength: 8
+          maxLength: 2048
+        verificationToken:
+          type: string
+          format: password
+          writeOnly: true
+          minLength: 32
+          maxLength: 1024
+          pattern: "^[A-Za-z0-9_-]+$"
+        expirationEpochMs:
+          $ref: "#/components/schemas/PositiveInt64String"
+    EnsureWebsiteRootEventDeliveryRequest:
+      type: object
+      additionalProperties: false
+      required: [address, verificationToken, expirationEpochMs]
+      properties:
+        address:
+          type: string
+          format: uri
+          pattern: "^https://.+"
+          minLength: 8
+          maxLength: 2048
+        verificationToken:
+          type: string
+          format: password
+          writeOnly: true
+          minLength: 32
+          maxLength: 1024
+          pattern: "^[A-Za-z0-9_-]+$"
+        expirationEpochMs:
+          $ref: "#/components/schemas/PositiveInt64String"
+    ResolveDriveResourceRequest:
+      type: object
+      additionalProperties: false
+      required: [scopeType, scopeUuid, relativePath]
+      properties:
+        scopeType:
+          $ref: "#/components/schemas/DriveResourceScopeType"
+        scopeUuid:
+          type: string
+          format: uuid
+        relativePath:
+          $ref: "#/components/schemas/NormalizedRelativePath"
+        pinnedGeneration:
+          $ref: "#/components/schemas/PositiveInt64String"
+        pinnedNodeVersionId:
+          type: string
+          minLength: 1
+          maxLength: 64
+    DriveResourceScopeType:
+      type: string
+      enum: [WEBSITE_ROOT, ROOT_SCOPE_SUBSCRIPTION]
+    NormalizedRelativePath:
+      type: string
+      minLength: 1
+      maxLength: 4096
+      pattern: "^(?!/)(?!.*(?:^|/)\\.{1,2}(?:/|$))(?!.*//)(?!.*\\\\).*[^/]$"
+    PositiveInt64String:
+      type: string
+      format: int64
+      pattern: "^[1-9][0-9]*$"
+      x-sdkwork-int64-string: true
+    NonNegativeInt64String:
+      type: string
+      format: int64
+      pattern: "^[0-9]+$"
+      x-sdkwork-int64-string: true
+    RootScopeSubscription:
+      type: object
+      additionalProperties: false
+      required:
+        - uuid
+        - spaceId
+        - consumerKind
+        - consumerResourceId
+        - rootNodeId
+        - scopeStatus
+        - version
+        - createdAt
+        - updatedAt
+      properties:
+        uuid: { type: string, format: uuid }
+        spaceId: { type: string, minLength: 1, maxLength: 64 }
+        consumerKind: { type: string, const: KNOWLEDGEBASE_RAW }
+        consumerResourceId: { type: string, minLength: 1, maxLength: 128 }
+        rootNodeId: { type: string, minLength: 1, maxLength: 64 }
+        scopeStatus:
+          type: string
+          enum: [ACTIVE, SUSPENDED, REVOKED]
+        version:
+          $ref: "#/components/schemas/PositiveInt64String"
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    WebsiteRoot:
+      type: object
+      additionalProperties: false
+      required:
+        - uuid
+        - spaceId
+        - sourceRootMode
+        - contentMode
+        - activeGeneration
+        - rootStatus
+        - capabilities
+        - version
+        - updatedAt
+      properties:
+        uuid: { type: string, format: uuid }
+        spaceId: { type: string, minLength: 1, maxLength: 64 }
+        sourceRootMode:
+          type: string
+          enum: [SPACE_ROOT, FOLDER]
+        contentMode:
+          type: string
+          enum: [LIVE_TREE, ATOMIC_GENERATION]
+        activeGeneration:
+          $ref: "#/components/schemas/PositiveInt64String"
+        rootStatus:
+          type: string
+          enum: [ACTIVE, SUSPENDED, INVALID, ARCHIVED]
+        capabilities:
+          type: array
+          minItems: 3
+          maxItems: 3
+          uniqueItems: true
+          items:
+            type: string
+            enum: [STATIC_CONTENT, BYTE_RANGE, CONDITIONAL_REQUESTS]
+        version:
+          $ref: "#/components/schemas/PositiveInt64String"
+        updatedAt: { type: string, format: date-time }
+    DriveResourceResolution:
+      type: object
+      additionalProperties: false
+      required:
+        - scopeType
+        - scopeUuid
+        - scopeGeneration
+        - normalizedRelativePath
+        - resourceType
+        - nodeId
+        - logicalNodeVersionId
+        - versionNo
+        - checksumSha256Hex
+        - etag
+        - contentType
+        - contentLength
+        - lastModified
+        - scopeStatus
+        - nodeStatus
+        - eligibility
+      properties:
+        scopeType:
+          $ref: "#/components/schemas/DriveResourceScopeType"
+        scopeUuid: { type: string, format: uuid }
+        scopeGeneration:
+          $ref: "#/components/schemas/PositiveInt64String"
+        normalizedRelativePath:
+          $ref: "#/components/schemas/NormalizedRelativePath"
+        resourceType: { type: string, const: FILE }
+        nodeId: { type: string, minLength: 1, maxLength: 64 }
+        logicalNodeVersionId: { type: string, minLength: 1, maxLength: 64 }
+        versionNo:
+          $ref: "#/components/schemas/PositiveInt64String"
+        checksumSha256Hex:
+          type: string
+          pattern: "^sha256:[0-9a-f]{64}$"
+        etag:
+          type: string
+          pattern: '^"sha256:[0-9a-f]{64}"$'
+        contentType:
+          type: string
+          minLength: 3
+          maxLength: 255
+        contentLength:
+          $ref: "#/components/schemas/NonNegativeInt64String"
+        lastModified: { type: string, format: date-time }
+        scopeStatus: { type: string, const: ACTIVE }
+        nodeStatus: { type: string, const: ACTIVE }
+        eligibility: { type: string, const: ELIGIBLE }
+    SdkWorkApiResponse:
+      type: object
+      additionalProperties: false
+      required: [code, data, traceId]
+      properties:
+        code:
+          type: integer
+          format: int32
+          const: 0
+        data: {}
+        traceId:
+          type: string
+          format: uuid
+    RootScopeSubscriptionResourceData:
+      type: object
+      additionalProperties: false
+      required: [item]
+      properties:
+        item:
+          $ref: "#/components/schemas/RootScopeSubscription"
+    RootScopeSubscriptionResponse:
+      allOf:
+        - $ref: "#/components/schemas/SdkWorkApiResponse"
+        - type: object
+          required: [data]
+          properties:
+            data:
+              $ref: "#/components/schemas/RootScopeSubscriptionResourceData"
+    WebsiteRootResourceData:
+      type: object
+      additionalProperties: false
+      required: [item]
+      properties:
+        item:
+          $ref: "#/components/schemas/WebsiteRoot"
+    WebsiteRootResponse:
+      allOf:
+        - $ref: "#/components/schemas/SdkWorkApiResponse"
+        - type: object
+          required: [data]
+          properties:
+            data:
+              $ref: "#/components/schemas/WebsiteRootResourceData"
+    RootScopeEventDelivery:
+      type: object
+      additionalProperties: false
+      required:
+        - channelId
+        - subscriptionUuid
+        - address
+        - expirationEpochMs
+        - lifecycleStatus
+        - version
+        - createdAt
+        - updatedAt
+      properties:
+        channelId:
+          type: string
+          minLength: 1
+          maxLength: 64
+        subscriptionUuid:
+          type: string
+          format: uuid
+        address:
+          type: string
+          format: uri
+        expirationEpochMs:
+          $ref: "#/components/schemas/PositiveInt64String"
+        lifecycleStatus:
+          type: string
+          enum: [ACTIVE, STOPPED, EXPIRED]
+        version:
+          $ref: "#/components/schemas/PositiveInt64String"
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    RootScopeEventDeliveryResourceData:
+      type: object
+      additionalProperties: false
+      required: [item]
+      properties:
+        item:
+          $ref: "#/components/schemas/RootScopeEventDelivery"
+    RootScopeEventDeliveryResponse:
+      allOf:
+        - $ref: "#/components/schemas/SdkWorkApiResponse"
+        - type: object
+          required: [data]
+          properties:
+            data:
+              $ref: "#/components/schemas/RootScopeEventDeliveryResourceData"
+    WebsiteRootEventDelivery:
+      type: object
+      additionalProperties: false
+      required:
+        - channelId
+        - websiteRootUuid
+        - address
+        - expirationEpochMs
+        - lifecycleStatus
+        - version
+        - createdAt
+        - updatedAt
+      properties:
+        channelId:
+          type: string
+          minLength: 1
+          maxLength: 64
+        websiteRootUuid:
+          type: string
+          format: uuid
+        address:
+          type: string
+          format: uri
+        expirationEpochMs:
+          $ref: "#/components/schemas/PositiveInt64String"
+        lifecycleStatus:
+          type: string
+          enum: [ACTIVE, STOPPED, EXPIRED]
+        version:
+          $ref: "#/components/schemas/PositiveInt64String"
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    WebsiteRootEventDeliveryResourceData:
+      type: object
+      additionalProperties: false
+      required: [item]
+      properties:
+        item:
+          $ref: "#/components/schemas/WebsiteRootEventDelivery"
+    WebsiteRootEventDeliveryResponse:
+      allOf:
+        - $ref: "#/components/schemas/SdkWorkApiResponse"
+        - type: object
+          required: [data]
+          properties:
+            data:
+              $ref: "#/components/schemas/WebsiteRootEventDeliveryResourceData"
+    DriveResourceResolutionResourceData:
+      type: object
+      additionalProperties: false
+      required: [item]
+      properties:
+        item:
+          $ref: "#/components/schemas/DriveResourceResolution"
+    DriveResourceResolutionResponse:
+      allOf:
+        - $ref: "#/components/schemas/SdkWorkApiResponse"
+        - type: object
+          required: [data]
+          properties:
+            data:
+              $ref: "#/components/schemas/DriveResourceResolutionResourceData"
+    SdkWorkPlatformErrorCode:
+      type: integer
+      format: int32
+      minimum: 40001
+      maximum: 79999
+    FieldError:
+      type: object
+      additionalProperties: false
+      required: [field, message]
+      properties:
+        field: { type: string }
+        message: { type: string }
+        code:
+          type: integer
+          format: int32
+          minimum: 40011
+          maximum: 40099
+    ProblemDetail:
+      type: object
+      additionalProperties: true
+      required: [type, title, status, code, traceId]
+      properties:
+        type: { type: string, format: uri-reference }
+        title: { type: string }
+        status:
+          type: integer
+          minimum: 100
+          maximum: 599
+        detail: { type: string }
+        instance: { type: string }
+        code:
+          $ref: "#/components/schemas/SdkWorkPlatformErrorCode"
+        traceId: { type: string, format: uuid }
+        errors:
+          type: array
+          items:
+            $ref: "#/components/schemas/FieldError"

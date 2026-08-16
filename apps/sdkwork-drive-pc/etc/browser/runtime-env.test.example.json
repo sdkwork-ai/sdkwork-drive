@@ -1,0 +1,37 @@
+{
+  "environment": "test",
+  "configProfile": "test",
+  "buildMode": "test",
+  "deploymentMode": "test",
+  "runtimeTarget": "test-runner",
+  "appKey": "sdkwork-drive-pc",
+  "appApiBaseUrl": "https://api-test.sdkwork.com/app/v3/api",
+  "backendApiBaseUrl": "https://api-test.sdkwork.com/backend/v3/api",
+  "sdkBaseUrls": {
+    "appApiBaseUrl": "https://api-test.sdkwork.com/app/v3/api",
+    "backendApiBaseUrl": "https://api-test.sdkwork.com/backend/v3/api",
+    "dependencySdkBaseUrls": {
+      "sdkwork-iam-app-sdk": {
+        "appApiBaseUrl": "https://api-test.sdkwork.com/app/v3/api"
+      },
+      "sdkwork-drive-app-sdk": {
+        "appApiBaseUrl": "https://api-test.sdkwork.com/app/v3/api"
+      },
+      "sdkwork-drive-admin-storage-sdk": {
+        "backendApiBaseUrl": "https://api-test.sdkwork.com/backend/v3/api"
+      }
+    }
+  },
+  "auth": {
+    "tokenManagerMode": "test",
+    "tokenStorage": "memory",
+    "accessTokenHeader": "Access-Token",
+    "authTokenHeader": "Authorization",
+    "refreshEnabled": false
+  },
+  "publicRuntime": {
+    "runtimeEnvFile": "/runtime-env.json",
+    "appApiBaseUrl": "https://api-test.sdkwork.com/app/v3/api",
+    "backendApiBaseUrl": "https://api-test.sdkwork.com/backend/v3/api"
+  }
+}

@@ -1,0 +1,31 @@
+{
+  "name": "@sdkwork/drive-pc-sandbox-contracts",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Framework-neutral PC contracts for Drive sandbox browsing and selection.",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "import": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "files": [
+    "src",
+    "README.md"
+  ],
+  "scripts": {
+    "typecheck": "tsc --noEmit --project tsconfig.json"
+  },
+  "devDependencies": {
+    "typescript": "catalog:"
+  },
+  "sdkwork": {
+    "architecture": "pc",
+    "capability": "sandbox-contracts",
+    "domain": "drive",
+    "packageType": "contracts-package",
+    "status": "standard"
+  }
+}

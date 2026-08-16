@@ -1,0 +1,139 @@
+{
+  "workspace": "sdkwork-drive-app-sdk",
+  "sdkOwner": "sdkwork-drive",
+  "apiAuthority": "sdkwork-drive-app-api",
+  "authoritySpec": "../../apis/app-api/drive/drive-app-api.openapi.json",
+  "generationInputSpec": "../../target/drive-sdk-generator-input/sdkwork-drive-app-sdk/drive-app-api.openapi.json",
+  "derivedSpecs": {
+    "default": "../../target/drive-sdk-generator-input/sdkwork-drive-app-sdk/drive-app-api.openapi.json"
+  },
+  "discoverySurface": {
+    "sdkTarget": "app",
+    "apiPrefix": "/app/v3/api",
+    "generatedProtocols": [
+      "http-openapi"
+    ],
+    "manualTransports": []
+  },
+  "languages": [
+    {
+      "language": "typescript",
+      "workspace": "sdkwork-drive-app-sdk-typescript",
+      "generationState": "declared",
+      "releaseState": "not_published",
+      "generatedPath": "sdkwork-drive-app-sdk-typescript/generated/server-openapi",
+      "manifestPath": "sdkwork-drive-app-sdk-typescript/generated/server-openapi/package.json",
+      "name": "@sdkwork-internal/sdkwork-drive-app-sdk-generated",
+      "version": "0.1.0",
+      "description": "Generator-owned TypeScript transport SDK for sdkwork-drive-app-sdk."
+    },
+    {
+      "language": "rust",
+      "workspace": "sdkwork-drive-app-sdk-rust",
+      "generationState": "declared",
+      "releaseState": "not_published",
+      "generatedPath": "sdkwork-drive-app-sdk-rust/generated/server-openapi",
+      "manifestPath": "sdkwork-drive-app-sdk-rust/generated/server-openapi/Cargo.toml",
+      "name": "sdkwork-drive-app-sdk-generated",
+      "version": "0.1.0",
+      "description": "Generator-owned Rust transport SDK for sdkwork-drive-app-sdk."
+    },
+    {
+      "language": "java",
+      "workspace": "sdkwork-drive-app-sdk-java",
+      "generationState": "declared",
+      "releaseState": "not_published",
+      "generatedPath": "sdkwork-drive-app-sdk-java/generated/server-openapi",
+      "manifestPath": "sdkwork-drive-app-sdk-java/generated/server-openapi/pom.xml",
+      "name": "com.sdkwork:sdkwork-drive-app-sdk-generated",
+      "version": "0.1.0",
+      "description": "Generator-owned Java transport SDK for sdkwork-drive-app-sdk."
+    },
+    {
+      "language": "python",
+      "workspace": "sdkwork-drive-app-sdk-python",
+      "generationState": "declared",
+      "releaseState": "not_published",
+      "generatedPath": "sdkwork-drive-app-sdk-python/generated/server-openapi",
+      "manifestPath": "sdkwork-drive-app-sdk-python/generated/server-openapi/pyproject.toml",
+      "name": "sdkwork-drive-app-sdk-generated",
+      "version": "0.1.0",
+      "description": "Generator-owned Python transport SDK for sdkwork-drive-app-sdk."
+    },
+    {
+      "language": "go",
+      "workspace": "sdkwork-drive-app-sdk-go",
+      "generationState": "declared",
+      "releaseState": "not_published",
+      "generatedPath": "sdkwork-drive-app-sdk-go/generated/server-openapi",
+      "manifestPath": "sdkwork-drive-app-sdk-go/generated/server-openapi/go.mod",
+      "name": "github.com/sdkwork/sdkwork-drive-app-sdk-generated",
+      "version": "0.1.0",
+      "description": "Generator-owned Go transport SDK for sdkwork-drive-app-sdk."
+    }
+  ],
+  "sdkDependencies": [
+    {
+      "workspace": "sdkwork-iam-app-sdk",
+      "role": "appbase-app-capability",
+      "required": true,
+      "dependencyMode": "consumer-sdk",
+      "apiPrefix": "/app/v3/api",
+      "apiAuthority": "sdkwork-iam-app-api",
+      "generatedTransportImportPolicy": "forbidden",
+      "packageByLanguage": {
+        "typescript": "@sdkwork/iam-app-sdk",
+        "rust": "sdkwork-iam-app-sdk",
+        "java": "com.sdkwork:sdkwork-iam-app-sdk",
+        "python": "sdkwork-iam-app-sdk",
+        "go": "github.com/sdkwork/sdkwork-iam-app-sdk"
+      }
+    }
+  ],
+  "schemaVersion": 1,
+  "sdkName": "sdkwork-drive-app-sdk",
+  "sdkFamily": "sdkwork-drive-app-sdk",
+  "sdkType": "app",
+  "apiPrefix": "/app/v3/api",
+  "generatedPackages": {
+    "typescript": {
+      "language": "typescript",
+      "packageName": "sdkwork-drive-app-sdk-generated-typescript",
+      "generatedOutput": "sdkwork-drive-app-sdk-typescript/generated/server-openapi"
+    },
+    "rust": {
+      "language": "rust",
+      "packageName": "sdkwork-drive-app-sdk-generated-rust",
+      "generatedOutput": "sdkwork-drive-app-sdk-rust/generated/server-openapi"
+    },
+    "java": {
+      "language": "java",
+      "packageName": "sdkwork-drive-app-sdk-generated-java",
+      "generatedOutput": "sdkwork-drive-app-sdk-java/generated/server-openapi"
+    },
+    "python": {
+      "language": "python",
+      "packageName": "sdkwork-drive-app-sdk-generated-python",
+      "generatedOutput": "sdkwork-drive-app-sdk-python/generated/server-openapi"
+    },
+    "go": {
+      "language": "go",
+      "packageName": "sdkwork-drive-app-sdk-generated-go",
+      "generatedOutput": "sdkwork-drive-app-sdk-go/generated/server-openapi"
+    }
+  },
+  "generatorName": "sdkwork-sdk-generator",
+  "baseUrl": "http://127.0.0.1:18080",
+  "standardProfile": "sdkwork-v3",
+  "fixedSdkVersion": "0.1.0",
+  "ownerOnlyOperationCount": 112,
+  "managedBy": "tools/drive_sdk_generator_runner.mjs",
+  "packageName": "@sdkwork/drive-app-sdk",
+  "transportPackageName": "sdkwork-drive-app-sdk-generated-typescript",
+  "typescript": {
+    "composedRoot": "sdkwork-drive-app-sdk-typescript",
+    "composedEntry": "sdkwork-drive-app-sdk-typescript/src/index.ts",
+    "transportRoot": "sdkwork-drive-app-sdk-typescript/generated/server-openapi",
+    "transportEntry": "sdkwork-drive-app-sdk-typescript/generated/server-openapi/src/index.ts"
+  }
+}

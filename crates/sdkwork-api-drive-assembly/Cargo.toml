@@ -1,0 +1,28 @@
+[package]
+name = "sdkwork-api-drive-assembly"
+edition.workspace = true
+version.workspace = true
+description = "Generated API assembly for sdkwork-drive application HTTP plane."
+
+[lib]
+name = "sdkwork_api_drive_assembly"
+path = "src/lib.rs"
+
+[dependencies]
+axum.workspace = true
+tokio.workspace = true
+sdkwork-web-bootstrap.workspace = true
+sqlx.workspace = true
+sdkwork-database-sqlx.workspace = true
+sdkwork-drive-http = { workspace = true, features = ["redis-rate-limit"] }
+sdkwork-drive-config.workspace = true
+sdkwork-drive-security.workspace = true
+sdkwork-drive-workspace-service.workspace = true
+sdkwork-web-contract.workspace = true
+sdkwork-web-core.workspace = true
+serde_json.workspace = true
+sdkwork-routes-drive-app-api.workspace = true
+sdkwork-routes-drive-backend-api.workspace = true
+sdkwork-routes-drive-internal-api.workspace = true
+sdkwork-routes-drive-open-api.workspace = true
+sdkwork-routes-storage-backend-api.workspace = true

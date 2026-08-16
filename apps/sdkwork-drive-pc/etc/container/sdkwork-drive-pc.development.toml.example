@@ -1,0 +1,25 @@
+[runtime]
+environment = "development"
+config_profile = "dev"
+build_mode = "development"
+deployment_mode = "container"
+runtime_target = "container"
+app_key = "sdkwork-drive-pc"
+
+[server]
+bind = "0.0.0.0:18080"
+external_scheme = "http"
+trust_forwarded_headers = false
+
+[database]
+engine = "postgresql"
+host = "postgres"
+port = 5432
+database = "sdkwork_ai_dev"
+username = "sdkwork_ai_dev"
+password_file = "/run/secrets/sdkwork-drive-pc/database-password"
+ssl_mode = "disable"
+max_connections = 32
+
+[redis]
+enabled = false

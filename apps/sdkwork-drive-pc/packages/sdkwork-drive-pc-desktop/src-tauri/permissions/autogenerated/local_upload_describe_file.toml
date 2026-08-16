@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-local-upload-describe-file"
+description = "Enables the local_upload_describe_file command without any pre-configured scope."
+commands.allow = ["local_upload_describe_file"]
+
+[[permission]]
+identifier = "deny-local-upload-describe-file"
+description = "Denies the local_upload_describe_file command without any pre-configured scope."
+commands.deny = ["local_upload_describe_file"]

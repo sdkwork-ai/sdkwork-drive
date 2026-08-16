@@ -1,0 +1,15 @@
+mode = "standalone"
+
+[service]
+name = "sdkwork-drive-standalone-gateway"
+environment = "production"
+
+[server]
+bind = "0.0.0.0:3900"
+
+[cors]
+allowAnyOrigin = false
+allowedOrigins = [
+  "https://api.sdkwork.com",
+  "https://apps.sdkwork.com",
+]

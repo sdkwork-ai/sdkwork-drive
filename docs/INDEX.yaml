@@ -1,0 +1,58 @@
+schemaVersion: 1
+kind: sdkwork.docs.index
+repository: sdkwork-drive
+canon:
+  prd: docs/product/prd/PRD.md
+  techArchitecture: docs/architecture/tech/TECH_ARCHITECTURE.md
+entries:
+  - id: REQ-2026-0001
+    path: docs/product/requirements/REQ-2026-0001-production-readiness.md
+    kind: requirement
+  - id: REQ-2026-0002
+    path: docs/product/requirements/REQ-2026-0002-production-security-alignment.md
+    kind: requirement
+  - id: REQ-2026-0003
+    path: docs/product/requirements/REQ-2026-0003-pre-launch-debt-cleanup.md
+    kind: requirement
+  - id: REQ-2026-0004
+    path: docs/product/requirements/REQ-2026-0004-website-space-directory-publishing.md
+    kind: requirement
+    status: ready
+  - id: pre-launch-checklist
+    path: docs/guides/operator/pre-launch-checklist.md
+    kind: guide
+  - id: drive-production-operations
+    path: docs/runbooks/drive-production-operations.md
+    kind: runbook
+  - id: drive-audit-investigation
+    path: docs/runbooks/drive-audit-investigation.md
+    kind: runbook
+  - id: drive-backup-disaster-recovery
+    path: docs/runbooks/drive-backup-disaster-recovery.md
+    kind: runbook
+  - id: releases
+    path: docs/releases/README.md
+    kind: release
+  - id: release-v0.1.0
+    path: docs/releases/RELEASE-v0.1.0.md
+    kind: release
+  - id: changelogs
+    path: docs/changelogs/README.md
+    kind: changelog
+  - id: adr-backend-personal-session-rejection
+    path: docs/architecture/decisions/ADR-20260625-backend-personal-session-rejection.md
+    kind: adr
+  - id: adr-http-error-sanitization
+    path: docs/architecture/decisions/ADR-20260625-http-error-sanitization.md
+    kind: adr
+  - id: adr-app-api-route-modularization
+    path: docs/architecture/decisions/ADR-20260625-app-api-route-modularization.md
+    kind: adr
+  - id: ADR-20260721-website-space-directory-resource
+    path: docs/architecture/decisions/ADR-20260721-website-space-directory-resource.md
+    kind: adr
+    status: proposed
+  - id: plan-commercial-ga
+    path: docs/engineering/plans/PLAN-2026-0625-commercial-ga.md
+    kind: plan
+domains: []

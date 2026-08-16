@@ -1,0 +1,557 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sdkwork-drive-app-api
+  labels:
+    app.kubernetes.io/name: sdkwork-drive
+    app.kubernetes.io/component: app-api
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: sdkwork-drive
+      app.kubernetes.io/component: app-api
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: sdkwork-drive
+        app.kubernetes.io/component: app-api
+    spec:
+      containers:
+        - name: app-api
+          # Replace REPLACE_WITH_RELEASE_DIGEST with the immutable digest from release evidence.
+          image: registry.sdkwork.com/apps/sdkwork-drive/app-api@sha256:REPLACE_WITH_RELEASE_DIGEST
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 18080
+          env:
+            - name: SDKWORK_DRIVE_APP_API_BIND
+              value: "0.0.0.0:18080"
+            - name: SDKWORK_DRIVE_RUNTIME_PROFILE
+              value: production
+            - name: SDKWORK_DRIVE_DEPLOYMENT_PROFILE
+              value: cloud
+            - name: SDKWORK_DRIVE_RUNTIME_TARGET
+              value: server
+            - name: SDKWORK_DRIVE_DOMAIN_OUTBOX_EMBEDDED_DISPATCH
+              value: "false"
+            - name: SDKWORK_DRIVE_RATE_LIMIT_TRUST_PROXY
+              value: "true"
+            - name: SDKWORK_DRIVE_RATE_LIMIT_BACKEND
+              value: redis
+            - name: SDKWORK_DRIVE_RATE_LIMIT_REDIS_URL
+              valueFrom:
+                secretKeyRef:
+                  name: sdkwork-drive-rate-limit
+                  key: SDKWORK_DRIVE_RATE_LIMIT_REDIS_URL
+            - name: SDKWORK_DRIVE_RATE_LIMIT_FAIL_CLOSED
+              value: "true"
+            - name: SDKWORK_DRIVE_UPLOAD_CONTENT_POLICY_MODE
+              value: enforce
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: http://otel-collector.observability.svc.cluster.local:4318/v1/traces
+            - name: OTEL_SERVICE_NAME
+              value: sdkwork-drive-app-api
+            - name: SDKWORK_DRIVE_APP_API_RATE_LIMIT_WINDOW_SECONDS
+              value: "60"
+            - name: SDKWORK_DRIVE_APP_API_RATE_LIMIT_MAX_REQUESTS
+              value: "600"
+          envFrom:
+            - secretRef:
+                name: sdkwork-drive-database
+            - secretRef:
+                name: sdkwork-drive-iam
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              cpu: "2"
+              memory: 2Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: sdkwork-drive-app-api
+  labels:
+    app.kubernetes.io/name: sdkwork-drive
+    app.kubernetes.io/component: app-api
+spec:
+  selector:
+    app.kubernetes.io/name: sdkwork-drive
+    app.kubernetes.io/component: app-api
+  ports:
+    - name: http
+      port: 18080
+      targetPort: http
+  type: ClusterIP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sdkwork-drive-backend-api
+  labels:
+    app.kubernetes.io/name: sdkwork-drive
+    app.kubernetes.io/component: backend-api
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: sdkwork-drive
+      app.kubernetes.io/component: backend-api
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: sdkwork-drive
+        app.kubernetes.io/component: backend-api
+    spec:
+      containers:
+        - name: backend-api
+          image: registry.sdkwork.com/apps/sdkwork-drive/backend-api@sha256:REPLACE_WITH_RELEASE_DIGEST
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 18081
+          env:
+            - name: SDKWORK_DRIVE_BACKEND_API_BIND
+              value: "0.0.0.0:18081"
+            - name: SDKWORK_DRIVE_RUNTIME_PROFILE
+              value: production
+            - name: SDKWORK_DRIVE_DEPLOYMENT_PROFILE
+              value: cloud
+            - name: SDKWORK_DRIVE_RATE_LIMIT_TRUST_PROXY
+              value: "true"
+            - name: SDKWORK_DRIVE_RATE_LIMIT_BACKEND
+              value: redis
+            - name: SDKWORK_DRIVE_RATE_LIMIT_REDIS_URL
+              valueFrom:
+                secretKeyRef:
+                  name: sdkwork-drive-rate-limit
+                  key: SDKWORK_DRIVE_RATE_LIMIT_REDIS_URL
+            - name: SDKWORK_DRIVE_RATE_LIMIT_FAIL_CLOSED
+              value: "true"
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: http://otel-collector.observability.svc.cluster.local:4318/v1/traces
+            - name: OTEL_SERVICE_NAME
+              value: sdkwork-drive-backend-api
+            - name: SDKWORK_DRIVE_BACKEND_API_RATE_LIMIT_WINDOW_SECONDS
+              value: "60"
+            - name: SDKWORK_DRIVE_BACKEND_API_RATE_LIMIT_MAX_REQUESTS
+              value: "300"
+          envFrom:
+            - secretRef:
+                name: sdkwork-drive-database
+            - secretRef:
+                name: sdkwork-drive-iam
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 200m
+              memory: 512Mi
+            limits:
+              cpu: "2"
+              memory: 2Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: sdkwork-drive-backend-api
+  labels:
+    app.kubernetes.io/name: sdkwork-drive
+    app.kubernetes.io/component: backend-api
+spec:
+  selector:
+    app.kubernetes.io/name: sdkwork-drive
+    app.kubernetes.io/component: backend-api
+  ports:
+    - name: http
+      port: 18081
+      targetPort: http
+  type: ClusterIP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sdkwork-drive-open-api
+  labels:
+    app.kubernetes.io/name: sdkwork-drive
+    app.kubernetes.io/component: open-api
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: sdkwork-drive
+      app.kubernetes.io/component: open-api
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: sdkwork-drive
+        app.kubernetes.io/component: open-api
+    spec:
+      containers:
+        - name: open-api
+          image: registry.sdkwork.com/apps/sdkwork-drive/open-api@sha256:REPLACE_WITH_RELEASE_DIGEST
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 18082
+          env:
+            - name: SDKWORK_DRIVE_OPEN_API_BIND
+              value: "0.0.0.0:18082"
+            - name: SDKWORK_DRIVE_RUNTIME_PROFILE
+              value: production
+            - name: SDKWORK_DRIVE_RATE_LIMIT_BACKEND
+              value: redis
+            - name: SDKWORK_DRIVE_RATE_LIMIT_REDIS_URL
+              valueFrom:
+                secretKeyRef:
+                  name: sdkwork-drive-rate-limit
+                  key: SDKWORK_DRIVE_RATE_LIMIT_REDIS_URL
+            - name: SDKWORK_DRIVE_RATE_LIMIT_FAIL_CLOSED
+              value: "true"
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: http://otel-collector.observability.svc.cluster.local:4318/v1/traces
+            - name: OTEL_SERVICE_NAME
+              value: sdkwork-drive-open-api
+            - name: SDKWORK_DRIVE_OPEN_API_RATE_LIMIT_WINDOW_SECONDS
+              value: "60"
+            - name: SDKWORK_DRIVE_OPEN_API_RATE_LIMIT_MAX_REQUESTS
+              value: "120"
+          envFrom:
+            - secretRef:
+                name: sdkwork-drive-database
+            - secretRef:
+                name: sdkwork-drive-iam
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 200m
+              memory: 512Mi
+            limits:
+              cpu: "2"
+              memory: 2Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: sdkwork-drive-open-api
+  labels:
+    app.kubernetes.io/name: sdkwork-drive
+    app.kubernetes.io/component: open-api
+spec:
+  selector:
+    app.kubernetes.io/name: sdkwork-drive
+    app.kubernetes.io/component: open-api
+  ports:
+    - name: http
+      port: 18082
+      targetPort: http
+  type: ClusterIP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sdkwork-drive-admin-storage-api
+  labels:
+    app.kubernetes.io/name: sdkwork-drive
+    app.kubernetes.io/component: admin-storage-api
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: sdkwork-drive
+      app.kubernetes.io/component: admin-storage-api
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: sdkwork-drive
+        app.kubernetes.io/component: admin-storage-api
+    spec:
+      containers:
+        - name: admin-storage-api
+          image: registry.sdkwork.com/apps/sdkwork-drive/admin-storage-api@sha256:REPLACE_WITH_RELEASE_DIGEST
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 18083
+          env:
+            - name: SDKWORK_DRIVE_ADMIN_STORAGE_API_BIND
+              value: "0.0.0.0:18083"
+            - name: SDKWORK_DRIVE_RUNTIME_PROFILE
+              value: production
+            - name: SDKWORK_DRIVE_DEPLOYMENT_PROFILE
+              value: cloud
+            - name: SDKWORK_DRIVE_RATE_LIMIT_TRUST_PROXY
+              value: "true"
+            - name: SDKWORK_DRIVE_RATE_LIMIT_BACKEND
+              value: redis
+            - name: SDKWORK_DRIVE_RATE_LIMIT_REDIS_URL
+              valueFrom:
+                secretKeyRef:
+                  name: sdkwork-drive-rate-limit
+                  key: SDKWORK_DRIVE_RATE_LIMIT_REDIS_URL
+            - name: SDKWORK_DRIVE_RATE_LIMIT_FAIL_CLOSED
+              value: "true"
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: http://otel-collector.observability.svc.cluster.local:4318/v1/traces
+            - name: OTEL_SERVICE_NAME
+              value: sdkwork-drive-admin-storage-api
+            - name: SDKWORK_DRIVE_ADMIN_STORAGE_API_RATE_LIMIT_WINDOW_SECONDS
+              value: "60"
+            - name: SDKWORK_DRIVE_ADMIN_STORAGE_API_RATE_LIMIT_MAX_REQUESTS
+              value: "300"
+          envFrom:
+            - secretRef:
+                name: sdkwork-drive-database
+            - secretRef:
+                name: sdkwork-drive-iam
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 200m
+              memory: 512Mi
+            limits:
+              cpu: "1"
+              memory: 1Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: sdkwork-drive-admin-storage-api
+  labels:
+    app.kubernetes.io/name: sdkwork-drive
+    app.kubernetes.io/component: admin-storage-api
+spec:
+  selector:
+    app.kubernetes.io/name: sdkwork-drive
+    app.kubernetes.io/component: admin-storage-api
+  ports:
+    - name: http
+      port: 18083
+      targetPort: http
+  type: ClusterIP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sdkwork-drive-install-worker
+  labels:
+    app.kubernetes.io/name: sdkwork-drive
+    app.kubernetes.io/component: install-worker
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: sdkwork-drive
+      app.kubernetes.io/component: install-worker
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: sdkwork-drive
+        app.kubernetes.io/component: install-worker
+    spec:
+      containers:
+        - name: install-worker
+          image: registry.sdkwork.com/apps/sdkwork-drive/install-worker@sha256:REPLACE_WITH_RELEASE_DIGEST
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 18084
+          env:
+            - name: SDKWORK_DRIVE_RUNTIME_PROFILE
+              value: production
+            - name: SDKWORK_DRIVE_INSTALL_WORKER_HEALTH_BIND
+              value: "127.0.0.1:18084"
+            - name: SDKWORK_DRIVE_WORKER_OUTBOX_DISPATCH_INTERVAL_SECONDS
+              value: "30"
+            - name: SDKWORK_DRIVE_KNOWLEDGEBASE_EVENT_CALLBACK_URL
+              value: https://knowledgebase.sdkwork.com/internal/v3/api/knowledgebase/drive_events
+            - name: SDKWORK_DRIVE_KNOWLEDGEBASE_EVENT_INGRESS_TOKEN_FILE
+              value: /run/secrets/sdkwork/knowledgebase-event-ingress-token
+          envFrom:
+            - secretRef:
+                name: sdkwork-drive-database
+          volumeMounts:
+            - name: knowledgebase-event-ingress-token
+              mountPath: /run/secrets/sdkwork/knowledgebase-event-ingress-token
+              subPath: ingress-token
+              readOnly: true
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: "1"
+              memory: 1Gi
+      volumes:
+        - name: knowledgebase-event-ingress-token
+          secret:
+            secretName: sdkwork-drive-knowledgebase-events
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sdkwork-api-drive-standalone-gateway
+  labels:
+    app.kubernetes.io/name: sdkwork-drive
+    app.kubernetes.io/component: standalone-gateway
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: sdkwork-drive
+      app.kubernetes.io/component: standalone-gateway
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: sdkwork-drive
+        app.kubernetes.io/component: standalone-gateway
+    spec:
+      containers:
+        - name: standalone-gateway
+          image: registry.sdkwork.com/apps/sdkwork-drive/standalone-gateway@sha256:REPLACE_WITH_RELEASE_DIGEST
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 3900
+          env:
+            - name: SDKWORK_DRIVE_STANDALONE_GATEWAY_ENVIRONMENT
+              value: production
+            - name: SDKWORK_DRIVE_STANDALONE_GATEWAY_CONFIG
+              value: /etc/sdkwork-drive/sdkwork-api-drive-standalone-gateway.production.toml
+            - name: SDKWORK_DRIVE_DOMAIN_OUTBOX_EMBEDDED_DISPATCH
+              value: "false"
+            - name: SDKWORK_DRIVE_RATE_LIMIT_TRUST_PROXY
+              value: "true"
+            - name: SDKWORK_DRIVE_ROOT_SCOPE_EVENT_CALLER_APP_ID
+              value: knowledgebase
+          envFrom:
+            - secretRef:
+                name: sdkwork-drive-database
+            - secretRef:
+                name: sdkwork-drive-iam
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 20
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              cpu: "2"
+              memory: 2Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: sdkwork-api-drive-standalone-gateway
+  labels:
+    app.kubernetes.io/name: sdkwork-drive
+    app.kubernetes.io/component: standalone-gateway
+spec:
+  selector:
+    app.kubernetes.io/name: sdkwork-drive
+    app.kubernetes.io/component: standalone-gateway
+  ports:
+    - name: http
+      port: 3900
+      targetPort: http
+  type: ClusterIP
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: sdkwork-drive
+  labels:
+    app.kubernetes.io/name: sdkwork-drive
+  annotations:
+    nginx.ingress.kubernetes.io/limit-rps: "120"
+    nginx.ingress.kubernetes.io/limit-burst-multiplier: "2"
+    nginx.ingress.kubernetes.io/proxy-body-size: "100m"
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: drive.sdkwork.com
+      http:
+        paths:
+          - path: /open/v3/api/drive/share_links
+            pathType: Prefix
+            backend:
+              service:
+                name: sdkwork-drive-open-api
+                port:
+                  number: 18082
+          - path: /app/v3/api/drive
+            pathType: Prefix
+            backend:
+              service:
+                name: sdkwork-drive-app-api
+                port:
+                  number: 18080

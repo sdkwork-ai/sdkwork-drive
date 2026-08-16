@@ -1,0 +1,67 @@
+{
+  "schemaVersion": 1,
+  "kind": "sdkwork.component.spec",
+  "component": {
+    "name": "sdkwork-drive-internal-sdk",
+    "displayName": "SDKWork Drive Internal API SDK",
+    "version": "0.1.0",
+    "type": "sdk-family",
+    "root": ".",
+    "domain": "drive",
+    "capability": "internal-publishing-provider",
+    "status": "standardized",
+    "languages": ["typescript", "rust", "java", "python", "go"],
+    "generated": true,
+    "private": true,
+    "manifests": ["sdk-manifest.json"],
+    "surface": "internal-api"
+  },
+  "canonicalSpecs": [
+    {
+      "file": "INTERNAL_API_SPEC.md",
+      "path": "../../../sdkwork-specs/INTERNAL_API_SPEC.md",
+      "purpose": "Internal API authority, SDK family, ingress, and auth rules."
+    },
+    {
+      "file": "SDK_SPEC.md",
+      "path": "../../../sdkwork-specs/SDK_SPEC.md",
+      "purpose": "Generator-first SDK ownership and consumer integration."
+    },
+    {
+      "file": "SDK_WORKSPACE_GENERATION_SPEC.md",
+      "path": "../../../sdkwork-specs/SDK_WORKSPACE_GENERATION_SPEC.md",
+      "purpose": "Application-root SDK family generation structure."
+    },
+    {
+      "file": "API_SPEC.md",
+      "path": "../../../sdkwork-specs/API_SPEC.md",
+      "purpose": "OpenAPI and SDKWork v3 wire contracts."
+    }
+  ],
+  "contracts": {
+    "apiAuthority": {
+      "name": "sdkwork-drive-internal-api",
+      "prefix": "/internal/v3/api",
+      "authorityOpenApi": "openapi/sdkwork-drive-internal-api.openapi.yaml",
+      "derivedOpenApi": ["openapi/sdkwork-drive-internal-api.sdkgen.yaml"],
+      "owner": "sdkwork-drive",
+      "surface": "internal"
+    },
+    "publicExports": [],
+    "runtimeEntrypoints": ["sdk-manifest.json"],
+    "sdkDependencies": [],
+    "sdkClients": ["SdkworkDriveInternalClient"],
+    "events": [],
+    "configKeys": ["sdk-manifest.json"],
+    "routeManifest": null,
+    "dependencyApiExports": [],
+    "dependencyApiSurfaces": []
+  },
+  "integration": {
+    "transportPolicy": "Generated transport only; raw HTTP and manual ingress-token headers are forbidden.",
+    "securityPolicy": "Ingress tokens are injected by the configured SDK auth provider and must never be persisted or logged."
+  },
+  "verification": {
+    "commands": ["node --test tests/sdk-family-smoke.test.mjs"]
+  }
+}

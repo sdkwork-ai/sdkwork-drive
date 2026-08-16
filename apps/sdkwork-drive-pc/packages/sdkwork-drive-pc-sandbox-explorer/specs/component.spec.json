@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 1,
+  "kind": "sdkwork.component.spec",
+  "component": {
+    "name": "@sdkwork/drive-pc-sandbox-explorer",
+    "displayName": "Drive Sandbox Explorer",
+    "version": "0.1.0",
+    "type": "react-package",
+    "root": ".",
+    "domain": "drive",
+    "capability": "sandbox-explorer",
+    "surface": "app",
+    "languages": ["typescript", "react"],
+    "generated": false,
+    "private": true,
+    "manifests": ["package.json"]
+  },
+  "canonicalSpecs": [
+    {"file":"COMPONENT_SPEC.md","path":"../../../../../sdkwork-specs/COMPONENT_SPEC.md","purpose":"Component-local contract and discovery rules."},
+    {"file":"CODE_STYLE_SPEC.md","path":"../../../../../sdkwork-specs/CODE_STYLE_SPEC.md","purpose":"Authored source structure and generated code boundaries."},
+    {"file":"NAMING_SPEC.md","path":"../../../../../sdkwork-specs/NAMING_SPEC.md","purpose":"Canonical SDKWork naming rules."},
+    {"file":"MODULE_SPEC.md","path":"../../../../../sdkwork-specs/MODULE_SPEC.md","purpose":"Reusable module boundary."},
+    {"file":"TEST_SPEC.md","path":"../../../../../sdkwork-specs/TEST_SPEC.md","purpose":"Frontend interaction verification requirements."},
+    {"file":"APP_PC_REACT_UI_SPEC.md","path":"../../../../../sdkwork-specs/APP_PC_REACT_UI_SPEC.md","purpose":"PC React embed capability rules."},
+    {"file":"APP_PC_ARCHITECTURE_SPEC.md","path":"../../../../../sdkwork-specs/APP_PC_ARCHITECTURE_SPEC.md","purpose":"PC browser and desktop application boundary rules."},
+    {"file":"FRONTEND_CODE_SPEC.md","path":"../../../../../sdkwork-specs/FRONTEND_CODE_SPEC.md","purpose":"Frontend implementation boundaries."},
+    {"file":"FRONTEND_SPEC.md","path":"../../../../../sdkwork-specs/FRONTEND_SPEC.md","purpose":"Frontend service, state, accessibility, and SDK boundary rules."},
+    {"file":"UI_ARCHITECTURE_SPEC.md","path":"../../../../../sdkwork-specs/UI_ARCHITECTURE_SPEC.md","purpose":"PC React UI architecture selection rules."},
+    {"file":"TYPESCRIPT_CODE_SPEC.md","path":"../../../../../sdkwork-specs/TYPESCRIPT_CODE_SPEC.md","purpose":"TypeScript public export rules."}
+  ],
+  "contracts": {
+    "layerRole": "frontend-feature",
+    "publicExports": ["."],
+    "providedPorts": [
+      "SandboxExplorerView",
+      "SandboxDirectoryPickerView",
+      "SandboxDirectoryPickerProvider",
+      "SandboxDirectoryPickerController",
+      "configureDriveSandboxExplorerRuntime"
+    ],
+    "requiredPorts": ["SandboxExplorerPort"],
+    "sdkClients": [],
+    "sdkDependencies": [],
+    "dependencyApiExports": [],
+    "dependencyApiSurfaces": [],
+    "events": [],
+    "configKeys": []
+  },
+  "verification": {"commands": ["pnpm --filter @sdkwork/drive-pc-sandbox-explorer typecheck"]}
+}

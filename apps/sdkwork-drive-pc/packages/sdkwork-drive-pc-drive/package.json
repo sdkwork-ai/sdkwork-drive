@@ -1,0 +1,38 @@
+{
+  "name": "sdkwork-drive-pc-drive",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "import": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit --project ../../tsconfig.json"
+  },
+  "dependencies": {
+    "sdkwork-drive-pc-commons": "workspace:*",
+    "sdkwork-drive-pc-core": "workspace:*",
+    "sdkwork-drive-pc-file": "workspace:*",
+    "sdkwork-drive-pc-types": "workspace:*"
+  },
+  "peerDependencies": {
+    "i18next": "^26.0.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "react-i18next": "^17.0.0"
+  },
+  "sdkwork": {
+    "workspace": "sdkwork-drive",
+    "product": "sdkwork-drive",
+    "architecture": "pc",
+    "domain": "drive",
+    "capability": "drive",
+    "status": "ready"
+  }
+}

@@ -1,0 +1,15 @@
+[package]
+name = "sdkwork-drive-storage-local"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+async-trait.workspace = true
+sdkwork-drive-storage-contract.workspace = true
+sdkwork-utils-rust.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+tokio.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true

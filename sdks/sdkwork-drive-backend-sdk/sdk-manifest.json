@@ -1,0 +1,141 @@
+{
+  "schemaVersion": 1,
+  "sdkName": "sdkwork-drive-backend-sdk",
+  "sdkOwner": "sdkwork-drive",
+  "apiAuthority": "sdkwork-drive.backend",
+  "sdkFamily": "sdkwork-drive-backend-sdk",
+  "sdkType": "backend",
+  "apiPrefix": "/backend/v3/api",
+  "generationInputSpec": "../../target/drive-sdk-generator-input/sdkwork-drive-backend-sdk/drive-backend-api.openapi.json",
+  "generatedPackages": {
+    "typescript": {
+      "language": "typescript",
+      "packageName": "sdkwork-drive-backend-sdk-generated-typescript",
+      "generatedOutput": "sdkwork-drive-backend-sdk-typescript/generated/server-openapi"
+    },
+    "rust": {
+      "language": "rust",
+      "packageName": "sdkwork-drive-backend-sdk-generated-rust",
+      "generatedOutput": "sdkwork-drive-backend-sdk-rust/generated/server-openapi"
+    },
+    "java": {
+      "language": "java",
+      "packageName": "sdkwork-drive-backend-sdk-generated-java",
+      "generatedOutput": "sdkwork-drive-backend-sdk-java/generated/server-openapi"
+    },
+    "python": {
+      "language": "python",
+      "packageName": "sdkwork-drive-backend-sdk-generated-python",
+      "generatedOutput": "sdkwork-drive-backend-sdk-python/generated/server-openapi"
+    },
+    "go": {
+      "language": "go",
+      "packageName": "sdkwork-drive-backend-sdk-generated-go",
+      "generatedOutput": "sdkwork-drive-backend-sdk-go/generated/server-openapi"
+    }
+  },
+  "sdkDependencies": [
+    {
+      "workspace": "sdkwork-iam-backend-sdk",
+      "role": "appbase-backend-management-capability",
+      "required": true,
+      "dependencyMode": "consumer-sdk",
+      "apiPrefix": "/backend/v3/api",
+      "apiAuthority": "sdkwork-iam-backend-api",
+      "generatedTransportImportPolicy": "forbidden",
+      "packageByLanguage": {
+        "typescript": "@sdkwork/iam-backend-sdk",
+        "rust": "sdkwork-iam-backend-sdk",
+        "java": "com.sdkwork:sdkwork-iam-backend-sdk",
+        "python": "sdkwork-iam-backend-sdk",
+        "go": "github.com/sdkwork/sdkwork-iam-backend-sdk"
+      }
+    }
+  ],
+  "generatorName": "sdkwork-sdk-generator",
+  "baseUrl": "http://127.0.0.1:18080",
+  "standardProfile": "sdkwork-v3",
+  "fixedSdkVersion": "0.1.0",
+  "ownerOnlyOperationCount": 25,
+  "managedBy": "tools/drive_sdk_generator_runner.mjs",
+  "workspace": "sdkwork-drive-backend-sdk",
+  "authoritySpec": "../../apis/backend-api/drive/drive-backend-api.openapi.json",
+  "derivedSpecs": {
+    "default": "../../target/drive-sdk-generator-input/sdkwork-drive-backend-sdk/drive-backend-api.openapi.json"
+  },
+  "discoverySurface": {
+    "sdkTarget": "backend",
+    "apiPrefix": "/backend/v3/api",
+    "generatedProtocols": [
+      "http-openapi"
+    ],
+    "manualTransports": []
+  },
+  "languages": [
+    {
+      "language": "typescript",
+      "workspace": "sdkwork-drive-backend-sdk-typescript",
+      "generationState": "declared",
+      "releaseState": "not_published",
+      "generatedPath": "sdkwork-drive-backend-sdk-typescript/generated/server-openapi",
+      "manifestPath": "sdkwork-drive-backend-sdk-typescript/generated/server-openapi/package.json",
+      "name": "@sdkwork-internal/sdkwork-drive-backend-sdk-generated",
+      "version": "0.1.0",
+      "description": "Generator-owned TypeScript transport SDK for sdkwork-drive-backend-sdk.",
+      "consumerPackageName": "@sdkwork/drive-backend-sdk",
+      "transportPackageName": "sdkwork-drive-backend-sdk-generated-typescript"
+    },
+    {
+      "language": "rust",
+      "workspace": "sdkwork-drive-backend-sdk-rust",
+      "generationState": "declared",
+      "releaseState": "not_published",
+      "generatedPath": "sdkwork-drive-backend-sdk-rust/generated/server-openapi",
+      "manifestPath": "sdkwork-drive-backend-sdk-rust/generated/server-openapi/Cargo.toml",
+      "name": "sdkwork-drive-backend-sdk-generated",
+      "version": "0.1.0",
+      "description": "Generator-owned Rust transport SDK for sdkwork-drive-backend-sdk."
+    },
+    {
+      "language": "java",
+      "workspace": "sdkwork-drive-backend-sdk-java",
+      "generationState": "declared",
+      "releaseState": "not_published",
+      "generatedPath": "sdkwork-drive-backend-sdk-java/generated/server-openapi",
+      "manifestPath": "sdkwork-drive-backend-sdk-java/generated/server-openapi/pom.xml",
+      "name": "com.sdkwork:sdkwork-drive-backend-sdk-generated",
+      "version": "0.1.0",
+      "description": "Generator-owned Java transport SDK for sdkwork-drive-backend-sdk."
+    },
+    {
+      "language": "python",
+      "workspace": "sdkwork-drive-backend-sdk-python",
+      "generationState": "declared",
+      "releaseState": "not_published",
+      "generatedPath": "sdkwork-drive-backend-sdk-python/generated/server-openapi",
+      "manifestPath": "sdkwork-drive-backend-sdk-python/generated/server-openapi/pyproject.toml",
+      "name": "sdkwork-drive-backend-sdk-generated",
+      "version": "0.1.0",
+      "description": "Generator-owned Python transport SDK for sdkwork-drive-backend-sdk."
+    },
+    {
+      "language": "go",
+      "workspace": "sdkwork-drive-backend-sdk-go",
+      "generationState": "declared",
+      "releaseState": "not_published",
+      "generatedPath": "sdkwork-drive-backend-sdk-go/generated/server-openapi",
+      "manifestPath": "sdkwork-drive-backend-sdk-go/generated/server-openapi/go.mod",
+      "name": "github.com/sdkwork/sdkwork-drive-backend-sdk-generated",
+      "version": "0.1.0",
+      "description": "Generator-owned Go transport SDK for sdkwork-drive-backend-sdk."
+    }
+  ],
+  "packageName": "@sdkwork/drive-backend-sdk",
+  "transportPackageName": "sdkwork-drive-backend-sdk-generated-typescript",
+  "typescript": {
+    "composedRoot": "sdkwork-drive-backend-sdk-typescript",
+    "composedEntry": "sdkwork-drive-backend-sdk-typescript/src/index.ts",
+    "transportRoot": "sdkwork-drive-backend-sdk-typescript/generated/server-openapi",
+    "transportEntry": "sdkwork-drive-backend-sdk-typescript/generated/server-openapi/src/index.ts"
+  }
+}

@@ -1,0 +1,86 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "experimentalDecorators": true,
+    "useDefineForClassFields": false,
+    "module": "ESNext",
+    "lib": [
+      "ES2022",
+      "DOM",
+      "DOM.Iterable"
+    ],
+    "skipLibCheck": true,
+    "moduleResolution": "bundler",
+    "isolatedModules": true,
+    "moduleDetection": "force",
+    "allowJs": true,
+    "jsx": "react-jsx",
+    "paths": {
+      "@/*": [
+        "./*"
+      ],
+      "sdkwork-drive-pc-types": [
+        "./packages/sdkwork-drive-pc-types/src"
+      ],
+      "sdkwork-drive-pc-commons": [
+        "./packages/sdkwork-drive-pc-commons/src"
+      ],
+      "sdkwork-drive-pc-file": [
+        "./packages/sdkwork-drive-pc-file/src"
+      ],
+      "sdkwork-drive-pc-sandbox-explorer": [
+        "./packages/sdkwork-drive-pc-sandbox-explorer/src"
+      ],
+      "sdkwork-drive-pc-transfer": [
+        "./packages/sdkwork-drive-pc-transfer/src"
+      ],
+      "sdkwork-drive-pc-core": [
+        "./packages/sdkwork-drive-pc-core/src"
+      ],
+      "sdkwork-drive-pc-core/types": [
+        "./packages/sdkwork-drive-pc-core/src/types/index.ts"
+      ],
+      "sdkwork-drive-pc-drive": [
+        "./packages/sdkwork-drive-pc-drive/src"
+      ],
+      "sdkwork-drive-pc-admin-core": [
+        "./packages/sdkwork-drive-pc-admin-core/src"
+      ],
+      "sdkwork-drive-pc-admin-storage-providers": [
+        "./packages/sdkwork-drive-pc-admin-storage-providers/src"
+      ],
+      "sdkwork-drive-pc-admin-operations": [
+        "./packages/sdkwork-drive-pc-admin-operations/src"
+      ],
+      "sdkwork-drive-pc-core/config/runtimeConfig": [
+        "./packages/sdkwork-drive-pc-core/src/config/runtimeConfig.ts"
+      ],
+      "sdkwork-drive-pc-core/session/sessionStore": [
+        "./packages/sdkwork-drive-pc-core/src/session/sessionStore.ts"
+      ],
+      "react": [
+        "./node_modules/@types/react/index.d.ts"
+      ],
+      "react-dom": [
+        "./node_modules/@types/react-dom/index.d.ts"
+      ],
+      "react/jsx-runtime": [
+        "./node_modules/@types/react/jsx-runtime.d.ts"
+      ],
+      "react/jsx-dev-runtime": [
+        "./node_modules/@types/react/jsx-dev-runtime.d.ts"
+      ],
+      "react-router-dom": [
+        "./node_modules/react-router-dom/dist/index.d.ts"
+      ]
+    },
+    "allowImportingTsExtensions": true,
+    "noEmit": true
+  },
+  "exclude": [
+    "node_modules",
+    "dist",
+    "packages/**/src-tauri/target/**",
+    "packages/**/src-tauri/target-test-migrate/**"
+  ]
+}

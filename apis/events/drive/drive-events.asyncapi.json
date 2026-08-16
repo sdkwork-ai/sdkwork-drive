@@ -1,0 +1,759 @@
+{
+  "asyncapi": "3.0.0",
+  "id": "urn:sdkwork:drive:events",
+  "info": {
+    "title": "SDKWork Drive Events",
+    "version": "1.0.0",
+    "description": "Versioned Drive cross-service events. Consumers must process only rootScopes addressed to their registered scope."
+  },
+  "defaultContentType": "application/json",
+  "channels": {
+    "nodeVersionCommitted": {
+      "address": "drive.node.version.committed.v1",
+      "messages": {
+        "DriveNodeVersionCommittedV1": {
+          "$ref": "#/components/messages/DriveNodeVersionCommittedV1"
+        }
+      }
+    },
+    "nodePathChanged": {
+      "address": "drive.node.path.changed.v1",
+      "messages": {
+        "DriveNodePathChangedV1": {
+          "$ref": "#/components/messages/DriveNodePathChangedV1"
+        }
+      }
+    },
+    "nodeEligibilityChanged": {
+      "address": "drive.node.eligibility.changed.v1",
+      "messages": {
+        "DriveNodeEligibilityChangedV1": {
+          "$ref": "#/components/messages/DriveNodeEligibilityChangedV1"
+        }
+      }
+    },
+    "nodeDeleted": {
+      "address": "drive.node.deleted.v1",
+      "messages": {
+        "DriveNodeDeletedV1": {
+          "$ref": "#/components/messages/DriveNodeDeletedV1"
+        }
+      }
+    },
+    "websiteRootGenerationChanged": {
+      "address": "drive.website_root.generation.changed.v1",
+      "messages": {
+        "DriveWebsiteRootGenerationChangedV1": {
+          "$ref": "#/components/messages/DriveWebsiteRootGenerationChangedV1"
+        }
+      }
+    }
+  },
+  "operations": {
+    "publishNodeVersionCommitted": {
+      "action": "send",
+      "channel": {
+        "$ref": "#/channels/nodeVersionCommitted"
+      },
+      "messages": [
+        {
+          "$ref": "#/channels/nodeVersionCommitted/messages/DriveNodeVersionCommittedV1"
+        }
+      ]
+    },
+    "publishNodePathChanged": {
+      "action": "send",
+      "channel": {
+        "$ref": "#/channels/nodePathChanged"
+      },
+      "messages": [
+        {
+          "$ref": "#/channels/nodePathChanged/messages/DriveNodePathChangedV1"
+        }
+      ]
+    },
+    "publishNodeEligibilityChanged": {
+      "action": "send",
+      "channel": {
+        "$ref": "#/channels/nodeEligibilityChanged"
+      },
+      "messages": [
+        {
+          "$ref": "#/channels/nodeEligibilityChanged/messages/DriveNodeEligibilityChangedV1"
+        }
+      ]
+    },
+    "publishNodeDeleted": {
+      "action": "send",
+      "channel": {
+        "$ref": "#/channels/nodeDeleted"
+      },
+      "messages": [
+        {
+          "$ref": "#/channels/nodeDeleted/messages/DriveNodeDeletedV1"
+        }
+      ]
+    },
+    "publishWebsiteRootGenerationChanged": {
+      "action": "send",
+      "channel": {
+        "$ref": "#/channels/websiteRootGenerationChanged"
+      },
+      "messages": [
+        {
+          "$ref": "#/channels/websiteRootGenerationChanged/messages/DriveWebsiteRootGenerationChangedV1"
+        }
+      ]
+    }
+  },
+  "components": {
+    "messages": {
+      "DriveNodeVersionCommittedV1": {
+        "name": "DriveNodeVersionCommittedV1",
+        "title": "Drive node version committed",
+        "contentType": "application/json",
+        "payload": {
+          "$ref": "#/components/schemas/DriveNodeVersionCommittedV1Envelope"
+        }
+      },
+      "DriveNodePathChangedV1": {
+        "name": "DriveNodePathChangedV1",
+        "title": "Drive node path changed",
+        "contentType": "application/json",
+        "payload": {
+          "$ref": "#/components/schemas/DriveNodePathChangedV1Envelope"
+        }
+      },
+      "DriveNodeEligibilityChangedV1": {
+        "name": "DriveNodeEligibilityChangedV1",
+        "title": "Drive node eligibility changed",
+        "contentType": "application/json",
+        "payload": {
+          "$ref": "#/components/schemas/DriveNodeEligibilityChangedV1Envelope"
+        }
+      },
+      "DriveNodeDeletedV1": {
+        "name": "DriveNodeDeletedV1",
+        "title": "Drive node deleted",
+        "contentType": "application/json",
+        "payload": {
+          "$ref": "#/components/schemas/DriveNodeDeletedV1Envelope"
+        }
+      },
+      "DriveWebsiteRootGenerationChangedV1": {
+        "name": "DriveWebsiteRootGenerationChangedV1",
+        "title": "Drive WebsiteRoot generation changed",
+        "contentType": "application/json",
+        "payload": {
+          "$ref": "#/components/schemas/DriveWebsiteRootGenerationChangedV1Envelope"
+        }
+      }
+    },
+    "schemas": {
+      "DriveNodeVersionCommittedV1Envelope": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "type",
+          "source",
+          "specversion",
+          "time",
+          "tenantId",
+          "subject",
+          "actorId",
+          "sequenceNo",
+          "data"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "type": {
+            "const": "drive.node.version.committed.v1"
+          },
+          "source": {
+            "const": "sdkwork-drive"
+          },
+          "specversion": {
+            "const": "1.0"
+          },
+          "time": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "tenantId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "organizationId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "subject": {
+            "type": "string",
+            "pattern": "^drive://spaces/[^/]+/nodes/[^/]+$"
+          },
+          "actorId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "sequenceNo": {
+            "type": "string",
+            "format": "int64",
+            "pattern": "^[1-9][0-9]*$",
+            "x-sdkwork-int64-string": true
+          },
+          "data": {
+            "$ref": "#/components/schemas/DriveNodeVersionCommittedV1Data"
+          }
+        }
+      },
+      "DriveNodeVersionCommittedV1Data": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "operationId",
+          "spaceId",
+          "nodeId",
+          "driveUri",
+          "driveVersionId",
+          "versionNo",
+          "spaceRelativePath",
+          "contentType",
+          "contentLength",
+          "checksumSha256Hex",
+          "rootScopes"
+        ],
+        "properties": {
+          "operationId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "spaceId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "nodeId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "driveUri": {
+            "type": "string",
+            "pattern": "^drive://spaces/[^/]+/nodes/[^/]+$"
+          },
+          "driveVersionId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "versionNo": {
+            "type": "string",
+            "format": "int64",
+            "pattern": "^[1-9][0-9]*$",
+            "x-sdkwork-int64-string": true
+          },
+          "spaceRelativePath": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096
+          },
+          "contentType": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 255
+          },
+          "contentLength": {
+            "type": "string",
+            "format": "int64",
+            "pattern": "^[0-9]+$",
+            "x-sdkwork-int64-string": true
+          },
+          "checksumSha256Hex": {
+            "type": "string",
+            "pattern": "^sha256:[0-9a-f]{64}$"
+          },
+          "rootScopes": {
+            "type": "array",
+            "maxItems": 256,
+            "items": {
+              "$ref": "#/components/schemas/DriveRootScopeEffect"
+            }
+          }
+        }
+      },
+      "DriveNodeLifecycleEventEnvelope": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "type",
+          "source",
+          "specversion",
+          "time",
+          "tenantId",
+          "subject",
+          "actorId",
+          "sequenceNo",
+          "data"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "type": {
+            "type": "string"
+          },
+          "source": {
+            "const": "sdkwork-drive"
+          },
+          "specversion": {
+            "const": "1.0"
+          },
+          "time": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "tenantId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "organizationId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "subject": {
+            "type": "string",
+            "pattern": "^drive://spaces/[^/]+/nodes/[^/]+$"
+          },
+          "actorId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "sequenceNo": {
+            "type": "string",
+            "format": "int64",
+            "pattern": "^[1-9][0-9]*$",
+            "x-sdkwork-int64-string": true
+          },
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "DriveNodePathChangedV1Envelope": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/DriveNodeLifecycleEventEnvelope"
+          },
+          {
+            "properties": {
+              "type": {
+                "const": "drive.node.path.changed.v1"
+              },
+              "data": {
+                "$ref": "#/components/schemas/DriveNodePathChangedV1Data"
+              }
+            }
+          }
+        ]
+      },
+      "DriveNodePathChangedV1Data": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "operationId",
+          "spaceId",
+          "nodeId",
+          "driveUri",
+          "oldSpaceRelativePath",
+          "newSpaceRelativePath",
+          "oldRootScopes",
+          "newRootScopes"
+        ],
+        "properties": {
+          "operationId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "spaceId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "nodeId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "driveUri": {
+            "type": "string",
+            "pattern": "^drive://spaces/[^/]+/nodes/[^/]+$"
+          },
+          "oldSpaceRelativePath": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096
+          },
+          "newSpaceRelativePath": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096
+          },
+          "oldRootScopes": {
+            "$ref": "#/components/schemas/DriveRootScopeEffects"
+          },
+          "newRootScopes": {
+            "$ref": "#/components/schemas/DriveRootScopeEffects"
+          }
+        }
+      },
+      "DriveNodeEligibilityChangedV1Envelope": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/DriveNodeLifecycleEventEnvelope"
+          },
+          {
+            "properties": {
+              "type": {
+                "const": "drive.node.eligibility.changed.v1"
+              },
+              "data": {
+                "$ref": "#/components/schemas/DriveNodeEligibilityChangedV1Data"
+              }
+            }
+          }
+        ]
+      },
+      "DriveNodeEligibilityChangedV1Data": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "operationId",
+          "spaceId",
+          "nodeId",
+          "driveUri",
+          "spaceRelativePath",
+          "oldEligibility",
+          "newEligibility",
+          "reason",
+          "rootScopes"
+        ],
+        "properties": {
+          "operationId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "spaceId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "nodeId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "driveUri": {
+            "type": "string",
+            "pattern": "^drive://spaces/[^/]+/nodes/[^/]+$"
+          },
+          "driveVersionId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "versionNo": {
+            "type": "string",
+            "format": "int64",
+            "pattern": "^[1-9][0-9]*$",
+            "x-sdkwork-int64-string": true
+          },
+          "spaceRelativePath": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096
+          },
+          "oldEligibility": {
+            "$ref": "#/components/schemas/DriveNodeEligibility"
+          },
+          "newEligibility": {
+            "$ref": "#/components/schemas/DriveNodeEligibility"
+          },
+          "reason": {
+            "type": "string",
+            "pattern": "^[A-Z][A-Z0-9_]{0,63}$"
+          },
+          "rootScopes": {
+            "$ref": "#/components/schemas/DriveRootScopeEffects"
+          }
+        }
+      },
+      "DriveNodeDeletedV1Envelope": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/DriveNodeLifecycleEventEnvelope"
+          },
+          {
+            "properties": {
+              "type": {
+                "const": "drive.node.deleted.v1"
+              },
+              "data": {
+                "$ref": "#/components/schemas/DriveNodeDeletedV1Data"
+              }
+            }
+          }
+        ]
+      },
+      "DriveNodeDeletedV1Data": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "operationId",
+          "spaceId",
+          "nodeId",
+          "driveUri",
+          "lastSpaceRelativePath",
+          "deletionReason",
+          "rootScopes"
+        ],
+        "properties": {
+          "operationId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "spaceId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "nodeId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "driveUri": {
+            "type": "string",
+            "pattern": "^drive://spaces/[^/]+/nodes/[^/]+$"
+          },
+          "driveVersionId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "versionNo": {
+            "type": "string",
+            "format": "int64",
+            "pattern": "^[1-9][0-9]*$",
+            "x-sdkwork-int64-string": true
+          },
+          "lastSpaceRelativePath": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096
+          },
+          "deletionReason": {
+            "type": "string",
+            "pattern": "^[A-Z][A-Z0-9_]{0,63}$"
+          },
+          "rootScopes": {
+            "$ref": "#/components/schemas/DriveRootScopeEffects"
+          }
+        }
+      },
+      "DriveNodeEligibility": {
+        "type": "string",
+        "enum": ["ELIGIBLE", "INELIGIBLE"]
+      },
+      "DriveWebsiteRootGenerationChangedV1Envelope": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "type",
+          "source",
+          "specversion",
+          "time",
+          "tenantId",
+          "subject",
+          "actorId",
+          "sequenceNo",
+          "data"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "type": {
+            "const": "drive.website_root.generation.changed.v1"
+          },
+          "source": {
+            "const": "sdkwork-drive"
+          },
+          "specversion": {
+            "const": "1.0"
+          },
+          "time": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "tenantId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "organizationId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "subject": {
+            "type": "string",
+            "pattern": "^drive://spaces/[^/]+/website_roots/[0-9a-f-]{36}$"
+          },
+          "actorId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "sequenceNo": {
+            "type": "string",
+            "format": "int64",
+            "pattern": "^[1-9][0-9]*$",
+            "x-sdkwork-int64-string": true
+          },
+          "data": {
+            "$ref": "#/components/schemas/DriveWebsiteRootGenerationChangedV1Data"
+          }
+        }
+      },
+      "DriveWebsiteRootGenerationChangedV1Data": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "operationId",
+          "spaceId",
+          "websiteRootUuid",
+          "previousRootNodeId",
+          "rootNodeId",
+          "previousGeneration",
+          "generation",
+          "fileCount",
+          "totalBytes",
+          "changeReason"
+        ],
+        "properties": {
+          "operationId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "spaceId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "websiteRootUuid": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "previousRootNodeId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "rootNodeId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "previousGeneration": {
+            "type": "string",
+            "format": "int64",
+            "pattern": "^[1-9][0-9]*$",
+            "x-sdkwork-int64-string": true
+          },
+          "generation": {
+            "type": "string",
+            "format": "int64",
+            "pattern": "^[1-9][0-9]*$",
+            "x-sdkwork-int64-string": true
+          },
+          "manifestSha256": {
+            "type": "string",
+            "pattern": "^sha256:[0-9a-f]{64}$"
+          },
+          "fileCount": {
+            "type": "string",
+            "format": "int64",
+            "pattern": "^[0-9]+$",
+            "x-sdkwork-int64-string": true
+          },
+          "totalBytes": {
+            "type": "string",
+            "format": "int64",
+            "pattern": "^[0-9]+$",
+            "x-sdkwork-int64-string": true
+          },
+          "changeReason": {
+            "type": "string",
+            "enum": ["SYNC_ACTIVATED", "ROLLBACK_ACTIVATED"]
+          }
+        }
+      },
+      "DriveRootScopeEffects": {
+        "type": "array",
+        "maxItems": 256,
+        "items": {
+          "$ref": "#/components/schemas/DriveRootScopeEffect"
+        }
+      },
+      "DriveRootScopeEffect": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["scopeId", "scopeKind", "relativePath"],
+        "properties": {
+          "scopeId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "scopeKind": {
+            "type": "string",
+            "enum": ["WEBSITE_ROOT", "KNOWLEDGEBASE_RAW"]
+          },
+          "relativePath": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096
+          },
+          "rootGeneration": {
+            "type": "string",
+            "format": "int64",
+            "pattern": "^[1-9][0-9]*$",
+            "x-sdkwork-int64-string": true
+          }
+        }
+      }
+    }
+  }
+}

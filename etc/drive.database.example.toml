@@ -1,0 +1,15 @@
+# SDKWork Drive database configuration example.
+# Use with: SDKWORK_DRIVE_CONFIG_FILE=./etc/drive.database.example.toml
+# PostgreSQL is the only server, Docker, Kubernetes, development, and test engine.
+# Prefer password_file for production. Use password only when the TOML file is
+# stored as a protected secret-bearing file.
+
+[database]
+engine = "postgresql"
+host = "db.internal"
+port = 5432
+database = "sdkwork_ai_dev"
+username = "sdkwork_ai_dev"
+password_file = "./database.secret"
+ssl_mode = "require"
+max_connections = 16

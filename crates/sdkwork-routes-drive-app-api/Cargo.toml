@@ -1,0 +1,37 @@
+[package]
+name = "sdkwork-routes-drive-app-api"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+async-trait.workspace = true
+axum.workspace = true
+serde.workspace = true
+http.workspace = true
+serde_json.workspace = true
+sdkwork-drive-http = { workspace = true, features = ["redis-rate-limit"] }
+sdkwork-drive-observability = { workspace = true, features = ["otlp"] }
+sdkwork-drive-config.workspace = true
+sdkwork-drive-contract.workspace = true
+sdkwork-drive-security.workspace = true
+sdkwork-drive-sandbox-local.workspace = true
+sdkwork-drive-uploader-service.workspace = true
+sdkwork-drive-workspace-service.workspace = true
+sdkwork-drive-storage-contract.workspace = true
+sdkwork-drive-storage-s3.workspace = true
+sdkwork-web-axum.workspace = true
+sdkwork-web-core.workspace = true
+sdkwork-utils-rust.workspace = true
+sdkwork-iam-web-adapter.workspace = true
+chrono = "0.4"
+sqlx.workspace = true
+tokio.workspace = true
+tower.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+tempfile.workspace = true
+zip.workspace = true
+
+[dev-dependencies]
+sdkwork-drive-test-support.workspace = true
+sdkwork-routes-drive-open-api.workspace = true

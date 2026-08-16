@@ -1,0 +1,399 @@
+{
+  "$schema": "../sdkwork-github-workflow/schemas/sdkwork-workflow.schema.json",
+  "schemaVersion": "2026-06-06.sdkwork.workflow.v1",
+  "app": {
+    "id": "sdkwork-drive",
+    "name": "SDKWork Drive",
+    "repository": "sdkwork-ai/sdkwork-drive",
+    "sourcePath": ".",
+    "configPath": "sdkwork.app.config.json"
+  },
+  "release": {
+    "artifactPrefix": "sdkwork-drive",
+    "defaultVersion": "0.1.0",
+    "changelog": {
+      "source": "app-manifest",
+      "maxCommitSubjects": 50
+    }
+  },
+  "targets": [
+    {
+      "id": "web-universal-cloud-browser-zip",
+      "profileBinding": "fixed",
+      "platform": "web",
+      "architecture": "universal",
+      "deploymentProfile": "cloud",
+      "runtimeTarget": "browser",
+      "profile": "browser",
+      "formats": [
+        "zip"
+      ],
+      "runner": "ubuntu-latest",
+      "outputGlobs": [
+        "dist/release/STABLE/0.1.0/web.zip",
+        ".sdkwork/evidence/web-universal-cloud-browser-zip.sbom.json"
+      ],
+      "artifactPath": "dist/release/STABLE/0.1.0/web.zip"
+    },
+    {
+      "id": "linux-x64-standalone-server-tar-gz",
+      "profileBinding": "fixed",
+      "platform": "linux",
+      "architecture": "x64",
+      "deploymentProfile": "standalone",
+      "runtimeTarget": "server",
+      "profile": "server",
+      "formats": [
+        "tar.gz"
+      ],
+      "runner": "ubuntu-latest",
+      "outputGlobs": [
+        "dist/standalone-gateway/sdkwork-api-drive-standalone-gateway-0.1.0-linux-x64-standalone-gateway.tar.gz",
+        ".sdkwork/evidence/linux-x64-standalone-server-tar-gz.sbom.json"
+      ],
+      "artifactPath": "dist/standalone-gateway/sdkwork-api-drive-standalone-gateway-0.1.0-linux-x64-standalone-gateway.tar.gz"
+    },
+    {
+      "id": "windows-x64-standalone-desktop-zip",
+      "profileBinding": "fixed",
+      "platform": "windows",
+      "architecture": "x64",
+      "deploymentProfile": "standalone",
+      "runtimeTarget": "desktop",
+      "profile": "desktop",
+      "formats": [
+        "zip"
+      ],
+      "runner": "windows-latest",
+      "outputGlobs": [
+        "dist/release/STABLE/0.1.0/windows/x64/app.zip",
+        ".sdkwork/evidence/windows-x64-standalone-desktop-zip.sbom.json"
+      ],
+      "artifactPath": "dist/release/STABLE/0.1.0/windows/x64/app.zip"
+    },
+    {
+      "id": "macos-universal-standalone-desktop-dmg",
+      "profileBinding": "fixed",
+      "platform": "macos",
+      "architecture": "universal",
+      "deploymentProfile": "standalone",
+      "runtimeTarget": "desktop",
+      "profile": "desktop",
+      "formats": [
+        "dmg"
+      ],
+      "runner": "macos-latest",
+      "outputGlobs": [
+        "dist/release/STABLE/0.1.0/macos/universal/app.dmg",
+        ".sdkwork/evidence/macos-universal-standalone-desktop-dmg.sbom.json"
+      ],
+      "artifactPath": "dist/release/STABLE/0.1.0/macos/universal/app.dmg"
+    },
+    {
+      "id": "linux-x64-standalone-desktop-appimage",
+      "profileBinding": "fixed",
+      "platform": "linux",
+      "architecture": "x64",
+      "deploymentProfile": "standalone",
+      "runtimeTarget": "desktop",
+      "profile": "desktop",
+      "formats": [
+        "appimage"
+      ],
+      "runner": "ubuntu-latest",
+      "outputGlobs": [
+        "dist/release/STABLE/0.1.0/linux/generic/x64/app.AppImage",
+        ".sdkwork/evidence/linux-x64-standalone-desktop-appimage.sbom.json"
+      ],
+      "artifactPath": "dist/release/STABLE/0.1.0/linux/generic/x64/app.AppImage"
+    },
+    {
+      "id": "container-x64-cloud-container-oci",
+      "profileBinding": "fixed",
+      "platform": "container",
+      "architecture": "x64",
+      "deploymentProfile": "cloud",
+      "runtimeTarget": "container",
+      "profile": "container",
+      "formats": [
+        "oci"
+      ],
+      "runner": "ubuntu-latest",
+      "outputGlobs": [
+        "deployments/container/sdkwork-drive-image.tar",
+        ".sdkwork/evidence/container-x64-cloud-container-oci.sbom.json"
+      ],
+      "artifactPath": "deployments/container/sdkwork-drive-image.tar"
+    }
+  ],
+  "dependencies": [
+    {
+      "id": "sdkwork-appbase",
+      "repository": "sdkwork-ai/sdkwork-appbase",
+      "refInput": "SDKWORK_APPBASE_REF",
+      "tokenSecret": "SDKWORK_RELEASE_TOKEN"
+    },
+    {
+      "id": "sdkwork-iam",
+      "repository": "sdkwork-ai/sdkwork-iam",
+      "refInput": "SDKWORK_IAM_REF",
+      "tokenSecret": "SDKWORK_RELEASE_TOKEN"
+    },
+    {
+      "id": "sdkwork-ui",
+      "repository": "sdkwork-ai/sdkwork-ui",
+      "refInput": "SDKWORK_UI_REF",
+      "tokenSecret": "SDKWORK_RELEASE_TOKEN"
+    },
+    {
+      "id": "sdkwork-sdk-commons",
+      "repository": "sdkwork-ai/sdkwork-sdk-commons",
+      "refInput": "SDKWORK_SDK_COMMONS_REF",
+      "tokenSecret": "SDKWORK_RELEASE_TOKEN"
+    },
+    {
+      "id": "sdkwork-sdk-generator",
+      "repository": "sdkwork-ai/sdkwork-sdk-generator",
+      "refInput": "SDKWORK_SDK_GENERATOR_REF",
+      "tokenSecret": "SDKWORK_RELEASE_TOKEN"
+    },
+    {
+      "id": "sdkwork-database",
+      "repository": "sdkwork-ai/sdkwork-database",
+      "refInput": "SDKWORK_DATABASE_REF",
+      "tokenSecret": "SDKWORK_RELEASE_TOKEN"
+    },
+    {
+      "id": "sdkwork-id",
+      "repository": "sdkwork-ai/sdkwork-id",
+      "refInput": "SDKWORK_ID_REF",
+      "tokenSecret": "SDKWORK_RELEASE_TOKEN"
+    },
+    {
+      "id": "sdkwork-web-framework",
+      "repository": "sdkwork-ai/sdkwork-web-framework",
+      "refInput": "SDKWORK_WEB_FRAMEWORK_REF",
+      "tokenSecret": "SDKWORK_RELEASE_TOKEN"
+    },
+    {
+      "id": "sdkwork-utils",
+      "repository": "sdkwork-ai/sdkwork-utils",
+      "refInput": "SDKWORK_UTILS_REF",
+      "tokenSecret": "SDKWORK_RELEASE_TOKEN"
+    },
+    {
+      "id": "sdkwork-app-topology",
+      "repository": "sdkwork-ai/sdkwork-app-topology",
+      "refInput": "SDKWORK_APP_TOPOLOGY_REF",
+      "tokenSecret": "SDKWORK_RELEASE_TOKEN"
+    },
+    {
+      "id": "sdkwork-core",
+      "repository": "sdkwork-ai/sdkwork-core",
+      "refInput": "SDKWORK_CORE_REF",
+      "tokenSecret": "SDKWORK_RELEASE_TOKEN"
+    }
+  ],
+  "toolchains": {
+    "node": "22",
+    "pnpm": "10.33.0",
+    "rust": "stable"
+  },
+  "lifecycle": {
+    "install": [
+      {
+        "name": "Install dependencies",
+        "shell": "bash",
+        "run": "pnpm install --frozen-lockfile"
+      },
+      {
+        "name": "Install Rust toolchain",
+        "shell": "bash",
+        "run": "rustup show active-toolchain || rustup toolchain install"
+      }
+    ],
+    "build": [
+      {
+        "name": "Build Rust workspace",
+        "shell": "bash",
+        "run": "cargo build --release"
+      },
+      {
+        "name": "Build PC app",
+        "shell": "bash",
+        "workingDirectory": "apps/sdkwork-drive-pc",
+        "run": "pnpm build"
+      }
+    ],
+    "validate": [
+      {
+        "name": "Validate SDK contracts",
+        "shell": "bash",
+        "run": "node tools/drive_sdk_generate.mjs --check"
+      },
+      {
+        "name": "Validate architecture alignment",
+        "shell": "bash",
+        "run": "node tools/check_sdkwork_drive_architecture_alignment.mjs"
+      },
+      {
+        "name": "Validate dependency management",
+        "shell": "bash",
+        "run": "node tools/check_sdkwork_drive_dependency_management.mjs"
+      },
+      {
+        "name": "Validate pnpm script standard",
+        "shell": "bash",
+        "run": "pnpm check:pnpm-script-standard"
+      },
+      {
+        "name": "Validate agent workflow standard",
+        "shell": "bash",
+        "run": "pnpm check:agent-workflow-standard"
+      },
+      {
+        "name": "Validate release readiness",
+        "shell": "bash",
+        "run": "pnpm check:release-readiness"
+      },
+      {
+        "name": "Validate drive alignment integration",
+        "shell": "bash",
+        "run": "pnpm test:drive-integration"
+      },
+      {
+        "name": "Validate drive share link integration",
+        "shell": "bash",
+        "run": "pnpm test:drive-share-link-integration"
+      },
+      {
+        "name": "Validate drive cross-api e2e",
+        "shell": "bash",
+        "run": "pnpm test:drive-e2e"
+      },
+      {
+        "name": "Validate playwright open-api smoke (skips without staging env)",
+        "shell": "bash",
+        "run": "pnpm test:e2e"
+      },
+      {
+        "name": "Validate deployment descriptors",
+        "shell": "bash",
+        "run": "pnpm deploy:validate"
+      }
+    ],
+    "package": [
+      {
+        "name": "Package browser web bundle",
+        "shell": "bash",
+        "run": "node scripts/release-web-bundle.mjs"
+      },
+      {
+        "name": "Package desktop bundle",
+        "shell": "bash",
+        "run": "node scripts/release-desktop-bundle.mjs"
+      },
+      {
+        "name": "Stage catalog media evidence",
+        "shell": "bash",
+        "run": "node scripts/release-catalog-media.mjs"
+      },
+      {
+        "name": "Materialize catalog media manifest evidence",
+        "shell": "bash",
+        "run": "node tools/materialize_catalog_media_evidence.mjs"
+      },
+      {
+        "name": "Package standalone gateway archive",
+        "shell": "bash",
+        "run": "node scripts/gateway-standalone-pack.mjs package"
+      },
+      {
+        "name": "Materialize release manifest checksum evidence",
+        "shell": "bash",
+        "run": "node tools/materialize_release_manifest_evidence.mjs"
+      },
+      {
+        "name": "Verify release evidence integrity",
+        "shell": "bash",
+        "run": "node tools/verify_release_evidence.mjs"
+      },
+      {
+        "name": "Validate strict release readiness",
+        "shell": "bash",
+        "run": "SDKWORK_RELEASE_VALIDATION=strict node tools/check_sdkwork_drive_release_readiness.mjs && SDKWORK_RELEASE_VALIDATION=strict node tools/verify_release_evidence.mjs"
+      },
+      {
+        "name": "Create canonical artifact evidence",
+        "shell": "bash",
+        "run": "node \"$SDKWORK_WORKFLOW_CLI\" evidence:create --config sdkwork.workflow.json --sbom \".sdkwork/evidence/${SDKWORK_PACKAGE_ID}.sbom.json\" --provenance \"git:${GITHUB_SHA:-local}\" --signature \"unsigned:signing-not-required\""
+      }
+    ],
+    "sbom": [
+      {
+        "name": "Generate target CycloneDX SBOM",
+        "shell": "bash",
+        "run": "node tools/generate_release_sbom.mjs \".sdkwork/evidence/${SDKWORK_PACKAGE_ID}.sbom.json\""
+      }
+    ],
+    "deploy": [
+      {
+        "name": "Apply immutable artifact through the SDKWork app facade",
+        "shell": "bash",
+        "run": "pnpm exec sdkwork-app deploy:workflow-apply"
+      }
+    ]
+  },
+  "security": {
+    "signingRequired": false,
+    "sbomRequired": true,
+    "artifactAttestations": true
+  },
+  "publish": {
+    "githubRelease": true,
+    "workflowArtifact": true,
+    "retentionDays": 30
+  },
+  "deployments": [
+    {
+      "id": "cloud-test-web",
+      "environment": "test",
+      "targetId": "web-universal-cloud-browser-zip",
+      "deploymentProfile": "cloud",
+      "lifecycle": "deploy",
+      "artifactEvidencePath": ".sdkwork/evidence/{packageId}.json"
+    },
+    {
+      "id": "cloud-staging-web",
+      "environment": "staging",
+      "targetId": "web-universal-cloud-browser-zip",
+      "deploymentProfile": "cloud",
+      "lifecycle": "deploy",
+      "artifactEvidencePath": ".sdkwork/evidence/{packageId}.json"
+    },
+    {
+      "id": "cloud-production-web",
+      "environment": "production",
+      "targetId": "web-universal-cloud-browser-zip",
+      "deploymentProfile": "cloud",
+      "lifecycle": "deploy",
+      "artifactEvidencePath": ".sdkwork/evidence/{packageId}.json"
+    },
+    {
+      "id": "standalone-production-server",
+      "environment": "production",
+      "targetId": "linux-x64-standalone-server-tar-gz",
+      "deploymentProfile": "standalone",
+      "lifecycle": "deploy",
+      "artifactEvidencePath": ".sdkwork/evidence/{packageId}.json"
+    },
+    {
+      "id": "cloud-production-container",
+      "environment": "production",
+      "targetId": "container-x64-cloud-container-oci",
+      "deploymentProfile": "cloud",
+      "lifecycle": "deploy",
+      "artifactEvidencePath": ".sdkwork/evidence/{packageId}.json"
+    }
+  ]
+}

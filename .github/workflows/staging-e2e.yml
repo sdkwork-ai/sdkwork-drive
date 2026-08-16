@@ -1,0 +1,87 @@
+name: Drive Staging E2E
+
+on:
+  schedule:
+    - cron: '0 4 * * 1'
+  workflow_dispatch:
+    inputs:
+      run_pc_browser:
+        description: Run PC browser share-claim smoke
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: drive-staging-e2e
+  cancel-in-progress: true
+
+jobs:
+  staging-smoke:
+    name: Staging smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Require staging secrets
+        shell: bash
+        env:
+          DRIVE_E2E_OPEN_API_BASE_URL: ${{ secrets.DRIVE_E2E_OPEN_API_BASE_URL }}
+          DRIVE_E2E_SHARE_TOKEN: ${{ secrets.DRIVE_E2E_SHARE_TOKEN }}
+          DRIVE_E2E_SHARE_ACCESS_CODE: ${{ secrets.DRIVE_E2E_SHARE_ACCESS_CODE }}
+          DRIVE_E2E_PC_BASE_URL: ${{ secrets.DRIVE_E2E_PC_BASE_URL }}
+          RUN_PC_BROWSER: ${{ inputs.run_pc_browser || 'false' }}
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "schedule" ] && [ -z "${DRIVE_E2E_OPEN_API_BASE_URL:-}" ]; then
+            echo "Staging secrets are not configured; skipping scheduled smoke."
+            exit 0
+          fi
+          missing=0
+          for name in DRIVE_E2E_OPEN_API_BASE_URL DRIVE_E2E_SHARE_TOKEN DRIVE_E2E_SHARE_ACCESS_CODE; do
+            if [ -z "${!name:-}" ]; then
+              echo "Missing repository secret: ${name}"
+              missing=1
+            fi
+          done
+          if [ "${RUN_PC_BROWSER}" = "true" ] && [ -z "${DRIVE_E2E_PC_BASE_URL:-}" ]; then
+            echo "Missing repository secret: DRIVE_E2E_PC_BASE_URL (required when run_pc_browser=true)"
+            missing=1
+          fi
+          if [ "${missing}" -ne 0 ]; then
+            exit 1
+          fi
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.0
+
+      - name: Install root dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright browsers
+        run: pnpm exec playwright install chromium --with-deps
+
+      - name: Open API live smoke
+        env:
+          DRIVE_E2E_OPEN_API_BASE_URL: ${{ secrets.DRIVE_E2E_OPEN_API_BASE_URL }}
+          DRIVE_E2E_SHARE_TOKEN: ${{ secrets.DRIVE_E2E_SHARE_TOKEN }}
+          DRIVE_E2E_SHARE_ACCESS_CODE: ${{ secrets.DRIVE_E2E_SHARE_ACCESS_CODE }}
+        run: pnpm exec playwright test tests/e2e/specs/drive-open-api.smoke.spec.mjs --config tests/e2e/playwright.config.mjs
+
+      - name: PC browser share-claim smoke
+        if: inputs.run_pc_browser
+        env:
+          DRIVE_E2E_PC_BASE_URL: ${{ secrets.DRIVE_E2E_PC_BASE_URL }}
+          DRIVE_E2E_PC_SESSION_JSON: ${{ secrets.DRIVE_E2E_PC_SESSION_JSON }}
+          DRIVE_E2E_PC_SHARE_TOKEN: ${{ secrets.DRIVE_E2E_PC_SHARE_TOKEN }}
+        run: pnpm exec playwright test tests/e2e/specs/drive-pc-share-link.ui.spec.mjs --config tests/e2e/playwright.config.mjs

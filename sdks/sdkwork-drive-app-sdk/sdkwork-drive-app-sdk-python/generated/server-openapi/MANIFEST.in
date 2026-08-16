@@ -1,0 +1,2 @@
+include README.md
+recursive-include sdkwork_drive_app_sdk_generated_python *.py

@@ -1,0 +1,141 @@
+{
+  "schemaVersion": 1,
+  "sdkName": "sdkwork-drive-admin-storage-sdk",
+  "sdkOwner": "sdkwork-drive",
+  "apiAuthority": "sdkwork-drive.admin.storage",
+  "sdkFamily": "sdkwork-drive-admin-storage-sdk",
+  "sdkType": "custom",
+  "apiPrefix": "/backend/v3/api",
+  "generationInputSpec": "../../target/drive-sdk-generator-input/sdkwork-drive-admin-storage-sdk/drive-admin-storage-api.openapi.json",
+  "generatedPackages": {
+    "typescript": {
+      "language": "typescript",
+      "packageName": "sdkwork-drive-admin-storage-sdk-generated-typescript",
+      "generatedOutput": "sdkwork-drive-admin-storage-sdk-typescript/generated/server-openapi"
+    },
+    "rust": {
+      "language": "rust",
+      "packageName": "sdkwork-drive-admin-storage-sdk-generated-rust",
+      "generatedOutput": "sdkwork-drive-admin-storage-sdk-rust/generated/server-openapi"
+    },
+    "java": {
+      "language": "java",
+      "packageName": "sdkwork-drive-admin-storage-sdk-generated-java",
+      "generatedOutput": "sdkwork-drive-admin-storage-sdk-java/generated/server-openapi"
+    },
+    "python": {
+      "language": "python",
+      "packageName": "sdkwork-drive-admin-storage-sdk-generated-python",
+      "generatedOutput": "sdkwork-drive-admin-storage-sdk-python/generated/server-openapi"
+    },
+    "go": {
+      "language": "go",
+      "packageName": "sdkwork-drive-admin-storage-sdk-generated-go",
+      "generatedOutput": "sdkwork-drive-admin-storage-sdk-go/generated/server-openapi"
+    }
+  },
+  "sdkDependencies": [
+    {
+      "workspace": "sdkwork-iam-backend-sdk",
+      "role": "appbase-backend-management-capability",
+      "required": true,
+      "dependencyMode": "consumer-sdk",
+      "apiPrefix": "/backend/v3/api",
+      "apiAuthority": "sdkwork-iam-backend-api",
+      "generatedTransportImportPolicy": "forbidden",
+      "packageByLanguage": {
+        "typescript": "@sdkwork/iam-backend-sdk",
+        "rust": "sdkwork-iam-backend-sdk",
+        "java": "com.sdkwork:sdkwork-iam-backend-sdk",
+        "python": "sdkwork-iam-backend-sdk",
+        "go": "github.com/sdkwork/sdkwork-iam-backend-sdk"
+      }
+    }
+  ],
+  "generatorName": "sdkwork-sdk-generator",
+  "baseUrl": "http://127.0.0.1:18080",
+  "standardProfile": "sdkwork-drive-admin-storage-v3",
+  "fixedSdkVersion": "0.1.0",
+  "ownerOnlyOperationCount": 27,
+  "managedBy": "tools/drive_sdk_generator_runner.mjs",
+  "workspace": "sdkwork-drive-admin-storage-sdk",
+  "authoritySpec": "../../apis/backend-api/drive/drive-admin-storage-api.openapi.json",
+  "derivedSpecs": {
+    "default": "../../target/drive-sdk-generator-input/sdkwork-drive-admin-storage-sdk/drive-admin-storage-api.openapi.json"
+  },
+  "discoverySurface": {
+    "sdkTarget": "custom",
+    "apiPrefix": "/backend/v3/api",
+    "generatedProtocols": [
+      "http-openapi"
+    ],
+    "manualTransports": []
+  },
+  "languages": [
+    {
+      "language": "typescript",
+      "workspace": "sdkwork-drive-admin-storage-sdk-typescript",
+      "generationState": "declared",
+      "releaseState": "not_published",
+      "generatedPath": "sdkwork-drive-admin-storage-sdk-typescript/generated/server-openapi",
+      "manifestPath": "sdkwork-drive-admin-storage-sdk-typescript/generated/server-openapi/package.json",
+      "name": "@sdkwork-internal/sdkwork-drive-admin-storage-sdk-generated",
+      "version": "0.1.0",
+      "description": "Generator-owned TypeScript transport SDK for sdkwork-drive-admin-storage-sdk.",
+      "consumerPackageName": "@sdkwork/drive-admin-storage-sdk",
+      "transportPackageName": "sdkwork-drive-admin-storage-sdk-generated-typescript"
+    },
+    {
+      "language": "rust",
+      "workspace": "sdkwork-drive-admin-storage-sdk-rust",
+      "generationState": "declared",
+      "releaseState": "not_published",
+      "generatedPath": "sdkwork-drive-admin-storage-sdk-rust/generated/server-openapi",
+      "manifestPath": "sdkwork-drive-admin-storage-sdk-rust/generated/server-openapi/Cargo.toml",
+      "name": "sdkwork-drive-admin-storage-sdk-generated",
+      "version": "0.1.0",
+      "description": "Generator-owned Rust transport SDK for sdkwork-drive-admin-storage-sdk."
+    },
+    {
+      "language": "java",
+      "workspace": "sdkwork-drive-admin-storage-sdk-java",
+      "generationState": "declared",
+      "releaseState": "not_published",
+      "generatedPath": "sdkwork-drive-admin-storage-sdk-java/generated/server-openapi",
+      "manifestPath": "sdkwork-drive-admin-storage-sdk-java/generated/server-openapi/pom.xml",
+      "name": "com.sdkwork:sdkwork-drive-admin-storage-sdk-generated",
+      "version": "0.1.0",
+      "description": "Generator-owned Java transport SDK for sdkwork-drive-admin-storage-sdk."
+    },
+    {
+      "language": "python",
+      "workspace": "sdkwork-drive-admin-storage-sdk-python",
+      "generationState": "declared",
+      "releaseState": "not_published",
+      "generatedPath": "sdkwork-drive-admin-storage-sdk-python/generated/server-openapi",
+      "manifestPath": "sdkwork-drive-admin-storage-sdk-python/generated/server-openapi/pyproject.toml",
+      "name": "sdkwork-drive-admin-storage-sdk-generated",
+      "version": "0.1.0",
+      "description": "Generator-owned Python transport SDK for sdkwork-drive-admin-storage-sdk."
+    },
+    {
+      "language": "go",
+      "workspace": "sdkwork-drive-admin-storage-sdk-go",
+      "generationState": "declared",
+      "releaseState": "not_published",
+      "generatedPath": "sdkwork-drive-admin-storage-sdk-go/generated/server-openapi",
+      "manifestPath": "sdkwork-drive-admin-storage-sdk-go/generated/server-openapi/go.mod",
+      "name": "github.com/sdkwork/sdkwork-drive-admin-storage-sdk-generated",
+      "version": "0.1.0",
+      "description": "Generator-owned Go transport SDK for sdkwork-drive-admin-storage-sdk."
+    }
+  ],
+  "packageName": "@sdkwork/drive-admin-storage-sdk",
+  "transportPackageName": "sdkwork-drive-admin-storage-sdk-generated-typescript",
+  "typescript": {
+    "composedRoot": "sdkwork-drive-admin-storage-sdk-typescript",
+    "composedEntry": "sdkwork-drive-admin-storage-sdk-typescript/src/index.ts",
+    "transportRoot": "sdkwork-drive-admin-storage-sdk-typescript/generated/server-openapi",
+    "transportEntry": "sdkwork-drive-admin-storage-sdk-typescript/generated/server-openapi/src/index.ts"
+  }
+}

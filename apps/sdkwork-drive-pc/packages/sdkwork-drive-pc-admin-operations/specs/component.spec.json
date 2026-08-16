@@ -1,0 +1,63 @@
+{
+  "schemaVersion": 1,
+  "kind": "sdkwork.component.spec",
+  "component": {
+    "name": "sdkwork-drive-pc-admin-operations",
+    "displayName": "SDKWork Drive PC Admin Operations",
+    "version": "0.1.0",
+    "type": "react-package",
+    "root": ".",
+    "domain": "drive",
+    "capability": "operations",
+    "surface": "backend-admin",
+    "languages": [
+      "typescript",
+      "react"
+    ],
+    "generated": false,
+    "manifests": [
+      "package.json"
+    ]
+  },
+  "canonicalSpecs": [
+    {
+      "file": "CODE_STYLE_SPEC.md",
+      "path": "../../../../sdkwork-specs/CODE_STYLE_SPEC.md",
+      "purpose": "Cross-language code organization."
+    },
+    {
+      "file": "FRONTEND_CODE_SPEC.md",
+      "path": "../../../../sdkwork-specs/FRONTEND_CODE_SPEC.md",
+      "purpose": "Frontend UI-service-SDK layering."
+    },
+    {
+      "file": "BACKEND_UI_SPEC.md",
+      "path": "../../../../sdkwork-specs/BACKEND_UI_SPEC.md",
+      "purpose": "Backend/admin UI package split."
+    }
+  ],
+  "contracts": {
+    "publicExports": [
+      "."
+    ],
+    "runtimeEntrypoints": [],
+    "routeManifest": null,
+    "sdkClients": [],
+    "sdkDependencies": [
+      {
+        "sdkFamily": "@sdkwork/drive-backend-sdk",
+        "surface": "backend-api",
+        "consumedThrough": "sdkwork-drive-pc-admin-core"
+      }
+    ],
+    "dependencyApiExports": [],
+    "dependencyApiSurfaces": [],
+    "events": [],
+    "configKeys": []
+  },
+  "verification": {
+    "commands": [
+      "pnpm typecheck"
+    ]
+  }
+}

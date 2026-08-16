@@ -1,0 +1,19 @@
+[Unit]
+Description=SDKWork Drive Install Worker
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=sdkwork
+Group=sdkwork
+EnvironmentFile=-/etc/sdkwork-drive/install-worker.env
+Environment=SDKWORK_DRIVE_RUNTIME_PROFILE=production
+Environment=SDKWORK_DRIVE_DEPLOYMENT_PROFILE=cloud
+Environment=SDKWORK_DRIVE_WORKER_OUTBOX_DISPATCH_INTERVAL_SECONDS=30
+ExecStart=/usr/local/bin/sdkwork-drive-install-worker
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

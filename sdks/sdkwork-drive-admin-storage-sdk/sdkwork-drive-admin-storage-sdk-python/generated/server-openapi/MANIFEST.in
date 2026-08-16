@@ -1,0 +1,2 @@
+include README.md
+recursive-include sdkwork_drive_admin_storage_sdk_generated_python *.py

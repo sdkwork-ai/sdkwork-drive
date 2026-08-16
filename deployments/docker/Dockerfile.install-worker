@@ -1,0 +1,19 @@
+# syntax=docker/dockerfile:1.7
+
+FROM rust:1-bookworm AS builder
+WORKDIR /src
+COPY . .
+RUN cargo build --release -p sdkwork-drive-install-worker
+
+FROM debian:bookworm-slim
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends ca-certificates libssl3 \
+    && rm -rf /var/lib/apt/lists/*
+WORKDIR /app
+COPY --from=builder /src/target/release/sdkwork-drive-install-worker /app/sdkwork-drive-install-worker
+ENV SDKWORK_DRIVE_RUNTIME_PROFILE=production
+ENV SDKWORK_DRIVE_INSTALL_WORKER_HEALTH_BIND=127.0.0.1:18084
+EXPOSE 18084
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
+  CMD wget -qO- http://127.0.0.1:18084/healthz || exit 1
+ENTRYPOINT ["/app/sdkwork-drive-install-worker"]

@@ -1,0 +1,19 @@
+# syntax=docker/dockerfile:1.7
+
+FROM rust:1-bookworm AS builder
+WORKDIR /src
+COPY . .
+RUN cargo build --release -p sdkwork-routes-drive-backend-api
+
+FROM debian:bookworm-slim
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends ca-certificates libssl3 \
+    && rm -rf /var/lib/apt/lists/*
+WORKDIR /app
+COPY --from=builder /src/target/release/sdkwork-routes-drive-backend-api /app/sdkwork-routes-drive-backend-api
+ENV SDKWORK_DRIVE_RUNTIME_PROFILE=production
+ENV SDKWORK_DRIVE_BACKEND_API_BIND=0.0.0.0:18081
+EXPOSE 18081
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
+  CMD wget -qO- http://127.0.0.1:18081/healthz || exit 1
+ENTRYPOINT ["/app/sdkwork-routes-drive-backend-api"]

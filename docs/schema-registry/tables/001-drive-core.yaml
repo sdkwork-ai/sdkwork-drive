@@ -1,0 +1,217 @@
+module: drive
+owner: sdkwork-drive
+tables:
+  - table: dr_drive_space
+    domain: drive
+    description: Top-level storage space.
+    columns:
+      - name: id
+        type: varchar(64)
+      - name: tenant_id
+        type: varchar(64)
+      - name: owner_subject_type
+        type: varchar(32)
+        constraints:
+          - "enum: [user, group, organization, app]"
+      - name: owner_subject_id
+        type: varchar(128)
+      - name: space_type
+        type: varchar(32)
+        constraints:
+          - "enum: [personal, team, knowledge_base, ai_generated, git_repository, deployment, app_upload, im, rtc, notary, website]"
+      - name: display_name
+        type: varchar(255)
+      - name: presentation_icon
+        type: varchar(128)
+        nullable: true
+      - name: presentation_color
+        type: varchar(64)
+        nullable: true
+      - name: description
+        type: text
+        nullable: true
+      - name: lifecycle_status
+        type: varchar(32)
+        constraints:
+          - "enum: [active, archived, deleted]"
+      - name: version
+        type: bigint
+        constraints:
+          - "min: 1"
+      - name: created_by
+        type: varchar(128)
+      - name: updated_by
+        type: varchar(128)
+      - name: created_at
+        type: timestamp
+      - name: updated_at
+        type: timestamp
+    constraints:
+      - name: ck_dr_drive_space_git_repository_owner_user
+        expression: "space_type != 'git_repository' OR owner_subject_type = 'user'"
+        description: Git repository spaces are always user-owned, enabling one source repository space per tenant user via ux_dr_drive_space_tenant_owner_type.
+      - name: ck_dr_drive_space_rtc_owner_user
+        expression: "space_type != 'rtc' OR owner_subject_type = 'user'"
+        description: RTC recording spaces are always user-owned, enabling one RTC recording space per tenant user via ux_dr_drive_space_tenant_owner_type.
+    indexes:
+      - name: ux_dr_drive_space_tenant_owner_type
+        unique: true
+        columns:
+          - tenant_id
+          - owner_subject_type
+          - owner_subject_id
+          - space_type
+        predicate: "space_type != 'website' AND lifecycle_status = 'active'"
+      - name: ix_dr_drive_space_tenant_status
+        columns:
+          - tenant_id
+          - lifecycle_status
+          - updated_at
+  - table: dr_drive_node
+    domain: drive
+    description: File/folder node metadata.
+    columns:
+      - name: id
+        type: varchar(64)
+      - name: tenant_id
+        type: varchar(64)
+      - name: space_id
+        type: varchar(64)
+        references: dr_drive_space.id
+        on_delete: cascade
+      - name: space_type
+        type: varchar(32)
+        description: Denormalized from dr_drive_space.space_type for high-frequency node and file list queries that must avoid joining dr_drive_space.
+        constraints:
+          - "enum: [personal, team, knowledge_base, ai_generated, git_repository, deployment, app_upload, im, rtc, notary, website]"
+      - name: parent_node_id
+        type: varchar(64)
+        nullable: true
+        references: dr_drive_node.id
+        on_delete: set_null
+      - name: shortcut_target_node_id
+        type: varchar(64)
+        nullable: true
+        references: dr_drive_node.id
+        on_delete: set_null
+        description: Active shortcut target node id for node_type=shortcut.
+      - name: node_type
+        type: varchar(32)
+        constraints:
+          - "enum: [file, folder, shortcut, virtual_reference]"
+      - name: node_name
+        type: varchar(255)
+      - name: scene
+        type: varchar(128)
+        nullable: true
+        description: Optional Drive uploader usage context attached to uploader-created nodes.
+        constraints:
+          - "pattern: ^[A-Za-z0-9._:@-]+$"
+      - name: source
+        type: varchar(128)
+        nullable: true
+        description: Optional Drive uploader source context attached to uploader-created nodes.
+        constraints:
+          - "pattern: ^[A-Za-z0-9._:@-]+$"
+      - name: content_state
+        type: varchar(32)
+        constraints:
+          - "enum: [empty, uploading, ready, failed]"
+      - name: lifecycle_status
+        type: varchar(32)
+        constraints:
+          - "enum: [active, trashed, deleted]"
+      - name: version
+        type: bigint
+        constraints:
+          - "min: 1"
+      - name: created_by
+        type: varchar(128)
+      - name: updated_by
+        type: varchar(128)
+      - name: created_at
+        type: timestamp
+      - name: updated_at
+        type: timestamp
+    indexes:
+      - name: ux_dr_drive_node_root_name_live
+        unique: true
+        columns:
+          - tenant_id
+          - space_id
+          - node_name
+        predicate: "parent_node_id IS NULL AND lifecycle_status = 'active'"
+      - name: ux_dr_drive_node_child_name_live
+        unique: true
+        columns:
+          - tenant_id
+          - space_id
+          - parent_node_id
+          - node_name
+        predicate: "parent_node_id IS NOT NULL AND lifecycle_status = 'active'"
+      - name: ix_dr_drive_node_space_parent
+        columns:
+          - tenant_id
+          - space_id
+          - parent_node_id
+          - updated_at
+      - name: ix_dr_drive_node_space_type_parent
+        columns:
+          - tenant_id
+          - space_type
+          - space_id
+          - parent_node_id
+          - lifecycle_status
+          - updated_at
+      - name: ix_dr_drive_node_shortcut_target
+        columns:
+          - tenant_id
+          - shortcut_target_node_id
+          - lifecycle_status
+      - name: ix_dr_drive_node_asset_list
+        columns:
+          - tenant_id
+          - node_type
+          - lifecycle_status
+          - updated_at
+          - id
+      - name: ix_dr_drive_node_asset_scene_source
+        columns:
+          - tenant_id
+          - node_type
+          - scene
+          - source
+          - lifecycle_status
+          - updated_at
+          - id
+      - name: ix_dr_drive_node_space_parent_type
+        columns:
+          - tenant_id
+          - space_id
+          - parent_node_id
+          - node_type
+          - updated_at
+  - table: dr_drive_tenant_quota
+    domain: drive
+    description: Tenant-scoped storage quota policy override.
+    columns:
+      - name: tenant_id
+        type: varchar(64)
+      - name: max_bytes
+        type: bigint
+        nullable: true
+      - name: updated_by
+        type: varchar(128)
+      - name: updated_at
+        type: timestamptz
+      - name: version
+        type: bigint
+        constraints:
+          - "min: 1"
+    constraints:
+      - name: ck_dr_drive_tenant_quota_max_bytes
+        expression: "max_bytes IS NULL OR max_bytes > 0"
+        description: Tenant quota caps must be positive when configured.
+      - name: ck_dr_drive_tenant_quota_version
+        expression: "version >= 1"
+        description: Optimistic version floor for quota policy updates.

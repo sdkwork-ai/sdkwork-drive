@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 1,
+  "kind": "sdkwork.component.spec",
+  "component": {
+    "name": "@sdkwork/drive-pc-sandbox-contracts",
+    "displayName": "Drive Sandbox Contracts",
+    "version": "0.1.0",
+    "type": "node-package",
+    "root": ".",
+    "domain": "drive",
+    "capability": "sandbox-contracts",
+    "surface": "app",
+    "languages": ["typescript"],
+    "generated": false,
+    "private": true,
+    "manifests": ["package.json"]
+  },
+  "canonicalSpecs": [
+    {"file":"COMPONENT_SPEC.md","path":"../../../../../sdkwork-specs/COMPONENT_SPEC.md","purpose":"Component-local contract and discovery rules."},
+    {"file":"CODE_STYLE_SPEC.md","path":"../../../../../sdkwork-specs/CODE_STYLE_SPEC.md","purpose":"Authored source structure and generated code boundaries."},
+    {"file":"NAMING_SPEC.md","path":"../../../../../sdkwork-specs/NAMING_SPEC.md","purpose":"Canonical SDKWork naming rules."},
+    {"file":"MODULE_SPEC.md","path":"../../../../../sdkwork-specs/MODULE_SPEC.md","purpose":"Reusable contracts boundary."},
+    {"file":"TYPESCRIPT_CODE_SPEC.md","path":"../../../../../sdkwork-specs/TYPESCRIPT_CODE_SPEC.md","purpose":"TypeScript public export rules."},
+    {"file":"TEST_SPEC.md","path":"../../../../../sdkwork-specs/TEST_SPEC.md","purpose":"Contract verification requirements."}
+  ],
+  "contracts": {
+    "layerRole": "contract",
+    "publicExports": ["."],
+    "providedPorts": ["SandboxExplorerPort"],
+    "requiredPorts": [],
+    "sdkClients": [],
+    "sdkDependencies": [],
+    "dependencyApiExports": [],
+    "dependencyApiSurfaces": [],
+    "events": [],
+    "configKeys": []
+  },
+  "verification": {
+    "commands": ["pnpm --filter @sdkwork/drive-pc-sandbox-contracts typecheck"]
+  }
+}

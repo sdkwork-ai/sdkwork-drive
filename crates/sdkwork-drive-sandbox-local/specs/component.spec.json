@@ -1,0 +1,57 @@
+{
+  "schemaVersion": 1,
+  "kind": "sdkwork.component.spec",
+  "component": {
+    "name": "sdkwork-drive-sandbox-local",
+    "displayName": "SDKWork Drive Local Sandbox Provider",
+    "version": "0.1.0",
+    "type": "rust-provider",
+    "root": ".",
+    "domain": "drive",
+    "capability": "sandbox-file-system",
+    "surface": "backend",
+    "languages": ["rust"],
+    "generated": false,
+    "manifests": ["Cargo.toml"]
+  },
+  "canonicalSpecs": [
+    {
+      "file": "COMPONENT_SPEC.md",
+      "path": "../../../sdkwork-specs/COMPONENT_SPEC.md",
+      "purpose": "Component-local contract and discovery rules."
+    },
+    {
+      "file": "RUST_CODE_SPEC.md",
+      "path": "../../../sdkwork-specs/RUST_CODE_SPEC.md",
+      "purpose": "Rust provider and public export rules."
+    },
+    {
+      "file": "DRIVE_SPEC.md",
+      "path": "../../../sdkwork-specs/DRIVE_SPEC.md",
+      "purpose": "Drive provider ownership and private provider metadata rules."
+    },
+    {
+      "file": "SECURITY_SPEC.md",
+      "path": "../../../sdkwork-specs/SECURITY_SPEC.md",
+      "purpose": "Path containment, least privilege, and sensitive metadata rules."
+    }
+  ],
+  "contracts": {
+    "layerRole": "backend-provider",
+    "publicExports": ["LocalSandboxDirectoryProvider", "SandboxPathResolver"],
+    "providedPorts": [
+      "DriveSandboxDirectoryProvider",
+      "DriveSandboxFileSystemProvider"
+    ],
+    "requiredPorts": [],
+    "runtimeEntrypoints": [],
+    "routeManifest": null,
+    "sdkClients": [],
+    "sdkDependencies": [],
+    "events": [],
+    "configKeys": []
+  },
+  "verification": {
+    "commands": ["cargo test -p sdkwork-drive-sandbox-local"]
+  }
+}

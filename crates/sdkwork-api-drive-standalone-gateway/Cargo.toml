@@ -1,0 +1,21 @@
+[package]
+name = "sdkwork-api-drive-standalone-gateway"
+version.workspace = true
+edition.workspace = true
+
+[[bin]]
+name = "sdkwork-api-drive-standalone-gateway"
+path = "src/main.rs"
+
+[dependencies]
+axum.workspace = true
+serde = { workspace = true }
+tokio = { version = "1.48", features = ["macros", "rt-multi-thread", "net", "signal"] }
+toml = { workspace = true }
+tracing = { workspace = true }
+sdkwork-drive-observability = { workspace = true, features = ["otlp"] }
+sdkwork-api-drive-assembly.workspace = true
+sdkwork-api-iam-assembly.workspace = true
+sdkwork-database-sqlx.workspace = true
+sdkwork-iam-web-adapter.workspace = true
+sdkwork-web-bootstrap.workspace = true

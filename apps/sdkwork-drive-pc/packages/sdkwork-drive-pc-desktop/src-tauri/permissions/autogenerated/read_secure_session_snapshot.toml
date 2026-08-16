@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-read-secure-session-snapshot"
+description = "Enables the read_secure_session_snapshot command without any pre-configured scope."
+commands.allow = ["read_secure_session_snapshot"]
+
+[[permission]]
+identifier = "deny-read-secure-session-snapshot"
+description = "Denies the read_secure_session_snapshot command without any pre-configured scope."
+commands.deny = ["read_secure_session_snapshot"]

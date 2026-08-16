@@ -1,0 +1,58 @@
+{
+  "schemaVersion": 1,
+  "kind": "sdkwork.component.spec",
+  "component": {
+    "name": "sdkwork-routes-drive-internal-api",
+    "displayName": "SDKWork Drive Internal API Routes",
+    "version": "0.1.0",
+    "type": "rust-route-crate",
+    "root": ".",
+    "domain": "drive",
+    "capability": "internal-publishing-provider",
+    "languages": ["rust"],
+    "generated": false,
+    "manifests": ["Cargo.toml"],
+    "surface": "internal-api"
+  },
+  "canonicalSpecs": [
+    {
+      "file": "INTERNAL_API_SPEC.md",
+      "path": "../../../sdkwork-specs/INTERNAL_API_SPEC.md",
+      "purpose": "Internal API ingress, authority, auth, and SDK rules."
+    },
+    {
+      "file": "API_SPEC.md",
+      "path": "../../../sdkwork-specs/API_SPEC.md",
+      "purpose": "OpenAPI and ProblemDetail contracts."
+    },
+    {
+      "file": "WEB_FRAMEWORK_SPEC.md",
+      "path": "../../../sdkwork-specs/WEB_FRAMEWORK_SPEC.md",
+      "purpose": "Mandatory request-context interceptor pipeline."
+    },
+    {
+      "file": "SECURITY_SPEC.md",
+      "path": "../../../sdkwork-specs/SECURITY_SPEC.md",
+      "purpose": "Tenant isolation, credential, and content-delivery security."
+    }
+  ],
+  "contracts": {
+    "publicExports": ["."],
+    "runtimeEntrypoints": [
+      "build_protected_router_with_pool",
+      "gateway_mount_business",
+      "internal_route_manifest"
+    ],
+    "routeManifest": "../../apis/internal-api/drive/sdkwork-drive-internal-api.openapi.yaml",
+    "authMode": "ingress-token",
+    "sdkClients": [],
+    "events": [],
+    "configKeys": ["SDKWORK_DRIVE_ROOT_SCOPE_EVENT_CALLER_APP_ID"],
+    "sdkDependencies": [],
+    "dependencyApiExports": [],
+    "dependencyApiSurfaces": []
+  },
+  "verification": {
+    "commands": ["cargo test -p sdkwork-routes-drive-internal-api"]
+  }
+}

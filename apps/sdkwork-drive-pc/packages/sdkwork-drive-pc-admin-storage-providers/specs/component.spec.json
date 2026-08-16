@@ -1,0 +1,78 @@
+{
+  "schemaVersion": 1,
+  "kind": "sdkwork.component.spec",
+  "component": {
+    "name": "sdkwork-drive-pc-admin-storage-providers",
+    "displayName": "SDKWork Drive PC Admin Storage Providers",
+    "version": "0.1.0",
+    "type": "react-package",
+    "root": ".",
+    "domain": "drive",
+    "capability": "storage-providers",
+    "surface": "backend-admin",
+    "languages": [
+      "typescript",
+      "react"
+    ],
+    "generated": false,
+    "manifests": [
+      "package.json"
+    ]
+  },
+  "canonicalSpecs": [
+    {
+      "file": "CODE_STYLE_SPEC.md",
+      "path": "../../../../sdkwork-specs/CODE_STYLE_SPEC.md",
+      "purpose": "Cross-language code organization."
+    },
+    {
+      "file": "NAMING_SPEC.md",
+      "path": "../../../../sdkwork-specs/NAMING_SPEC.md",
+      "purpose": "Canonical naming."
+    },
+    {
+      "file": "FRONTEND_CODE_SPEC.md",
+      "path": "../../../../sdkwork-specs/FRONTEND_CODE_SPEC.md",
+      "purpose": "Frontend UI-service-SDK layering."
+    },
+    {
+      "file": "APP_PC_ARCHITECTURE_SPEC.md",
+      "path": "../../../../sdkwork-specs/APP_PC_ARCHITECTURE_SPEC.md",
+      "purpose": "PC application root architecture."
+    },
+    {
+      "file": "BACKEND_UI_SPEC.md",
+      "path": "../../../../sdkwork-specs/BACKEND_UI_SPEC.md",
+      "purpose": "Backend/admin UI package split."
+    },
+    {
+      "file": "DRIVE_SPEC.md",
+      "path": "../../../../sdkwork-specs/DRIVE_SPEC.md",
+      "purpose": "Drive storage provider lifecycle."
+    }
+  ],
+  "contracts": {
+    "publicExports": [
+      "."
+    ],
+    "runtimeEntrypoints": [],
+    "routeManifest": null,
+    "sdkClients": [],
+    "sdkDependencies": [
+      {
+        "sdkFamily": "@sdkwork/drive-admin-storage-sdk",
+        "surface": "backend-api",
+        "consumedThrough": "sdkwork-drive-pc-admin-core"
+      }
+    ],
+    "dependencyApiExports": [],
+    "dependencyApiSurfaces": [],
+    "events": [],
+    "configKeys": []
+  },
+  "verification": {
+    "commands": [
+      "pnpm typecheck"
+    ]
+  }
+}

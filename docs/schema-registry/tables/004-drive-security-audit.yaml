@@ -1,0 +1,963 @@
+module: drive
+owner: sdkwork-drive
+tables:
+  - table: dr_drive_node_permission
+    domain: drive
+    description: ACL permission entries for Drive nodes.
+    columns:
+      - name: id
+        type: varchar(64)
+      - name: tenant_id
+        type: varchar(64)
+      - name: node_id
+        type: varchar(64)
+        references: dr_drive_node.id
+        on_delete: cascade
+      - name: subject_type
+        type: varchar(32)
+        constraints:
+          - "enum: [user, group, domain, app]"
+      - name: subject_id
+        type: varchar(128)
+      - name: role
+        type: varchar(32)
+        constraints:
+          - "enum: [reader, commenter, writer, owner]"
+      - name: inherited
+        type: boolean
+      - name: lifecycle_status
+        type: varchar(32)
+        constraints:
+          - "enum: [active, deleted]"
+      - name: version
+        type: bigint
+        constraints:
+          - "min: 1"
+      - name: created_by
+        type: varchar(128)
+      - name: updated_by
+        type: varchar(128)
+      - name: created_at
+        type: timestamptz
+      - name: updated_at
+        type: timestamptz
+    indexes:
+      - name: ix_dr_drive_node_permission_resource
+        columns:
+          - tenant_id
+          - node_id
+          - lifecycle_status
+      - name: ix_dr_drive_node_permission_subject
+        columns:
+          - tenant_id
+          - subject_type
+          - subject_id
+          - lifecycle_status
+      - name: ux_dr_drive_node_permission_node_subject_live
+        unique: true
+        columns:
+          - tenant_id
+          - node_id
+          - subject_type
+          - subject_id
+        predicate: "lifecycle_status = 'active'"
+  - table: dr_drive_node_share_link
+    domain: drive
+    description: Shared link records with SHA-256 hashed public tokens.
+    columns:
+      - name: id
+        type: varchar(64)
+      - name: tenant_id
+        type: varchar(64)
+      - name: node_id
+        type: varchar(64)
+        references: dr_drive_node.id
+        on_delete: cascade
+      - name: token_hash
+        type: varchar(80)
+        algorithm: sha256_hex
+        prefix: "sha256:"
+      - name: role
+        type: varchar(32)
+        constraints:
+          - "enum: [reader, commenter, writer]"
+      - name: expires_at_epoch_ms
+        type: bigint
+        constraints:
+          - nullable
+          - "min: 1"
+      - name: download_limit
+        type: bigint
+        constraints:
+          - nullable
+          - "min: 0"
+      - name: download_count
+        type: bigint
+        constraints:
+          - "min: 0"
+      - name: lifecycle_status
+        type: varchar(32)
+        constraints:
+          - "enum: [active, deleted]"
+      - name: version
+        type: bigint
+        constraints:
+          - "min: 1"
+      - name: created_by
+        type: varchar(128)
+      - name: updated_by
+        type: varchar(128)
+      - name: created_at
+        type: timestamptz
+      - name: updated_at
+        type: timestamptz
+    indexes:
+      - name: ux_dr_drive_node_share_link_token_hash
+        unique: true
+        columns:
+          - token_hash
+      - name: ix_dr_drive_node_share_link_resource
+        columns:
+          - tenant_id
+          - node_id
+          - lifecycle_status
+  - table: dr_drive_node_favorite
+    domain: drive
+    description: Per-subject favorite markers for Drive nodes.
+    columns:
+      - name: id
+        type: varchar(64)
+      - name: tenant_id
+        type: varchar(64)
+      - name: node_id
+        type: varchar(64)
+        references: dr_drive_node.id
+        on_delete: cascade
+      - name: subject_type
+        type: varchar(32)
+        constraints:
+          - "enum: [user, group, domain, app]"
+      - name: subject_id
+        type: varchar(128)
+      - name: lifecycle_status
+        type: varchar(32)
+        constraints:
+          - "enum: [active, deleted]"
+      - name: version
+        type: bigint
+        constraints:
+          - "min: 1"
+      - name: created_by
+        type: varchar(128)
+      - name: updated_by
+        type: varchar(128)
+      - name: created_at
+        type: timestamptz
+      - name: updated_at
+        type: timestamptz
+    indexes:
+      - name: ux_dr_drive_node_favorite_subject_node
+        unique: true
+        columns:
+          - tenant_id
+          - subject_type
+          - subject_id
+          - node_id
+      - name: ix_dr_drive_node_favorite_subject
+        columns:
+          - tenant_id
+          - subject_type
+          - subject_id
+          - lifecycle_status
+          - updated_at
+  - table: dr_drive_node_property
+    domain: drive
+    description: Custom Drive node metadata properties similar to Drive appProperties/properties.
+    columns:
+      - name: id
+        type: varchar(64)
+      - name: tenant_id
+        type: varchar(64)
+      - name: node_id
+        type: varchar(64)
+        references: dr_drive_node.id
+        on_delete: cascade
+      - name: property_key
+        type: varchar(128)
+      - name: property_value
+        type: text
+      - name: visibility
+        type: varchar(32)
+        constraints:
+          - "enum: [private, app_public]"
+      - name: lifecycle_status
+        type: varchar(32)
+        constraints:
+          - "enum: [active, deleted]"
+      - name: version
+        type: bigint
+        constraints:
+          - "min: 1"
+      - name: created_by
+        type: varchar(128)
+      - name: updated_by
+        type: varchar(128)
+      - name: created_at
+        type: timestamptz
+      - name: updated_at
+        type: timestamptz
+    indexes:
+      - name: ux_dr_drive_node_property_key
+        unique: true
+        columns:
+          - tenant_id
+          - node_id
+          - property_key
+          - visibility
+      - name: ix_dr_drive_node_property_node
+        columns:
+          - tenant_id
+          - node_id
+          - visibility
+          - lifecycle_status
+          - property_key
+  - table: dr_drive_label
+    domain: drive
+    description: Tenant-scoped Drive label definitions for classification and governance.
+    columns:
+      - name: id
+        type: varchar(64)
+      - name: tenant_id
+        type: varchar(64)
+      - name: label_key
+        type: varchar(128)
+      - name: display_name
+        type: varchar(255)
+      - name: color
+        type: varchar(32)
+      - name: description
+        type: text
+      - name: lifecycle_status
+        type: varchar(32)
+        constraints:
+          - "enum: [active, deleted]"
+      - name: version
+        type: bigint
+        constraints:
+          - "min: 1"
+      - name: created_by
+        type: varchar(128)
+      - name: updated_by
+        type: varchar(128)
+      - name: created_at
+        type: timestamptz
+      - name: updated_at
+        type: timestamptz
+    indexes:
+      - name: ux_dr_drive_label_key
+        unique: true
+        columns:
+          - tenant_id
+          - label_key
+      - name: ix_dr_drive_label_tenant_status
+        columns:
+          - tenant_id
+          - lifecycle_status
+          - label_key
+  - table: dr_drive_node_label
+    domain: drive
+    description: Active label applications on Drive nodes.
+    columns:
+      - name: id
+        type: varchar(64)
+      - name: tenant_id
+        type: varchar(64)
+      - name: node_id
+        type: varchar(64)
+        references: dr_drive_node.id
+        on_delete: cascade
+      - name: label_id
+        type: varchar(64)
+        references: dr_drive_label.id
+        on_delete: cascade
+      - name: lifecycle_status
+        type: varchar(32)
+        constraints:
+          - "enum: [active, deleted]"
+      - name: version
+        type: bigint
+        constraints:
+          - "min: 1"
+      - name: created_by
+        type: varchar(128)
+      - name: updated_by
+        type: varchar(128)
+      - name: created_at
+        type: timestamptz
+      - name: updated_at
+        type: timestamptz
+    indexes:
+      - name: ux_dr_drive_node_label_node_label
+        unique: true
+        columns:
+          - tenant_id
+          - node_id
+          - label_id
+      - name: ix_dr_drive_node_label_node
+        columns:
+          - tenant_id
+          - node_id
+          - lifecycle_status
+          - label_id
+      - name: ix_dr_drive_node_label_label
+        columns:
+          - tenant_id
+          - label_id
+          - lifecycle_status
+          - node_id
+  - table: dr_drive_watch_channel
+    domain: drive
+    description: Push notification channel registrations for Drive changes and node resources.
+    columns:
+      - name: id
+        type: varchar(64)
+      - name: tenant_id
+        type: varchar(64)
+      - name: space_id
+        type: varchar(64)
+        nullable: true
+        references: dr_drive_space.id
+        on_delete: cascade
+      - name: node_id
+        type: varchar(64)
+        nullable: true
+        references: dr_drive_node.id
+        on_delete: cascade
+      - name: resource_type
+        type: varchar(32)
+        constraints:
+          - "enum: [changes, node]"
+      - name: resource_id
+        type: varchar(64)
+      - name: channel_type
+        type: varchar(32)
+        constraints:
+          - "enum: [web_hook]"
+      - name: address
+        type: text
+      - name: token_hash
+        type: varchar(64)
+        algorithm: sha256_hex
+      - name: expiration_epoch_ms
+        type: bigint
+        constraints:
+          - "min: 1"
+      - name: lifecycle_status
+        type: varchar(32)
+        constraints:
+          - "enum: [active, stopped, expired]"
+      - name: version
+        type: bigint
+        constraints:
+          - "min: 1"
+      - name: created_by
+        type: varchar(128)
+      - name: updated_by
+        type: varchar(128)
+      - name: created_at
+        type: timestamptz
+      - name: updated_at
+        type: timestamptz
+    indexes:
+      - name: ix_dr_drive_watch_channel_tenant_status
+        columns:
+          - tenant_id
+          - lifecycle_status
+          - expiration_epoch_ms
+      - name: ix_dr_drive_watch_channel_resource
+        columns:
+          - tenant_id
+          - resource_type
+          - resource_id
+          - lifecycle_status
+      - name: ix_dr_drive_watch_channel_node
+        columns:
+          - tenant_id
+          - node_id
+          - lifecycle_status
+      - name: ix_dr_drive_watch_channel_expires
+        columns:
+          - tenant_id
+          - lifecycle_status
+          - expiration_epoch_ms
+  - table: dr_drive_node_comment
+    domain: drive
+    description: File collaboration comments anchored to Drive nodes.
+    columns:
+      - name: id
+        type: varchar(64)
+      - name: tenant_id
+        type: varchar(64)
+      - name: node_id
+        type: varchar(64)
+        references: dr_drive_node.id
+        on_delete: cascade
+      - name: content
+        type: text
+      - name: anchor
+        type: text
+      - name: resolved
+        type: boolean
+      - name: lifecycle_status
+        type: varchar(32)
+        constraints:
+          - "enum: [active, deleted]"
+      - name: version
+        type: bigint
+        constraints:
+          - "min: 1"
+      - name: created_by
+        type: varchar(128)
+      - name: updated_by
+        type: varchar(128)
+      - name: created_at
+        type: timestamptz
+      - name: updated_at
+        type: timestamptz
+    indexes:
+      - name: ix_dr_drive_node_comment_node
+        columns:
+          - tenant_id
+          - node_id
+          - lifecycle_status
+          - created_at
+      - name: ix_dr_drive_node_comment_resolved
+        columns:
+          - tenant_id
+          - node_id
+          - resolved
+          - lifecycle_status
+          - updated_at
+  - table: dr_drive_node_comment_reply
+    domain: drive
+    description: Threaded replies under Drive node comments.
+    columns:
+      - name: id
+        type: varchar(64)
+      - name: tenant_id
+        type: varchar(64)
+      - name: node_id
+        type: varchar(64)
+        references: dr_drive_node.id
+        on_delete: cascade
+      - name: comment_id
+        type: varchar(64)
+        references: dr_drive_node_comment.id
+        on_delete: cascade
+      - name: content
+        type: text
+      - name: lifecycle_status
+        type: varchar(32)
+        constraints:
+          - "enum: [active, deleted]"
+      - name: version
+        type: bigint
+        constraints:
+          - "min: 1"
+      - name: created_by
+        type: varchar(128)
+      - name: updated_by
+        type: varchar(128)
+      - name: created_at
+        type: timestamptz
+      - name: updated_at
+        type: timestamptz
+    indexes:
+      - name: ix_dr_drive_node_comment_reply_comment
+        columns:
+          - tenant_id
+          - comment_id
+          - lifecycle_status
+          - created_at
+      - name: ix_dr_drive_node_comment_reply_node
+        columns:
+          - tenant_id
+          - node_id
+          - lifecycle_status
+          - created_at
+  - table: dr_drive_change_cursor
+    domain: drive
+    description: Per-tenant-space atomic sequence allocator for the Drive change feed.
+    columns:
+      - name: id
+        type: varchar(160)
+      - name: tenant_id
+        type: varchar(64)
+      - name: space_id
+        type: varchar(64)
+      - name: last_sequence_no
+        type: bigint
+        constraints:
+          - "min: 0"
+      - name: updated_at
+        type: timestamptz
+    indexes:
+      - name: ux_dr_drive_change_cursor_scope
+        unique: true
+        columns:
+          - tenant_id
+          - space_id
+  - table: dr_drive_change_log
+    domain: drive
+    description: Append-only Drive node, permission, share-link, favorite, comment, and reply change feed.
+    columns:
+      - name: id
+        type: bigint
+      - name: tenant_id
+        type: varchar(64)
+      - name: space_id
+        type: varchar(64)
+      - name: node_id
+        type: varchar(64)
+      - name: sequence_no
+        type: bigint
+        constraints:
+          - "min: 1"
+      - name: event_type
+        type: varchar(64)
+      - name: actor_id
+        type: varchar(128)
+      - name: created_at
+        type: timestamptz
+    indexes:
+      - name: ux_dr_drive_change_log_space_sequence
+        unique: true
+        columns:
+          - tenant_id
+          - space_id
+          - sequence_no
+      - name: ix_dr_drive_change_log_tenant_space_created
+        columns:
+          - tenant_id
+          - space_id
+          - created_at
+  - table: dr_drive_maintenance_leader
+    domain: drive
+    description: SQLite/PostgreSQL install-worker leader election lease for single-writer maintenance sweeps.
+    columns:
+      - name: lock_key
+        type: text
+      - name: holder_id
+        type: text
+      - name: acquired_at
+        type: timestamptz
+    indexes: []
+  - table: dr_drive_domain_outbox
+    domain: drive
+    description: Durable domain change outbox for webhook and integration delivery retries.
+    columns:
+      - name: id
+        type: varchar(64)
+      - name: tenant_id
+        type: varchar(64)
+      - name: space_id
+        type: varchar(64)
+      - name: node_id
+        type: varchar(64)
+      - name: event_type
+        type: varchar(128)
+      - name: actor_id
+        type: varchar(128)
+      - name: sequence_no
+        type: bigint
+      - name: payload_json
+        type: text
+      - name: delivery_status
+        type: varchar(32)
+      - name: attempt_count
+        type: int
+      - name: last_error
+        type: text
+      - name: created_at
+        type: timestamptz
+      - name: delivered_at
+        type: timestamptz
+    indexes:
+      - name: ix_dr_drive_domain_outbox_pending
+        columns:
+          - delivery_status
+          - created_at
+      - name: ix_dr_drive_domain_outbox_pending_dispatch
+        columns:
+          - attempt_count
+          - created_at
+        partial: "delivery_status = 'pending'"
+  - table: dr_drive_domain_outbox_channel_delivery
+    domain: drive
+    description: Per-channel webhook delivery ledger for idempotent outbox fan-out retries.
+    columns:
+      - name: outbox_id
+        type: varchar(64)
+      - name: channel_id
+        type: varchar(64)
+      - name: delivered_at
+        type: timestamptz
+    indexes:
+      - name: ix_dr_drive_domain_outbox_channel_delivery_channel
+        columns:
+          - channel_id
+          - delivered_at
+  - table: dr_drive_audit_event
+    domain: drive
+    description: Append-only drive audit events.
+    columns:
+      - name: id
+        type: bigint
+      - name: tenant_id
+        type: varchar(64)
+      - name: action
+        type: varchar(128)
+      - name: resource_type
+        type: varchar(64)
+      - name: resource_id
+        type: varchar(128)
+      - name: operator_id
+        type: varchar(128)
+      - name: request_id
+        type: varchar(64)
+      - name: trace_id
+        type: varchar(128)
+      - name: created_at
+        type: timestamptz
+    indexes:
+      - name: ix_dr_drive_audit_event_tenant_created
+        columns:
+          - tenant_id
+          - created_at
+      - name: ix_dr_drive_audit_event_resource
+        columns:
+          - resource_type
+          - resource_id
+          - created_at
+      - name: ix_dr_drive_audit_event_action_created
+        columns:
+          - action
+          - created_at
+      - name: ix_dr_drive_audit_event_request_created
+        columns:
+          - request_id
+          - created_at
+      - name: ix_dr_drive_audit_event_trace_created
+        columns:
+          - trace_id
+          - created_at
+  - table: dr_drive_sandbox_volume
+    domain: drive
+    description: Organization-owned server filesystem sandbox configuration. provider_root_ref is protected backend-admin data and never enters app/open APIs, audit facts, logs, or telemetry.
+    columns:
+      - name: id
+        type: varchar(128)
+      - name: tenant_id
+        type: varchar(64)
+      - name: organization_id
+        type: varchar(64)
+        nullable: true
+      - name: display_name
+        type: varchar(255)
+      - name: root_entry_id
+        type: varchar(128)
+      - name: provider_kind
+        type: varchar(32)
+        constraints:
+          - "enum: [local_filesystem]"
+      - name: provider_root_ref
+        type: text
+        constraints:
+          - "protected backend-admin value; redact from logs, errors, audit facts, app API, and open API"
+      - name: lifecycle_status
+        type: varchar(32)
+        constraints:
+          - "enum: [active, read_only, disabled]"
+      - name: default_access
+        type: varchar(32)
+        constraints:
+          - "enum: [full, read_only]"
+          - "configuration default only; access still requires an explicit grant"
+      - name: version
+        type: bigint
+        constraints:
+          - "min: 1"
+      - name: created_by
+        type: varchar(128)
+      - name: updated_by
+        type: varchar(128)
+      - name: created_at
+        type: timestamptz
+      - name: updated_at
+        type: timestamptz
+    indexes:
+      - name: ix_dr_drive_sandbox_volume_tenant_status
+        columns:
+          - tenant_id
+          - lifecycle_status
+          - display_name
+      - name: ix_dr_drive_sandbox_volume_tenant_organization_status
+        columns:
+          - tenant_id
+          - organization_id
+          - lifecycle_status
+          - display_name
+          - id
+      - name: ux_dr_drive_sandbox_volume_root_entry
+        unique: true
+        columns:
+          - id
+          - root_entry_id
+  - table: dr_drive_sandbox_grant
+    domain: drive
+    description: Explicit principal authorization for one server sandbox. default_access on the volume never substitutes for these rows.
+    columns:
+      - name: id
+        type: varchar(128)
+      - name: sandbox_id
+        type: varchar(128)
+        references: dr_drive_sandbox_volume.id
+        on_delete: cascade
+      - name: subject_type
+        type: varchar(32)
+        constraints:
+          - "enum: [user, organization, workspace, role]"
+          - "public runtime resolves user and organization only until authoritative workspace and role membership adapters exist"
+      - name: subject_id
+        type: varchar(128)
+      - name: access_level
+        type: varchar(32)
+        constraints:
+          - "enum: [full, read_only]"
+      - name: granted_by
+        type: varchar(128)
+      - name: created_at
+        type: timestamptz
+    indexes:
+      - name: ix_dr_drive_sandbox_grant_subject
+        columns:
+          - subject_type
+          - subject_id
+          - sandbox_id
+  - table: dr_drive_sandbox_mutation_operation
+    domain: drive
+    description: Durable idempotency, lease, and replay result state for bounded sandbox filesystem mutations. Raw idempotency keys and physical paths are forbidden.
+    columns:
+      - name: id
+        type: bigint
+      - name: tenant_id
+        type: varchar(64)
+      - name: sandbox_id
+        type: varchar(128)
+        references: dr_drive_sandbox_volume.id
+        on_delete: cascade
+      - name: actor_id
+        type: varchar(128)
+      - name: idempotency_key_hash
+        type: varchar(64)
+        constraints:
+          - "SHA-256 of method-scoped mutation kind plus the raw idempotency key; raw key is never persisted"
+      - name: request_fingerprint
+        type: varchar(64)
+      - name: mutation_kind
+        type: varchar(32)
+        constraints:
+          - "enum: [create_directory, create_file, update_file, move_entry, delete_entry]"
+      - name: parent_logical_path
+        type: text
+      - name: entry_name
+        type: varchar(255)
+      - name: operation_status
+        type: varchar(32)
+        constraints:
+          - "enum: [pending, completed, failed_conflict]"
+      - name: lease_token
+        type: varchar(64)
+      - name: lease_expires_at_ms
+        type: bigint
+      - name: result_entry_id
+        type: varchar(128)
+        nullable: true
+      - name: result_parent_id
+        type: varchar(128)
+        nullable: true
+      - name: result_entry_kind
+        type: varchar(32)
+        nullable: true
+        constraints:
+          - "enum: [directory, file]"
+      - name: result_logical_path
+        type: text
+        nullable: true
+      - name: result_revision
+        type: varchar(128)
+        nullable: true
+      - name: result_deleted
+        type: boolean
+      - name: created_at
+        type: timestamptz
+      - name: updated_at
+        type: timestamptz
+    indexes:
+      - name: ix_dr_drive_sandbox_mutation_operation_pending
+        columns:
+          - operation_status
+          - lease_expires_at_ms
+      - name: ix_dr_drive_sandbox_mutation_operation_sandbox_created
+        columns:
+          - tenant_id
+          - sandbox_id
+          - created_at
+  - table: dr_drive_maintenance_job
+    domain: drive
+    description: Operational maintenance job execution history for object sweeps, upload-session sweeps, and future repair tasks.
+    columns:
+      - name: id
+        type: bigint
+      - name: job_type
+        type: varchar(64)
+        constraints:
+          - "enum: [object_sweep, upload_session_sweep, expired_upload_content_sweep, abandoned_upload_task_sweep]"
+      - name: status
+        type: varchar(32)
+        constraints:
+          - "enum: [completed, failed]"
+      - name: dry_run
+        type: boolean
+      - name: scanned_count
+        type: bigint
+        constraints:
+          - "min: 0"
+      - name: affected_count
+        type: bigint
+        constraints:
+          - "min: 0"
+      - name: operator_id
+        type: varchar(128)
+      - name: request_id
+        type: varchar(64)
+        nullable: true
+      - name: trace_id
+        type: varchar(128)
+        nullable: true
+      - name: error_message
+        type: text
+        nullable: true
+      - name: started_at
+        type: timestamptz
+      - name: finished_at
+        type: timestamptz
+      - name: created_at
+        type: timestamptz
+    indexes:
+      - name: ix_dr_drive_maintenance_job_type_created
+        columns:
+          - job_type
+          - created_at
+      - name: ix_dr_drive_maintenance_job_status_created
+        columns:
+          - status
+          - created_at
+      - name: ix_dr_drive_maintenance_job_operator_created
+        columns:
+          - operator_id
+          - created_at
+  - table: dr_drive_file_sensitive_operation
+    domain: drive
+    description: Append-only sensitive file operation facts for upload completion, deletion, restoration, sharing, permission, and download grant events.
+    columns:
+      - name: id
+        type: varchar(64)
+      - name: tenant_id
+        type: varchar(64)
+      - name: organization_id
+        type: varchar(128)
+        nullable: true
+      - name: user_id
+        type: varchar(128)
+        nullable: true
+      - name: space_id
+        type: varchar(64)
+        references: dr_drive_space.id
+        on_delete: cascade
+      - name: node_id
+        type: varchar(64)
+        references: dr_drive_node.id
+        on_delete: cascade
+      - name: storage_object_id
+        type: varchar(64)
+        nullable: true
+        references: dr_drive_storage_object.id
+        on_delete: set_null
+      - name: upload_item_id
+        type: varchar(64)
+        nullable: true
+        references: dr_drive_upload_item.id
+        on_delete: set_null
+      - name: operation_type
+        type: varchar(64)
+        constraints:
+          - "enum: [upload_completed, soft_delete, hard_delete, restore, share_created, share_revoked, permission_changed, download_granted, retention_expired]"
+      - name: operation_reason
+        type: varchar(64)
+        constraints:
+          - "enum: [user_request, retention_expired, manual, admin, quota_policy, system]"
+      - name: content_type
+        type: varchar(255)
+      - name: content_type_group
+        type: varchar(64)
+      - name: content_length
+        type: bigint
+        constraints:
+          - "min: 0"
+      - name: checksum_sha256_hex
+        type: varchar(255)
+        nullable: true
+        constraints:
+          - "format: sha256:[0-9a-f]{64}"
+      - name: object_bucket
+        type: varchar(255)
+        nullable: true
+      - name: object_key
+        type: text
+        nullable: true
+      - name: before_lifecycle_status
+        type: varchar(32)
+        nullable: true
+      - name: after_lifecycle_status
+        type: varchar(32)
+        nullable: true
+      - name: operator_id
+        type: varchar(128)
+      - name: maintenance_job_id
+        type: bigint
+        nullable: true
+        references: dr_drive_maintenance_job.id
+        on_delete: set_null
+      - name: request_id
+        type: varchar(64)
+        nullable: true
+      - name: trace_id
+        type: varchar(128)
+        nullable: true
+      - name: object_delete_status
+        type: varchar(32)
+        constraints:
+          - "enum: [not_required, deleted, missing, failed]"
+      - name: created_at
+        type: timestamptz
+    indexes:
+      - name: ix_dr_drive_file_sensitive_operation_upload_item
+        columns:
+          - tenant_id
+          - upload_item_id
+          - created_at
+      - name: ix_dr_drive_file_sensitive_operation_tenant_created
+        columns:
+          - tenant_id
+          - created_at

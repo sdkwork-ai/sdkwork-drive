@@ -1,0 +1,27 @@
+[runtime]
+environment = "test"
+config_profile = "test"
+build_mode = "test"
+deployment_mode = "test"
+runtime_target = "server"
+app_key = "sdkwork-drive-pc"
+
+[server]
+bind = "127.0.0.1:18080"
+external_scheme = "http"
+trust_forwarded_headers = false
+
+[database]
+engine = "postgresql"
+host = "127.0.0.1"
+port = 5432
+database = "sdkwork_ai_test"
+schema = "sdkwork_ai_test"
+username = "sdkwork_ai_test"
+password_file = "./secrets/database-password.test"
+ssl_mode = "disable"
+max_connections = 5
+
+[redis]
+enabled = false
+key_prefix = "sdkwork-drive-pc-test"

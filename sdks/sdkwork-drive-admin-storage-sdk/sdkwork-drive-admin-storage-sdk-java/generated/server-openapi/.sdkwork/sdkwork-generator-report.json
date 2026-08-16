@@ -1,0 +1,176 @@
+{
+  "schemaVersion": 1,
+  "generator": "@sdkwork/sdk-generator",
+  "artifacts": {
+    "stateDir": ".sdkwork",
+    "manifestPath": ".sdkwork/sdkwork-generator-manifest.json",
+    "changeSummaryPath": ".sdkwork/sdkwork-generator-changes.json",
+    "executionReportPath": ".sdkwork/sdkwork-generator-report.json",
+    "manualBackupDir": ".sdkwork/manual-backups"
+  },
+  "status": "ok",
+  "mode": "apply",
+  "hasChanges": false,
+  "hasDestructiveChanges": false,
+  "changeFingerprint": "ade3ea98d07370a913a21dc631290200b03d75db542686ac5e4618610f58e4b8",
+  "changeImpact": {
+    "schemaVersion": 1,
+    "areas": [],
+    "details": [],
+    "requiresVerification": false,
+    "summary": "No generated, scaffold, or backup changes detected. Verification can be skipped."
+  },
+  "executionDecision": {
+    "schemaVersion": 1,
+    "riskLevel": "low",
+    "nextAction": "skip",
+    "requiresManualReview": false,
+    "applyRequiresExpectedFingerprint": false,
+    "summary": "No actionable changes were detected. No apply or verification step is required.",
+    "reasons": [
+      "no-actionable-changes"
+    ]
+  },
+  "executionHandoff": {
+    "schemaVersion": 1,
+    "summary": "No further commands are required.",
+    "steps": []
+  },
+  "verificationPlan": {
+    "shouldRun": false,
+    "runPhase": "skip",
+    "summary": "No generated, scaffold, or backup changes detected. Verification can be skipped.",
+    "steps": []
+  },
+  "sdk": {
+    "name": "sdkwork-drive-admin-storage-sdk",
+    "version": "0.1.0",
+    "language": "java",
+    "sdkType": "custom",
+    "protocol": "http",
+    "outputPath": "E:\\sdkwork-space\\sdkwork-drive\\sdks\\sdkwork-drive-admin-storage-sdk\\sdkwork-drive-admin-storage-sdk-java\\generated\\server-openapi",
+    "packageName": "sdkwork-drive-admin-storage-sdk-generated-java"
+  },
+  "versioning": {
+    "resolvedVersion": "0.1.0",
+    "localVersions": []
+  },
+  "stats": {
+    "totalFiles": 64,
+    "models": 50,
+    "apis": 1,
+    "types": 0
+  },
+  "warnings": [],
+  "syncSummary": {
+    "dryRun": false,
+    "controlPlaneEnabled": true,
+    "writtenFiles": 0,
+    "skippedScaffoldFiles": 1,
+    "skippedUnchangedGeneratedFiles": 63,
+    "deletedGeneratedFiles": 0,
+    "changeSummaryPath": ".sdkwork/sdkwork-generator-changes.json",
+    "changeFingerprint": "ade3ea98d07370a913a21dc631290200b03d75db542686ac5e4618610f58e4b8",
+    "changes": {
+      "createdGeneratedFiles": [],
+      "updatedGeneratedFiles": [],
+      "unchangedGeneratedFiles": [
+        "bin/publish-core.mjs",
+        "bin/publish.ps1",
+        "bin/publish.sh",
+        "CHANGELOG.md",
+        "LICENSE",
+        "pom.xml",
+        "README.md",
+        "sdkwork-sdk.json",
+        "src/main/java/com/sdkwork/drive/admin/storage/sdk/generated/java/api/ApiPaths.java",
+        "src/main/java/com/sdkwork/drive/admin/storage/sdk/generated/java/api/DriveApi.java",
+        "src/main/java/com/sdkwork/drive/admin/storage/sdk/generated/java/api/package-info.java",
+        "src/main/java/com/sdkwork/drive/admin/storage/sdk/generated/java/http/HttpClient.java",
+        "src/main/java/com/sdkwork/drive/admin/storage/sdk/generated/java/model/CopyProviderObjectRequest.java",
+        "src/main/java/com/sdkwork/drive/admin/storage/sdk/generated/java/model/CreateStorageProviderRequest.java",
+        "src/main/java/com/sdkwork/drive/admin/storage/sdk/generated/java/model/FieldError.java",
+        "src/main/java/com/sdkwork/drive/admin/storage/sdk/generated/java/model/PageInfo.java",
+        "src/main/java/com/sdkwork/drive/admin/storage/sdk/generated/java/model/ProblemDetail.java",
+        "src/main/java/com/sdkwork/drive/admin/storage/sdk/generated/java/model/ProviderBucket.java",
+        "src/main/java/com/sdkwork/drive/admin/storage/sdk/generated/java/model/ProviderBucketListItem.java",
+        "src/main/java/com/sdkwork/drive/admin/storage/sdk/generated/java/model/ProviderBucketMutation.java",
+        "src/main/java/com/sdkwork/drive/admin/storage/sdk/generated/java/model/ProviderObject.java",
+        "src/main/java/com/sdkwork/drive/admin/storage/sdk/generated/java/model/ProviderObjectContent.java",
+        "src/main/java/com/sdkwork/drive/admin/storage/sdk/generated/java/model/ProviderObjectMutation.java",
+        "src/main/java/com/sdkwork/drive/admin/storage/sdk/generated/java/model/RotateStorageProviderCredentialRequest.java",
+        "src/main/java/com/sdkwork/drive/admin/storage/sdk/generated/java/model/SdkWorkApiResponse.java",
+        "src/main/java/com/sdkwork/drive/admin/storage/sdk/generated/java/model/SdkWorkCommandData.java",
+        "src/main/java/com/sdkwork/drive/admin/storage/sdk/generated/java/model/SdkWorkCommandResponse.java",
+        "src/main/java/com/sdkwork/drive/admin/storage/sdk/generated/java/model/SdkWorkPageData.java",
+        "src/main/java/com/sdkwork/drive/admin/storage/sdk/generated/java/model/SdkWorkResourceData.java",
+        "src/main/java/com/sdkwork/drive/admin/storage/sdk/generated/java/model/SdkWorkResourceResponse.java",
+        "src/main/java/com/sdkwork/drive/admin/storage/sdk/generated/java/model/SetDefaultStorageProviderBindingRequest.java",
+        "src/main/java/com/sdkwork/drive/admin/storage/sdk/generated/java/model/SetStorageProviderKindEnabledRequest.java",
+        "src/main/java/com/sdkwork/drive/admin/storage/sdk/generated/java/model/StorageProvider.java",
+        "src/main/java/com/sdkwork/drive/admin/storage/sdk/generated/java/model/StorageProviderBinding.java",
+        "src/main/java/com/sdkwork/drive/admin/storage/sdk/generated/java/model/StorageProviderBindingsDefaultRetrieveResponse.java",
+        "src/main/java/com/sdkwork/drive/admin/storage/sdk/generated/java/model/StorageProviderBindingsDefaultUpdateResponse.java",
+        "src/main/java/com/sdkwork/drive/admin/storage/sdk/generated/java/model/StorageProviderBindingsListResponse.java",
+        "src/main/java/com/sdkwork/drive/admin/storage/sdk/generated/java/model/StorageProviderCapabilities.java",
+        "src/main/java/com/sdkwork/drive/admin/storage/sdk/generated/java/model/StorageProviderKind.java",
+        "src/main/java/com/sdkwork/drive/admin/storage/sdk/generated/java/model/StorageProviderKindsInitializeResponse.java",
+        "src/main/java/com/sdkwork/drive/admin/storage/sdk/generated/java/model/StorageProviderKindsListResponse.java",
+        "src/main/java/com/sdkwork/drive/admin/storage/sdk/generated/java/model/StorageProviderKindsUpdateResponse.java",
+        "src/main/java/com/sdkwork/drive/admin/storage/sdk/generated/java/model/StorageProvidersActivateResponse.java",
+        "src/main/java/com/sdkwork/drive/admin/storage/sdk/generated/java/model/StorageProvidersBucketRetrieveResponse.java",
+        "src/main/java/com/sdkwork/drive/admin/storage/sdk/generated/java/model/StorageProvidersBucketsListResponse.java",
+        "src/main/java/com/sdkwork/drive/admin/storage/sdk/generated/java/model/StorageProvidersBucketUpdateResponse.java",
+        "src/main/java/com/sdkwork/drive/admin/storage/sdk/generated/java/model/StorageProvidersCapabilitiesListResponse.java",
+        "src/main/java/com/sdkwork/drive/admin/storage/sdk/generated/java/model/StorageProvidersCreateResponse201.java",
+        "src/main/java/com/sdkwork/drive/admin/storage/sdk/generated/java/model/StorageProvidersCredentialsRotateResponse.java",
+        "src/main/java/com/sdkwork/drive/admin/storage/sdk/generated/java/model/StorageProvidersDeactivateResponse.java",
+        "src/main/java/com/sdkwork/drive/admin/storage/sdk/generated/java/model/StorageProvidersListResponse.java",
+        "src/main/java/com/sdkwork/drive/admin/storage/sdk/generated/java/model/StorageProvidersObjectsContentRetrieveResponse.java",
+        "src/main/java/com/sdkwork/drive/admin/storage/sdk/generated/java/model/StorageProvidersObjectsContentUpdateResponse.java",
+        "src/main/java/com/sdkwork/drive/admin/storage/sdk/generated/java/model/StorageProvidersObjectsCopyResponse.java",
+        "src/main/java/com/sdkwork/drive/admin/storage/sdk/generated/java/model/StorageProvidersObjectsListResponse.java",
+        "src/main/java/com/sdkwork/drive/admin/storage/sdk/generated/java/model/StorageProvidersObjectsRetrieveResponse.java",
+        "src/main/java/com/sdkwork/drive/admin/storage/sdk/generated/java/model/StorageProvidersRetrieveResponse.java",
+        "src/main/java/com/sdkwork/drive/admin/storage/sdk/generated/java/model/StorageProvidersTestResponse.java",
+        "src/main/java/com/sdkwork/drive/admin/storage/sdk/generated/java/model/StorageProvidersUpdateResponse.java",
+        "src/main/java/com/sdkwork/drive/admin/storage/sdk/generated/java/model/TestStorageProviderResponse.java",
+        "src/main/java/com/sdkwork/drive/admin/storage/sdk/generated/java/model/UpdateProviderObjectContent.java",
+        "src/main/java/com/sdkwork/drive/admin/storage/sdk/generated/java/model/UpdateStorageProviderRequest.java",
+        "src/main/java/com/sdkwork/drive/admin/storage/sdk/generated/java/SdkworkCustomClient.java"
+      ],
+      "deletedGeneratedFiles": [],
+      "scaffoldedFiles": [],
+      "preservedScaffoldFiles": [
+        "custom/README.md"
+      ],
+      "backedUpFiles": []
+    },
+    "impact": {
+      "schemaVersion": 1,
+      "areas": [],
+      "details": [],
+      "requiresVerification": false,
+      "summary": "No generated, scaffold, or backup changes detected. Verification can be skipped."
+    },
+    "verificationPlan": {
+      "shouldRun": false,
+      "runPhase": "skip",
+      "summary": "No generated, scaffold, or backup changes detected. Verification can be skipped.",
+      "steps": []
+    },
+    "executionDecision": {
+      "schemaVersion": 1,
+      "riskLevel": "low",
+      "nextAction": "skip",
+      "requiresManualReview": false,
+      "applyRequiresExpectedFingerprint": false,
+      "summary": "No actionable changes were detected. No apply or verification step is required.",
+      "reasons": [
+        "no-actionable-changes"
+      ]
+    },
+    "backedUpFiles": [],
+    "preservedLegacyFiles": false
+  }
+}

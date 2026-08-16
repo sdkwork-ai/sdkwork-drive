@@ -1,0 +1,42 @@
+# SDKWork Drive edge rate limiting (example)
+
+Use this pattern in front of multi-replica Drive HTTP services. Cloud
+deployments also run the Redis-backed application limiter with fail-closed
+behavior; edge limits are the first protection layer and absorb obvious
+abuse before requests reach Drive pods.
+
+## Nginx (`limit_req`)
+
+```nginx
+# deployments/nginx/drive-edge-rate-limit.conf.example
+limit_req_zone $binary_remote_addr zone=drive_open_api:10m rate=30r/s;
+limit_req_zone $binary_remote_addr zone=drive_app_api:10m rate=120r/s;
+
+server {
+    listen 443 ssl;
+    server_name drive.sdkwork.com;
+
+    location /open/v3/api/drive/share_links/ {
+        limit_req zone=drive_open_api burst=60 nodelay;
+        proxy_pass http://sdkwork-drive-open-api:18082;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    }
+
+    location /app/v3/api/drive/ {
+        limit_req zone=drive_app_api burst=240 nodelay;
+        proxy_pass http://sdkwork-drive-app-api:18080;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    }
+}
+```
+
+## Kubernetes Ingress (nginx ingress controller)
+
+```yaml
+metadata:
+  annotations:
+    nginx.ingress.kubernetes.io/limit-rps: "120"
+    nginx.ingress.kubernetes.io/limit-burst-multiplier: "2"
+```
+
+Tune limits per tenant SLA and pair with WAF rules for abusive share-link traffic.

@@ -1,0 +1,16 @@
+node_modules/
+dist/
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.staging.local
+.env.production.local
+.env.postgres
+.env.release.local
+config/*.local.toml
+packages/*/node_modules/
+packages/sdkwork-drive-pc-desktop/src-tauri/target/
+packages/sdkwork-drive-pc-desktop/src-tauri/target-test-migrate/
+packages/sdkwork-drive-pc-desktop/src-tauri/gen/
+pnpm-lock.yaml

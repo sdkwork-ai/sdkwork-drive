@@ -1,0 +1,65 @@
+module: drive
+owner: sdkwork-drive
+capability: global-assets
+description: Global assets API facade backed by canonical Drive nodes and storage objects.
+canonical_asset_table: dr_drive_node
+asset_id_alias: drive_node_id
+canonical_storage_table: dr_drive_storage_object
+tables: []
+views:
+  - api: /app/v3/api/assets
+    source: dr_drive_node
+    description: Lists file and virtual_reference Drive nodes as global assets.
+    field_mapping:
+      assetId: dr_drive_node.id
+      driveNodeId: dr_drive_node.id
+      driveSpaceId: dr_drive_node.space_id
+      assetKind: dr_drive_node.node_type plus latest resource content group
+      title: dr_drive_node.node_name
+      scene: dr_drive_node.scene
+      source: dr_drive_node.source
+      sourceType: derived from dr_drive_node.source or upload/generation context
+      sourceDomain: dr_drive_node.source domain prefix when present
+      lifecycleStatus: dr_drive_node.lifecycle_status
+      resourceSnapshot: latest dr_drive_storage_object media metadata when available
+indexes:
+  - name: ix_dr_drive_node_asset_list
+    table: dr_drive_node
+    columns:
+      - tenant_id
+      - node_type
+      - lifecycle_status
+      - updated_at
+      - id
+    purpose: Cursor pagination for global assets without duplicating Drive node state.
+  - name: ix_dr_drive_node_asset_scene_source
+    table: dr_drive_node
+    columns:
+      - tenant_id
+      - node_type
+      - scene
+      - source
+      - lifecycle_status
+      - updated_at
+      - id
+    purpose: High-volume filtering for upload, AI-generated, imported, and app-scoped assets.
+  - name: ix_dr_drive_storage_object_node_latest
+    table: dr_drive_storage_object
+    columns:
+      - tenant_id
+      - node_id
+      - lifecycle_status
+      - version_no
+    purpose: Resolve latest resource metadata for AssetItem.resourceSnapshot.
+api_rules:
+  - /assets is global and must not live under /generations.
+  - Upload sessions, presign flows, and download grants stay under Drive upload/download APIs.
+  - Asset creation binds to an existing Drive node or creates a Drive virtual_reference node; it must not create a parallel asset row.
+  - AI generation outputs use assetId as an alias of driveNodeId after the result is saved to Drive.
+forbidden:
+  - parallel asset domain tables
+  - asset resource reference tables
+  - asset projection tables
+  - direct object-store locator fields
+  - temporary signed transfer URLs
+  - asset-scoped upload session records

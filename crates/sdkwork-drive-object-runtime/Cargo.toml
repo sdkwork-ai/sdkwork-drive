@@ -1,0 +1,17 @@
+[package]
+name = "sdkwork-drive-object-runtime"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+sdkwork-drive-storage-contract.workspace = true
+sdkwork-drive-storage-local.workspace = true
+sdkwork-drive-storage-s3.workspace = true
+sdkwork-drive-workspace-service.workspace = true
+sqlx.workspace = true
+tokio.workspace = true
+url.workspace = true
+
+[dev-dependencies]
+sdkwork-drive-config.workspace = true
+tempfile.workspace = true

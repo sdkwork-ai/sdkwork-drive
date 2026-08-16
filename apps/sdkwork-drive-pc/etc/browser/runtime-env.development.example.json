@@ -1,0 +1,37 @@
+{
+  "environment": "development",
+  "configProfile": "dev",
+  "buildMode": "development",
+  "deploymentMode": "desktop",
+  "runtimeTarget": "browser",
+  "appKey": "sdkwork-drive-pc",
+  "appApiBaseUrl": "http://127.0.0.1:3900",
+  "backendApiBaseUrl": "http://127.0.0.1:3900",
+  "sdkBaseUrls": {
+    "appApiBaseUrl": "http://127.0.0.1:3900",
+    "backendApiBaseUrl": "http://127.0.0.1:3900",
+    "dependencySdkBaseUrls": {
+      "sdkwork-iam-app-sdk": {
+        "appApiBaseUrl": "http://127.0.0.1:3900"
+      },
+      "sdkwork-drive-app-sdk": {
+        "appApiBaseUrl": "http://127.0.0.1:3900"
+      },
+      "sdkwork-drive-admin-storage-sdk": {
+        "backendApiBaseUrl": "http://127.0.0.1:3900"
+      }
+    }
+  },
+  "auth": {
+    "tokenManagerMode": "appbase-global",
+    "tokenStorage": "browser-local",
+    "accessTokenHeader": "Access-Token",
+    "authTokenHeader": "Authorization",
+    "refreshEnabled": true
+  },
+  "publicRuntime": {
+    "runtimeEnvFile": "/runtime-env.json",
+    "appApiBaseUrl": "http://127.0.0.1:3900",
+    "backendApiBaseUrl": "http://127.0.0.1:3900"
+  }
+}

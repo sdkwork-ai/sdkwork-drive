@@ -1,0 +1,29 @@
+{
+  "name": "sdkwork-drive-pc-admin-operations",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": {
+      "import": "./src/index.ts",
+      "types": "./src/index.ts"
+    }
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit --project ../../tsconfig.json"
+  },
+  "dependencies": {
+    "@sdkwork/drive-backend-sdk": "workspace:*",
+    "@sdkwork/ui-pc-react": "workspace:*",
+    "@sdkwork/utils": "workspace:*",
+    "lucide-react": "catalog:",
+    "sdkwork-drive-pc-admin-core": "workspace:*",
+    "sdkwork-drive-pc-commons": "workspace:*",
+    "sdkwork-drive-pc-core": "workspace:*"
+  },
+  "peerDependencies": {
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  }
+}

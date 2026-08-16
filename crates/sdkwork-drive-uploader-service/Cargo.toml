@@ -1,0 +1,10 @@
+[package]
+name = "sdkwork-drive-uploader-service"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+sdkwork-drive-workspace-service.workspace = true
+
+[dev-dependencies]
+tokio.workspace = true

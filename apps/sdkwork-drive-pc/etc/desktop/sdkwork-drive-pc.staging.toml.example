@@ -1,0 +1,32 @@
+[runtime]
+environment = "staging"
+config_profile = "staging"
+build_mode = "staging"
+deployment_mode = "desktop"
+runtime_target = "desktop"
+app_key = "sdkwork-drive-pc"
+
+[sdk_base_urls]
+app_api_base_url = "https://api-staging.sdkwork.com/app/v3/api"
+backend_api_base_url = "https://api-staging.sdkwork.com/backend/v3/api"
+
+[auth]
+token_manager_mode = "appbase-global"
+token_storage = "os-secure-storage"
+access_token_header = "Access-Token"
+auth_token_header = "Authorization"
+refresh_enabled = true
+
+[desktop]
+native_host = "tauri"
+local_service_enabled = false
+user_config_file = "~/.sdkwork/sdkwork-drive-pc/config/sdkwork-drive-pc.toml"
+secure_storage_provider = "os"
+
+[database]
+engine = "sqlite"
+file = "~/.sdkwork/sdkwork-drive-pc/data/sdkwork-drive-pc.sqlite"
+max_connections = 1
+
+[redis]
+enabled = false

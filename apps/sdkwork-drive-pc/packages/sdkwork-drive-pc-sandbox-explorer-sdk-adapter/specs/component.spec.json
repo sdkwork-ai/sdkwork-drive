@@ -1,0 +1,46 @@
+{
+  "schemaVersion": 1,
+  "kind": "sdkwork.component.spec",
+  "component": {
+    "name": "@sdkwork/drive-pc-sandbox-explorer-sdk-adapter",
+    "displayName": "Drive Sandbox Explorer SDK Adapter",
+    "version": "0.1.0",
+    "type": "node-package",
+    "root": ".",
+    "domain": "drive",
+    "capability": "sandbox-explorer-sdk-adapter",
+    "surface": "app",
+    "languages": ["typescript"],
+    "generated": false,
+    "private": true,
+    "manifests": ["package.json"]
+  },
+  "canonicalSpecs": [
+    {"file":"COMPONENT_SPEC.md","path":"../../../../../sdkwork-specs/COMPONENT_SPEC.md","purpose":"Component-local contract and discovery rules."},
+    {"file":"CODE_STYLE_SPEC.md","path":"../../../../../sdkwork-specs/CODE_STYLE_SPEC.md","purpose":"Authored source structure and generated code boundaries."},
+    {"file":"NAMING_SPEC.md","path":"../../../../../sdkwork-specs/NAMING_SPEC.md","purpose":"Canonical SDKWork naming rules."},
+    {"file":"MODULE_SPEC.md","path":"../../../../../sdkwork-specs/MODULE_SPEC.md","purpose":"Reusable adapter boundary."},
+    {"file":"APP_SDK_INTEGRATION_SPEC.md","path":"../../../../../sdkwork-specs/APP_SDK_INTEGRATION_SPEC.md","purpose":"Composed app SDK consumption rules."},
+    {"file":"SDK_SPEC.md","path":"../../../../../sdkwork-specs/SDK_SPEC.md","purpose":"Generated SDK ownership and facade rules."},
+    {"file":"TYPESCRIPT_CODE_SPEC.md","path":"../../../../../sdkwork-specs/TYPESCRIPT_CODE_SPEC.md","purpose":"TypeScript public export rules."},
+    {"file":"TEST_SPEC.md","path":"../../../../../sdkwork-specs/TEST_SPEC.md","purpose":"Adapter contract verification requirements."}
+  ],
+  "contracts": {
+    "layerRole": "frontend-core",
+    "publicExports": ["."],
+    "providedPorts": ["createDriveSandboxExplorerSdkPort"],
+    "requiredPorts": ["SandboxExplorerPort", "DriveSandboxExplorerSdkClient"],
+    "sdkClients": [],
+    "sdkDependencies": [],
+    "dependencyApiExports": [],
+    "dependencyApiSurfaces": [],
+    "events": [],
+    "configKeys": []
+  },
+  "verification": {
+    "commands": [
+      "pnpm --filter @sdkwork/drive-pc-sandbox-explorer-sdk-adapter typecheck",
+      "pnpm --filter @sdkwork/drive-pc-sandbox-explorer-sdk-adapter test"
+    ]
+  }
+}

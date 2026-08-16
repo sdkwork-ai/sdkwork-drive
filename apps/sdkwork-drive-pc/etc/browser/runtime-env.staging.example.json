@@ -1,0 +1,37 @@
+{
+  "environment": "staging",
+  "configProfile": "staging",
+  "buildMode": "staging",
+  "deploymentMode": "private",
+  "runtimeTarget": "browser",
+  "appKey": "sdkwork-drive-pc",
+  "appApiBaseUrl": "https://api-staging.sdkwork.com/app/v3/api",
+  "backendApiBaseUrl": "https://api-staging.sdkwork.com/backend/v3/api",
+  "sdkBaseUrls": {
+    "appApiBaseUrl": "https://api-staging.sdkwork.com/app/v3/api",
+    "backendApiBaseUrl": "https://api-staging.sdkwork.com/backend/v3/api",
+    "dependencySdkBaseUrls": {
+      "sdkwork-iam-app-sdk": {
+        "appApiBaseUrl": "https://api-staging.sdkwork.com/app/v3/api"
+      },
+      "sdkwork-drive-app-sdk": {
+        "appApiBaseUrl": "https://api-staging.sdkwork.com/app/v3/api"
+      },
+      "sdkwork-drive-admin-storage-sdk": {
+        "backendApiBaseUrl": "https://api-staging.sdkwork.com/backend/v3/api"
+      }
+    }
+  },
+  "auth": {
+    "tokenManagerMode": "appbase-global",
+    "tokenStorage": "browser-local",
+    "accessTokenHeader": "Access-Token",
+    "authTokenHeader": "Authorization",
+    "refreshEnabled": true
+  },
+  "publicRuntime": {
+    "runtimeEnvFile": "/runtime-env.json",
+    "appApiBaseUrl": "https://api-staging.sdkwork.com/app/v3/api",
+    "backendApiBaseUrl": "https://api-staging.sdkwork.com/backend/v3/api"
+  }
+}

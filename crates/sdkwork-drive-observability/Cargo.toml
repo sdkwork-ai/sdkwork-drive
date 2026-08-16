@@ -1,0 +1,22 @@
+[package]
+name = "sdkwork-drive-observability"
+version.workspace = true
+edition.workspace = true
+
+[features]
+default = []
+otlp = [
+    "dep:opentelemetry",
+    "dep:opentelemetry_sdk",
+    "dep:opentelemetry-otlp",
+    "dep:tracing-opentelemetry",
+]
+
+[dependencies]
+sdkwork-drive-config.workspace = true
+tracing.workspace = true
+tracing-subscriber = { workspace = true, features = ["env-filter", "fmt", "registry"] }
+opentelemetry = { version = "0.30", optional = true }
+opentelemetry_sdk = { version = "0.30", optional = true, features = ["rt-tokio"] }
+opentelemetry-otlp = { version = "0.30", optional = true, features = ["http-proto", "reqwest-client"] }
+tracing-opentelemetry = { version = "0.31", optional = true }

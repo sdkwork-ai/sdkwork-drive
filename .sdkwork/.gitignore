@@ -1,0 +1,7 @@
+local/
+tmp/
+cache/
+secrets/
+*.local.json
+*.local.toml
+*.secret

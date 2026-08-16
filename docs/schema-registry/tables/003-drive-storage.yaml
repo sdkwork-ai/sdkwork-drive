@@ -1,0 +1,732 @@
+module: drive
+owner: sdkwork-drive
+tables:
+  - table: dr_drive_storage_provider
+    domain: drive
+    description: Configured object storage provider.
+    columns:
+      - name: id
+        type: varchar(64)
+        constraints:
+          - primary_key
+      - name: provider_kind
+        type: varchar(64)
+        constraints:
+          - "enum: [local_filesystem, s3_compatible, google_cloud_storage, aliyun_oss, tencent_cos, huawei_obs, volcengine_tos]"
+          - "extensible_pattern: ^(local_filesystem|s3_compatible|google_cloud_storage|aliyun_oss|tencent_cos|huawei_obs|volcengine_tos|custom:[a-z0-9_-]{2,32})$"
+      - name: name
+        type: varchar(128)
+      - name: endpoint_url
+        type: text
+        constraints:
+          - "pattern: local_filesystem uses ^file://.+$; object-store providers use ^https?://[^\\s/?#]+.*$"
+          - "must be normalized before adapter construction: no leading/trailing whitespace and no embedded whitespace"
+      - name: region
+        type: varchar(128)
+        nullable: true
+      - name: bucket
+        type: varchar(255)
+        constraints:
+          - "runtime bucket reference: trimmed ^[A-Za-z0-9._-]{1,255}$"
+          - "object-store adapter input must be normalized before adapter construction: no leading/trailing whitespace"
+          - "pattern: local_filesystem uses ^[A-Za-z0-9._-]{1,255}$; object-store providers use S3 DNS-compatible bucket names: 3-63 lowercase letters, digits, dot, or hyphen; start/end alphanumeric; no adjacent dots, dot-hyphen adjacency, IPv4 format, or reserved S3 affixes"
+      - name: path_style
+        type: boolean
+      - name: strict_tls
+        type: boolean
+        constraints:
+          - "default: true"
+          - "strict_tls=true requires an https endpoint for object-store providers; private http endpoints must set strict_tls=false"
+      - name: credential_ref
+        type: varchar(255)
+        nullable: true
+        constraints:
+          - "credential reference pattern: ^(plain|env|secret|kms|vault):.+$"
+          - "plain:<accessKeyId>:<secretAccessKey>[:<sessionToken>] stores only local/dev inline values; production providers should prefer env, secret, kms, or vault refs"
+          - "env:<accessKeyEnv>:<secretKeyEnv>[:<sessionTokenEnv>] resolves credentials from named environment variables"
+          - "secret/kms/vault refs are materialized before adapter construction through SDKWORK_DRIVE_STORAGE_CREDENTIAL__<sanitized_ref>__ACCESS_KEY_ID, __SECRET_ACCESS_KEY, and optional __SESSION_TOKEN"
+      - name: server_side_encryption_mode
+        type: varchar(64)
+        nullable: true
+      - name: default_storage_class
+        type: varchar(64)
+        nullable: true
+      - name: status
+        type: varchar(32)
+        constraints:
+          - "enum: [active, disabled, deleted]"
+      - name: version
+        type: bigint
+        constraints:
+          - "min: 1"
+      - name: created_by
+        type: varchar(128)
+      - name: updated_by
+        type: varchar(128)
+      - name: created_at
+        type: timestamp
+      - name: updated_at
+        type: timestamp
+    indexes:
+      - name: ix_dr_drive_storage_provider_status
+        columns: [status, updated_at]
+
+  - table: dr_drive_storage_provider_binding
+    domain: drive
+    description: Tenant or space default binding to a configured storage provider.
+    columns:
+      - name: id
+        type: varchar(192)
+        constraints:
+          - primary_key
+      - name: tenant_id
+        type: varchar(64)
+      - name: space_id
+        type: varchar(64)
+        nullable: true
+        references: dr_drive_space.id
+        on_delete: cascade
+      - name: provider_id
+        type: varchar(64)
+        references: dr_drive_storage_provider.id
+        on_delete: cascade
+      - name: binding_scope
+        type: varchar(32)
+        constraints:
+          - "enum: [tenant, space]"
+      - name: purpose
+        type: varchar(32)
+        constraints:
+          - "enum: [primary]"
+      - name: storage_root_prefix
+        type: text
+        constraints:
+          - "object prefix: UTF-8 1-512 bytes, trimmed, relative prefix; no leading/trailing slash, double slash, NUL, or period-only path segments"
+      - name: lifecycle_status
+        type: varchar(32)
+        constraints:
+          - "enum: [active, disabled, deleted]"
+      - name: version
+        type: bigint
+        constraints:
+          - "min: 1"
+      - name: created_by
+        type: varchar(128)
+      - name: updated_by
+        type: varchar(128)
+      - name: created_at
+        type: timestamp
+      - name: updated_at
+        type: timestamp
+    indexes:
+      - name: ix_dr_drive_storage_provider_binding_lookup
+        columns: [tenant_id, space_id, purpose, lifecycle_status]
+      - name: ix_dr_drive_storage_provider_binding_provider
+        columns: [provider_id, lifecycle_status]
+      - name: ux_dr_drive_storage_provider_binding_tenant_primary_active
+        columns: [tenant_id, purpose]
+        unique: true
+        predicate: "space_id IS NULL AND purpose = 'primary' AND lifecycle_status = 'active'"
+      - name: ux_dr_drive_storage_provider_binding_space_primary_active
+        columns: [tenant_id, space_id, purpose]
+        unique: true
+        predicate: "space_id IS NOT NULL AND purpose = 'primary' AND lifecycle_status = 'active'"
+      - name: ux_dr_drive_storage_provider_binding_space_type_active
+        columns: [tenant_id, purpose]
+        unique: true
+        predicate: "binding_scope = 'space_type' AND lifecycle_status = 'active'"
+
+  - table: dr_drive_storage_object
+    domain: drive
+    description: Versioned object metadata for a file node. The database is the source of truth for node-to-object binding; the object store keeps bytes.
+    columns:
+      - name: id
+        type: varchar(64)
+        constraints:
+          - primary_key
+      - name: tenant_id
+        type: varchar(64)
+      - name: node_id
+        type: varchar(64)
+        references: dr_drive_node.id
+        on_delete: cascade
+      - name: version_no
+        type: bigint
+        constraints:
+          - "min: 1"
+      - name: storage_provider_id
+        type: varchar(64)
+        references: dr_drive_storage_provider.id
+        on_delete: restrict
+      - name: bucket
+        type: varchar(255)
+        constraints:
+          - "runtime bucket reference: trimmed ^[A-Za-z0-9._-]{1,255}$"
+      - name: object_key
+        type: text
+        constraints:
+          - "object_key: UTF-8 1-1024 bytes, trimmed, relative key; no leading/trailing slash, double slash, NUL, or period-only path segments"
+      - name: content_type
+        type: varchar(255)
+        constraints:
+          - "MIME type: trimmed 3-255 chars, exactly one slash, no whitespace"
+      - name: content_length
+        type: bigint
+        constraints:
+          - "min: 0"
+      - name: checksum_sha256_hex
+        type: varchar(255)
+        constraints:
+          - "sha256:<64 lowercase hex characters>"
+      - name: lifecycle_status
+        type: varchar(32)
+        constraints:
+          - "enum: [active, deleted]"
+      - name: created_by
+        type: varchar(128)
+      - name: updated_by
+        type: varchar(128)
+      - name: created_at
+        type: timestamp
+      - name: updated_at
+        type: timestamp
+    indexes:
+      - name: ux_dr_drive_storage_object_node_version
+        columns: [tenant_id, node_id, version_no]
+        unique: true
+      - name: ux_dr_drive_storage_object_active_locator
+        columns: [tenant_id, node_id, storage_provider_id, bucket, object_key]
+        unique: true
+        predicate: "lifecycle_status = 'active'"
+      - name: ix_dr_drive_storage_object_node_latest
+        columns: [tenant_id, node_id, lifecycle_status, version_no]
+
+  - table: dr_drive_node_version
+    domain: drive
+    description: Logical node version fact. This is the stable version identity that business domains may reference; it points to a storage object when Drive owns bytes.
+    columns:
+      - name: id
+        type: varchar(64)
+        constraints:
+          - primary_key
+      - name: tenant_id
+        type: varchar(64)
+      - name: space_id
+        type: varchar(64)
+        references: dr_drive_space.id
+        on_delete: cascade
+      - name: node_id
+        type: varchar(64)
+        references: dr_drive_node.id
+        on_delete: cascade
+      - name: version_no
+        type: bigint
+        constraints:
+          - "min: 1"
+      - name: storage_object_id
+        type: varchar(64)
+        references: dr_drive_storage_object.id
+        on_delete: set_null
+      - name: content_type
+        type: varchar(255)
+        constraints:
+          - "MIME type: trimmed 3-255 chars, exactly one slash, no whitespace"
+      - name: content_length
+        type: bigint
+        constraints:
+          - "min: 0"
+      - name: checksum_sha256_hex
+        type: varchar(255)
+        constraints:
+          - "sha256:<64 lowercase hex characters>"
+      - name: version_kind
+        type: varchar(32)
+        constraints:
+          - "enum: [auto, manual, restore, import, ai_generated, system]"
+      - name: version_label
+        type: varchar(128)
+      - name: change_source
+        type: varchar(32)
+        constraints:
+          - "enum: [app_api, backend_api, uploader, sync, ai, import, restore, system]"
+      - name: change_summary
+        type: text
+      - name: restored_from_version_id
+        type: varchar(64)
+        references: dr_drive_node_version.id
+        on_delete: set_null
+      - name: app_id
+        type: varchar(128)
+      - name: app_resource_type
+        type: varchar(64)
+      - name: app_resource_id
+        type: varchar(128)
+      - name: scene
+        type: varchar(128)
+      - name: source
+        type: varchar(128)
+      - name: lifecycle_status
+        type: varchar(32)
+        constraints:
+          - "enum: [active, deleted]"
+      - name: created_by
+        type: varchar(128)
+      - name: updated_by
+        type: varchar(128)
+      - name: created_at
+        type: timestamp
+      - name: updated_at
+        type: timestamp
+    indexes:
+      - name: ux_dr_drive_node_version_node_version
+        columns: [tenant_id, node_id, version_no]
+        unique: true
+      - name: ix_dr_drive_node_version_node_latest
+        columns: [tenant_id, node_id, lifecycle_status, version_no]
+      - name: ix_dr_drive_node_version_storage_object
+        columns: [tenant_id, storage_object_id]
+        predicate: "storage_object_id IS NOT NULL"
+      - name: ix_dr_drive_node_version_app_resource
+        columns: [tenant_id, app_id, app_resource_type, app_resource_id, created_at]
+        predicate: "app_id IS NOT NULL"
+
+  - table: dr_drive_space_version_policy
+    domain: drive
+    description: Default node-version policy for a Drive space.
+    columns:
+      - name: id
+        type: varchar(64)
+        constraints:
+          - primary_key
+      - name: tenant_id
+        type: varchar(64)
+      - name: space_id
+        type: varchar(64)
+        references: dr_drive_space.id
+        on_delete: cascade
+      - name: versioning_enabled
+        type: boolean
+      - name: default_version_kind
+        type: varchar(32)
+        constraints:
+          - "enum: [auto, manual, restore, import, ai_generated, system]"
+      - name: retention_mode
+        type: varchar(32)
+        constraints:
+          - "enum: [unlimited, max_versions, time_window]"
+      - name: max_versions
+        type: bigint
+      - name: retention_days
+        type: bigint
+      - name: keep_deleted_versions
+        type: boolean
+      - name: created_by
+        type: varchar(128)
+      - name: updated_by
+        type: varchar(128)
+      - name: created_at
+        type: timestamp
+      - name: updated_at
+        type: timestamp
+    indexes:
+      - name: ux_dr_drive_space_version_policy_space
+        columns: [tenant_id, space_id]
+        unique: true
+
+  - table: dr_drive_node_version_policy
+    domain: drive
+    description: Optional node-level override for Drive node-version behavior.
+    columns:
+      - name: id
+        type: varchar(64)
+        constraints:
+          - primary_key
+      - name: tenant_id
+        type: varchar(64)
+      - name: space_id
+        type: varchar(64)
+        references: dr_drive_space.id
+        on_delete: cascade
+      - name: node_id
+        type: varchar(64)
+        references: dr_drive_node.id
+        on_delete: cascade
+      - name: versioning_enabled
+        type: boolean
+      - name: default_version_kind
+        type: varchar(32)
+        constraints:
+          - "enum: [auto, manual, restore, import, ai_generated, system]"
+      - name: retention_mode
+        type: varchar(32)
+        constraints:
+          - "enum: [unlimited, max_versions, time_window]"
+      - name: max_versions
+        type: bigint
+      - name: retention_days
+        type: bigint
+      - name: keep_deleted_versions
+        type: boolean
+      - name: created_by
+        type: varchar(128)
+      - name: updated_by
+        type: varchar(128)
+      - name: created_at
+        type: timestamp
+      - name: updated_at
+        type: timestamp
+    indexes:
+      - name: ux_dr_drive_node_version_policy_node
+        columns: [tenant_id, node_id]
+        unique: true
+
+  - table: dr_drive_upload_session
+    domain: drive
+    description: Upload session state used for resumable and multipart upload workflows.
+    columns:
+      - name: id
+        type: varchar(64)
+        constraints:
+          - primary_key
+      - name: tenant_id
+        type: varchar(64)
+      - name: space_id
+        type: varchar(64)
+        references: dr_drive_space.id
+        on_delete: cascade
+      - name: node_id
+        type: varchar(64)
+        references: dr_drive_node.id
+        on_delete: cascade
+      - name: bucket
+        type: varchar(255)
+        constraints:
+          - "runtime bucket reference: trimmed ^[A-Za-z0-9._-]{1,255}$"
+      - name: object_key
+        type: text
+        constraints:
+          - "object_key: UTF-8 1-1024 bytes, trimmed, relative key; no leading/trailing slash, double slash, NUL, or period-only path segments"
+      - name: idempotency_key
+        type: varchar(128)
+      - name: storage_provider_id
+        type: varchar(64)
+        references: dr_drive_storage_provider.id
+        on_delete: restrict
+      - name: storage_upload_id
+        type: text
+      - name: state
+        type: varchar(32)
+        constraints:
+          - "enum: [created, uploading, completing, completed, aborted, expired]"
+      - name: expires_at_epoch_ms
+        type: bigint
+        constraints:
+          - "min: 1"
+      - name: version
+        type: bigint
+        constraints:
+          - "min: 1"
+      - name: created_by
+        type: varchar(128)
+      - name: updated_by
+        type: varchar(128)
+      - name: created_at
+        type: timestamp
+      - name: updated_at
+        type: timestamp
+    indexes:
+      - name: ux_dr_drive_upload_session_idempotency
+        columns: [tenant_id, space_id, node_id, idempotency_key]
+        unique: true
+      - name: ix_dr_drive_upload_session_expires
+        columns: [tenant_id, state, expires_at_epoch_ms]
+
+  - table: dr_drive_upload_item
+    domain: drive
+    description: Drive Uploader upload task and content lifecycle fact table.
+    columns:
+      - name: id
+        type: varchar(64)
+        constraints:
+          - primary_key
+      - name: task_id
+        type: varchar(64)
+      - name: tenant_id
+        type: varchar(64)
+      - name: organization_id
+        type: varchar(128)
+        nullable: true
+      - name: user_id
+        type: varchar(128)
+        nullable: true
+      - name: actor_type
+        type: varchar(32)
+        constraints:
+          - "enum: [anonymous, user, system]"
+      - name: actor_id
+        type: varchar(128)
+      - name: app_id
+        type: varchar(128)
+      - name: app_resource_type
+        type: varchar(128)
+      - name: app_resource_id
+        type: varchar(128)
+      - name: scene
+        type: varchar(128)
+        nullable: true
+        constraints:
+          - "pattern: ^[A-Za-z0-9._:@-]+$"
+      - name: source
+        type: varchar(128)
+        nullable: true
+        constraints:
+          - "pattern: ^[A-Za-z0-9._:@-]+$"
+      - name: upload_profile_code
+        type: varchar(64)
+        constraints:
+          - "enum: [generic, video, image, audio, document, archive, text, dataset, attachment, avatar, thumbnail]"
+      - name: file_fingerprint
+        type: varchar(255)
+      - name: space_id
+        type: varchar(64)
+        references: dr_drive_space.id
+        on_delete: cascade
+      - name: node_id
+        type: varchar(64)
+        references: dr_drive_node.id
+        on_delete: cascade
+      - name: upload_session_id
+        type: varchar(64)
+        nullable: true
+        references: dr_drive_upload_session.id
+        on_delete: set_null
+      - name: storage_provider_id
+        type: varchar(64)
+        nullable: true
+        references: dr_drive_storage_provider.id
+        on_delete: set_null
+      - name: storage_upload_id
+        type: text
+        nullable: true
+      - name: original_file_name
+        type: varchar(255)
+      - name: file_extension
+        type: varchar(64)
+        nullable: true
+      - name: content_type
+        type: varchar(255)
+        constraints:
+          - "MIME type: trimmed 3-255 chars, exactly one slash, no whitespace"
+      - name: content_type_group
+        type: varchar(64)
+      - name: detected_content_type
+        type: varchar(255)
+        nullable: true
+      - name: content_length
+        type: bigint
+        constraints:
+          - "min: 0"
+      - name: checksum_sha256_hex
+        type: varchar(255)
+        nullable: true
+        constraints:
+          - "format: sha256:[0-9a-f]{64}"
+      - name: chunk_size_bytes
+        type: bigint
+        constraints:
+          - "min: 1"
+      - name: total_parts
+        type: bigint
+        constraints:
+          - "min: 1"
+      - name: uploaded_parts_count
+        type: bigint
+        constraints:
+          - "min: 0"
+      - name: uploaded_bytes
+        type: bigint
+        constraints:
+          - "min: 0"
+      - name: status
+        type: varchar(32)
+        constraints:
+          - "enum: [prepared, uploading, paused, completing, completed, failed, cancelled, expired]"
+      - name: retention_mode
+        type: varchar(32)
+        constraints:
+          - "enum: [temporary, long_term]"
+      - name: retention_expires_at_epoch_ms
+        type: bigint
+        nullable: true
+      - name: cleanup_action
+        type: varchar(32)
+        nullable: true
+        constraints:
+          - "enum: [soft_delete, hard_delete]"
+      - name: hard_delete_after_epoch_ms
+        type: bigint
+        nullable: true
+      - name: cleanup_status
+        type: varchar(32)
+        constraints:
+          - "enum: [active, expired, soft_deleted, hard_deleted, failed]"
+      - name: post_process_status
+        type: varchar(32)
+        constraints:
+          - "enum: [not_required, pending, processing, completed, failed]"
+      - name: created_by
+        type: varchar(128)
+      - name: updated_by
+        type: varchar(128)
+      - name: created_at
+        type: timestamp
+      - name: updated_at
+        type: timestamp
+    indexes:
+      - name: ux_dr_drive_upload_item_task
+        columns: [tenant_id, task_id]
+        unique: true
+      - name: ix_dr_drive_upload_item_fingerprint
+        columns: [tenant_id, file_fingerprint, status]
+      - name: ix_dr_drive_upload_item_retention
+        columns: [tenant_id, cleanup_status, retention_expires_at_epoch_ms]
+      - name: ix_dr_drive_upload_item_usage_scope
+        columns:
+          - tenant_id
+          - organization_id
+          - user_id
+          - app_id
+          - scene
+          - source
+          - upload_profile_code
+          - content_type_group
+          - cleanup_status
+
+  - table: dr_drive_upload_part
+    domain: drive
+    description: Drive Uploader resumable multipart upload part facts.
+    columns:
+      - name: id
+        type: varchar(64)
+        constraints:
+          - primary_key
+      - name: tenant_id
+        type: varchar(64)
+      - name: upload_item_id
+        type: varchar(64)
+        references: dr_drive_upload_item.id
+        on_delete: cascade
+      - name: upload_session_id
+        type: varchar(64)
+        references: dr_drive_upload_session.id
+        on_delete: cascade
+      - name: part_no
+        type: bigint
+        constraints:
+          - "min: 1"
+          - "max: 10000"
+      - name: offset_bytes
+        type: bigint
+        constraints:
+          - "min: 0"
+      - name: size_bytes
+        type: bigint
+        constraints:
+          - "min: 1"
+      - name: etag
+        type: text
+      - name: checksum_sha256_hex
+        type: varchar(255)
+        nullable: true
+        constraints:
+          - "format: sha256:[0-9a-f]{64}"
+      - name: status
+        type: varchar(32)
+        constraints:
+          - "enum: [pending, uploading, uploaded, failed]"
+      - name: retry_count
+        type: bigint
+        constraints:
+          - "min: 0"
+      - name: uploaded_at_epoch_ms
+        type: bigint
+        nullable: true
+      - name: created_at
+        type: timestamp
+      - name: updated_at
+        type: timestamp
+    indexes:
+      - name: ux_dr_drive_upload_part_item_part
+        columns: [tenant_id, upload_item_id, part_no]
+        unique: true
+      - name: ix_dr_drive_upload_part_session
+        columns: [tenant_id, upload_session_id, status, part_no]
+
+  - table: dr_drive_download_package
+    domain: drive
+    description: Server-generated ZIP archive metadata for multi-node Drive package downloads.
+    columns:
+      - name: id
+        type: varchar(64)
+        constraints:
+          - primary_key
+      - name: tenant_id
+        type: varchar(64)
+      - name: package_name
+        type: varchar(255)
+      - name: state
+        type: varchar(32)
+        constraints:
+          - "enum: [creating, ready, failed, expired]"
+      - name: storage_provider_id
+        type: varchar(64)
+        references: dr_drive_storage_provider.id
+        on_delete: restrict
+      - name: bucket
+        type: varchar(255)
+      - name: archive_object_key
+        type: text
+        constraints:
+          - "object_key: UTF-8 1-1024 bytes, trimmed, relative key; no leading/trailing slash, double slash, NUL, or period-only path segments"
+      - name: content_type
+        type: varchar(255)
+      - name: file_count
+        type: bigint
+        constraints:
+          - "min: 0"
+      - name: total_bytes
+        type: bigint
+        constraints:
+          - "min: 0"
+      - name: archive_size_bytes
+        type: bigint
+        constraints:
+          - "min: 0"
+      - name: requested_node_ids_json
+        type: text
+      - name: item_manifest_json
+        type: text
+      - name: expires_at_epoch_ms
+        type: bigint
+        constraints:
+          - "min: 1"
+      - name: error_message
+        type: text
+        nullable: true
+      - name: version
+        type: bigint
+        constraints:
+          - "min: 1"
+      - name: created_by
+        type: varchar(128)
+      - name: updated_by
+        type: varchar(128)
+      - name: created_at
+        type: timestamp
+      - name: updated_at
+        type: timestamp
+    indexes:
+      - name: ix_dr_drive_download_package_tenant_state_created
+        columns: [tenant_id, state, created_at]
+      - name: ix_dr_drive_download_package_expires
+        columns: [state, expires_at_epoch_ms]

@@ -1,0 +1,276 @@
+module: drive
+owner: sdkwork-drive
+tables:
+  - table: dr_drive_website_root
+    domain: drive
+    description: Stable directory resource selected from one Website Space root or descendant folder.
+    columns:
+      - name: id
+        type: varchar(64)
+      - name: uuid
+        type: varchar(64)
+      - name: tenant_id
+        type: varchar(64)
+      - name: space_id
+        type: varchar(64)
+        references: dr_drive_space.id
+        on_delete: cascade
+      - name: root_key
+        type: varchar(128)
+      - name: display_name
+        type: varchar(255)
+      - name: source_root_mode
+        type: varchar(32)
+        constraints:
+          - "enum: [space_root, folder]"
+      - name: selected_folder_node_id
+        type: varchar(64)
+        nullable: true
+        references: dr_drive_node.id
+        on_delete: restrict
+      - name: selector_key
+        type: varchar(160)
+      - name: content_mode
+        type: varchar(32)
+        constraints:
+          - "enum: [live_tree, atomic_generation]"
+      - name: active_node_id
+        type: varchar(64)
+        references: dr_drive_node.id
+        on_delete: restrict
+      - name: active_generation
+        type: bigint
+      - name: root_status
+        type: varchar(32)
+        constraints:
+          - "enum: [active, suspended, archived, invalid]"
+      - name: last_switch_at
+        type: timestamp
+      - name: last_switch_by
+        type: varchar(128)
+      - name: version
+        type: bigint
+      - name: created_by
+        type: varchar(128)
+      - name: updated_by
+        type: varchar(128)
+      - name: created_at
+        type: timestamp
+      - name: updated_at
+        type: timestamp
+    indexes:
+      - name: ux_dr_drive_website_root_uuid
+        unique: true
+        columns: [uuid]
+      - name: ux_dr_drive_website_root_space_key
+        unique: true
+        columns: [tenant_id, space_id, root_key]
+      - name: ux_dr_drive_website_root_selector_active
+        unique: true
+        columns: [tenant_id, space_id, selector_key]
+        predicate: "root_status IN ('active', 'suspended', 'invalid')"
+      - name: ix_dr_drive_website_root_active_node
+        columns: [tenant_id, space_id, active_node_id, root_status]
+
+  - table: dr_drive_website_root_generation
+    domain: drive
+    description: Immutable WebsiteRoot generation history; it is not a Deploy Release.
+    columns:
+      - name: id
+        type: varchar(64)
+      - name: tenant_id
+        type: varchar(64)
+      - name: website_root_id
+        type: varchar(64)
+        references: dr_drive_website_root.id
+        on_delete: cascade
+      - name: generation_no
+        type: bigint
+      - name: root_node_id
+        type: varchar(64)
+        references: dr_drive_node.id
+        on_delete: restrict
+      - name: source_sync_id
+        type: varchar(64)
+        nullable: true
+      - name: manifest_sha256
+        type: varchar(71)
+        nullable: true
+      - name: file_count
+        type: bigint
+      - name: total_bytes
+        type: bigint
+      - name: generation_status
+        type: varchar(32)
+        constraints:
+          - "enum: [current, retained, expired, deleting, deleted, invalid]"
+      - name: activated_at
+        type: timestamp
+      - name: activated_by
+        type: varchar(128)
+      - name: retention_until
+        type: timestamp
+        nullable: true
+      - name: created_at
+        type: timestamp
+    indexes:
+      - name: ux_dr_drive_website_root_generation_no
+        unique: true
+        columns: [website_root_id, generation_no]
+      - name: ux_dr_drive_website_root_generation_current
+        unique: true
+        columns: [website_root_id]
+        predicate: "generation_status = 'current'"
+      - name: ix_dr_drive_website_root_generation_retention
+        columns: [generation_status, retention_until]
+
+  - table: dr_drive_space_website_profile
+    domain: drive
+    description: Website-project policy and default root for a Website Space.
+    columns:
+      - name: space_id
+        type: varchar(64)
+        references: dr_drive_space.id
+        on_delete: cascade
+      - name: tenant_id
+        type: varchar(64)
+      - name: project_key
+        type: varchar(128)
+      - name: default_root_id
+        type: varchar(64)
+        references: dr_drive_website_root.id
+        on_delete: restrict
+      - name: case_collision_policy
+        type: varchar(32)
+      - name: retained_generation_count
+        type: int
+      - name: sync_policy
+        type: varchar(32)
+        constraints:
+          - "enum: [ordinary, atomic_recommended, atomic_required]"
+      - name: profile_status
+        type: varchar(32)
+        constraints:
+          - "enum: [active, suspended, archived]"
+      - name: version
+        type: bigint
+      - name: created_by
+        type: varchar(128)
+      - name: updated_by
+        type: varchar(128)
+      - name: created_at
+        type: timestamp
+      - name: updated_at
+        type: timestamp
+    indexes:
+      - name: ux_dr_drive_space_website_profile_project
+        unique: true
+        columns: [tenant_id, project_key]
+
+  - table: dr_drive_website_sync
+    domain: drive
+    description: Fenced, idempotent complete-tree upload and atomic WebsiteRoot switch workflow.
+    columns:
+      - name: id
+        type: varchar(64)
+      - name: tenant_id
+        type: varchar(64)
+      - name: website_root_id
+        type: varchar(64)
+        references: dr_drive_website_root.id
+        on_delete: cascade
+      - name: space_id
+        type: varchar(64)
+        references: dr_drive_space.id
+        on_delete: cascade
+      - name: idempotency_key
+        type: varchar(128)
+      - name: expected_root_version
+        type: bigint
+      - name: expected_generation
+        type: bigint
+      - name: staging_node_id
+        type: varchar(64)
+        references: dr_drive_node.id
+        on_delete: restrict
+      - name: manifest_sha256
+        type: varchar(71)
+      - name: manifest_file_count
+        type: bigint
+      - name: manifest_total_bytes
+        type: bigint
+      - name: uploaded_file_count
+        type: bigint
+      - name: uploaded_total_bytes
+        type: bigint
+      - name: sync_status
+        type: varchar(32)
+        constraints:
+          - "enum: [created, uploading, ready, validating, active, completed, failed, aborted, expired]"
+      - name: version
+        type: bigint
+      - name: created_by
+        type: varchar(128)
+      - name: updated_by
+        type: varchar(128)
+      - name: created_at
+        type: timestamp
+      - name: updated_at
+        type: timestamp
+    indexes:
+      - name: ux_dr_drive_website_sync_idempotency
+        unique: true
+        columns: [tenant_id, idempotency_key]
+      - name: ix_dr_drive_website_sync_worker
+        columns: [sync_status, lease_expires_at, updated_at]
+      - name: ix_dr_drive_website_sync_root_status
+        columns: [tenant_id, website_root_id, sync_status, created_at]
+
+  - table: dr_drive_root_scope_subscription
+    domain: drive
+    description: Authorized non-Website root subscription used by Knowledgebase sources/raw projection.
+    columns:
+      - name: id
+        type: varchar(64)
+      - name: uuid
+        type: varchar(64)
+      - name: tenant_id
+        type: varchar(64)
+      - name: space_id
+        type: varchar(64)
+        references: dr_drive_space.id
+        on_delete: cascade
+      - name: consumer_kind
+        type: varchar(32)
+        constraints:
+          - "enum: [knowledgebase_raw]"
+      - name: consumer_resource_id
+        type: varchar(128)
+      - name: root_node_id
+        type: varchar(64)
+        references: dr_drive_node.id
+        on_delete: restrict
+      - name: scope_status
+        type: varchar(32)
+        constraints:
+          - "enum: [active, suspended, revoked]"
+      - name: version
+        type: bigint
+      - name: created_by
+        type: varchar(128)
+      - name: updated_by
+        type: varchar(128)
+      - name: created_at
+        type: timestamp
+      - name: updated_at
+        type: timestamp
+    indexes:
+      - name: ux_dr_drive_root_scope_subscription_uuid
+        unique: true
+        columns: [uuid]
+      - name: ux_dr_drive_root_scope_subscription_consumer
+        unique: true
+        columns: [tenant_id, consumer_kind, consumer_resource_id]
+        predicate: "scope_status IN ('active', 'suspended')"
+      - name: ix_dr_drive_root_scope_subscription_root
+        columns: [tenant_id, space_id, root_node_id, scope_status]

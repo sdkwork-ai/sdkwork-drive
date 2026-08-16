@@ -1,0 +1,8 @@
+@import "./driveWorkspaceChrome.css";
+@source "../sdkwork-drive-pc-file/src";
+@source "../sdkwork-drive-pc-transfer/src";
+@source "../sdkwork-drive-pc-commons/src";
+@source "../sdkwork-drive-pc-core/src";
+@source "./";
+
+@custom-variant dark (&:where(.dark, .dark *));

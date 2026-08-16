@@ -1,0 +1,13 @@
+[package]
+name = "sdkwork-drive-test-support"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+sdkwork-database-config.workspace = true
+sdkwork-database-sqlx.workspace = true
+sdkwork-drive-database-host.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+sqlx.workspace = true
+tokio.workspace = true

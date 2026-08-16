@@ -1,0 +1,32 @@
+[runtime]
+environment = "test"
+config_profile = "test"
+build_mode = "test"
+deployment_mode = "test"
+runtime_target = "desktop"
+app_key = "sdkwork-drive-pc"
+
+[sdk_base_urls]
+app_api_base_url = "https://api-test.sdkwork.com/app/v3/api"
+backend_api_base_url = "https://api-test.sdkwork.com/backend/v3/api"
+
+[auth]
+token_manager_mode = "test"
+token_storage = "memory"
+access_token_header = "Access-Token"
+auth_token_header = "Authorization"
+refresh_enabled = false
+
+[desktop]
+native_host = "tauri"
+local_service_enabled = false
+user_config_file = "~/.sdkwork/sdkwork-drive-pc-test/config/sdkwork-drive-pc.toml"
+secure_storage_provider = "memory"
+
+[database]
+engine = "sqlite"
+file = "~/.sdkwork/sdkwork-drive-pc-test/data/sdkwork-drive-pc.sqlite"
+max_connections = 1
+
+[redis]
+enabled = false

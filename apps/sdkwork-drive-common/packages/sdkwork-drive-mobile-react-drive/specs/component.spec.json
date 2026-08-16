@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 1,
+  "kind": "sdkwork.component.spec",
+  "component": {
+    "name": "@sdkwork/drive-mobile-react-drive",
+    "displayName": "SDKWork Drive Mobile React",
+    "version": "0.1.0",
+    "type": "react-package",
+    "root": ".",
+    "domain": "drive",
+    "capability": "drive",
+    "surface": "app",
+    "languages": ["typescript", "react"],
+    "generated": false,
+    "manifests": ["package.json"]
+  },
+  "canonicalSpecs": [
+    { "file": "COMPONENT_SPEC.md", "path": "../../../../../sdkwork-specs/COMPONENT_SPEC.md", "purpose": "Component contract." },
+    { "file": "CODE_STYLE_SPEC.md", "path": "../../../../../sdkwork-specs/CODE_STYLE_SPEC.md", "purpose": "Source and SDK boundaries." },
+    { "file": "TYPESCRIPT_CODE_SPEC.md", "path": "../../../../../sdkwork-specs/TYPESCRIPT_CODE_SPEC.md", "purpose": "TypeScript package rules." },
+    { "file": "FRONTEND_CODE_SPEC.md", "path": "../../../../../sdkwork-specs/FRONTEND_CODE_SPEC.md", "purpose": "Frontend composition rules." },
+    { "file": "APP_MOBILE_REACT_UI_SPEC.md", "path": "../../../../../sdkwork-specs/APP_MOBILE_REACT_UI_SPEC.md", "purpose": "Mobile React behavior." },
+    { "file": "APP_SDK_INTEGRATION_SPEC.md", "path": "../../../../../sdkwork-specs/APP_SDK_INTEGRATION_SPEC.md", "purpose": "Injected app SDK rules." },
+    { "file": "TEST_SPEC.md", "path": "../../../../../sdkwork-specs/TEST_SPEC.md", "purpose": "Verification rules." }
+  ],
+  "contracts": {
+    "layerRole": "frontend-feature",
+    "publicExports": ["."],
+    "providedPorts": [
+      { "name": "driveMobileReactDrive", "export": "." },
+      { "name": "cloudDriveRuntime", "export": "." }
+    ],
+    "requiredPorts": [
+      { "name": "driveAppSdk", "package": "@sdkwork/drive-app-sdk", "export": "." },
+      { "name": "mobileReactUi", "package": "@sdkwork/ui-mobile-react", "export": "." }
+    ],
+    "runtimeEntrypoints": ["CloudDriveApp", "configureCloudDriveRuntime"],
+    "routeManifest": null,
+    "sdkClients": ["SdkworkDriveAppClient"],
+    "sdkDependencies": [
+      { "workspace": "sdkwork-drive-app-sdk", "role": "drive-app-capability", "required": true }
+    ],
+    "events": [],
+    "configKeys": []
+  },
+  "verification": {
+    "commands": [
+      "pnpm --filter @sdkwork/drive-mobile-react-drive test",
+      "pnpm --dir apps/sdkwork-im-h5 typecheck"
+    ]
+  }
+}

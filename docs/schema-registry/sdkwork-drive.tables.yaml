@@ -1,0 +1,12 @@
+schema_registry:
+  name: sdkwork-drive
+  version: 0.1.0
+  date: 2026-06-24
+  standard: ../../../sdkwork-specs/DATABASE_SPEC.md
+  api_standard: ../../../sdkwork-specs/API_SPEC.md
+table_fragments:
+  - tables/001-drive-core.yaml
+  - tables/002-drive-special-spaces.yaml
+  - tables/003-drive-storage.yaml
+  - tables/004-drive-security-audit.yaml
+  - tables/005-global-assets.yaml

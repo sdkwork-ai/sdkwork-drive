@@ -1,0 +1,19 @@
+mode = "standalone"
+
+[service]
+name = "sdkwork-drive-standalone-gateway"
+environment = "development"
+
+[server]
+bind = "127.0.0.1:3900"
+
+[cors]
+# Development CORS: restrict to known origins to prevent accidental exposure.
+# Override with SDKWORK_DRIVE_STANDALONE_GATEWAY_CORS_ALLOW_ANY_ORIGIN=true if needed.
+allowAnyOrigin = false
+allowedOrigins = [
+  "http://127.0.0.1:5183",
+  "http://localhost:5183",
+  "tauri://localhost",
+  "https://tauri.localhost",
+]

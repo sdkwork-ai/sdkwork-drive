@@ -1,0 +1,308 @@
+{
+  "schemaVersion": 1,
+  "generator": "@sdkwork/sdk-generator",
+  "sdk": {
+    "name": "sdkwork-drive-backend-sdk",
+    "version": "0.1.0",
+    "language": "java",
+    "sdkType": "backend",
+    "protocol": "http",
+    "packageName": "sdkwork-drive-backend-sdk-generated-java"
+  },
+  "generatedFiles": [
+    {
+      "path": "bin/publish-core.mjs",
+      "sha256": "98ad0918a78bfbe22bf8f12fec709b0bed545b9e01edd40f5e4abf31a23378a5"
+    },
+    {
+      "path": "bin/publish.ps1",
+      "sha256": "33394b9189a458f6b36bf7fd74815ea4b71a435083e0c428a9d3ca4673e28c3e"
+    },
+    {
+      "path": "bin/publish.sh",
+      "sha256": "da4bd76701864b29d52b6b260c20f65305bcd4b9eea8696f7751b991f6aba345"
+    },
+    {
+      "path": "CHANGELOG.md",
+      "sha256": "fb941a0806986a54fc192f98a98f6d9c282b8d350b2b19a3e71dda404e92d545"
+    },
+    {
+      "path": "LICENSE",
+      "sha256": "7840cc7d2b36ff364ac16c2fc5ec15b861bfe96854eecf81fb59b00edb8b1447"
+    },
+    {
+      "path": "pom.xml",
+      "sha256": "d5cb51299ff7976710ce16941b0b99ced615223536c333726ebe444b4ee5c73f"
+    },
+    {
+      "path": "README.md",
+      "sha256": "5fea5b211591ae9661bab75cda70db22b457f724763062736940bcfa73a7c43b"
+    },
+    {
+      "path": "sdkwork-sdk.json",
+      "sha256": "0fb88644ce1b93619ee648a6cf2c3806658edcd845210995e00a1db098e7df05"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/drive/backend/sdk/generated/java/api/ApiPaths.java",
+      "sha256": "e899156e2576b8b36c3bd0d8a9e05c170a79a607382d209fa278feaefd825d7d"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/drive/backend/sdk/generated/java/api/DriveApi.java",
+      "sha256": "27afe81399f22d3e103da263a450cc87cdec7806302ad2527c3cbb4807020f08"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/drive/backend/sdk/generated/java/api/package-info.java",
+      "sha256": "05103fda82bf400c4801b0e8373ba7f89a53f568eb156751e644e510221c6d55"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/drive/backend/sdk/generated/java/http/HttpClient.java",
+      "sha256": "03b33e9dc9a1c4733d67238b05d3963a66beb64f4fba3a16f8e0e3273c8007f5"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/drive/backend/sdk/generated/java/model/AuditEvent.java",
+      "sha256": "07e32c7a0aff79945082468e3c8ed17db858021af96e4aa4a73763c865da0e47"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/drive/backend/sdk/generated/java/model/AuditEventListHttpResponse.java",
+      "sha256": "3cf3edb83daa9637c13bf2228a8b8d328b5656dff5c1508a4ee565c3bfed1b5e"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/drive/backend/sdk/generated/java/model/AuditEventsListResponse.java",
+      "sha256": "2acecec87be013ea1c527e4dc5cb68414415b758c78ef9146817dc8fcb871b35"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/drive/backend/sdk/generated/java/model/CreateLabelRequest.java",
+      "sha256": "4f64c287ac2158e9523ef5dfbbdf09f6fb0e6d400400448af6871f2cd589a69f"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/drive/backend/sdk/generated/java/model/CreateSandboxGrantRequest.java",
+      "sha256": "34ca41bd67d699e460bcc8d1586474d644f9e592cc3a192ad32bef8520943fe8"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/drive/backend/sdk/generated/java/model/CreateSandboxVolumeRequest.java",
+      "sha256": "e94b338ddc7c6f0eab32948633b0da7ffedfd65fd70862a2f5ffa9aeccc54d11"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/drive/backend/sdk/generated/java/model/DownloadPackage.java",
+      "sha256": "ab85f5c18fe3b62deea92733e97f2e4627b1deb70a9986dbc5f130386a80caaf"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/drive/backend/sdk/generated/java/model/DownloadPackageListHttpResponse.java",
+      "sha256": "6eed05dc6ec4eb93fc5aa58b4f41b1b9369eb3e7b93752e41517a964888813b7"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/drive/backend/sdk/generated/java/model/DownloadPackagesListResponse.java",
+      "sha256": "8b1572be7a63c6b61c9ba91ac0252292c90a952dae81535afd5d0de64c066f67"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/drive/backend/sdk/generated/java/model/DriveLabel.java",
+      "sha256": "dccfbbde8c936dcf10ae254307ee2e898670c2eb4ed0b0b3374b3c1d07efe7a1"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/drive/backend/sdk/generated/java/model/DriveLabelListHttpResponse.java",
+      "sha256": "b15d502bf3a9312d43a9b5647499d3d795e43a41a5dc37cbd242c9219c61d51d"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/drive/backend/sdk/generated/java/model/DriveSpace.java",
+      "sha256": "5188694089ec788fb5b9d5fcfbe5cb9524eecf2f1eb428e94aba8a3d7cf28505"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/drive/backend/sdk/generated/java/model/DriveSpaceListHttpResponse.java",
+      "sha256": "1773197075cc4b3fffc5c38fae9a9c2791ef9ae29f0aa5601e669f9923c20a8b"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/drive/backend/sdk/generated/java/model/FieldError.java",
+      "sha256": "c1717965dc860dcc68bc4215bf04d9e04cf2d810e3faf6b35d085231484d621e"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/drive/backend/sdk/generated/java/model/InitialSandboxUserGrantRequest.java",
+      "sha256": "e2ac5ec72f795a0adfc966a783ec082b496e73cccf5bfb4006e5a0e556fa4341"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/drive/backend/sdk/generated/java/model/LabelsCreateResponse201.java",
+      "sha256": "a5f33d0fbca80129922cb5858851ffed527a2fbff0d518b739e6015b87b6c975"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/drive/backend/sdk/generated/java/model/LabelsListResponse.java",
+      "sha256": "3125bf5594dd5a764364744abf44028985f62f4ce28cdf42e0199c2fd6124db1"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/drive/backend/sdk/generated/java/model/LabelsRetrieveResponse.java",
+      "sha256": "ca993dec5d02b4af1a535604a1e975bfcecd2bdcb53461c5bf817671b7a254e0"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/drive/backend/sdk/generated/java/model/LabelsUpdateResponse.java",
+      "sha256": "40f07ea30fc807f3472560803eadb048f28dbbcb3eb2fb3cfcef199ed0a6f002"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/drive/backend/sdk/generated/java/model/MaintenanceAbandonedUploadTaskSweepResponse.java",
+      "sha256": "7b5e7fe389c5c625a0c4f3cffe7541a215fb30fc499787922748fb5cbbc07ba1"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/drive/backend/sdk/generated/java/model/MaintenanceExpiredUploadContentSweepResponse.java",
+      "sha256": "2352adbf524634a3f269e8dbbfaffa8018b5dca7021a7b4e9fcae2a98e578959"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/drive/backend/sdk/generated/java/model/MaintenanceJob.java",
+      "sha256": "72d53d2672fab82e4c9dedb2502f0dddde2982bb8c483f5dd6f25e3b05cbd9db"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/drive/backend/sdk/generated/java/model/MaintenanceJobListHttpResponse.java",
+      "sha256": "ea28e18789cca55b866e8522d3f1aec654fc5d6f17686ce02c6c893c8ac8ea2e"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/drive/backend/sdk/generated/java/model/MaintenanceJobsListResponse.java",
+      "sha256": "403654d6790e5272a6f8602753a5735c2b4d68518ab7a97256cefac4a541e269"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/drive/backend/sdk/generated/java/model/MaintenanceObjectSweepResponse.java",
+      "sha256": "8a03950e27acc0f0d2d4d9dfe6c949873c400943d10a1a63391ce04384ec9c69"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/drive/backend/sdk/generated/java/model/MaintenanceUploadSessionSweepResponse.java",
+      "sha256": "d84ab17e7b1c783cf97d1679d5c00df45b76737166d4d60fdad4fc5b2e57358d"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/drive/backend/sdk/generated/java/model/PageInfo.java",
+      "sha256": "7057b7d4d3646af86b6f08eaa2345265322bf575aed267ef7a5beb2c028f71e3"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/drive/backend/sdk/generated/java/model/ProblemDetail.java",
+      "sha256": "3ce8e85fbac82d6a17c6336816b8c35a3285f7785db71ff351b9f792b1f9ada4"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/drive/backend/sdk/generated/java/model/QuotasRetrieveResponse.java",
+      "sha256": "7b8a51b404a9ea8988a0d55c3c3e458a747a8c68d79494f42fa567e415dbe4e2"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/drive/backend/sdk/generated/java/model/QuotaSummary.java",
+      "sha256": "d5fa172dadbc03a6cbf9cfe61975a8c163f2ceeb1c5deeabfbe698144040c1ce"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/drive/backend/sdk/generated/java/model/QuotasUpdateResponse.java",
+      "sha256": "7022015ecbc181ab134fe7852436eec22718be6550880f35049552c8def98b01"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/drive/backend/sdk/generated/java/model/SandboxGrant.java",
+      "sha256": "edc12777d8635009164b4bdf99609660df38e0428d1a76b5e1d445a947554a22"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/drive/backend/sdk/generated/java/model/SandboxGrantListHttpResponse.java",
+      "sha256": "14e6789ae075bdcb28c877ec3e8e67697fc4d9f215a697e5a15e0dc74ac760c3"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/drive/backend/sdk/generated/java/model/SandboxGrantResourceHttpResponse.java",
+      "sha256": "6879da84726a0d63f34cb4419a68b6581e717d330d28bd1479b66c9da1dfdd9c"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/drive/backend/sdk/generated/java/model/SandboxGrantsCreateResponse201.java",
+      "sha256": "826f4ff726bc96c868a6a3441e3cb1cddcc9e6730f73be0c17d8c1507e85184b"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/drive/backend/sdk/generated/java/model/SandboxGrantsListResponse.java",
+      "sha256": "91a883bd118ab3a6789ae7657d6ebd98235daaeb8c8d8e921f4310fec4f8da49"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/drive/backend/sdk/generated/java/model/SandboxGrantsRetrieveResponse.java",
+      "sha256": "9c2cdfb592ea9bc8b09ffcc4128b21ca6a67f8d59d9948b4ce80154935fea6de"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/drive/backend/sdk/generated/java/model/SandboxGrantsUpdateResponse.java",
+      "sha256": "c360ca5deac9b3455a33a77c56a3581807557b33a58872ecb90919f07a5c83b4"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/drive/backend/sdk/generated/java/model/SandboxVolume.java",
+      "sha256": "41645965e1ea981cf154244603631b98a2f6568758a6fddcc0ffb6fe32265ad8"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/drive/backend/sdk/generated/java/model/SandboxVolumeListHttpResponse.java",
+      "sha256": "026b7396571f7c4f64b7a99abd21b0c4313bf5bae1d5f3995bfa9a5b52f4cb4b"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/drive/backend/sdk/generated/java/model/SandboxVolumeResourceHttpResponse.java",
+      "sha256": "9dc89bff11b1219d6cf90cbcb822e648a6cf03ea85df072fadb39897bb9baef4"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/drive/backend/sdk/generated/java/model/SandboxVolumesCreateResponse201.java",
+      "sha256": "22030c6a80c90e0c2bc5ee7e88ff534e312760c71b4249702d6f88bd12dcfa08"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/drive/backend/sdk/generated/java/model/SandboxVolumesListResponse.java",
+      "sha256": "2f927e7389bfdafb9bdc473de05ca4cfecdfa1ceabadc12a5e013408882eecdb"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/drive/backend/sdk/generated/java/model/SandboxVolumesRetrieveResponse.java",
+      "sha256": "6a8ab3fb6a3c7ca9158a9aa69f82ca0c9a5344157703645ea2bebdc8f2fdda5c"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/drive/backend/sdk/generated/java/model/SandboxVolumesUpdateResponse.java",
+      "sha256": "9e9585d38301ec4e3573c99b99bd905ca9d87d8fccdc139a6b36274efcbe1360"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/drive/backend/sdk/generated/java/model/SdkWorkApiResponse.java",
+      "sha256": "8546b8bfa662779812b2dd968ddae9a54a95c9500defed31b0135713efeb966d"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/drive/backend/sdk/generated/java/model/SdkWorkCommandData.java",
+      "sha256": "ea0a2cd7bb5b4dc74072b5077dcc0f3d184e63cd401c1b5420d0f31a6a64b768"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/drive/backend/sdk/generated/java/model/SdkWorkCommandResponse.java",
+      "sha256": "444a0185ad357152b28b1907abe73cd0b0a76a1b885a1ca716597c0a46bc49f8"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/drive/backend/sdk/generated/java/model/SdkWorkPageData.java",
+      "sha256": "311e89206accda2fe34789db52e0bd04e595ede71f6ab192d90a51a4abf15905"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/drive/backend/sdk/generated/java/model/SdkWorkResourceData.java",
+      "sha256": "045ab14a3a9e564f884736698dbf30b4dbe21fec3927757d4baa3c57d70a496b"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/drive/backend/sdk/generated/java/model/SdkWorkResourceResponse.java",
+      "sha256": "1fbd60021e233c257f4cc0babe9e4158f3097d878f10a5a80ce665a0a869b871"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/drive/backend/sdk/generated/java/model/SpacesAdminListResponse.java",
+      "sha256": "16189224a72c683d623169a07be2616f8ae8987fff82196467fd3b97df501a90"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/drive/backend/sdk/generated/java/model/SweepObjectStoreRequest.java",
+      "sha256": "0128a6455f6e92ff1fc504408d1730a433802b7daabb417eea7455fb2caf0f90"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/drive/backend/sdk/generated/java/model/SweepResponse.java",
+      "sha256": "bd16955dc595f3de84f4d0978a65dc094c4380f82ccc59beb154bc8a5bcfc041"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/drive/backend/sdk/generated/java/model/SweepUploadSessionsRequest.java",
+      "sha256": "9da191a30037784df50fc2f6c7b4ce58bfae14a8ac56c03bb5781bb9df7b395d"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/drive/backend/sdk/generated/java/model/UpdateLabelRequest.java",
+      "sha256": "56cb11fb00bc17c7501b063cf45cb0dc1ac6af8bfe205852ff792ca3a0a7eb9c"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/drive/backend/sdk/generated/java/model/UpdateQuotaPolicyRequest.java",
+      "sha256": "75f761e6e56f9851f79d256099d383f632b92a4d7a6d527cd9ba0ea4102fc6b3"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/drive/backend/sdk/generated/java/model/UpdateSandboxGrantRequest.java",
+      "sha256": "9c06b1554ef79a08d0e534c181d158ead405f28afdee44e3686927befc843048"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/drive/backend/sdk/generated/java/model/UpdateSandboxVolumeRequest.java",
+      "sha256": "c5c34da497e1740dc6ea74164d8e609db195aee29903c339e5b05c8a2271f725"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/drive/backend/sdk/generated/java/SdkworkBackendClient.java",
+      "sha256": "8cc5c3ffca346b6cc550eb73f91b9196345baf64a5257a2d34d2bd7298fe4e12"
+    }
+  ],
+  "scaffoldFiles": [
+    "custom/README.md"
+  ],
+  "customRoots": [
+    "custom/"
+  ]
+}

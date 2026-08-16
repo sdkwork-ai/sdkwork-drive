@@ -1,0 +1,20 @@
+[Unit]
+Description=SDKWork Drive Standalone Gateway
+After=network-online.target postgresql.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=sdkwork
+Group=sdkwork
+EnvironmentFile=-/etc/sdkwork-drive/standalone-gateway.env
+Environment=SDKWORK_DRIVE_STANDALONE_GATEWAY_ENVIRONMENT=production
+Environment=SDKWORK_DRIVE_DEPLOYMENT_PROFILE=standalone
+Environment=SDKWORK_DRIVE_STANDALONE_GATEWAY_CONFIG=/etc/sdkwork-drive/sdkwork-drive-standalone-gateway.production.toml
+ExecStart=/usr/local/bin/sdkwork-drive-standalone-gateway --config /etc/sdkwork-drive/sdkwork-drive-standalone-gateway.production.toml
+Restart=on-failure
+RestartSec=5
+LimitNOFILE=65535
+
+[Install]
+WantedBy=multi-user.target

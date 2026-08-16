@@ -1,0 +1,149 @@
+name: Drive Commercial Gates
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: drive-commercial-gates-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: Verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.0
+
+      - name: Prepare SDKWork source dependencies
+        env:
+          SDKWORK_RELEASE_TOKEN: ${{ secrets.SDKWORK_RELEASE_TOKEN || github.token }}
+        run: node scripts/prepare-ci-dependencies.mjs --apply
+
+      - name: Install root dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust artifacts
+        uses: swatinem/rust-cache@v2
+
+      - name: Run Drive verification pipeline
+        run: pnpm verify
+
+      - name: Verify Redis rate-limit feature compiles
+        run: cargo check -p sdkwork-drive-http --features redis-rate-limit
+
+  postgres-integration:
+    name: PostgreSQL Integration
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: sdkwork_ai_test
+          POSTGRES_PASSWORD: sdkwork
+          POSTGRES_DB: sdkwork_ai_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U sdkwork_ai_test -d sdkwork_ai_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Prepare SDKWork source dependencies
+        env:
+          SDKWORK_RELEASE_TOKEN: ${{ secrets.SDKWORK_RELEASE_TOKEN || github.token }}
+        run: node scripts/prepare-ci-dependencies.mjs --apply
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust artifacts
+        uses: swatinem/rust-cache@v2
+
+      - name: Run PostgreSQL integration tests
+        env:
+          SDKWORK_DATABASE_URL: postgres://sdkwork_ai_test:sdkwork@localhost:5432/sdkwork_ai_test
+        run: cargo test --workspace -- --nocapture
+
+  release-readiness-strict:
+    name: Strict Release Readiness
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Strict release readiness (non-GA warnings only)
+        run: SDKWORK_RELEASE_VALIDATION=strict node tools/check_sdkwork_drive_release_readiness.mjs
+
+  release-evidence:
+    name: Release Evidence
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.0
+
+      - name: Prepare SDKWork source dependencies
+        env:
+          SDKWORK_RELEASE_TOKEN: ${{ secrets.SDKWORK_RELEASE_TOKEN || github.token }}
+        run: node scripts/prepare-ci-dependencies.mjs --apply
+
+      - name: Install root dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Validate release evidence when artifacts exist
+        run: |
+          if [ -f target/release/release-evidence.json ]; then
+            pnpm release:validate
+          else
+            echo "Release evidence artifacts not present; skipping release:validate on main."
+          fi

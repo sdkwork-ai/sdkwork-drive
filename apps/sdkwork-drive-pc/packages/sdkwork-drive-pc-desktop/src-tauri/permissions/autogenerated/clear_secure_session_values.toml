@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-clear-secure-session-values"
+description = "Enables the clear_secure_session_values command without any pre-configured scope."
+commands.allow = ["clear_secure_session_values"]
+
+[[permission]]
+identifier = "deny-clear-secure-session-values"
+description = "Denies the clear_secure_session_values command without any pre-configured scope."
+commands.deny = ["clear_secure_session_values"]

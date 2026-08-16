@@ -1,0 +1,13 @@
+[package]
+name = "sdkwork-drive-storage-opendal"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+async-trait.workspace = true
+http.workspace = true
+opendal.workspace = true
+sdkwork-drive-storage-contract.workspace = true
+
+[dev-dependencies]
+tokio.workspace = true

@@ -1,0 +1,112 @@
+module: drive
+owner: sdkwork-drive
+tables:
+  - table: dr_drive_space_knowledge_profile
+    domain: drive
+    description: Knowledge-base space profile.
+    columns:
+      - name: space_id
+        type: varchar(64)
+        references: dr_drive_space.id
+        on_delete: cascade
+        constraints:
+          - primary_key
+      - name: tenant_id
+        type: varchar(64)
+      - name: knowledge_base_id
+        type: varchar(64)
+      - name: ingestion_policy_code
+        type: varchar(64)
+      - name: created_at
+        type: timestamp
+      - name: updated_at
+        type: timestamp
+    indexes:
+      - name: ux_dr_drive_space_knowledge_profile_tenant_kb
+        unique: true
+        columns:
+          - tenant_id
+          - knowledge_base_id
+  - table: dr_drive_space_ai_generation_profile
+    domain: drive
+    description: AI-generated asset space profile.
+    columns:
+      - name: space_id
+        type: varchar(64)
+        references: dr_drive_space.id
+        on_delete: cascade
+        constraints:
+          - primary_key
+      - name: tenant_id
+        type: varchar(64)
+      - name: generation_scope
+        type: varchar(32)
+      - name: retention_policy_code
+        type: varchar(64)
+      - name: created_at
+        type: timestamp
+      - name: updated_at
+        type: timestamp
+    indexes:
+      - name: ix_dr_drive_space_ai_generation_profile_tenant_scope
+        columns:
+          - tenant_id
+          - generation_scope
+  - table: dr_drive_space_app_upload_profile
+    domain: drive
+    description: App upload space profile.
+    columns:
+      - name: space_id
+        type: varchar(64)
+        references: dr_drive_space.id
+        on_delete: cascade
+        constraints:
+          - primary_key
+      - name: tenant_id
+        type: varchar(64)
+      - name: app_id
+        type: varchar(64)
+      - name: app_resource_type
+        type: varchar(64)
+      - name: app_resource_id
+        type: varchar(128)
+      - name: upload_policy_code
+        type: varchar(32)
+      - name: created_at
+        type: timestamp
+      - name: updated_at
+        type: timestamp
+    indexes:
+      - name: ux_dr_drive_space_app_upload_profile_binding
+        unique: true
+        columns:
+          - tenant_id
+          - app_id
+          - app_resource_type
+          - app_resource_id
+  - table: dr_drive_space_rtc_profile
+    domain: drive
+    description: RTC recording space profile.
+    columns:
+      - name: space_id
+        type: varchar(64)
+        references: dr_drive_space.id
+        on_delete: cascade
+        constraints:
+          - primary_key
+      - name: tenant_id
+        type: varchar(64)
+      - name: user_id
+        type: varchar(128)
+      - name: retention_policy_code
+        type: varchar(64)
+      - name: created_at
+        type: timestamp
+      - name: updated_at
+        type: timestamp
+    indexes:
+      - name: ux_dr_drive_space_rtc_profile_user
+        unique: true
+        columns:
+          - tenant_id
+          - user_id

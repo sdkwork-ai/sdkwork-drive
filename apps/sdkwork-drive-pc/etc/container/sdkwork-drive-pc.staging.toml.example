@@ -1,0 +1,31 @@
+[runtime]
+environment = "staging"
+config_profile = "staging"
+build_mode = "staging"
+deployment_mode = "container"
+runtime_target = "container"
+app_key = "sdkwork-drive-pc"
+
+[server]
+bind = "0.0.0.0:18080"
+external_scheme = "https"
+trust_forwarded_headers = true
+
+[database]
+engine = "postgresql"
+host = "postgres"
+port = 5432
+database = "sdkwork_ai_staging"
+schema = "sdkwork_ai_staging"
+username = "sdkwork_ai_staging"
+password_file = "/run/secrets/sdkwork-drive-pc/database-password"
+ssl_mode = "require"
+max_connections = 16
+
+[redis]
+enabled = true
+host = "redis"
+port = 6379
+database = 0
+password_file = "/run/secrets/sdkwork-drive-pc/redis-password"
+key_prefix = "sdkwork-drive-pc-staging"
