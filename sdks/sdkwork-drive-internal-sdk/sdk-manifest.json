@@ -111,5 +111,13 @@
       "generatedOutput": "sdkwork-drive-internal-sdk-go/generated/server-openapi"
     }
   },
-  "ownerOnlyOperationCount": 7
+  "ownerOnlyOperationCount": 7,
+  "packageName": "@sdkwork/drive-internal-sdk",
+  "transportPackageName": "sdkwork-drive-internal-sdk-generated-typescript",
+  "typescript": {
+    "composedRoot": "sdkwork-drive-internal-sdk-typescript",
+    "composedEntry": "sdkwork-drive-internal-sdk-typescript/src/index.ts",
+    "transportRoot": "sdkwork-drive-internal-sdk-typescript/generated/server-openapi",
+    "transportEntry": "sdkwork-drive-internal-sdk-typescript/generated/server-openapi/src/index.ts"
+  }
 }

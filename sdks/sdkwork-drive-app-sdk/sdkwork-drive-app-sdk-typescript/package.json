@@ -1,6 +1,6 @@
 {
   "name": "@sdkwork/drive-app-sdk",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "SDKWork Drive App SDK with high-level uploader facade.",
   "type": "module",
   "private": false,
@@ -26,11 +26,11 @@
     }
   },
   "dependencies": {
-    "@sdkwork/sdk-common": "^1.0.3",
-    "@sdkwork/utils": "workspace:*"
+    "@sdkwork/sdk-common": "^1.0.5",
+    "@sdkwork/utils": "^0.11.0"
   },
   "peerDependencies": {
-    "@sdkwork/iam-app-sdk": "workspace:*"
+    "@sdkwork/iam-app-sdk": "^0.1.1"
   },
   "peerDependenciesMeta": {
     "@sdkwork/iam-app-sdk": {

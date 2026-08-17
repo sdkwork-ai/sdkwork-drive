@@ -1,7 +1,7 @@
 {
   "name": "sdkwork-drive-sdk-generated-typescript",
   "version": "0.1.0",
-  "description": "sdkwork-drive-sdk",
+  "description": "Generator-owned TypeScript transport SDK for sdkwork-drive-sdk.",
   "author": "SDKWork Team",
   "license": "MIT",
   "type": "module",
@@ -24,7 +24,7 @@
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
-    "@sdkwork/sdk-common": "^1.0.4"
+    "@sdkwork/sdk-common": "^1.0.5"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
@@ -36,5 +36,7 @@
     "api",
     "custom",
     "sdkwork"
-  ]
+  ],
+  "private": true,
+  "sdkworkRole": "transport"
 }
