@@ -60,6 +60,17 @@
       "componentRef": "crates/sdkwork-routes-storage-backend-api/specs/component.spec.json",
       "routeManifestRef": "apis/backend-api/drive/drive-admin-storage-api.openapi.json",
       "sourceRef": "crates/sdkwork-routes-storage-backend-api/Cargo.toml"
+    },
+    {
+      "packageName": "sdkwork-routes-drive-git-api",
+      "memberDir": "crates/sdkwork-routes-drive-git-api",
+      "libName": "sdkwork_routes_drive_git_api",
+      "surface": "external-git-smart-http",
+      "pathPrefix": "/git",
+      "mountOrder": 5,
+      "componentRef": "crates/sdkwork-routes-drive-git-api/specs/component.spec.json",
+      "routeManifestRef": null,
+      "sourceRef": "crates/sdkwork-routes-drive-git-api/Cargo.toml"
     }
   ]
 }

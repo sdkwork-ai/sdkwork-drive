@@ -7,11 +7,15 @@ import {
 
 export type Theme = 'dark' | 'light' | 'system';
 
+export type ColorScheme = 'dark' | 'light';
+
 interface ThemeProviderProps {
   children: React.ReactNode;
   defaultTheme?: Theme;
   preferenceStorage?: PreferenceStorage;
   storageKey?: string;
+  resolveHostColorScheme?: () => ColorScheme;
+  subscribeHostColorScheme?: (listener: (scheme: ColorScheme) => void) => () => void;
 }
 
 interface ThemeProviderState {
@@ -26,47 +30,89 @@ const initialState: ThemeProviderState = {
 
 const ThemeProviderContext = createContext<ThemeProviderState>(initialState);
 
+function resolveSystemColorScheme(): ColorScheme {
+  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+}
+
+function resolveStandaloneTheme(
+  defaultTheme: Theme,
+  preferenceStorage?: PreferenceStorage,
+  storageKey?: string,
+): Theme {
+  return normalizeTheme(readPreference(preferenceStorage, storageKey)) ?? defaultTheme;
+}
+
+function resolveColorScheme(theme: Theme): ColorScheme {
+  if (theme === 'system') {
+    return resolveSystemColorScheme();
+  }
+  return theme;
+}
+
 export function ThemeProvider({
   children,
   defaultTheme = 'system',
   preferenceStorage,
   storageKey = 'sdkwork-ui-theme',
+  resolveHostColorScheme,
+  subscribeHostColorScheme,
   ...props
 }: ThemeProviderProps) {
-  const [theme, setThemeState] = useState<Theme>(
-    () => normalizeTheme(readPreference(preferenceStorage, storageKey)) ?? defaultTheme
-  );
+  const hostManaged = resolveHostColorScheme !== undefined;
+  const [theme, setThemeState] = useState<Theme>(() => {
+    if (hostManaged) {
+      return resolveHostColorScheme();
+    }
+    return resolveStandaloneTheme(defaultTheme, preferenceStorage, storageKey);
+  });
 
   useEffect(() => {
-    const root = window.document.documentElement;
-
-    root.classList.remove('light', 'dark');
-
-    if (theme === 'system') {
-      const systemTheme = window.matchMedia('(prefers-color-scheme: dark)')
-        .matches
-        ? 'dark'
-        : 'light';
-
-      root.classList.add(systemTheme);
-      return;
+    if (!subscribeHostColorScheme) {
+      return undefined;
     }
 
-    root.classList.add(theme);
-  }, [theme]);
+    return subscribeHostColorScheme((nextScheme) => {
+      setThemeState(nextScheme);
+    });
+  }, [subscribeHostColorScheme]);
+
+  useEffect(() => {
+    if (hostManaged) {
+      return undefined;
+    }
+
+    const root = window.document.documentElement;
+    root.classList.remove('light', 'dark');
+    root.classList.add(resolveColorScheme(theme));
+    return undefined;
+  }, [hostManaged, theme]);
 
   const value = {
     theme,
-    setTheme: (theme: Theme) => {
-      writePreference(preferenceStorage, storageKey, theme);
-      setThemeState(theme);
+    setTheme: (nextTheme: Theme) => {
+      if (hostManaged) {
+        return;
+      }
+      writePreference(preferenceStorage, storageKey, nextTheme);
+      setThemeState(nextTheme);
     },
   };
 
-  return (
+  const content = (
     <ThemeProviderContext.Provider {...props} value={value}>
       {children}
     </ThemeProviderContext.Provider>
+  );
+
+  if (!hostManaged) {
+    return content;
+  }
+
+  const scheme = resolveColorScheme(theme);
+  return (
+    <div className={`${scheme} flex h-full min-h-0 w-full min-w-0 flex-col`}>
+      {content}
+    </div>
   );
 }
 

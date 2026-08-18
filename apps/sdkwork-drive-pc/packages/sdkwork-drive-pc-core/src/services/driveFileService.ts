@@ -16,6 +16,7 @@ import {
 import { omitAuthProjectionBody, omitAuthProjectionQuery } from '../sdk/authProjection';
 import type { DriveAppSdkClient, DriveAppSdkRequest } from '../sdk/driveAppSdkClient';
 import type { SessionSnapshot } from '../session/sessionStore';
+import { enrichSessionSnapshotFromAccessToken } from '../session/accessTokenContextClaims';
 import { isDriveAbortError } from '../transfer/downloadTransfer';
 
 export interface SharedSpace {
@@ -596,7 +597,7 @@ function normalizeSubjectType(value: string | undefined): RemoteIdentity['subjec
 }
 
 function resolveIdentity(getSession: () => SessionSnapshot): RemoteIdentity {
-  const snapshot = getSession();
+  const snapshot = enrichSessionSnapshotFromAccessToken(getSession());
   const tenantId = snapshot.context?.tenantId;
   const userId = snapshot.context?.userId ?? snapshot.user?.id;
 

@@ -11,4 +11,5 @@ pub use context::*;
 pub use permission::*;
 pub use policy::*;
 pub use policy_handle::*;
+pub use token_claims::{resolve_dual_token_context, TokenClaimsError};
 pub use webhook_url::{validate_webhook_https_url, validate_webhook_https_url_for_dispatch};

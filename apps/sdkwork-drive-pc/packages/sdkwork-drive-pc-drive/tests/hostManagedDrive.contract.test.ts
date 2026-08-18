@@ -58,6 +58,16 @@ describe('sdkwork-drive-pc-drive host module contract', () => {
     expect(driveView).toContain('subscribeHostLanguage');
   });
 
+  it('supports host-managed color-scheme ports for embedding', () => {
+    const driveView = readFileSync(path.join(packageRoot, 'src', 'DriveView.tsx'), 'utf8');
+    const sdkPortsSource = readFileSync(path.join(packageRoot, 'src', 'sdkPorts.ts'), 'utf8');
+
+    expect(sdkPortsSource).toContain('resolveHostColorScheme');
+    expect(sdkPortsSource).toContain('subscribeHostColorScheme');
+    expect(driveView).toContain('subscribeHostColorScheme');
+    expect(driveView).toContain('ThemeProvider');
+  });
+
   it('accepts stable Drive node preview requests from an embedding host', () => {
     const driveView = readFileSync(path.join(packageRoot, 'src', 'DriveView.tsx'), 'utf8');
     const driveIndex = readFileSync(path.join(packageRoot, 'src', 'index.ts'), 'utf8');
