@@ -3,7 +3,7 @@
 //! Encodes inherited reader permission checks in the database so list endpoints
 //! do not need per-row `resolve_effective_node_access` round trips.
 
-pub(crate) const READER_SATISFYING_ROLES: &[&str] = &["owner", "writer", "commenter", "reader"];
+pub const READER_SATISFYING_ROLES: &[&str] = &["owner", "writer", "commenter", "reader"];
 
 fn reader_roles_sql() -> String {
     READER_SATISFYING_ROLES
@@ -29,7 +29,7 @@ fn node_ancestors_cte(node_alias: &str) -> String {
 
 /// Returns an `EXISTS` predicate that is true when `node_alias` is readable by
 /// the subject bound to `subject_type_bind` and `subject_id_bind`.
-pub(crate) fn reader_inherited_permission_exists_sql(
+pub fn reader_inherited_permission_exists_sql(
     node_alias: &str,
     subject_type_bind: &str,
     subject_id_bind: &str,
@@ -57,7 +57,7 @@ pub(crate) fn reader_inherited_permission_exists_sql(
 }
 
 /// Returns a predicate that matches nodes visible in the shared-with-me view.
-pub(crate) fn shared_with_me_visible_sql(
+pub fn shared_with_me_visible_sql(
     node_alias: &str,
     subject_type_bind: &str,
     subject_id_bind: &str,
@@ -120,7 +120,7 @@ pub(crate) fn shared_with_me_visible_sql(
 }
 
 /// Returns a predicate that is true when the subject can read `node_alias`.
-pub(crate) fn node_reader_visible_sql(
+pub fn node_reader_visible_sql(
     node_alias: &str,
     subject_type_bind: &str,
     subject_id_bind: &str,
@@ -148,7 +148,7 @@ pub(crate) fn node_reader_visible_sql(
 }
 
 /// Returns a predicate that is true when the subject can list or access the space.
-pub(crate) fn space_accessible_to_subject_sql(
+pub fn space_accessible_to_subject_sql(
     space_alias: &str,
     subject_type_bind: &str,
     subject_id_bind: &str,
@@ -192,7 +192,7 @@ pub(crate) fn space_accessible_to_subject_sql(
 }
 
 /// Returns a predicate that is true when the subject can read a watch channel row.
-pub(crate) fn watch_channel_reader_visible_sql(
+pub fn watch_channel_reader_visible_sql(
     channel_alias: &str,
     subject_type_bind: &str,
     subject_id_bind: &str,

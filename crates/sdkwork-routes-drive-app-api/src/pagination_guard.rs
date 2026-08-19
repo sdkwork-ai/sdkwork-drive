@@ -17,7 +17,7 @@ const FORBIDDEN_PAGINATION_QUERY_KEYS: &[&str] = &[
     "size",
 ];
 
-pub(crate) async fn reject_legacy_pagination_query(request: Request<Body>, next: Next) -> Response {
+pub async fn reject_legacy_pagination_query(request: Request<Body>, next: Next) -> Response {
     if let Some(forbidden_key) = request.uri().query().and_then(find_forbidden_query_key) {
         return problem(
             StatusCode::BAD_REQUEST,

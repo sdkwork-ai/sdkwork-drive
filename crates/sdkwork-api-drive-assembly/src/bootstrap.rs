@@ -33,6 +33,7 @@ async fn assemble_application_business_routes(pool: sqlx::PgPool) -> BusinessRou
         router.merge(sdkwork_routes_drive_internal_api::gateway_mount_business(pool.clone()).await);
     router =
         router.merge(sdkwork_routes_drive_open_api::gateway_mount_business(pool.clone()).await);
+    router = router.merge(sdkwork_routes_drive_git_api::gateway_mount_business(pool.clone()).await);
     BusinessRouterAssembly { router }
 }
 
@@ -191,7 +192,10 @@ pub async fn assemble_api_router(pool: sqlx::PgPool) -> Result<ApiAssembly, Stri
                 pool.clone(),
                 admin_storage_config,
             ),
-        );
+        )
+        .merge(sdkwork_routes_drive_git_api::build_git_business_router(
+            sdkwork_routes_drive_git_api::GitState::new(pool.clone()),
+        ));
     let routes = sdkwork_routes_drive_app_api::gateway_route_manifest()
         .routes()
         .iter()
@@ -212,6 +216,11 @@ pub async fn assemble_api_router(pool: sqlx::PgPool) -> Result<ApiAssembly, Stri
         )
         .chain(
             sdkwork_routes_storage_backend_api::gateway_route_manifest()
+                .routes()
+                .iter(),
+        )
+        .chain(
+            sdkwork_routes_drive_git_api::gateway_route_manifest()
                 .routes()
                 .iter(),
         )

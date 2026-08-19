@@ -4,7 +4,7 @@ use crate::constants::{
 use std::sync::atomic::Ordering;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-pub(crate) fn next_drive_id(prefix: &str) -> String {
+pub fn next_drive_id(prefix: &str) -> String {
     format!("{prefix}_{}", next_snowflake_id())
 }
 

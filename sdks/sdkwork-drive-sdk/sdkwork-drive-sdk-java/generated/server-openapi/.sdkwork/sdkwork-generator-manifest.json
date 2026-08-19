@@ -12,7 +12,7 @@
   "generatedFiles": [
     {
       "path": "bin/publish-core.mjs",
-      "sha256": "98ad0918a78bfbe22bf8f12fec709b0bed545b9e01edd40f5e4abf31a23378a5"
+      "sha256": "a47e95119bf3eafcbcb2102f7024c147f967924e4e3f343d1a29effb4b6765df"
     },
     {
       "path": "bin/publish.ps1",
@@ -56,7 +56,7 @@
     },
     {
       "path": "src/main/java/com/sdkwork/drive/sdk/generated/java/http/HttpClient.java",
-      "sha256": "b5f4022014bf8cba17d2e35614837a6b39d8f1b23790c2ad03c23d1e64850d8e"
+      "sha256": "2dc83c266200f45054300b0fd3e5edf59a09c8456190e10a51094bee9b933fbb"
     },
     {
       "path": "src/main/java/com/sdkwork/drive/sdk/generated/java/model/CreateOpenDownloadUrlRequest.java",

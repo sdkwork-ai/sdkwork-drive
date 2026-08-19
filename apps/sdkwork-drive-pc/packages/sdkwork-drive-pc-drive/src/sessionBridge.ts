@@ -1,11 +1,12 @@
 import type { SessionStore } from 'sdkwork-drive-pc-core';
+import { enrichSessionSnapshotFromAccessToken } from 'sdkwork-drive-pc-core';
 
 import { getDrivePcSdkPorts } from './sdkPorts';
 
 export function syncHostSessionIntoDriveStore(session: SessionStore): void {
   const hostSession = getDrivePcSdkPorts().readHostSession();
   if (hostSession) {
-    session.setSession(hostSession);
+    session.setSession(enrichSessionSnapshotFromAccessToken(hostSession));
     return;
   }
   session.clearSession();

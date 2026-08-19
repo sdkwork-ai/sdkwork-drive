@@ -9,22 +9,23 @@
     "protocol": "http",
     "packageName": "sdkwork-drive-admin-storage-sdk-generated-go"
   },
-  "changeFingerprint": "8fe91f692ad29ff54051ac1d395e6fb9e6ed652d794f8c2af868a25fa0ebff9a",
+  "changeFingerprint": "e96f8d2d4fdc2aca1c19de1b4c7eab7b8c7cc1ed4f3a1caf5a0db6157fafddce",
   "changes": {
     "createdGeneratedFiles": [],
-    "updatedGeneratedFiles": [],
+    "updatedGeneratedFiles": [
+      "api/drive.go",
+      "bin/publish-core.mjs",
+      "http/client.go"
+    ],
     "unchangedGeneratedFiles": [
       "api/base.go",
       "api/doc.go",
-      "api/drive.go",
       "api/paths.go",
-      "bin/publish-core.mjs",
       "bin/publish.ps1",
       "bin/publish.sh",
       "CHANGELOG.md",
       "doc.go",
       "go.mod",
-      "http/client.go",
       "http/doc.go",
       "LICENSE",
       "README.md",
@@ -93,26 +94,69 @@
   },
   "impact": {
     "schemaVersion": 1,
-    "areas": [],
-    "details": [],
-    "requiresVerification": false,
-    "summary": "No generated, scaffold, or backup changes detected. Verification can be skipped."
+    "areas": [
+      "api-surface",
+      "runtime",
+      "publish-workflow"
+    ],
+    "details": [
+      {
+        "area": "api-surface",
+        "paths": [
+          "api/drive.go",
+          "http/client.go"
+        ]
+      },
+      {
+        "area": "runtime",
+        "paths": [
+          "http/client.go"
+        ]
+      },
+      {
+        "area": "publish-workflow",
+        "paths": [
+          "bin/publish-core.mjs"
+        ]
+      }
+    ],
+    "requiresVerification": true,
+    "summary": "Detected impact areas: api-surface, runtime, publish-workflow. Verification is required."
   },
   "verificationPlan": {
-    "shouldRun": false,
-    "runPhase": "skip",
-    "summary": "No generated, scaffold, or backup changes detected. Verification can be skipped.",
-    "steps": []
+    "shouldRun": true,
+    "runPhase": "now",
+    "summary": "Detected impact areas: api-surface, runtime, publish-workflow. Verification is required. Run the required verification commands now against the generated SDK output.",
+    "steps": [
+      {
+        "id": "check",
+        "title": "Unified package check",
+        "required": true,
+        "rationale": "Validate the generated package with the unified publish helper. Triggered by: api-surface, runtime, publish-workflow.",
+        "workingDirectory": "E:\\sdkwork-space\\sdkwork-drive\\sdks\\sdkwork-drive-admin-storage-sdk\\sdkwork-drive-admin-storage-sdk-go\\generated\\server-openapi",
+        "command": "node",
+        "args": [
+          "./bin/publish-core.mjs",
+          "--language",
+          "go",
+          "--project-dir",
+          ".",
+          "--action",
+          "check"
+        ],
+        "displayCommand": "node ./bin/publish-core.mjs --language go --project-dir . --action check"
+      }
+    ]
   },
   "executionDecision": {
     "schemaVersion": 1,
-    "riskLevel": "low",
-    "nextAction": "skip",
+    "riskLevel": "medium",
+    "nextAction": "verify",
     "requiresManualReview": false,
     "applyRequiresExpectedFingerprint": false,
-    "summary": "No actionable changes were detected. No apply or verification step is required.",
+    "summary": "Changes have been applied. Run the required verification plan now.",
     "reasons": [
-      "no-actionable-changes"
+      "verification-required"
     ]
   },
   "preservedLegacyFiles": false

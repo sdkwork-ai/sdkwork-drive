@@ -55,7 +55,6 @@ const client = new SdkworkAppClient({
 ## API Modules
 
 - `client.drive` - drive API
-- `client.assets` - assets API
 
 ## Usage Examples
 
@@ -64,17 +63,6 @@ const client = new SdkworkAppClient({
 ```typescript
 // GET /app/v3/api/drive/quotas/summary
 const result = await client.drive.quotas.retrieve();
-```
-
-### assets
-
-```typescript
-// List asset collections
-const params = {
-  cursor: 'cursor',
-  page_size: 2,
-};
-const result = await client.assets.assetCollections.list(params);
 ```
 
 ## Error Handling

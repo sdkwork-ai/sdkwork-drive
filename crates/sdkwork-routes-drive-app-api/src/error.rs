@@ -5,11 +5,11 @@ use sdkwork_drive_observability::error_kinds;
 use sdkwork_drive_storage_contract::{DriveObjectStoreError, DriveObjectStoreErrorKind};
 use sdkwork_drive_workspace_service::DriveServiceError;
 
-pub(crate) use sdkwork_drive_http::api_problem::SdkWorkResultCode;
+pub use sdkwork_drive_http::api_problem::SdkWorkResultCode;
 
-pub(crate) type ProblemDetail = SdkWorkProblemDetail;
+pub type ProblemDetail = SdkWorkProblemDetail;
 
-pub(crate) fn map_service_error(error: DriveServiceError) -> (StatusCode, Json<ProblemDetail>) {
+pub fn map_service_error(error: DriveServiceError) -> (StatusCode, Json<ProblemDetail>) {
     match error {
         DriveServiceError::Validation(detail) => {
             let code = if detail.starts_with("provider_kind is invalid;") {
@@ -53,7 +53,7 @@ pub(crate) fn map_service_error(error: DriveServiceError) -> (StatusCode, Json<P
     }
 }
 
-pub(crate) fn map_download_token_error(
+pub fn map_download_token_error(
     error: DriveServiceError,
 ) -> (StatusCode, Json<ProblemDetail>) {
     match error {
@@ -67,7 +67,7 @@ pub(crate) fn map_download_token_error(
     }
 }
 
-pub(crate) fn share_link_expired_problem() -> (StatusCode, Json<ProblemDetail>) {
+pub fn share_link_expired_problem() -> (StatusCode, Json<ProblemDetail>) {
     problem(
         StatusCode::GONE,
         "share link expired",
@@ -76,7 +76,7 @@ pub(crate) fn share_link_expired_problem() -> (StatusCode, Json<ProblemDetail>) 
     )
 }
 
-pub(crate) fn share_link_download_limit_problem() -> (StatusCode, Json<ProblemDetail>) {
+pub fn share_link_download_limit_problem() -> (StatusCode, Json<ProblemDetail>) {
     problem(
         StatusCode::TOO_MANY_REQUESTS,
         "download limit exceeded",
@@ -85,7 +85,7 @@ pub(crate) fn share_link_download_limit_problem() -> (StatusCode, Json<ProblemDe
     )
 }
 
-pub(crate) fn internal_problem(detail: impl Into<String>) -> (StatusCode, Json<ProblemDetail>) {
+pub fn internal_problem(detail: impl Into<String>) -> (StatusCode, Json<ProblemDetail>) {
     let detail = detail.into();
     tracing::error!(
         target: "sdkwork.drive",
@@ -100,7 +100,7 @@ pub(crate) fn internal_problem(detail: impl Into<String>) -> (StatusCode, Json<P
     )
 }
 
-pub(crate) fn internal_sql_error(
+pub fn internal_sql_error(
     prefix: &'static str,
 ) -> impl Fn(sqlx::Error) -> (StatusCode, Json<ProblemDetail>) {
     move |error| {
@@ -118,7 +118,7 @@ pub(crate) fn internal_sql_error(
 ///
 /// Uses the sqlx `Error::as_database_error()` API when available, falling back
 /// to error message inspection for engines that do not provide structured codes.
-pub(crate) fn is_unique_constraint_error(error: &sqlx::Error) -> bool {
+pub fn is_unique_constraint_error(error: &sqlx::Error) -> bool {
     if let Some(database_error) = error.as_database_error() {
         if let Some(code) = database_error.code() {
             if code.as_ref() == "23505" {
@@ -135,7 +135,7 @@ pub(crate) fn is_unique_constraint_error(error: &sqlx::Error) -> bool {
         || message.contains("duplicate key value violates unique constraint")
 }
 
-pub(crate) fn unique_node_insert_conflict_target(error: &sqlx::Error) -> &'static str {
+pub fn unique_node_insert_conflict_target(error: &sqlx::Error) -> &'static str {
     if !is_unique_constraint_error(error) {
         return "unknown";
     }
@@ -172,7 +172,7 @@ pub(crate) fn unique_node_insert_conflict_target(error: &sqlx::Error) -> &'stati
     "unknown"
 }
 
-pub(crate) fn not_found_problem(detail: impl Into<String>) -> (StatusCode, Json<ProblemDetail>) {
+pub fn not_found_problem(detail: impl Into<String>) -> (StatusCode, Json<ProblemDetail>) {
     problem(
         StatusCode::NOT_FOUND,
         "not found",
@@ -181,7 +181,7 @@ pub(crate) fn not_found_problem(detail: impl Into<String>) -> (StatusCode, Json<
     )
 }
 
-pub(crate) fn validation_problem(detail: impl Into<String>) -> (StatusCode, Json<ProblemDetail>) {
+pub fn validation_problem(detail: impl Into<String>) -> (StatusCode, Json<ProblemDetail>) {
     problem(
         StatusCode::BAD_REQUEST,
         "validation failed",
@@ -190,7 +190,7 @@ pub(crate) fn validation_problem(detail: impl Into<String>) -> (StatusCode, Json
     )
 }
 
-pub(crate) fn invalid_parameter_problem(
+pub fn invalid_parameter_problem(
     detail: impl Into<String>,
 ) -> (StatusCode, Json<ProblemDetail>) {
     problem(
@@ -201,7 +201,7 @@ pub(crate) fn invalid_parameter_problem(
     )
 }
 
-pub(crate) fn missing_required_field_problem(
+pub fn missing_required_field_problem(
     detail: impl Into<String>,
 ) -> (StatusCode, Json<ProblemDetail>) {
     problem(
@@ -212,7 +212,7 @@ pub(crate) fn missing_required_field_problem(
     )
 }
 
-pub(crate) fn malformed_request_problem(
+pub fn malformed_request_problem(
     detail: impl Into<String>,
 ) -> (StatusCode, Json<ProblemDetail>) {
     problem(
@@ -223,7 +223,7 @@ pub(crate) fn malformed_request_problem(
     )
 }
 
-pub(crate) fn precondition_required_problem(
+pub fn precondition_required_problem(
     detail: impl Into<String>,
 ) -> (StatusCode, Json<ProblemDetail>) {
     problem(
@@ -234,7 +234,7 @@ pub(crate) fn precondition_required_problem(
     )
 }
 
-pub(crate) fn precondition_failed_problem(
+pub fn precondition_failed_problem(
     detail: impl Into<String>,
 ) -> (StatusCode, Json<ProblemDetail>) {
     problem(
@@ -245,7 +245,7 @@ pub(crate) fn precondition_failed_problem(
     )
 }
 
-pub(crate) fn payload_too_large_problem(
+pub fn payload_too_large_problem(
     detail: impl Into<String>,
 ) -> (StatusCode, Json<ProblemDetail>) {
     problem(
@@ -256,7 +256,7 @@ pub(crate) fn payload_too_large_problem(
     )
 }
 
-pub(crate) fn service_error_kind(error: &DriveServiceError) -> &'static str {
+pub fn service_error_kind(error: &DriveServiceError) -> &'static str {
     match error {
         DriveServiceError::Validation(_) => error_kinds::VALIDATION,
         DriveServiceError::Conflict(_) => error_kinds::CONFLICT,
@@ -266,7 +266,7 @@ pub(crate) fn service_error_kind(error: &DriveServiceError) -> &'static str {
     }
 }
 
-pub(crate) fn status_error_kind(status: StatusCode) -> &'static str {
+pub fn status_error_kind(status: StatusCode) -> &'static str {
     match status {
         StatusCode::BAD_REQUEST => error_kinds::VALIDATION,
         StatusCode::FORBIDDEN => error_kinds::PERMISSION_DENIED,
@@ -276,7 +276,7 @@ pub(crate) fn status_error_kind(status: StatusCode) -> &'static str {
     }
 }
 
-pub(crate) fn problem(
+pub fn problem(
     status: StatusCode,
     title: &str,
     detail: impl Into<String>,
@@ -285,7 +285,7 @@ pub(crate) fn problem(
     shared_problem(status, title, detail, code)
 }
 
-pub(crate) fn map_object_store_error(error: DriveObjectStoreError) -> DriveServiceError {
+pub fn map_object_store_error(error: DriveObjectStoreError) -> DriveServiceError {
     match error.kind {
         DriveObjectStoreErrorKind::NotFound => DriveServiceError::NotFound(error.message),
         DriveObjectStoreErrorKind::InvalidRequest => DriveServiceError::Validation(error.message),
@@ -297,7 +297,7 @@ pub(crate) fn map_object_store_error(error: DriveObjectStoreError) -> DriveServi
     }
 }
 
-pub(crate) fn map_object_store_route_error(
+pub fn map_object_store_route_error(
     error: DriveObjectStoreError,
 ) -> (StatusCode, Json<ProblemDetail>) {
     map_service_error(map_object_store_error(error))

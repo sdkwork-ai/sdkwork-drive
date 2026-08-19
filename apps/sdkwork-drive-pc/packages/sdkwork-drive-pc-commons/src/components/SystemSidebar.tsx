@@ -79,7 +79,7 @@ export function SystemSidebar({
 
   return (
     <>
-    <div className="w-[60px] h-full bg-[#2e2e2e] flex flex-col items-center py-6 gap-8 select-none shrink-0 z-50">
+    <div className="w-[60px] h-full bg-zinc-100 dark:bg-[#2e2e2e] flex flex-col items-center py-6 gap-8 select-none shrink-0 z-50 border-r border-black/5 dark:border-transparent">
       <div className="flex flex-col gap-5 w-full items-center">
         {/* User / App Avatar */}
         <button

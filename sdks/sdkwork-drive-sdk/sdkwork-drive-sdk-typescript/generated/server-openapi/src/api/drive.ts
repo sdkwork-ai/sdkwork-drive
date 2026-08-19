@@ -19,11 +19,11 @@ async openShareLinksRetrieve(token: string, params?: DriveOpenShareLinksRetrieve
     const query = buildQueryString([
       { name: 'accessCode', value: params?.accessCode, style: 'form', explode: true, allowReserved: false },
     ]);
-    return this.client.request<OpenShareLinksRetrieveResponse>(appendQueryString(customApiPath(`/drive/share_links/${serializePathParameter(token, { name: 'token', style: 'simple', explode: false })}`), query), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'GET' as any, skipAuth: true });
+    return this.client.request<OpenShareLinksRetrieveResponse>(appendQueryString(customApiPath(`/drive/share_links/${serializePathParameter(token, { name: 'token', style: 'simple', explode: false })}`), query), { ...(requestOptions?.signal !== undefined ? { signal: requestOptions.signal } : {}), ...(requestOptions?.timeout !== undefined ? { timeout: requestOptions.timeout } : {}), method: 'GET' as any, skipAuth: true });
   }
 
 async openShareLinksDownloadUrlsCreate(token: string, body?: CreateOpenDownloadUrlRequest, requestOptions?: ApiRequestOptions): Promise<OpenShareLinksDownloadUrlsCreateResponse201> {
-    return this.client.request<OpenShareLinksDownloadUrlsCreateResponse201>(customApiPath(`/drive/share_links/${serializePathParameter(token, { name: 'token', style: 'simple', explode: false })}/download_url`), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'POST' as any, body, contentType: 'application/json', skipAuth: true });
+    return this.client.request<OpenShareLinksDownloadUrlsCreateResponse201>(customApiPath(`/drive/share_links/${serializePathParameter(token, { name: 'token', style: 'simple', explode: false })}/download_url`), { ...(requestOptions?.signal !== undefined ? { signal: requestOptions.signal } : {}), ...(requestOptions?.timeout !== undefined ? { timeout: requestOptions.timeout } : {}), method: 'POST' as any, ...(body !== undefined ? { body, contentType: 'application/json' } : {}), skipAuth: true });
   }
 }
 

@@ -169,13 +169,13 @@ public class DriveApi {
 
     /** Retrieve provider object content */
     public StorageProvidersObjectsContentRetrieveResponse storageProvidersObjectsContentRetrieve(String providerId, String objectKey) throws Exception {
-        Object raw = client.get(ApiPaths.customPath("/drive/storage/providers/" + serializePathParameter(providerId, new PathParameterSpec("providerId", "simple", false)) + "/objects/" + serializePathParameter(objectKey, new PathParameterSpec("objectKey", "simple", false)) + "/content"));
+        Object raw = client.get(ApiPaths.customPath("/drive/storage/providers/" + serializePathParameter(providerId, new PathParameterSpec("providerId", "simple", false)) + "/object-contents/" + serializePathParameter(objectKey, new PathParameterSpec("objectKey", "simple", false)) + ""));
         return client.convertValue(raw, new TypeReference<StorageProvidersObjectsContentRetrieveResponse>() {});
     }
 
     /** Write provider object content */
     public StorageProvidersObjectsContentUpdateResponse storageProvidersObjectsContentUpdate(String providerId, String objectKey, UpdateProviderObjectContent body) throws Exception {
-        Object raw = client.put(ApiPaths.customPath("/drive/storage/providers/" + serializePathParameter(providerId, new PathParameterSpec("providerId", "simple", false)) + "/objects/" + serializePathParameter(objectKey, new PathParameterSpec("objectKey", "simple", false)) + "/content"), body, null, null, "application/json");
+        Object raw = client.put(ApiPaths.customPath("/drive/storage/providers/" + serializePathParameter(providerId, new PathParameterSpec("providerId", "simple", false)) + "/object-contents/" + serializePathParameter(objectKey, new PathParameterSpec("objectKey", "simple", false)) + ""), body, null, null, "application/json");
         return client.convertValue(raw, new TypeReference<StorageProvidersObjectsContentUpdateResponse>() {});
     }
 

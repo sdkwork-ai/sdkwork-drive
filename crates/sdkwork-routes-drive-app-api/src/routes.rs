@@ -310,53 +310,11 @@ fn build_business_router_layers(state: AppState) -> Router {
         .route(
             "/app/v3/api/drive/download_tokens/{token}",
             get(resolve_download_token),
-        )
-        .route("/app/v3/api/assets", get(list_assets).post(create_asset))
-        .route(
-            "/app/v3/api/assets/collections",
-            get(list_asset_collections).post(create_asset_collection),
-        )
-        .route(
-            "/app/v3/api/assets/collections/{collection_id}/items",
-            post(add_asset_collection_item),
-        )
-        .route(
-            "/app/v3/api/assets/collections/{collection_id}/items/{item_id}",
-            post(asset_method_not_allowed).delete(delete_asset_collection_item),
-        )
-        .route(
-            "/app/v3/api/assets/{asset_id}",
-            get(get_asset).patch(update_asset),
-        )
-        .route("/app/v3/api/assets/{asset_id}/archive", post(archive_asset))
-        .route("/app/v3/api/assets/{asset_id}/restore", post(restore_asset))
-        .route(
-            "/app/v3/api/assets/{asset_id}/relations",
-            post(create_asset_relation),
-        )
-        .route(
-            "/app/v3/api/assets/{asset_id}/relations/{relation_id}",
-            post(asset_method_not_allowed).delete(delete_asset_relation),
-        );
-
-    let forbidden_asset_routes = Router::new()
-        .route(
-            "/app/v3/api/assets/upload",
-            post(legacy_asset_upload_route_gone),
-        )
-        .route(
-            "/app/v3/api/assets/presign",
-            post(legacy_asset_upload_route_gone),
-        )
-        .route(
-            "/app/v3/api/assets/upload_sessions",
-            post(legacy_asset_upload_route_gone),
         );
 
     Router::new()
         .merge(
             drive_routes
-                .merge(forbidden_asset_routes)
                 .route_layer(middleware::from_fn(
                     crate::pagination_guard::reject_legacy_pagination_query,
                 ))

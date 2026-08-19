@@ -10,37 +10,91 @@
   },
   "status": "ok",
   "mode": "apply",
-  "hasChanges": false,
+  "hasChanges": true,
   "hasDestructiveChanges": false,
-  "changeFingerprint": "8a95bd1903f6da6fdb7137a4eb89d12a8f8e6a69e4692436848dab480f7b554a",
+  "changeFingerprint": "7b9ebc379511a44baef34b891f4fbe4637a180d5ab77a86f0c3ce8928d4a7bc3",
   "changeImpact": {
     "schemaVersion": 1,
-    "areas": [],
-    "details": [],
-    "requiresVerification": false,
-    "summary": "No generated, scaffold, or backup changes detected. Verification can be skipped."
+    "areas": [
+      "runtime",
+      "publish-workflow"
+    ],
+    "details": [
+      {
+        "area": "runtime",
+        "paths": [
+          "src/main/java/com/sdkwork/drive/sdk/generated/java/http/HttpClient.java"
+        ]
+      },
+      {
+        "area": "publish-workflow",
+        "paths": [
+          "bin/publish-core.mjs"
+        ]
+      }
+    ],
+    "requiresVerification": true,
+    "summary": "Detected impact areas: runtime, publish-workflow. Verification is required."
   },
   "executionDecision": {
     "schemaVersion": 1,
-    "riskLevel": "low",
-    "nextAction": "skip",
+    "riskLevel": "medium",
+    "nextAction": "verify",
     "requiresManualReview": false,
     "applyRequiresExpectedFingerprint": false,
-    "summary": "No actionable changes were detected. No apply or verification step is required.",
+    "summary": "Changes have been applied. Run the required verification plan now.",
     "reasons": [
-      "no-actionable-changes"
+      "verification-required"
     ]
   },
   "executionHandoff": {
     "schemaVersion": 1,
-    "summary": "No further commands are required.",
-    "steps": []
+    "summary": "Run the required verification commands now.",
+    "steps": [
+      {
+        "id": "verify-check",
+        "title": "Unified package check",
+        "required": true,
+        "rationale": "Validate the generated package with the unified publish helper. Triggered by: runtime, publish-workflow.",
+        "workingDirectory": "E:\\sdkwork-space\\sdkwork-drive\\sdks\\sdkwork-drive-sdk\\sdkwork-drive-sdk-java\\generated\\server-openapi",
+        "command": "node",
+        "args": [
+          "./bin/publish-core.mjs",
+          "--language",
+          "java",
+          "--project-dir",
+          ".",
+          "--action",
+          "check"
+        ],
+        "displayCommand": "node ./bin/publish-core.mjs --language java --project-dir . --action check"
+      }
+    ]
   },
   "verificationPlan": {
-    "shouldRun": false,
-    "runPhase": "skip",
-    "summary": "No generated, scaffold, or backup changes detected. Verification can be skipped.",
-    "steps": []
+    "shouldRun": true,
+    "runPhase": "now",
+    "summary": "Detected impact areas: runtime, publish-workflow. Verification is required. Run the required verification commands now against the generated SDK output.",
+    "steps": [
+      {
+        "id": "check",
+        "title": "Unified package check",
+        "required": true,
+        "rationale": "Validate the generated package with the unified publish helper. Triggered by: runtime, publish-workflow.",
+        "workingDirectory": "E:\\sdkwork-space\\sdkwork-drive\\sdks\\sdkwork-drive-sdk\\sdkwork-drive-sdk-java\\generated\\server-openapi",
+        "command": "node",
+        "args": [
+          "./bin/publish-core.mjs",
+          "--language",
+          "java",
+          "--project-dir",
+          ".",
+          "--action",
+          "check"
+        ],
+        "displayCommand": "node ./bin/publish-core.mjs --language java --project-dir . --action check"
+      }
+    ]
   },
   "sdk": {
     "name": "sdkwork-drive-sdk",
@@ -65,17 +119,19 @@
   "syncSummary": {
     "dryRun": false,
     "controlPlaneEnabled": true,
-    "writtenFiles": 0,
+    "writtenFiles": 2,
     "skippedScaffoldFiles": 1,
-    "skippedUnchangedGeneratedFiles": 26,
+    "skippedUnchangedGeneratedFiles": 24,
     "deletedGeneratedFiles": 0,
     "changeSummaryPath": ".sdkwork/sdkwork-generator-changes.json",
-    "changeFingerprint": "8a95bd1903f6da6fdb7137a4eb89d12a8f8e6a69e4692436848dab480f7b554a",
+    "changeFingerprint": "7b9ebc379511a44baef34b891f4fbe4637a180d5ab77a86f0c3ce8928d4a7bc3",
     "changes": {
       "createdGeneratedFiles": [],
-      "updatedGeneratedFiles": [],
-      "unchangedGeneratedFiles": [
+      "updatedGeneratedFiles": [
         "bin/publish-core.mjs",
+        "src/main/java/com/sdkwork/drive/sdk/generated/java/http/HttpClient.java"
+      ],
+      "unchangedGeneratedFiles": [
         "bin/publish.ps1",
         "bin/publish.sh",
         "CHANGELOG.md",
@@ -86,7 +142,6 @@
         "src/main/java/com/sdkwork/drive/sdk/generated/java/api/ApiPaths.java",
         "src/main/java/com/sdkwork/drive/sdk/generated/java/api/DriveApi.java",
         "src/main/java/com/sdkwork/drive/sdk/generated/java/api/package-info.java",
-        "src/main/java/com/sdkwork/drive/sdk/generated/java/http/HttpClient.java",
         "src/main/java/com/sdkwork/drive/sdk/generated/java/model/CreateOpenDownloadUrlRequest.java",
         "src/main/java/com/sdkwork/drive/sdk/generated/java/model/DriveOpenShareLink.java",
         "src/main/java/com/sdkwork/drive/sdk/generated/java/model/FieldError.java",
@@ -111,26 +166,61 @@
     },
     "impact": {
       "schemaVersion": 1,
-      "areas": [],
-      "details": [],
-      "requiresVerification": false,
-      "summary": "No generated, scaffold, or backup changes detected. Verification can be skipped."
+      "areas": [
+        "runtime",
+        "publish-workflow"
+      ],
+      "details": [
+        {
+          "area": "runtime",
+          "paths": [
+            "src/main/java/com/sdkwork/drive/sdk/generated/java/http/HttpClient.java"
+          ]
+        },
+        {
+          "area": "publish-workflow",
+          "paths": [
+            "bin/publish-core.mjs"
+          ]
+        }
+      ],
+      "requiresVerification": true,
+      "summary": "Detected impact areas: runtime, publish-workflow. Verification is required."
     },
     "verificationPlan": {
-      "shouldRun": false,
-      "runPhase": "skip",
-      "summary": "No generated, scaffold, or backup changes detected. Verification can be skipped.",
-      "steps": []
+      "shouldRun": true,
+      "runPhase": "now",
+      "summary": "Detected impact areas: runtime, publish-workflow. Verification is required. Run the required verification commands now against the generated SDK output.",
+      "steps": [
+        {
+          "id": "check",
+          "title": "Unified package check",
+          "required": true,
+          "rationale": "Validate the generated package with the unified publish helper. Triggered by: runtime, publish-workflow.",
+          "workingDirectory": "E:\\sdkwork-space\\sdkwork-drive\\sdks\\sdkwork-drive-sdk\\sdkwork-drive-sdk-java\\generated\\server-openapi",
+          "command": "node",
+          "args": [
+            "./bin/publish-core.mjs",
+            "--language",
+            "java",
+            "--project-dir",
+            ".",
+            "--action",
+            "check"
+          ],
+          "displayCommand": "node ./bin/publish-core.mjs --language java --project-dir . --action check"
+        }
+      ]
     },
     "executionDecision": {
       "schemaVersion": 1,
-      "riskLevel": "low",
-      "nextAction": "skip",
+      "riskLevel": "medium",
+      "nextAction": "verify",
       "requiresManualReview": false,
       "applyRequiresExpectedFingerprint": false,
-      "summary": "No actionable changes were detected. No apply or verification step is required.",
+      "summary": "Changes have been applied. Run the required verification plan now.",
       "reasons": [
-        "no-actionable-changes"
+        "verification-required"
       ]
     },
     "backedUpFiles": [],

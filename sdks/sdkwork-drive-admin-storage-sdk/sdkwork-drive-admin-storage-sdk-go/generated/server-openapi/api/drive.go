@@ -273,7 +273,7 @@ func (a *DriveApi) StorageProviderKindsUpdate(providerKind string, body sdktypes
 
 // Retrieve provider object content
 func (a *DriveApi) StorageProvidersObjectsContentRetrieve(providerId string, objectKey string) (sdktypes.StorageProvidersObjectsContentRetrieveResponse, error) {
-    raw, err := a.client.Get(CustomApiPath(fmt.Sprintf("/drive/storage/providers/%s/objects/%s/content", SerializePathParameter(providerId, PathParameterSpec{Name: "providerId", Style: "simple", Explode: false}), SerializePathParameter(objectKey, PathParameterSpec{Name: "objectKey", Style: "simple", Explode: false}))), nil, nil)
+    raw, err := a.client.Get(CustomApiPath(fmt.Sprintf("/drive/storage/providers/%s/object-contents/%s", SerializePathParameter(providerId, PathParameterSpec{Name: "providerId", Style: "simple", Explode: false}), SerializePathParameter(objectKey, PathParameterSpec{Name: "objectKey", Style: "simple", Explode: false}))), nil, nil)
     if err != nil {
         var zero sdktypes.StorageProvidersObjectsContentRetrieveResponse
         return zero, err
@@ -283,7 +283,7 @@ func (a *DriveApi) StorageProvidersObjectsContentRetrieve(providerId string, obj
 
 // Write provider object content
 func (a *DriveApi) StorageProvidersObjectsContentUpdate(providerId string, objectKey string, body sdktypes.UpdateProviderObjectContent) (sdktypes.StorageProvidersObjectsContentUpdateResponse, error) {
-    raw, err := a.client.Put(CustomApiPath(fmt.Sprintf("/drive/storage/providers/%s/objects/%s/content", SerializePathParameter(providerId, PathParameterSpec{Name: "providerId", Style: "simple", Explode: false}), SerializePathParameter(objectKey, PathParameterSpec{Name: "objectKey", Style: "simple", Explode: false}))), body, nil, nil, "application/json")
+    raw, err := a.client.Put(CustomApiPath(fmt.Sprintf("/drive/storage/providers/%s/object-contents/%s", SerializePathParameter(providerId, PathParameterSpec{Name: "providerId", Style: "simple", Explode: false}), SerializePathParameter(objectKey, PathParameterSpec{Name: "objectKey", Style: "simple", Explode: false}))), body, nil, nil, "application/json")
     if err != nil {
         var zero sdktypes.StorageProvidersObjectsContentUpdateResponse
         return zero, err

@@ -8,14 +8,14 @@ use sdkwork_drive_contract::api::pagination_cursor::{
     decode_change_sequence_cursor, decode_offset_cursor, encode_offset_cursor,
 };
 
-pub(crate) fn require_query_value(
+pub fn require_query_value(
     value: Option<String>,
     field_name: &str,
 ) -> Result<String, (StatusCode, Json<ProblemDetail>)> {
     require_body_value(value, field_name)
 }
 
-pub(crate) fn require_body_value(
+pub fn require_body_value(
     value: Option<String>,
     field_name: &str,
 ) -> Result<String, (StatusCode, Json<ProblemDetail>)> {
@@ -39,7 +39,7 @@ pub(crate) fn require_body_value(
     Ok(trimmed)
 }
 
-pub(crate) fn require_non_empty_text(
+pub fn require_non_empty_text(
     value: String,
     field_name: &str,
 ) -> Result<String, (StatusCode, Json<ProblemDetail>)> {
@@ -55,13 +55,13 @@ pub(crate) fn require_non_empty_text(
     Ok(trimmed)
 }
 
-pub(crate) fn normalize_optional_text(value: Option<String>) -> Option<String> {
+pub fn normalize_optional_text(value: Option<String>) -> Option<String> {
     value
         .map(|raw| raw.trim().to_string())
         .filter(|trimmed| !trimmed.is_empty())
 }
 
-pub(crate) fn parse_page_request(
+pub fn parse_page_request(
     page_size: Option<i64>,
     cursor: Option<String>,
 ) -> Result<PageRequest, (StatusCode, Json<ProblemDetail>)> {
@@ -83,7 +83,7 @@ pub(crate) fn parse_page_request(
     Ok(PageRequest { limit, offset })
 }
 
-pub(crate) fn parse_nodes_list_order_clause(
+pub fn parse_nodes_list_order_clause(
     sort_by: Option<String>,
     sort_order: Option<String>,
 ) -> Result<&'static str, (StatusCode, Json<ProblemDetail>)> {
@@ -118,7 +118,7 @@ pub(crate) fn parse_nodes_list_order_clause(
     }
 }
 
-pub(crate) fn resolve_node_list_order_by(
+pub fn resolve_node_list_order_by(
     sort_by: Option<String>,
     sort_order: Option<String>,
     default_clause: &'static str,
@@ -129,7 +129,7 @@ pub(crate) fn resolve_node_list_order_by(
     Ok(parse_nodes_list_order_clause(sort_by, sort_order)?.to_string())
 }
 
-pub(crate) fn qualify_nodes_list_order_clause(clause: &str, node_alias: &str) -> String {
+pub fn qualify_nodes_list_order_clause(clause: &str, node_alias: &str) -> String {
     clause
         .replace("node_type", &format!("{node_alias}.node_type"))
         .replace("node_name", &format!("{node_alias}.node_name"))
@@ -145,7 +145,7 @@ pub(crate) fn qualify_nodes_list_order_clause(clause: &str, node_alias: &str) ->
         )
 }
 
-pub(crate) fn resolve_aliased_node_list_order_by(
+pub fn resolve_aliased_node_list_order_by(
     sort_by: Option<String>,
     sort_order: Option<String>,
     node_alias: &str,
@@ -158,7 +158,7 @@ pub(crate) fn resolve_aliased_node_list_order_by(
     Ok(qualify_nodes_list_order_clause(clause, node_alias))
 }
 
-pub(crate) fn next_page_token<T>(items: &mut Vec<T>, page: PageRequest) -> Option<String> {
+pub fn next_page_token<T>(items: &mut Vec<T>, page: PageRequest) -> Option<String> {
     if items.len() as i64 > page.limit {
         items.pop();
         encode_offset_cursor(page.offset + page.limit)
@@ -167,7 +167,7 @@ pub(crate) fn next_page_token<T>(items: &mut Vec<T>, page: PageRequest) -> Optio
     }
 }
 
-pub(crate) fn parse_change_page_request(
+pub fn parse_change_page_request(
     page_size: Option<i64>,
     cursor: Option<String>,
 ) -> Result<PageRequest, (StatusCode, Json<ProblemDetail>)> {
@@ -189,7 +189,7 @@ pub(crate) fn parse_change_page_request(
     Ok(PageRequest { limit, offset })
 }
 
-pub(crate) fn validate_permission_role(
+pub fn validate_permission_role(
     role: &str,
 ) -> Result<(), (StatusCode, Json<ProblemDetail>)> {
     if matches!(role, "reader" | "commenter" | "writer" | "owner") {
@@ -203,7 +203,7 @@ pub(crate) fn validate_permission_role(
     ))
 }
 
-pub(crate) fn validate_share_link_role(
+pub fn validate_share_link_role(
     role: &str,
 ) -> Result<(), (StatusCode, Json<ProblemDetail>)> {
     if matches!(role, "reader" | "commenter" | "writer") {
@@ -217,7 +217,7 @@ pub(crate) fn validate_share_link_role(
     ))
 }
 
-pub(crate) fn validate_share_link_token(
+pub fn validate_share_link_token(
     token: &str,
 ) -> Result<(), (StatusCode, Json<ProblemDetail>)> {
     if let Err(error) = sdkwork_drive_workspace_service::validate_share_link_token(token) {
@@ -235,7 +235,7 @@ pub(crate) fn validate_share_link_token(
     Ok(())
 }
 
-pub(crate) fn validate_optional_non_negative_i64(
+pub fn validate_optional_non_negative_i64(
     value: Option<i64>,
     field_name: &str,
 ) -> Result<(), (StatusCode, Json<ProblemDetail>)> {
@@ -250,7 +250,7 @@ pub(crate) fn validate_optional_non_negative_i64(
     Ok(())
 }
 
-pub(crate) fn validate_optional_future_epoch_ms(
+pub fn validate_optional_future_epoch_ms(
     value: Option<i64>,
     field_name: &str,
 ) -> Result<(), (StatusCode, Json<ProblemDetail>)> {
@@ -265,7 +265,7 @@ pub(crate) fn validate_optional_future_epoch_ms(
     Ok(())
 }
 
-pub(crate) fn validate_requested_ttl_seconds(
+pub fn validate_requested_ttl_seconds(
     value: Option<u32>,
     default_seconds: u32,
     min_seconds: u32,
@@ -284,7 +284,7 @@ pub(crate) fn validate_requested_ttl_seconds(
     Ok(ttl_seconds)
 }
 
-pub(crate) fn validate_content_type<'a>(
+pub fn validate_content_type<'a>(
     value: &'a str,
     field_name: &str,
 ) -> Result<&'a str, (StatusCode, Json<ProblemDetail>)> {
@@ -340,7 +340,7 @@ fn is_mime_token(value: &str) -> bool {
         })
 }
 
-pub(crate) fn validate_sha256_checksum<'a>(
+pub fn validate_sha256_checksum<'a>(
     value: &'a str,
     field_name: &str,
 ) -> Result<&'a str, (StatusCode, Json<ProblemDetail>)> {
@@ -369,7 +369,7 @@ pub(crate) fn validate_sha256_checksum<'a>(
     Ok(trimmed)
 }
 
-pub(crate) fn validate_page_size_i64(
+pub fn validate_page_size_i64(
     value: Option<i64>,
     default_value: i64,
     min_value: i64,
@@ -388,7 +388,7 @@ pub(crate) fn validate_page_size_i64(
     Ok(page_size)
 }
 
-pub(crate) fn validate_object_key(
+pub fn validate_object_key(
     value: String,
     field_name: &str,
 ) -> Result<String, (StatusCode, Json<ProblemDetail>)> {
@@ -430,7 +430,7 @@ pub(crate) fn validate_object_key(
     Ok(trimmed)
 }
 
-pub(crate) fn validate_subject_type(
+pub fn validate_subject_type(
     subject_type: &str,
 ) -> Result<(), (StatusCode, Json<ProblemDetail>)> {
     if matches!(subject_type, "user" | "group" | "domain" | "app") {
@@ -444,7 +444,7 @@ pub(crate) fn validate_subject_type(
     ))
 }
 
-pub(crate) fn validate_node_property_key(
+pub fn validate_node_property_key(
     property_key: &str,
 ) -> Result<&str, (StatusCode, Json<ProblemDetail>)> {
     let trimmed = property_key.trim();
@@ -464,7 +464,7 @@ pub(crate) fn validate_node_property_key(
     Ok(trimmed)
 }
 
-pub(crate) fn validate_node_property_visibility(
+pub fn validate_node_property_visibility(
     visibility: &str,
 ) -> Result<&str, (StatusCode, Json<ProblemDetail>)> {
     let trimmed = visibility.trim();
@@ -479,7 +479,7 @@ pub(crate) fn validate_node_property_visibility(
     ))
 }
 
-pub(crate) fn validate_label_key(
+pub fn validate_label_key(
     label_key: &str,
 ) -> Result<&str, (StatusCode, Json<ProblemDetail>)> {
     let trimmed = label_key.trim();
@@ -499,7 +499,7 @@ pub(crate) fn validate_label_key(
     Ok(trimmed)
 }
 
-pub(crate) fn validate_watch_channel_id(
+pub fn validate_watch_channel_id(
     channel_id: &str,
 ) -> Result<&str, (StatusCode, Json<ProblemDetail>)> {
     let trimmed = channel_id.trim();
@@ -519,7 +519,7 @@ pub(crate) fn validate_watch_channel_id(
     Ok(trimmed)
 }
 
-pub(crate) fn validate_watch_channel_address(
+pub fn validate_watch_channel_address(
     address: &str,
 ) -> Result<&str, (StatusCode, Json<ProblemDetail>)> {
     crate::webhook_url::validate_webhook_https_url(address).map_err(|detail| {
@@ -532,7 +532,7 @@ pub(crate) fn validate_watch_channel_address(
     })
 }
 
-pub(crate) fn validate_watch_channel_type(
+pub fn validate_watch_channel_type(
     channel_type: &str,
 ) -> Result<&str, (StatusCode, Json<ProblemDetail>)> {
     let trimmed = channel_type.trim();
@@ -547,7 +547,7 @@ pub(crate) fn validate_watch_channel_type(
     ))
 }
 
-pub(crate) fn validate_watch_resource_type(
+pub fn validate_watch_resource_type(
     resource_type: &str,
 ) -> Result<&str, (StatusCode, Json<ProblemDetail>)> {
     let trimmed = resource_type.trim();
@@ -562,7 +562,7 @@ pub(crate) fn validate_watch_resource_type(
     ))
 }
 
-pub(crate) fn validate_watch_lifecycle_status(
+pub fn validate_watch_lifecycle_status(
     lifecycle_status: &str,
 ) -> Result<&str, (StatusCode, Json<ProblemDetail>)> {
     let trimmed = lifecycle_status.trim();
@@ -577,7 +577,7 @@ pub(crate) fn validate_watch_lifecycle_status(
     ))
 }
 
-pub(crate) fn validate_watch_expiration(
+pub fn validate_watch_expiration(
     expiration_epoch_ms: i64,
 ) -> Result<(), (StatusCode, Json<ProblemDetail>)> {
     if expiration_epoch_ms <= current_epoch_ms() {
