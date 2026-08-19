@@ -20,7 +20,7 @@
     },
     {
       "path": "api/drive.go",
-      "sha256": "3bdf134e13a8382c3487796dd329f0094a3896fe6ee2ad976c87d489068a0e5b"
+      "sha256": "b55f5d7e4384f59c02336cdbc15b1f3fce7be6852f3a4cc76cf8cc63597a491f"
     },
     {
       "path": "api/paths.go",
@@ -28,7 +28,7 @@
     },
     {
       "path": "bin/publish-core.mjs",
-      "sha256": "98ad0918a78bfbe22bf8f12fec709b0bed545b9e01edd40f5e4abf31a23378a5"
+      "sha256": "a47e95119bf3eafcbcb2102f7024c147f967924e4e3f343d1a29effb4b6765df"
     },
     {
       "path": "bin/publish.ps1",
@@ -52,7 +52,7 @@
     },
     {
       "path": "http/client.go",
-      "sha256": "56ea3ce1326bda42739f11157e93ac570d4e5bcae7875aae4c7ab02ffdc02536"
+      "sha256": "fad5c6750da29f53ae40c217f31d533ad2a727c9821de5553f20bdebb3a2c2c0"
     },
     {
       "path": "http/doc.go",

@@ -6,22 +6,22 @@ use sdkwork_drive_security::DriveAppContext;
 use sdkwork_web_core::WebAuthLevel;
 
 #[derive(Debug, Clone)]
-pub(crate) struct DriveRequestContext {
-    pub(crate) tenant_id: String,
-    pub(crate) user_id: String,
-    pub(crate) organization_id: Option<String>,
-    pub(crate) app_id: Option<String>,
-    pub(crate) actor_id: String,
-    pub(crate) subject_type: String,
-    pub(crate) subject_id: String,
-    pub(crate) auth_level: WebAuthLevel,
-    pub(crate) request_id: String,
-    pub(crate) trace_id: String,
-    pub(crate) from_token: bool,
+pub struct DriveRequestContext {
+    pub tenant_id: String,
+    pub user_id: String,
+    pub organization_id: Option<String>,
+    pub app_id: Option<String>,
+    pub actor_id: String,
+    pub subject_type: String,
+    pub subject_id: String,
+    pub auth_level: WebAuthLevel,
+    pub request_id: String,
+    pub trace_id: String,
+    pub from_token: bool,
 }
 
 impl DriveRequestContext {
-    pub(crate) fn from_app_context(
+    pub fn from_app_context(
         app_context: &DriveAppContext,
         auth_level: WebAuthLevel,
     ) -> Self {
@@ -40,17 +40,17 @@ impl DriveRequestContext {
         }
     }
 
-    pub(crate) fn resolve_tenant_id(&self) -> Result<String, (StatusCode, Json<ProblemDetail>)> {
+    pub fn resolve_tenant_id(&self) -> Result<String, (StatusCode, Json<ProblemDetail>)> {
         self.require_verified_context()?;
         Ok(self.tenant_id.clone())
     }
 
-    pub(crate) fn resolve_operator_id(&self) -> Result<String, (StatusCode, Json<ProblemDetail>)> {
+    pub fn resolve_operator_id(&self) -> Result<String, (StatusCode, Json<ProblemDetail>)> {
         self.require_verified_context()?;
         Ok(self.actor_id.clone())
     }
 
-    pub(crate) fn resolve_app_id(&self) -> Result<String, (StatusCode, Json<ProblemDetail>)> {
+    pub fn resolve_app_id(&self) -> Result<String, (StatusCode, Json<ProblemDetail>)> {
         self.require_verified_context()?;
         self.app_id.clone().ok_or_else(|| {
             problem(
@@ -62,7 +62,7 @@ impl DriveRequestContext {
         })
     }
 
-    pub(crate) fn resolve_subject(
+    pub fn resolve_subject(
         &self,
     ) -> Result<(String, String), (StatusCode, Json<ProblemDetail>)> {
         self.require_verified_context()?;
@@ -70,7 +70,7 @@ impl DriveRequestContext {
         Ok((self.subject_type.clone(), self.subject_id.clone()))
     }
 
-    pub(crate) fn require_verified_context(&self) -> Result<(), (StatusCode, Json<ProblemDetail>)> {
+    pub fn require_verified_context(&self) -> Result<(), (StatusCode, Json<ProblemDetail>)> {
         if self.from_token {
             return Ok(());
         }

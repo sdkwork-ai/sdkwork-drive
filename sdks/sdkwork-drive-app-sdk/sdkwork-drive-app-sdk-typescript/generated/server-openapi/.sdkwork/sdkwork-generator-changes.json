@@ -9,10 +9,16 @@
     "protocol": "http",
     "packageName": "sdkwork-drive-app-sdk-generated-typescript"
   },
-  "changeFingerprint": "54c3547ea72807a990bbc81ea1cc8575f2950becb7ceb7f5d0fd74e1918e6a98",
+  "changeFingerprint": "3ae3bf4d129086ac5e13ec652eef325f1f54cea1bb54e1e3cdfa8eff735d6dd4",
   "changes": {
     "createdGeneratedFiles": [],
-    "updatedGeneratedFiles": [],
+    "updatedGeneratedFiles": [
+      "README.md",
+      "src/api/drive.ts",
+      "src/api/index.ts",
+      "src/sdk.ts",
+      "src/types/index.ts"
+    ],
     "unchangedGeneratedFiles": [
       "bin/publish-core.mjs",
       "bin/publish.ps1",
@@ -22,35 +28,17 @@
       "CHANGELOG.md",
       "LICENSE",
       "package.json",
-      "README.md",
       "sdkwork-sdk.json",
-      "src/api/assets.ts",
       "src/api/base.ts",
-      "src/api/drive.ts",
-      "src/api/index.ts",
       "src/api/paths.ts",
       "src/auth/index.ts",
       "src/http/client.ts",
       "src/http/index.ts",
       "src/index.ts",
-      "src/sdk.ts",
       "src/types/activate-website-generation-request.ts",
       "src/types/apply-node-label-request.ts",
       "src/types/archive-entry-list-http-response.ts",
       "src/types/archive-entry.ts",
-      "src/types/asset-action-request.ts",
-      "src/types/asset-collection-http-response.ts",
-      "src/types/asset-collection-item-http-response.ts",
-      "src/types/asset-collection-item.ts",
-      "src/types/asset-collection-list-data.ts",
-      "src/types/asset-collection-list-http-response.ts",
-      "src/types/asset-collection.ts",
-      "src/types/asset-item-http-response.ts",
-      "src/types/asset-item.ts",
-      "src/types/asset-list-data.ts",
-      "src/types/asset-list-http-response.ts",
-      "src/types/asset-relation-http-response.ts",
-      "src/types/asset-relation.ts",
       "src/types/change-list-data.ts",
       "src/types/change-list-http-response.ts",
       "src/types/change.ts",
@@ -61,10 +49,6 @@
       "src/types/complete-upload-session-request.ts",
       "src/types/completed-upload-part.ts",
       "src/types/copy-node-request.ts",
-      "src/types/create-asset-collection-item-request.ts",
-      "src/types/create-asset-collection-request.ts",
-      "src/types/create-asset-relation-request.ts",
-      "src/types/create-asset-request.ts",
       "src/types/create-comment-reply-request.ts",
       "src/types/create-comment-request.ts",
       "src/types/create-download-grant-request.ts",
@@ -148,9 +132,7 @@
       "src/types/file-version-list-data.ts",
       "src/types/file-version-list-http-response.ts",
       "src/types/file-version.ts",
-      "src/types/index.ts",
       "src/types/mark-uploader-part-uploaded-request.ts",
-      "src/types/media-resource.ts",
       "src/types/move-node-request.ts",
       "src/types/node-capabilities-http-response.ts",
       "src/types/node-capabilities-response.ts",
@@ -183,7 +165,6 @@
       "src/types/stop-watch-channel-http-response.ts",
       "src/types/stop-watch-channel-request.ts",
       "src/types/stop-watch-channel-response.ts",
-      "src/types/update-asset-request.ts",
       "src/types/update-comment-reply-request.ts",
       "src/types/update-comment-request.ts",
       "src/types/update-drive-sandbox-entry-request.ts",
@@ -218,7 +199,28 @@
       "src/types/website-sync.ts",
       "tsconfig.json"
     ],
-    "deletedGeneratedFiles": [],
+    "deletedGeneratedFiles": [
+      "src/api/assets.ts",
+      "src/types/asset-action-request.ts",
+      "src/types/asset-collection-http-response.ts",
+      "src/types/asset-collection-item-http-response.ts",
+      "src/types/asset-collection-item.ts",
+      "src/types/asset-collection-list-data.ts",
+      "src/types/asset-collection-list-http-response.ts",
+      "src/types/asset-collection.ts",
+      "src/types/asset-item-http-response.ts",
+      "src/types/asset-item.ts",
+      "src/types/asset-list-data.ts",
+      "src/types/asset-list-http-response.ts",
+      "src/types/asset-relation-http-response.ts",
+      "src/types/asset-relation.ts",
+      "src/types/create-asset-collection-item-request.ts",
+      "src/types/create-asset-collection-request.ts",
+      "src/types/create-asset-relation-request.ts",
+      "src/types/create-asset-request.ts",
+      "src/types/media-resource.ts",
+      "src/types/update-asset-request.ts"
+    ],
     "scaffoldedFiles": [],
     "preservedScaffoldFiles": [
       "custom/build-runtime.mjs",
@@ -228,26 +230,110 @@
   },
   "impact": {
     "schemaVersion": 1,
-    "areas": [],
-    "details": [],
-    "requiresVerification": false,
-    "summary": "No generated, scaffold, or backup changes detected. Verification can be skipped."
+    "areas": [
+      "api-surface",
+      "models",
+      "documentation"
+    ],
+    "details": [
+      {
+        "area": "api-surface",
+        "paths": [
+          "src/api/assets.ts",
+          "src/api/drive.ts",
+          "src/api/index.ts",
+          "src/sdk.ts"
+        ]
+      },
+      {
+        "area": "models",
+        "paths": [
+          "src/types/asset-action-request.ts",
+          "src/types/asset-collection-http-response.ts",
+          "src/types/asset-collection-item-http-response.ts",
+          "src/types/asset-collection-item.ts",
+          "src/types/asset-collection-list-data.ts",
+          "src/types/asset-collection-list-http-response.ts",
+          "src/types/asset-collection.ts",
+          "src/types/asset-item-http-response.ts",
+          "src/types/asset-item.ts",
+          "src/types/asset-list-data.ts",
+          "src/types/asset-list-http-response.ts",
+          "src/types/asset-relation-http-response.ts",
+          "src/types/asset-relation.ts",
+          "src/types/create-asset-collection-item-request.ts",
+          "src/types/create-asset-collection-request.ts",
+          "src/types/create-asset-relation-request.ts",
+          "src/types/create-asset-request.ts",
+          "src/types/index.ts",
+          "src/types/media-resource.ts",
+          "src/types/update-asset-request.ts"
+        ]
+      },
+      {
+        "area": "documentation",
+        "paths": [
+          "README.md"
+        ]
+      }
+    ],
+    "requiresVerification": true,
+    "summary": "Detected impact areas: api-surface, models, documentation. Verification is required."
   },
   "verificationPlan": {
-    "shouldRun": false,
-    "runPhase": "skip",
-    "summary": "No generated, scaffold, or backup changes detected. Verification can be skipped.",
-    "steps": []
+    "shouldRun": true,
+    "runPhase": "now",
+    "summary": "Detected impact areas: api-surface, models, documentation. Verification is required. Run the required verification commands now against the generated SDK output.",
+    "steps": [
+      {
+        "id": "check",
+        "title": "Unified package check",
+        "required": true,
+        "rationale": "Validate the generated package with the unified publish helper. Triggered by: api-surface, models, documentation.",
+        "workingDirectory": "E:\\sdkwork-space\\sdkwork-drive\\sdks\\sdkwork-drive-app-sdk\\sdkwork-drive-app-sdk-typescript\\generated\\server-openapi",
+        "command": "node",
+        "args": [
+          "./bin/publish-core.mjs",
+          "--language",
+          "typescript",
+          "--project-dir",
+          ".",
+          "--action",
+          "check"
+        ],
+        "displayCommand": "node ./bin/publish-core.mjs --language typescript --project-dir . --action check"
+      },
+      {
+        "id": "build",
+        "title": "Unified package build",
+        "required": true,
+        "rationale": "Run the full package build because this language uses a lighter check path than the final build. Triggered by: api-surface, models, documentation.",
+        "workingDirectory": "E:\\sdkwork-space\\sdkwork-drive\\sdks\\sdkwork-drive-app-sdk\\sdkwork-drive-app-sdk-typescript\\generated\\server-openapi",
+        "command": "node",
+        "args": [
+          "./bin/publish-core.mjs",
+          "--language",
+          "typescript",
+          "--project-dir",
+          ".",
+          "--action",
+          "build"
+        ],
+        "displayCommand": "node ./bin/publish-core.mjs --language typescript --project-dir . --action build"
+      }
+    ]
   },
   "executionDecision": {
     "schemaVersion": 1,
-    "riskLevel": "low",
-    "nextAction": "skip",
+    "riskLevel": "high",
+    "nextAction": "verify",
     "requiresManualReview": false,
     "applyRequiresExpectedFingerprint": false,
-    "summary": "No actionable changes were detected. No apply or verification step is required.",
+    "summary": "Changes have been applied. Run the required verification plan now.",
     "reasons": [
-      "no-actionable-changes"
+      "deleted-generated-files",
+      "manual-review-required",
+      "verification-required"
     ]
   },
   "preservedLegacyFiles": false

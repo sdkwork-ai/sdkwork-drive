@@ -1,14 +1,14 @@
 use sdkwork_utils_rust::sha256_hash;
 
-pub(crate) fn sha256_hex(bytes: &[u8]) -> String {
+pub fn sha256_hex(bytes: &[u8]) -> String {
     format!("sha256:{}", sha256_hash(bytes))
 }
 
-pub(crate) fn sha256_raw_hex(bytes: &[u8]) -> String {
+pub fn sha256_raw_hex(bytes: &[u8]) -> String {
     sha256_hash(bytes)
 }
 
-pub(crate) fn sha256_raw_hex_separated(parts: &[&[u8]]) -> String {
+pub fn sha256_raw_hex_separated(parts: &[&[u8]]) -> String {
     let mut buffer = Vec::new();
     for part in parts {
         if !buffer.is_empty() {
@@ -19,7 +19,7 @@ pub(crate) fn sha256_raw_hex_separated(parts: &[&[u8]]) -> String {
     sha256_hash(&buffer)
 }
 
-pub(crate) fn tenant_shard_prefix(tenant_id: &str) -> String {
+pub fn tenant_shard_prefix(tenant_id: &str) -> String {
     sha256_hash(tenant_id.trim().as_bytes())[..2].to_string()
 }
 

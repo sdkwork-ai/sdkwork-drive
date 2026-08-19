@@ -12,7 +12,7 @@
   "generatedFiles": [
     {
       "path": "bin/publish-core.mjs",
-      "sha256": "98ad0918a78bfbe22bf8f12fec709b0bed545b9e01edd40f5e4abf31a23378a5"
+      "sha256": "a47e95119bf3eafcbcb2102f7024c147f967924e4e3f343d1a29effb4b6765df"
     },
     {
       "path": "bin/publish.ps1",
@@ -40,11 +40,11 @@
     },
     {
       "path": "package.json",
-      "sha256": "14c266da2aae0ef0b7572b0d102d1beb9864913a31616cf53c82625fefb5d630"
+      "sha256": "6496f16db1e81f64ee7dd73b8651c3f4e5e617099dcf3cc6eff0c03ab0aa8b26"
     },
     {
       "path": "README.md",
-      "sha256": "16d276b2bf1f13b86e82adc569e46f2164be00cb03d85fe20bd71b87bb46a889"
+      "sha256": "fc28d0259c2bb58108e0df172e84b290aa6b73fbb2a2836503e9400210e91f83"
     },
     {
       "path": "sdkwork-sdk.json",
@@ -52,11 +52,11 @@
     },
     {
       "path": "src/api/base.ts",
-      "sha256": "02ad25e6bf331ff241ba387c2947ddf1900dd849038e08c2757416a3aa788a04"
+      "sha256": "94d136c54a008dfe7602e373a0b2c79176bbf2fc6e7c899fc23b1f12f750380f"
     },
     {
       "path": "src/api/drive.ts",
-      "sha256": "6fb8a88359e05e9d23d97784a2a8e40098d01db1e1836b3d0f163e875e764302"
+      "sha256": "baac71328c15c83a3b5526014505c7ffe96c1ec8793a08d1cdf6bf621e3b5e2d"
     },
     {
       "path": "src/api/index.ts",
@@ -72,7 +72,7 @@
     },
     {
       "path": "src/http/client.ts",
-      "sha256": "1eb3736d5ac8d52324ae16396ba70920c7a26add09e3792e9306e3d735cbb92d"
+      "sha256": "da09bd4f8879b322b450ca3710a70f35162f001b05fe894f165a26a16d1a3252"
     },
     {
       "path": "src/http/index.ts",

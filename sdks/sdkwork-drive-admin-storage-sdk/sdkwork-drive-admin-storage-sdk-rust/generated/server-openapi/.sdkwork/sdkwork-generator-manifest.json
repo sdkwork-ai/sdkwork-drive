@@ -12,7 +12,7 @@
   "generatedFiles": [
     {
       "path": "bin/publish-core.mjs",
-      "sha256": "98ad0918a78bfbe22bf8f12fec709b0bed545b9e01edd40f5e4abf31a23378a5"
+      "sha256": "a47e95119bf3eafcbcb2102f7024c147f967924e4e3f343d1a29effb4b6765df"
     },
     {
       "path": "bin/publish.ps1",
@@ -48,7 +48,7 @@
     },
     {
       "path": "src/api/drive.rs",
-      "sha256": "f370508da8063bd55517259c89a15a4aa9697aab4e0e5fadc3cf87c83818fd44"
+      "sha256": "cca791594fe8f542f955e1092fcfb5ea88c9699b41de5f020075c1746f3d0f1f"
     },
     {
       "path": "src/api/mod.rs",
@@ -64,7 +64,7 @@
     },
     {
       "path": "src/http/client.rs",
-      "sha256": "ab16ce577dbca06e212a9349da9b82182791a7ba2dce7cf855a9828932f82fa0"
+      "sha256": "1fca1387fc8833fdea1adaf46aeaa9edf34b8c5c60eaddf1ca6ffbc3f98d6d4f"
     },
     {
       "path": "src/http/mod.rs",

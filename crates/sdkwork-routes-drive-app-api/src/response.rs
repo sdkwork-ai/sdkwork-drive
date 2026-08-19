@@ -9,28 +9,28 @@ use crate::dto::{is_false_bool, DriveNodeResponse, PageRequest};
 /// Standard list payload with optional drive-specific ACL scan metadata.
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub(crate) struct DriveListPageData<T> {
+pub struct DriveListPageData<T> {
     pub items: Vec<T>,
     pub page_info: PageInfo,
     #[serde(skip_serializing_if = "is_false_bool")]
     pub incomplete_page: bool,
 }
 
-pub(crate) type DriveNodeListHttpResponse =
+pub type DriveNodeListHttpResponse =
     Json<SdkWorkApiResponse<DriveListPageData<DriveNodeResponse>>>;
 
-pub(crate) type DriveListHttpResponse<T> = Json<SdkWorkApiResponse<SdkWorkPageData<T>>>;
+pub type DriveListHttpResponse<T> = Json<SdkWorkApiResponse<SdkWorkPageData<T>>>;
 
-pub(crate) fn current_trace_id() -> String {
+pub fn current_trace_id() -> String {
     sdkwork_drive_http::problem_correlation::current_problem_correlation().trace_id
 }
 
-pub(crate) fn no_content() -> axum::http::StatusCode {
+pub fn no_content() -> axum::http::StatusCode {
     axum::http::StatusCode::NO_CONTENT
 }
 
 /// Build cursor-mode `PageInfo` for numeric cursor offset continuation.
-pub(crate) fn page_info_from_offset_token(
+pub fn page_info_from_offset_token(
     page: PageRequest,
     next_page_token: Option<String>,
 ) -> PageInfo {
@@ -45,7 +45,7 @@ pub(crate) fn page_info_from_offset_token(
     }
 }
 
-pub(crate) fn success_list_page<T: Serialize>(
+pub fn success_list_page<T: Serialize>(
     items: Vec<T>,
     page: PageRequest,
     next_page_token: Option<String>,
@@ -61,7 +61,7 @@ pub(crate) fn success_list_page<T: Serialize>(
     ))
 }
 
-pub(crate) fn success_list_page_simple<T: Serialize>(
+pub fn success_list_page_simple<T: Serialize>(
     items: Vec<T>,
     page: PageRequest,
     next_page_token: Option<String>,
@@ -75,7 +75,7 @@ pub(crate) fn success_list_page_simple<T: Serialize>(
     ))
 }
 
-pub(crate) fn success_offset_list_page<T: Serialize>(
+pub fn success_offset_list_page<T: Serialize>(
     items: Vec<T>,
     page: i32,
     page_size: i32,
@@ -104,7 +104,7 @@ pub(crate) fn success_offset_list_page<T: Serialize>(
 }
 
 /// Full list payload when every item is returned in a single response (no continuation).
-pub(crate) fn success_full_list<T: Serialize>(
+pub fn success_full_list<T: Serialize>(
     items: Vec<T>,
 ) -> Json<SdkWorkApiResponse<SdkWorkPageData<T>>> {
     let total_items = items.len() as i64;
@@ -126,7 +126,7 @@ pub(crate) fn success_full_list<T: Serialize>(
     ))
 }
 
-pub(crate) fn success_created_command_data<T: Serialize>(
+pub fn success_created_command_data<T: Serialize>(
     data: T,
 ) -> (axum::http::StatusCode, Json<SdkWorkApiResponse<T>>) {
     (
@@ -135,7 +135,7 @@ pub(crate) fn success_created_command_data<T: Serialize>(
     )
 }
 
-pub(crate) fn success_resource<T: Serialize>(
+pub fn success_resource<T: Serialize>(
     item: T,
 ) -> Json<SdkWorkApiResponse<SdkWorkResourceData<T>>> {
     Json(SdkWorkApiResponse::success(
@@ -144,7 +144,7 @@ pub(crate) fn success_resource<T: Serialize>(
     ))
 }
 
-pub(crate) fn success_created_resource<T: Serialize>(
+pub fn success_created_resource<T: Serialize>(
     item: T,
 ) -> (
     axum::http::StatusCode,
@@ -159,17 +159,17 @@ pub(crate) fn success_created_resource<T: Serialize>(
     )
 }
 
-pub(crate) fn success_envelope<T: Serialize>(data: T) -> Json<SdkWorkApiResponse<T>> {
+pub fn success_envelope<T: Serialize>(data: T) -> Json<SdkWorkApiResponse<T>> {
     Json(SdkWorkApiResponse::success(data, current_trace_id()))
 }
 
-pub(crate) fn success_created_envelope<T: Serialize>(
+pub fn success_created_envelope<T: Serialize>(
     data: T,
 ) -> (axum::http::StatusCode, Json<SdkWorkApiResponse<T>>) {
     success_created_command_data(data)
 }
 
-pub(crate) fn success_cursor_list_page<T: Serialize>(
+pub fn success_cursor_list_page<T: Serialize>(
     items: Vec<T>,
     page_size: i32,
     next_cursor: Option<String>,

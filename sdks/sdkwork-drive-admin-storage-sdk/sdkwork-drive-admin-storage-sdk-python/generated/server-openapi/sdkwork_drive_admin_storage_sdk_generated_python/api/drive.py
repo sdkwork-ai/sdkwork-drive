@@ -192,7 +192,6 @@ class DriveApi:
         self.storage_provider_bindings = DriveStorageProviderBindingsApi(client)
         self.storage_providers = DriveStorageProvidersApi(client)
         self.storage_provider_kinds = DriveStorageProviderKindsApi(client)
-        self.storage = DriveStorageApi(client)
 
 
 class DriveStorageProviderBindingsApi:
@@ -324,6 +323,7 @@ class DriveStorageProvidersObjectsApi:
 
     def __init__(self, client: HttpClient):
         self._client = client
+        self.content = DriveStorageProvidersObjectsContentApi(client)
 
 
     def list(self, provider_id: str, prefix: Optional[str] = None, delimiter: Optional[str] = None, cursor: Optional[str] = None, page_size: Optional[int] = None) -> StorageProvidersObjectsListResponse:
@@ -344,6 +344,21 @@ class DriveStorageProvidersObjectsApi:
     def copy(self, provider_id: str, body: CopyProviderObjectRequest) -> StorageProvidersObjectsCopyResponse:
         return self._client.post(f"/backend/v3/api/drive/storage/providers/{serialize_path_parameter(provider_id, {'name': 'providerId', 'style': 'simple', 'explode': False})}/objects/copy", json=body)
 
+class DriveStorageProvidersObjectsContentApi:
+    """drive drive.storage_providers.objects.content API client."""
+
+    def __init__(self, client: HttpClient):
+        self._client = client
+
+
+    def retrieve(self, provider_id: str, object_key: str) -> StorageProvidersObjectsContentRetrieveResponse:
+        """Retrieve provider object content"""
+        return self._client.get(f"/backend/v3/api/drive/storage/providers/{serialize_path_parameter(provider_id, {'name': 'providerId', 'style': 'simple', 'explode': False})}/object-contents/{serialize_path_parameter(object_key, {'name': 'objectKey', 'style': 'simple', 'explode': False})}")
+
+    def update(self, provider_id: str, object_key: str, body: UpdateProviderObjectContent) -> StorageProvidersObjectsContentUpdateResponse:
+        """Write provider object content"""
+        return self._client.put(f"/backend/v3/api/drive/storage/providers/{serialize_path_parameter(provider_id, {'name': 'providerId', 'style': 'simple', 'explode': False})}/object-contents/{serialize_path_parameter(object_key, {'name': 'objectKey', 'style': 'simple', 'explode': False})}", json=body)
+
 class DriveStorageProviderKindsApi:
     """drive drive.storage_provider_kinds API client."""
 
@@ -359,34 +374,3 @@ class DriveStorageProviderKindsApi:
 
     def update(self, provider_kind: str, body: SetStorageProviderKindEnabledRequest) -> StorageProviderKindsUpdateResponse:
         return self._client.patch(f"/backend/v3/api/drive/storage/provider-kinds/{serialize_path_parameter(provider_kind, {'name': 'providerKind', 'style': 'simple', 'explode': False})}", json=body)
-
-class DriveStorageApi:
-    """drive drive.storage API client."""
-
-    def __init__(self, client: HttpClient):
-        self._client = client
-        self.providers = DriveStorageProvidersApi(client)
-
-
-class DriveStorageProvidersApi:
-    """drive drive.storage.providers API client."""
-
-    def __init__(self, client: HttpClient):
-        self._client = client
-        self.objects = DriveStorageProvidersObjectsApi(client)
-
-
-class DriveStorageProvidersObjectsApi:
-    """drive drive.storage.providers.objects API client."""
-
-    def __init__(self, client: HttpClient):
-        self._client = client
-
-
-    def storage_providers_objects_content_retrieve(self, provider_id: str, object_key: str) -> StorageProvidersObjectsContentRetrieveResponse:
-        """Retrieve provider object content"""
-        return self._client.get(f"/backend/v3/api/drive/storage/providers/{serialize_path_parameter(provider_id, {'name': 'providerId', 'style': 'simple', 'explode': False})}/objects/{serialize_path_parameter(object_key, {'name': 'objectKey', 'style': 'simple', 'explode': False})}/content")
-
-    def storage_providers_objects_content_update(self, provider_id: str, object_key: str, body: UpdateProviderObjectContent) -> StorageProvidersObjectsContentUpdateResponse:
-        """Write provider object content"""
-        return self._client.put(f"/backend/v3/api/drive/storage/providers/{serialize_path_parameter(provider_id, {'name': 'providerId', 'style': 'simple', 'explode': False})}/objects/{serialize_path_parameter(object_key, {'name': 'objectKey', 'style': 'simple', 'explode': False})}/content", json=body)

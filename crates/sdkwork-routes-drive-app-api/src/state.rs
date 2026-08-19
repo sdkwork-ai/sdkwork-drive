@@ -5,9 +5,9 @@ use std::sync::Arc;
 
 #[derive(Clone, Debug)]
 pub struct AppState {
-    pub(crate) pool: PgPool,
-    pub(crate) download_public_base_url: String,
-    pub(crate) runtime_sandbox_roots: Arc<[RuntimeSandboxRoot]>,
+    pub pool: PgPool,
+    pub download_public_base_url: String,
+    pub runtime_sandbox_roots: Arc<[RuntimeSandboxRoot]>,
 }
 
 impl AppState {

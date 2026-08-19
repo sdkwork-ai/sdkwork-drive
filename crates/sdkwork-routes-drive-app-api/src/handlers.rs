@@ -1,4 +1,3 @@
-pub(crate) use crate::assets::*;
 pub(crate) use crate::change_handlers::*;
 pub(crate) use crate::comment_handlers::*;
 pub(crate) use crate::download_handlers::*;

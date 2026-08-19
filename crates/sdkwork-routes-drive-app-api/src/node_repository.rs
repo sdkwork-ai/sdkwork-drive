@@ -11,7 +11,7 @@ use sdkwork_drive_workspace_service::infrastructure::sql::NODE_API_SELECT_COLUMN
 use sqlx::PgPool;
 use std::collections::{BTreeSet, VecDeque};
 
-pub(crate) async fn find_node(
+pub async fn find_node(
     pool: &PgPool,
     tenant_id: &str,
     node_id: &str,
@@ -32,7 +32,7 @@ pub(crate) async fn find_node(
     Ok(map_node_row(&row))
 }
 
-pub(crate) async fn find_active_node(
+pub async fn find_active_node(
     pool: &PgPool,
     tenant_id: &str,
     node_id: &str,
@@ -45,7 +45,7 @@ pub(crate) async fn find_active_node(
     Ok(node)
 }
 
-pub(crate) async fn collect_node_subtree(
+pub async fn collect_node_subtree(
     pool: &PgPool,
     tenant_id: &str,
     root: &DriveNodeResponse,
@@ -106,7 +106,7 @@ pub(crate) async fn collect_node_subtree(
     Ok(nodes)
 }
 
-pub(crate) async fn resolve_node_path(
+pub async fn resolve_node_path(
     pool: &PgPool,
     tenant_id: &str,
     node_id: &str,

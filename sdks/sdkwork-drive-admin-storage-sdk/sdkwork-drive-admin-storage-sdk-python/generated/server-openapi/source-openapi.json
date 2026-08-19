@@ -2016,10 +2016,10 @@
               "type": "string",
               "minLength": 1,
               "maxLength": 1024,
-              "pattern": "^(?!/)(?!.*//)(?!.*(?:^|/)\\.{1,2}(?:/|$))(?!.*\\u0000).*(?:[^/])$",
-              "description": "Drive object key. UTF-8 1-1024 bytes, trimmed relative key; no leading/trailing slash, double slash, NUL, or period-only path segments."
+              "pattern": "^(?!/)(?!.*//)(?!.*(?:^|/)\\.{1,2}(?:/|$))(?!.*\u0000).*$",
+              "description": "Drive object key path tail. May end with a single slash for directory placeholder objects. The runtime percent-decodes the path segment once before validation."
             },
-            "description": "Drive object key path tail. The runtime accepts slash-separated tail paths such as objects/file.bin and URL-encoded keys where / is encoded as %2F. UTF-8 1-1024 bytes, trimmed relative key; no leading/trailing slash, double slash, NUL, or period-only path segments."
+            "description": "Drive object key path tail. For content writes the key may end with a slash to create a directory placeholder object with empty content."
           }
         ],
         "responses": {
@@ -2151,10 +2151,10 @@
               "type": "string",
               "minLength": 1,
               "maxLength": 1024,
-              "pattern": "^(?!/)(?!.*//)(?!.*(?:^|/)\\.{1,2}(?:/|$))(?!.*\\u0000).*(?:[^/])$",
-              "description": "Drive object key. UTF-8 1-1024 bytes, trimmed relative key; no leading/trailing slash, double slash, NUL, or period-only path segments."
+              "pattern": "^(?!/)(?!.*//)(?!.*(?:^|/)\\.{1,2}(?:/|$))(?!.*\u0000).*$",
+              "description": "Drive object key path tail. May end with a single slash for directory placeholder objects. The runtime percent-decodes the path segment once before validation."
             },
-            "description": "Drive object key path tail. The runtime accepts slash-separated tail paths such as objects/file.bin and URL-encoded keys where / is encoded as %2F. UTF-8 1-1024 bytes, trimmed relative key; no leading/trailing slash, double slash, NUL, or period-only path segments."
+            "description": "Drive object key path tail. For content writes the key may end with a slash to create a directory placeholder object with empty content."
           }
         ],
         "responses": {
@@ -2911,11 +2911,11 @@
         "x-sdkwork-permission": "drive.storage.admin"
       }
     },
-    "/backend/v3/api/drive/storage/providers/{providerId}/objects/{objectKey}/content": {
+    "/backend/v3/api/drive/storage/providers/{providerId}/object-contents/{objectKey}": {
       "get": {
         "operationId": "storageProviders.objects.content.retrieve",
         "tags": [
-          "Storage Providers"
+          "storageAdmin"
         ],
         "summary": "Retrieve provider object content",
         "description": "Reads a single provider object up to 8 MiB. Larger objects must use the presigned download channel. Content is returned base64-encoded with size and SHA-256 checksum.",
@@ -2942,7 +2942,8 @@
               "type": "string",
               "minLength": 1,
               "maxLength": 1024,
-              "description": "Drive object key path tail. The runtime decodes percent-encoding before validation."
+              "description": "Drive object key path tail. May end with a single slash for directory placeholder objects. The runtime percent-decodes the path segment once before validation.",
+              "pattern": "^(?!/)(?!.*//)(?!.*(?:^|/)\\.{1,2}(?:/|$))(?!.*\u0000).*$"
             },
             "description": "Drive object key path tail. For content writes the key may end with a slash to create a directory placeholder object with empty content."
           }
@@ -3041,12 +3042,17 @@
               }
             }
           }
-        }
+        },
+        "x-sdkwork-owner": "sdkwork-drive",
+        "x-sdkwork-api-authority": "sdkwork-drive.admin.storage",
+        "x-sdkwork-request-context": "WebRequestContext",
+        "x-sdkwork-api-surface": "backend-api",
+        "x-sdkwork-permission": "drive.storage.admin"
       },
       "put": {
         "operationId": "storageProviders.objects.content.update",
         "tags": [
-          "Storage Providers"
+          "storageAdmin"
         ],
         "summary": "Write provider object content",
         "description": "Creates or replaces a provider object. encoding is utf8 (default) or base64. An object key ending with a slash and empty content creates a directory placeholder.",
@@ -3073,7 +3079,8 @@
               "type": "string",
               "minLength": 1,
               "maxLength": 1024,
-              "description": "Drive object key path tail. The runtime decodes percent-encoding before validation."
+              "description": "Drive object key path tail. May end with a single slash for directory placeholder objects. The runtime percent-decodes the path segment once before validation.",
+              "pattern": "^(?!/)(?!.*//)(?!.*(?:^|/)\\.{1,2}(?:/|$))(?!.*\u0000).*$"
             },
             "description": "Drive object key path tail. For content writes the key may end with a slash to create a directory placeholder object with empty content."
           }
@@ -3182,7 +3189,12 @@
               }
             }
           }
-        }
+        },
+        "x-sdkwork-owner": "sdkwork-drive",
+        "x-sdkwork-api-authority": "sdkwork-drive.admin.storage",
+        "x-sdkwork-request-context": "WebRequestContext",
+        "x-sdkwork-api-surface": "backend-api",
+        "x-sdkwork-permission": "drive.storage.admin"
       }
     }
   },

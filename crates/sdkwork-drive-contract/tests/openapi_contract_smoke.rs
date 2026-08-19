@@ -1003,8 +1003,6 @@ fn openapi_paths_follow_sdkwork_v3_prefixes() {
         "/app/v3/api/drive/nodes/{nodeId}/versions/{versionId}",
         "/app/v3/api/drive/share_links/{shareLinkId}",
         "/app/v3/api/drive/spaces/{spaceId}",
-        "/app/v3/api/assets/collections/{collectionId}/items/{itemId}",
-        "/app/v3/api/assets/{assetId}/relations/{relationId}",
     ] {
         assert_no_content_response(&app_json, path_key, "delete");
     }

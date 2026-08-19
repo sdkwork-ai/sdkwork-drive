@@ -1002,29 +1002,9 @@ assertPathExists(
   "/app/v3/api/drive/download_tokens/{token}",
   "app openapi",
 );
-assertPathExists(appOpenapi, "/app/v3/api/assets", "app openapi");
-assertPathExists(appOpenapi, "/app/v3/api/assets/{assetId}", "app openapi");
-assertPathExists(appOpenapi, "/app/v3/api/assets/{assetId}/archive", "app openapi");
-assertPathExists(appOpenapi, "/app/v3/api/assets/{assetId}/restore", "app openapi");
-assertPathExists(appOpenapi, "/app/v3/api/assets/collections", "app openapi");
-assertPathExists(
-  appOpenapi,
-  "/app/v3/api/assets/collections/{collectionId}/items",
-  "app openapi",
-);
-assertPathExists(
-  appOpenapi,
-  "/app/v3/api/assets/collections/{collectionId}/items/{itemId}",
-  "app openapi",
-);
-assertPathExists(appOpenapi, "/app/v3/api/assets/{assetId}/relations", "app openapi");
-assertPathExists(
-  appOpenapi,
-  "/app/v3/api/assets/{assetId}/relations/{relationId}",
-  "app openapi",
-);
 for (const forbiddenAssetPath of [
   "/app/v3/api/generations/assets",
+  "/app/v3/api/assets",
   "/app/v3/api/assets/upload",
   "/app/v3/api/assets/presign",
   "/app/v3/api/assets/upload_sessions",
@@ -2098,8 +2078,6 @@ for (const [pathKey, label] of [
   ["/app/v3/api/drive/nodes/{nodeId}/versions/{versionId}", "app openapi"],
   ["/app/v3/api/drive/share_links/{shareLinkId}", "app openapi"],
   ["/app/v3/api/drive/spaces/{spaceId}", "app openapi"],
-  ["/app/v3/api/assets/collections/{collectionId}/items/{itemId}", "app openapi"],
-  ["/app/v3/api/assets/{assetId}/relations/{relationId}", "app openapi"],
 ]) {
   assertNoContentResponse(appOpenapi, pathKey, "delete", label);
 }

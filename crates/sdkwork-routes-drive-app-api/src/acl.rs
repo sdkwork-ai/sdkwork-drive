@@ -52,7 +52,7 @@ impl ReaderPaginationAclCache {
     }
 }
 
-pub(crate) async fn is_subject_space_owner(
+pub async fn is_subject_space_owner(
     pool: &PgPool,
     tenant_id: &str,
     space_id: &str,
@@ -65,7 +65,7 @@ pub(crate) async fn is_subject_space_owner(
         .await
 }
 
-pub(crate) async fn paginate_offset_limited_items<T, F, Fut>(
+pub async fn paginate_offset_limited_items<T, F, Fut>(
     page: crate::dto::PageRequest,
     mut fetch_batch: F,
     map_row: fn(&PgRow) -> T,
@@ -90,7 +90,7 @@ where
     Ok((items, next_page_token))
 }
 
-pub(crate) fn permission_denied_problem() -> (StatusCode, Json<ProblemDetail>) {
+pub fn permission_denied_problem() -> (StatusCode, Json<ProblemDetail>) {
     problem(
         StatusCode::FORBIDDEN,
         "permission denied",
@@ -99,7 +99,7 @@ pub(crate) fn permission_denied_problem() -> (StatusCode, Json<ProblemDetail>) {
     )
 }
 
-pub(crate) async fn ensure_subject_role(
+pub async fn ensure_subject_role(
     pool: &PgPool,
     tenant_id: &str,
     space_id: &str,
@@ -125,7 +125,7 @@ pub(crate) async fn ensure_subject_role(
     Ok(access)
 }
 
-pub(crate) async fn ensure_ctx_node_role(
+pub async fn ensure_ctx_node_role(
     pool: &PgPool,
     ctx: &DriveRequestContext,
     space_id: &str,
@@ -146,7 +146,7 @@ pub(crate) async fn ensure_ctx_node_role(
     .await
 }
 
-pub(crate) async fn ensure_list_parent_reader(
+pub async fn ensure_list_parent_reader(
     pool: &PgPool,
     ctx: &DriveRequestContext,
     space_id: &str,
@@ -165,7 +165,7 @@ pub(crate) async fn ensure_list_parent_reader(
     .await
 }
 
-pub(crate) async fn ensure_subject_space_scoped_reader(
+pub async fn ensure_subject_space_scoped_reader(
     pool: &PgPool,
     tenant_id: &str,
     space_id: &str,
@@ -256,7 +256,7 @@ async fn subject_has_any_space_permission_grant(
     Ok(count > 0)
 }
 
-pub(crate) async fn ensure_space_owner(
+pub async fn ensure_space_owner(
     pool: &PgPool,
     ctx: &DriveRequestContext,
     space_id: &str,
@@ -293,7 +293,7 @@ pub(crate) async fn ensure_space_owner(
     Ok(())
 }
 
-pub(crate) async fn ensure_parent_writer(
+pub async fn ensure_parent_writer(
     pool: &PgPool,
     ctx: &DriveRequestContext,
     space_id: &str,
@@ -352,7 +352,7 @@ async fn is_space_owner_any_lifecycle(
     }))
 }
 
-pub(crate) async fn ensure_space_change_feed_reader(
+pub async fn ensure_space_change_feed_reader(
     pool: &PgPool,
     ctx: &DriveRequestContext,
     space_id: &str,
@@ -365,7 +365,7 @@ pub(crate) async fn ensure_space_change_feed_reader(
     ensure_list_parent_reader(pool, ctx, space_id, None).await
 }
 
-pub(crate) async fn ensure_watch_channel_role(
+pub async fn ensure_watch_channel_role(
     pool: &PgPool,
     ctx: &DriveRequestContext,
     channel: &DriveWatchChannelResponse,
@@ -392,7 +392,7 @@ pub(crate) async fn ensure_watch_channel_role(
     }
 }
 
-pub(crate) async fn ensure_node_ids_role(
+pub async fn ensure_node_ids_role(
     pool: &PgPool,
     ctx: &DriveRequestContext,
     node_ids: &[String],
@@ -410,7 +410,7 @@ pub(crate) async fn ensure_node_ids_role(
     Ok(())
 }
 
-pub(crate) async fn paginate_cursor_limited_changes<F, Fut>(
+pub async fn paginate_cursor_limited_changes<F, Fut>(
     page: PageRequest,
     mut fetch_batch: F,
 ) -> Result<(Vec<ChangeResponse>, Option<String>), (StatusCode, Json<ProblemDetail>)>

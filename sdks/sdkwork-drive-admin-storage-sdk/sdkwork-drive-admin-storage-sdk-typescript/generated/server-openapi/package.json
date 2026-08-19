@@ -24,7 +24,7 @@
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
-    "@sdkwork/sdk-common": "^1.0.4"
+    "@sdkwork/sdk-common": "^1.0.5"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",

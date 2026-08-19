@@ -9,12 +9,15 @@
     "protocol": "http",
     "packageName": "sdkwork-drive-admin-storage-sdk-generated-java"
   },
-  "changeFingerprint": "ade3ea98d07370a913a21dc631290200b03d75db542686ac5e4618610f58e4b8",
+  "changeFingerprint": "a7ec851cc513e64ca22ea32f9cc3378525fbd43c40db92bdbe3162e6ed2e49ea",
   "changes": {
     "createdGeneratedFiles": [],
-    "updatedGeneratedFiles": [],
-    "unchangedGeneratedFiles": [
+    "updatedGeneratedFiles": [
       "bin/publish-core.mjs",
+      "src/main/java/com/sdkwork/drive/admin/storage/sdk/generated/java/api/DriveApi.java",
+      "src/main/java/com/sdkwork/drive/admin/storage/sdk/generated/java/http/HttpClient.java"
+    ],
+    "unchangedGeneratedFiles": [
       "bin/publish.ps1",
       "bin/publish.sh",
       "CHANGELOG.md",
@@ -23,9 +26,7 @@
       "README.md",
       "sdkwork-sdk.json",
       "src/main/java/com/sdkwork/drive/admin/storage/sdk/generated/java/api/ApiPaths.java",
-      "src/main/java/com/sdkwork/drive/admin/storage/sdk/generated/java/api/DriveApi.java",
       "src/main/java/com/sdkwork/drive/admin/storage/sdk/generated/java/api/package-info.java",
-      "src/main/java/com/sdkwork/drive/admin/storage/sdk/generated/java/http/HttpClient.java",
       "src/main/java/com/sdkwork/drive/admin/storage/sdk/generated/java/model/CopyProviderObjectRequest.java",
       "src/main/java/com/sdkwork/drive/admin/storage/sdk/generated/java/model/CreateStorageProviderRequest.java",
       "src/main/java/com/sdkwork/drive/admin/storage/sdk/generated/java/model/FieldError.java",
@@ -87,26 +88,68 @@
   },
   "impact": {
     "schemaVersion": 1,
-    "areas": [],
-    "details": [],
-    "requiresVerification": false,
-    "summary": "No generated, scaffold, or backup changes detected. Verification can be skipped."
+    "areas": [
+      "api-surface",
+      "runtime",
+      "publish-workflow"
+    ],
+    "details": [
+      {
+        "area": "api-surface",
+        "paths": [
+          "src/main/java/com/sdkwork/drive/admin/storage/sdk/generated/java/api/DriveApi.java"
+        ]
+      },
+      {
+        "area": "runtime",
+        "paths": [
+          "src/main/java/com/sdkwork/drive/admin/storage/sdk/generated/java/http/HttpClient.java"
+        ]
+      },
+      {
+        "area": "publish-workflow",
+        "paths": [
+          "bin/publish-core.mjs"
+        ]
+      }
+    ],
+    "requiresVerification": true,
+    "summary": "Detected impact areas: api-surface, runtime, publish-workflow. Verification is required."
   },
   "verificationPlan": {
-    "shouldRun": false,
-    "runPhase": "skip",
-    "summary": "No generated, scaffold, or backup changes detected. Verification can be skipped.",
-    "steps": []
+    "shouldRun": true,
+    "runPhase": "now",
+    "summary": "Detected impact areas: api-surface, runtime, publish-workflow. Verification is required. Run the required verification commands now against the generated SDK output.",
+    "steps": [
+      {
+        "id": "check",
+        "title": "Unified package check",
+        "required": true,
+        "rationale": "Validate the generated package with the unified publish helper. Triggered by: api-surface, runtime, publish-workflow.",
+        "workingDirectory": "E:\\sdkwork-space\\sdkwork-drive\\sdks\\sdkwork-drive-admin-storage-sdk\\sdkwork-drive-admin-storage-sdk-java\\generated\\server-openapi",
+        "command": "node",
+        "args": [
+          "./bin/publish-core.mjs",
+          "--language",
+          "java",
+          "--project-dir",
+          ".",
+          "--action",
+          "check"
+        ],
+        "displayCommand": "node ./bin/publish-core.mjs --language java --project-dir . --action check"
+      }
+    ]
   },
   "executionDecision": {
     "schemaVersion": 1,
-    "riskLevel": "low",
-    "nextAction": "skip",
+    "riskLevel": "medium",
+    "nextAction": "verify",
     "requiresManualReview": false,
     "applyRequiresExpectedFingerprint": false,
-    "summary": "No actionable changes were detected. No apply or verification step is required.",
+    "summary": "Changes have been applied. Run the required verification plan now.",
     "reasons": [
-      "no-actionable-changes"
+      "verification-required"
     ]
   },
   "preservedLegacyFiles": false

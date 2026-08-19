@@ -12,7 +12,7 @@
   "generatedFiles": [
     {
       "path": "bin/publish-core.mjs",
-      "sha256": "98ad0918a78bfbe22bf8f12fec709b0bed545b9e01edd40f5e4abf31a23378a5"
+      "sha256": "a47e95119bf3eafcbcb2102f7024c147f967924e4e3f343d1a29effb4b6765df"
     },
     {
       "path": "bin/publish.ps1",
@@ -48,7 +48,7 @@
     },
     {
       "path": "src/main/java/com/sdkwork/drive/admin/storage/sdk/generated/java/api/DriveApi.java",
-      "sha256": "5a918795533acee7550bdaf06a144e5110286e3285266a30e0b2ca03d3142128"
+      "sha256": "63e6b90bb04e44b3c17bb061ac8db36fc80902e0e47014d7312fb6f449f680df"
     },
     {
       "path": "src/main/java/com/sdkwork/drive/admin/storage/sdk/generated/java/api/package-info.java",
@@ -56,7 +56,7 @@
     },
     {
       "path": "src/main/java/com/sdkwork/drive/admin/storage/sdk/generated/java/http/HttpClient.java",
-      "sha256": "0af9c48f42a366adfbfaf7450b63a895ef7d80d836ec954b02f65c1f3abd2e0d"
+      "sha256": "4fd6254b74c40a7f6afa07afe3f8b27cda25e59d3dc61c4fa956e303275d2276"
     },
     {
       "path": "src/main/java/com/sdkwork/drive/admin/storage/sdk/generated/java/model/CopyProviderObjectRequest.java",

@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useLayoutEffect, useState } from 'react';
 import {
   readPreference,
   writePreference,
@@ -87,6 +87,30 @@ export function ThemeProvider({
     return undefined;
   }, [hostManaged, theme]);
 
+  const scheme = resolveColorScheme(theme);
+
+  useLayoutEffect(() => {
+    if (!hostManaged) {
+      return undefined;
+    }
+    const root = document.documentElement;
+    const previousDark = root.classList.contains('dark');
+    const previousLight = root.classList.contains('light');
+    const previousLightMode = root.classList.contains('light-mode');
+    const previousSdkColorMode = root.getAttribute('data-sdk-color-mode');
+    root.classList.toggle('dark', scheme === 'dark');
+    root.classList.toggle('light', scheme === 'light');
+    root.classList.toggle('light-mode', scheme === 'light');
+    root.setAttribute('data-sdk-color-mode', scheme);
+    return () => {
+      root.classList.toggle('dark', previousDark);
+      root.classList.toggle('light', previousLight);
+      root.classList.toggle('light-mode', previousLightMode);
+      if (previousSdkColorMode === null) root.removeAttribute('data-sdk-color-mode');
+      else root.setAttribute('data-sdk-color-mode', previousSdkColorMode);
+    };
+  }, [hostManaged, scheme]);
+
   const value = {
     theme,
     setTheme: (nextTheme: Theme) => {
@@ -108,9 +132,8 @@ export function ThemeProvider({
     return content;
   }
 
-  const scheme = resolveColorScheme(theme);
   return (
-    <div className={`${scheme} flex h-full min-h-0 w-full min-w-0 flex-col`}>
+    <div className={`flex h-full min-h-0 w-full min-w-0 flex-col${scheme === 'dark' ? ' dark' : ''}`} data-sdk-color-mode={scheme}>
       {content}
     </div>
   );

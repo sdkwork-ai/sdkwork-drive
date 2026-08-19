@@ -171,13 +171,13 @@ impl DriveApi {
 
     /// Retrieve provider object content
     pub async fn storage_providers_objects_content_retrieve(&self, provider_id: &str, object_key: &str) -> Result<StorageProvidersObjectsContentRetrieveResponse, SdkworkError> {
-        let path = custom_path(&format!("/drive/storage/providers/{}/objects/{}/content", serialize_path_parameter(provider_id, PathParameterSpec::new("providerId", "simple", false)), serialize_path_parameter(object_key, PathParameterSpec::new("objectKey", "simple", false))));
+        let path = custom_path(&format!("/drive/storage/providers/{}/object-contents/{}", serialize_path_parameter(provider_id, PathParameterSpec::new("providerId", "simple", false)), serialize_path_parameter(object_key, PathParameterSpec::new("objectKey", "simple", false))));
         self.client.get(&path, None, None).await
     }
 
     /// Write provider object content
     pub async fn storage_providers_objects_content_update(&self, provider_id: &str, object_key: &str, body: &UpdateProviderObjectContent) -> Result<StorageProvidersObjectsContentUpdateResponse, SdkworkError> {
-        let path = custom_path(&format!("/drive/storage/providers/{}/objects/{}/content", serialize_path_parameter(provider_id, PathParameterSpec::new("providerId", "simple", false)), serialize_path_parameter(object_key, PathParameterSpec::new("objectKey", "simple", false))));
+        let path = custom_path(&format!("/drive/storage/providers/{}/object-contents/{}", serialize_path_parameter(provider_id, PathParameterSpec::new("providerId", "simple", false)), serialize_path_parameter(object_key, PathParameterSpec::new("objectKey", "simple", false))));
         self.client.put(&path, Some(body), None, None, Some("application/json")).await
     }
 

@@ -3,7 +3,7 @@ use chrono::{DateTime, SecondsFormat, Utc};
 use sdkwork_drive_workspace_service::domain::space::DriveSpace;
 use sqlx::Row;
 
-pub(crate) fn map_node_row(row: &sqlx::postgres::PgRow) -> DriveNodeResponse {
+pub fn map_node_row(row: &sqlx::postgres::PgRow) -> DriveNodeResponse {
     DriveNodeResponse {
         id: row.get("id"),
         tenant_id: row.get("tenant_id"),
@@ -83,7 +83,7 @@ fn normalize_offset_suffix(value: &str) -> String {
     }
 }
 
-pub(crate) fn map_space_response(space: DriveSpace) -> CreateSpaceResponse {
+pub fn map_space_response(space: DriveSpace) -> CreateSpaceResponse {
     CreateSpaceResponse {
         id: space.id,
         tenant_id: space.tenant_id,
@@ -100,7 +100,7 @@ pub(crate) fn map_space_response(space: DriveSpace) -> CreateSpaceResponse {
     }
 }
 
-pub(crate) fn map_permission_row(row: &sqlx::postgres::PgRow) -> PermissionResponse {
+pub fn map_permission_row(row: &sqlx::postgres::PgRow) -> PermissionResponse {
     let inherited: i64 = row.get("inherited");
     PermissionResponse {
         id: row.get("id"),
@@ -115,7 +115,7 @@ pub(crate) fn map_permission_row(row: &sqlx::postgres::PgRow) -> PermissionRespo
     }
 }
 
-pub(crate) fn map_file_version_row(row: &sqlx::postgres::PgRow) -> FileVersionResponse {
+pub fn map_file_version_row(row: &sqlx::postgres::PgRow) -> FileVersionResponse {
     FileVersionResponse {
         id: row.get("id"),
         tenant_id: row.get("tenant_id"),
@@ -130,7 +130,7 @@ pub(crate) fn map_file_version_row(row: &sqlx::postgres::PgRow) -> FileVersionRe
     }
 }
 
-pub(crate) fn map_share_link_row(row: &sqlx::postgres::PgRow) -> ShareLinkResponse {
+pub fn map_share_link_row(row: &sqlx::postgres::PgRow) -> ShareLinkResponse {
     ShareLinkResponse {
         id: row.get("id"),
         tenant_id: row.get("tenant_id"),
@@ -150,7 +150,7 @@ pub(crate) fn map_share_link_row(row: &sqlx::postgres::PgRow) -> ShareLinkRespon
     }
 }
 
-pub(crate) fn map_share_link_record(row: &sqlx::postgres::PgRow) -> ShareLinkRecord {
+pub fn map_share_link_record(row: &sqlx::postgres::PgRow) -> ShareLinkRecord {
     ShareLinkRecord {
         id: row.get("id"),
         tenant_id: row.get("tenant_id"),
@@ -166,7 +166,7 @@ pub(crate) fn map_share_link_record(row: &sqlx::postgres::PgRow) -> ShareLinkRec
     }
 }
 
-pub(crate) fn map_comment_row(row: &sqlx::postgres::PgRow) -> CommentRecord {
+pub fn map_comment_row(row: &sqlx::postgres::PgRow) -> CommentRecord {
     let resolved: i64 = row.get("resolved");
     CommentRecord {
         id: row.get("id"),
@@ -184,7 +184,7 @@ pub(crate) fn map_comment_row(row: &sqlx::postgres::PgRow) -> CommentRecord {
     }
 }
 
-pub(crate) fn map_comment_reply_row(row: &sqlx::postgres::PgRow) -> CommentReplyRecord {
+pub fn map_comment_reply_row(row: &sqlx::postgres::PgRow) -> CommentReplyRecord {
     CommentReplyRecord {
         id: row.get("id"),
         tenant_id: row.get("tenant_id"),
@@ -200,7 +200,7 @@ pub(crate) fn map_comment_reply_row(row: &sqlx::postgres::PgRow) -> CommentReply
     }
 }
 
-pub(crate) fn map_node_property_row(row: &sqlx::postgres::PgRow) -> NodePropertyResponse {
+pub fn map_node_property_row(row: &sqlx::postgres::PgRow) -> NodePropertyResponse {
     NodePropertyResponse {
         id: row.get("id"),
         tenant_id: row.get("tenant_id"),
@@ -213,7 +213,7 @@ pub(crate) fn map_node_property_row(row: &sqlx::postgres::PgRow) -> NodeProperty
     }
 }
 
-pub(crate) fn map_label_summary_row(row: &sqlx::postgres::PgRow) -> LabelSummaryResponse {
+pub fn map_label_summary_row(row: &sqlx::postgres::PgRow) -> LabelSummaryResponse {
     LabelSummaryResponse {
         id: row.get("label_id"),
         tenant_id: row.get("tenant_id"),
@@ -226,7 +226,7 @@ pub(crate) fn map_label_summary_row(row: &sqlx::postgres::PgRow) -> LabelSummary
     }
 }
 
-pub(crate) fn map_node_label_row(row: &sqlx::postgres::PgRow) -> NodeLabelResponse {
+pub fn map_node_label_row(row: &sqlx::postgres::PgRow) -> NodeLabelResponse {
     NodeLabelResponse {
         id: row.get("id"),
         tenant_id: row.get("tenant_id"),
@@ -238,7 +238,7 @@ pub(crate) fn map_node_label_row(row: &sqlx::postgres::PgRow) -> NodeLabelRespon
     }
 }
 
-pub(crate) fn map_watch_channel_row(row: &sqlx::postgres::PgRow) -> DriveWatchChannelResponse {
+pub fn map_watch_channel_row(row: &sqlx::postgres::PgRow) -> DriveWatchChannelResponse {
     DriveWatchChannelResponse {
         id: row.get("id"),
         tenant_id: row.get("tenant_id"),
@@ -254,7 +254,7 @@ pub(crate) fn map_watch_channel_row(row: &sqlx::postgres::PgRow) -> DriveWatchCh
     }
 }
 
-pub(crate) struct NodeCapabilitiesInput<'a> {
+pub struct NodeCapabilitiesInput<'a> {
     pub tenant_id: String,
     pub node_id: String,
     pub subject_type: String,
@@ -267,7 +267,7 @@ pub(crate) struct NodeCapabilitiesInput<'a> {
     pub node_lifecycle_status: &'a str,
 }
 
-pub(crate) fn build_node_capabilities_response(
+pub fn build_node_capabilities_response(
     input: NodeCapabilitiesInput<'_>,
 ) -> NodeCapabilitiesResponse {
     let can_read = matches!(
