@@ -9,7 +9,7 @@
     "protocol": "http",
     "packageName": "sdkwork-drive-sdk-generated-java"
   },
-  "changeFingerprint": "7b9ebc379511a44baef34b891f4fbe4637a180d5ab77a86f0c3ce8928d4a7bc3",
+  "changeFingerprint": "2dad60ca45bf4b12a9c9308b8fc05b4942026ebdf65ab9613b49fb9c0a4116eb",
   "changes": {
     "createdGeneratedFiles": [],
     "updatedGeneratedFiles": [
@@ -47,7 +47,10 @@
     "preservedScaffoldFiles": [
       "custom/README.md"
     ],
-    "backedUpFiles": []
+    "backedUpFiles": [
+      "bin/publish-core.mjs",
+      "src/main/java/com/sdkwork/drive/sdk/generated/java/http/HttpClient.java"
+    ]
   },
   "impact": {
     "schemaVersion": 1,
@@ -99,12 +102,14 @@
   },
   "executionDecision": {
     "schemaVersion": 1,
-    "riskLevel": "medium",
+    "riskLevel": "high",
     "nextAction": "verify",
     "requiresManualReview": false,
     "applyRequiresExpectedFingerprint": false,
     "summary": "Changes have been applied. Run the required verification plan now.",
     "reasons": [
+      "backed-up-generated-files",
+      "manual-review-required",
       "verification-required"
     ]
   },

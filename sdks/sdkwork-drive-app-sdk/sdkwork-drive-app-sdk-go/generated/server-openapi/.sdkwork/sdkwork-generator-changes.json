@@ -9,7 +9,7 @@
     "protocol": "http",
     "packageName": "sdkwork-drive-app-sdk-generated-go"
   },
-  "changeFingerprint": "f3284f317fb7c6e697f492d772471fb743e6d99b9df72fb339d7f1330e9c1811",
+  "changeFingerprint": "a4ba32634ecc25abc8e289e98cd9e9bfb491831a40ce5cd97d60ae809ac10cd0",
   "changes": {
     "createdGeneratedFiles": [],
     "updatedGeneratedFiles": [
@@ -220,7 +220,9 @@
     "preservedScaffoldFiles": [
       "custom/README.md"
     ],
-    "backedUpFiles": []
+    "backedUpFiles": [
+      "bin/publish-core.mjs"
+    ]
   },
   "impact": {
     "schemaVersion": 1,
@@ -265,12 +267,14 @@
   },
   "executionDecision": {
     "schemaVersion": 1,
-    "riskLevel": "medium",
+    "riskLevel": "high",
     "nextAction": "verify",
     "requiresManualReview": false,
     "applyRequiresExpectedFingerprint": false,
     "summary": "Changes have been applied. Run the required verification plan now.",
     "reasons": [
+      "backed-up-generated-files",
+      "manual-review-required",
       "verification-required"
     ]
   },

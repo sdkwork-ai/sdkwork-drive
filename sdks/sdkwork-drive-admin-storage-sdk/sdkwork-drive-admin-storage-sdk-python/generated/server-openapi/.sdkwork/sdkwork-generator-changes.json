@@ -9,7 +9,7 @@
     "protocol": "http",
     "packageName": "sdkwork-drive-admin-storage-sdk-generated-python"
   },
-  "changeFingerprint": "d1cf09bb95db9a78376f318c0fed47d5945c45ab0db61ab437875068c2cbb631",
+  "changeFingerprint": "6ac2d1fbb20c3c7fbd011122fafb53b404e744268aa8af6ee89eaf2577f5e300",
   "changes": {
     "createdGeneratedFiles": [],
     "updatedGeneratedFiles": [
@@ -88,7 +88,10 @@
     "preservedScaffoldFiles": [
       "custom/README.md"
     ],
-    "backedUpFiles": []
+    "backedUpFiles": [
+      "bin/publish-core.mjs",
+      "sdkwork_drive_admin_storage_sdk_generated_python/api/drive.py"
+    ]
   },
   "impact": {
     "schemaVersion": 1,
@@ -140,12 +143,14 @@
   },
   "executionDecision": {
     "schemaVersion": 1,
-    "riskLevel": "medium",
+    "riskLevel": "high",
     "nextAction": "verify",
     "requiresManualReview": false,
     "applyRequiresExpectedFingerprint": false,
     "summary": "Changes have been applied. Run the required verification plan now.",
     "reasons": [
+      "backed-up-generated-files",
+      "manual-review-required",
       "verification-required"
     ]
   },

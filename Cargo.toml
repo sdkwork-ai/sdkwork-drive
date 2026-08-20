@@ -16,8 +16,6 @@ members = [
     "crates/sdkwork-drive-test-support",
     "crates/sdkwork-drive-workspace-service",
     "crates/sdkwork-drive-uploader-service",
-    "crates/sdkwork-drive-git-server",
-    "crates/sdkwork-routes-drive-git-api",
     "crates/sdkwork-routes-drive-open-api",
     "crates/sdkwork-routes-drive-internal-api",
     "crates/sdkwork-routes-drive-app-api",
@@ -80,8 +78,6 @@ sdkwork-drive-test-support = { path = "crates/sdkwork-drive-test-support" }
 sdkwork-drive-workspace-service = { path = "crates/sdkwork-drive-workspace-service" }
 sdkwork-drive-uploader-service = { path = "crates/sdkwork-drive-uploader-service" }
 sdkwork-drive-install-worker = { path = "crates/sdkwork-drive-install-worker" }
-sdkwork-drive-git-server = { path = "crates/sdkwork-drive-git-server" }
-sdkwork-routes-drive-git-api = { path = "crates/sdkwork-routes-drive-git-api" }
 sdkwork-api-drive-assembly = { path = "crates/sdkwork-api-drive-assembly" }
 sdkwork-api-drive-standalone-gateway = { path = "crates/sdkwork-api-drive-standalone-gateway" }
 sdkwork-routes-drive-open-api = { path = "crates/sdkwork-routes-drive-open-api" }

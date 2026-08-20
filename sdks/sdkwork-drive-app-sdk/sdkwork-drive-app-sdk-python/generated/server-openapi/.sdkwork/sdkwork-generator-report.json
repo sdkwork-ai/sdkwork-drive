@@ -12,7 +12,7 @@
   "mode": "apply",
   "hasChanges": true,
   "hasDestructiveChanges": false,
-  "changeFingerprint": "005b60dbab6ce0c245fbd9604801ad6d34e61b8b7c4696cf82dd50c783199ef7",
+  "changeFingerprint": "675d6c72feb905e356a8b89de6905d45112ef353a3f71e149f435ba33689380c",
   "changeImpact": {
     "schemaVersion": 1,
     "areas": [
@@ -31,12 +31,14 @@
   },
   "executionDecision": {
     "schemaVersion": 1,
-    "riskLevel": "medium",
+    "riskLevel": "high",
     "nextAction": "verify",
     "requiresManualReview": false,
     "applyRequiresExpectedFingerprint": false,
     "summary": "Changes have been applied. Run the required verification plan now.",
     "reasons": [
+      "backed-up-generated-files",
+      "manual-review-required",
       "verification-required"
     ]
   },
@@ -117,7 +119,7 @@
     "skippedUnchangedGeneratedFiles": 194,
     "deletedGeneratedFiles": 0,
     "changeSummaryPath": ".sdkwork/sdkwork-generator-changes.json",
-    "changeFingerprint": "005b60dbab6ce0c245fbd9604801ad6d34e61b8b7c4696cf82dd50c783199ef7",
+    "changeFingerprint": "675d6c72feb905e356a8b89de6905d45112ef353a3f71e149f435ba33689380c",
     "changes": {
       "createdGeneratedFiles": [],
       "updatedGeneratedFiles": [
@@ -324,7 +326,9 @@
       "preservedScaffoldFiles": [
         "custom/README.md"
       ],
-      "backedUpFiles": []
+      "backedUpFiles": [
+        "bin/publish-core.mjs"
+      ]
     },
     "impact": {
       "schemaVersion": 1,
@@ -369,16 +373,20 @@
     },
     "executionDecision": {
       "schemaVersion": 1,
-      "riskLevel": "medium",
+      "riskLevel": "high",
       "nextAction": "verify",
       "requiresManualReview": false,
       "applyRequiresExpectedFingerprint": false,
       "summary": "Changes have been applied. Run the required verification plan now.",
       "reasons": [
+        "backed-up-generated-files",
+        "manual-review-required",
         "verification-required"
       ]
     },
-    "backedUpFiles": [],
+    "backedUpFiles": [
+      "bin/publish-core.mjs"
+    ],
     "preservedLegacyFiles": false
   }
 }

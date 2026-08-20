@@ -9,7 +9,7 @@
     "protocol": "http",
     "packageName": "sdkwork-drive-admin-storage-sdk-generated-rust"
   },
-  "changeFingerprint": "5a30c42c374fe1370102116c24f39ff62cc27773fa0f6c67906361bba177bde0",
+  "changeFingerprint": "cc8dae2cc6b3ae1e1ca5314eb7f8a5d3567c0d9c48b98382cd3897d0bd0465dc",
   "changes": {
     "createdGeneratedFiles": [],
     "updatedGeneratedFiles": [
@@ -89,7 +89,11 @@
     "preservedScaffoldFiles": [
       "custom/README.md"
     ],
-    "backedUpFiles": []
+    "backedUpFiles": [
+      "bin/publish-core.mjs",
+      "src/api/drive.rs",
+      "src/http/client.rs"
+    ]
   },
   "impact": {
     "schemaVersion": 1,
@@ -166,12 +170,14 @@
   },
   "executionDecision": {
     "schemaVersion": 1,
-    "riskLevel": "medium",
+    "riskLevel": "high",
     "nextAction": "verify",
     "requiresManualReview": false,
     "applyRequiresExpectedFingerprint": false,
     "summary": "Changes have been applied. Run the required verification plan now.",
     "reasons": [
+      "backed-up-generated-files",
+      "manual-review-required",
       "verification-required"
     ]
   },

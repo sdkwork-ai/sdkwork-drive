@@ -20,6 +20,26 @@ use sdkwork_web_core::HttpRouteManifest;
 
 pub type ApiAssembly = ApiAssemblyContribution;
 
+/// Drive App API route manifest for host gateway composition.
+///
+/// Host gateways that merge the unwrapped App surface contribution compose
+/// this manifest into their own surface route inventory so the Web Framework
+/// honors the App routes' declared authentication and permissions
+/// (API_ASSEMBLY_SPEC §3).
+pub fn app_api_route_manifest() -> HttpRouteManifest {
+    sdkwork_routes_drive_app_api::app_route_manifest()
+}
+
+/// Drive Admin Storage backend route manifest for host gateway composition.
+///
+/// Same-origin dependency hosts mount the storage backend surface through
+/// `assemble_backend_admin_storage_contribution_with_pool`; this manifest
+/// must be composed into the host backend route inventory so auth resolution
+/// matches the mounted router (API_ASSEMBLY_SPEC §3/§6.1).
+pub fn backend_admin_storage_route_manifest() -> HttpRouteManifest {
+    sdkwork_routes_storage_backend_api::storage_route_manifest()
+}
+
 pub struct BusinessRouterAssembly {
     pub router: Router,
 }
@@ -33,7 +53,6 @@ async fn assemble_application_business_routes(pool: sqlx::PgPool) -> BusinessRou
         router.merge(sdkwork_routes_drive_internal_api::gateway_mount_business(pool.clone()).await);
     router =
         router.merge(sdkwork_routes_drive_open_api::gateway_mount_business(pool.clone()).await);
-    router = router.merge(sdkwork_routes_drive_git_api::gateway_mount_business(pool.clone()).await);
     BusinessRouterAssembly { router }
 }
 
@@ -192,10 +211,7 @@ pub async fn assemble_api_router(pool: sqlx::PgPool) -> Result<ApiAssembly, Stri
                 pool.clone(),
                 admin_storage_config,
             ),
-        )
-        .merge(sdkwork_routes_drive_git_api::build_git_business_router(
-            sdkwork_routes_drive_git_api::GitState::new(pool.clone()),
-        ));
+        );
     let routes = sdkwork_routes_drive_app_api::gateway_route_manifest()
         .routes()
         .iter()
@@ -216,11 +232,6 @@ pub async fn assemble_api_router(pool: sqlx::PgPool) -> Result<ApiAssembly, Stri
         )
         .chain(
             sdkwork_routes_storage_backend_api::gateway_route_manifest()
-                .routes()
-                .iter(),
-        )
-        .chain(
-            sdkwork_routes_drive_git_api::gateway_route_manifest()
                 .routes()
                 .iter(),
         )

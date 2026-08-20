@@ -126,7 +126,7 @@
   "baseUrl": "http://127.0.0.1:18080",
   "standardProfile": "sdkwork-v3",
   "fixedSdkVersion": "0.1.0",
-  "ownerOnlyOperationCount": 100,
+  "ownerOnlyOperationCount": 112,
   "managedBy": "tools/drive_sdk_generator_runner.mjs",
   "packageName": "@sdkwork/drive-app-sdk",
   "transportPackageName": "sdkwork-drive-app-sdk-generated-typescript",

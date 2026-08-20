@@ -12,7 +12,7 @@
   "mode": "apply",
   "hasChanges": true,
   "hasDestructiveChanges": false,
-  "changeFingerprint": "934aed834de58e04e00328fd64c1a8aed5085c0c3ccbb7fd5323fb8fa7b51d19",
+  "changeFingerprint": "de81c36afa5ac61d1e5d13c0564e64b5042ad3aec2deea25427353b72fedd6aa",
   "changeImpact": {
     "schemaVersion": 1,
     "areas": [
@@ -31,12 +31,14 @@
   },
   "executionDecision": {
     "schemaVersion": 1,
-    "riskLevel": "medium",
+    "riskLevel": "high",
     "nextAction": "verify",
     "requiresManualReview": false,
     "applyRequiresExpectedFingerprint": false,
     "summary": "Changes have been applied. Run the required verification plan now.",
     "reasons": [
+      "backed-up-generated-files",
+      "manual-review-required",
       "verification-required"
     ]
   },
@@ -153,7 +155,7 @@
     "skippedUnchangedGeneratedFiles": 76,
     "deletedGeneratedFiles": 0,
     "changeSummaryPath": ".sdkwork/sdkwork-generator-changes.json",
-    "changeFingerprint": "934aed834de58e04e00328fd64c1a8aed5085c0c3ccbb7fd5323fb8fa7b51d19",
+    "changeFingerprint": "de81c36afa5ac61d1e5d13c0564e64b5042ad3aec2deea25427353b72fedd6aa",
     "changes": {
       "createdGeneratedFiles": [],
       "updatedGeneratedFiles": [
@@ -242,7 +244,9 @@
       "preservedScaffoldFiles": [
         "custom/README.md"
       ],
-      "backedUpFiles": []
+      "backedUpFiles": [
+        "bin/publish-core.mjs"
+      ]
     },
     "impact": {
       "schemaVersion": 1,
@@ -305,16 +309,20 @@
     },
     "executionDecision": {
       "schemaVersion": 1,
-      "riskLevel": "medium",
+      "riskLevel": "high",
       "nextAction": "verify",
       "requiresManualReview": false,
       "applyRequiresExpectedFingerprint": false,
       "summary": "Changes have been applied. Run the required verification plan now.",
       "reasons": [
+        "backed-up-generated-files",
+        "manual-review-required",
         "verification-required"
       ]
     },
-    "backedUpFiles": [],
+    "backedUpFiles": [
+      "bin/publish-core.mjs"
+    ],
     "preservedLegacyFiles": false
   }
 }

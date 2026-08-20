@@ -3,7 +3,6 @@ import './driveSurface.css';
 import {
   DrivePcPreferencesProvider,
   LanguageProvider,
-  ThemeProvider,
   type PreferenceStorage,
 } from 'sdkwork-drive-pc-commons';
 import {
@@ -65,16 +64,6 @@ export const DriveView: React.FC<DriveViewProps> = ({
       subscribeHostLanguage: ports.subscribeHostLanguage,
     };
   }, []);
-  const hostThemePorts = useMemo(() => {
-    const ports = tryGetDrivePcSdkPorts();
-    if (!ports?.resolveHostColorScheme || !ports.subscribeHostColorScheme) {
-      return null;
-    }
-    return {
-      resolveHostColorScheme: ports.resolveHostColorScheme,
-      subscribeHostColorScheme: ports.subscribeHostColorScheme,
-    };
-  }, []);
   const [activeSection, setActiveSection] = useState<DriveSection>('my-storage');
   const [storageSummary, setStorageSummary] = useState<DriveStorageSummary | undefined>();
   const [sessionSnapshot, setSessionSnapshot] = useState(() => runtime.session.getSnapshot());
@@ -126,33 +115,27 @@ export const DriveView: React.FC<DriveViewProps> = ({
 
   return (
     <DriveRuntimeProvider runtime={runtime}>
-      <ThemeProvider
-        preferenceStorage={preferenceStorage}
-        resolveHostColorScheme={hostThemePorts?.resolveHostColorScheme}
-        subscribeHostColorScheme={hostThemePorts?.subscribeHostColorScheme}
-      >
-        <DrivePcPreferencesProvider preferenceStorage={preferenceStorage}>
-          <LanguageProvider
-            preferenceStorage={preferenceStorage}
-            resolveHostLanguage={hostLanguagePorts?.resolveHostLanguage}
-            subscribeHostLanguage={hostLanguagePorts?.subscribeHostLanguage}
-          >
-            <div className="flex h-full w-full flex-1 min-h-0 min-w-0 overflow-hidden bg-[#f5f5f5] text-[#333] dark:bg-[#111] dark:text-[#eee]">
-              <React.Suspense fallback={<DriveWorkspaceFallback />}>
-                <DrivePage
-                  activeSection={activeSection}
-                  fileService={runtime.services.fileService}
-                  openRequest={openRequest}
-                  storageSummary={storageSummary}
-                  onOpenExternal={runtime.host.openExternal}
-                  onOpenRequestHandled={onOpenRequestHandled}
-                  onSectionChange={setActiveSection}
-                />
-              </React.Suspense>
-            </div>
-          </LanguageProvider>
-        </DrivePcPreferencesProvider>
-      </ThemeProvider>
+      <DrivePcPreferencesProvider preferenceStorage={preferenceStorage}>
+        <LanguageProvider
+          preferenceStorage={preferenceStorage}
+          resolveHostLanguage={hostLanguagePorts?.resolveHostLanguage}
+          subscribeHostLanguage={hostLanguagePorts?.subscribeHostLanguage}
+        >
+          <div className="flex h-full w-full flex-1 min-h-0 min-w-0 overflow-hidden bg-[#f5f5f5] text-[#333] dark:bg-[#111] dark:text-[#eee]">
+            <React.Suspense fallback={<DriveWorkspaceFallback />}>
+              <DrivePage
+                activeSection={activeSection}
+                fileService={runtime.services.fileService}
+                openRequest={openRequest}
+                storageSummary={storageSummary}
+                onOpenExternal={runtime.host.openExternal}
+                onOpenRequestHandled={onOpenRequestHandled}
+                onSectionChange={setActiveSection}
+              />
+            </React.Suspense>
+          </div>
+        </LanguageProvider>
+      </DrivePcPreferencesProvider>
     </DriveRuntimeProvider>
   );
 };

@@ -8,7 +8,6 @@ export * from './sdk/generatedSdkTransport';
 export * from './sdk/driveAppSdkClient';
 export * from './services/driveFileService';
 export * from './session/sessionStore';
-export * from './session/accessTokenContextClaims';
 export * from './session/osSecureSessionStorage';
 export * from './session/sessionTokenManager';
 export * from './transfer/transferJobStore';

@@ -6,8 +6,6 @@ export interface DrivePcSdkPorts {
   subscribeHostSession?: (listener: () => void) => () => void;
   resolveHostLanguage?: () => string;
   subscribeHostLanguage?: (listener: (language: string) => void) => () => void;
-  resolveHostColorScheme?: () => 'light' | 'dark';
-  subscribeHostColorScheme?: (listener: (scheme: 'light' | 'dark') => void) => () => void;
 }
 
 let sdkPorts: DrivePcSdkPorts | null = null;

@@ -9,7 +9,7 @@
     "protocol": "http",
     "packageName": "sdkwork-drive-sdk-generated-rust"
   },
-  "changeFingerprint": "5d99b577e5747c6eec7210da8c85aa286451462d85826f02ffedca12a0c86113",
+  "changeFingerprint": "7dafe759ccbf6950500ef4ba05fa4f69227ecff57054c5c89dc023a6b1e30546",
   "changes": {
     "createdGeneratedFiles": [],
     "updatedGeneratedFiles": [
@@ -52,7 +52,10 @@
     "preservedScaffoldFiles": [
       "custom/README.md"
     ],
-    "backedUpFiles": []
+    "backedUpFiles": [
+      "bin/publish-core.mjs",
+      "src/http/client.rs"
+    ]
   },
   "impact": {
     "schemaVersion": 1,
@@ -122,12 +125,14 @@
   },
   "executionDecision": {
     "schemaVersion": 1,
-    "riskLevel": "medium",
+    "riskLevel": "high",
     "nextAction": "verify",
     "requiresManualReview": false,
     "applyRequiresExpectedFingerprint": false,
     "summary": "Changes have been applied. Run the required verification plan now.",
     "reasons": [
+      "backed-up-generated-files",
+      "manual-review-required",
       "verification-required"
     ]
   },

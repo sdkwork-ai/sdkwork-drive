@@ -9,7 +9,7 @@
     "protocol": "http",
     "packageName": "sdkwork-drive-admin-storage-sdk-generated-go"
   },
-  "changeFingerprint": "e96f8d2d4fdc2aca1c19de1b4c7eab7b8c7cc1ed4f3a1caf5a0db6157fafddce",
+  "changeFingerprint": "04425a00f910c036241cce0ad14516acf72efc9ccb75478e5851cbe738913baa",
   "changes": {
     "createdGeneratedFiles": [],
     "updatedGeneratedFiles": [
@@ -90,7 +90,11 @@
     "preservedScaffoldFiles": [
       "custom/README.md"
     ],
-    "backedUpFiles": []
+    "backedUpFiles": [
+      "api/drive.go",
+      "bin/publish-core.mjs",
+      "http/client.go"
+    ]
   },
   "impact": {
     "schemaVersion": 1,
@@ -150,12 +154,14 @@
   },
   "executionDecision": {
     "schemaVersion": 1,
-    "riskLevel": "medium",
+    "riskLevel": "high",
     "nextAction": "verify",
     "requiresManualReview": false,
     "applyRequiresExpectedFingerprint": false,
     "summary": "Changes have been applied. Run the required verification plan now.",
     "reasons": [
+      "backed-up-generated-files",
+      "manual-review-required",
       "verification-required"
     ]
   },
