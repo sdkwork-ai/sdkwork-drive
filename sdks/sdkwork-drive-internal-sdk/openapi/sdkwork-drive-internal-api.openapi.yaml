@@ -151,7 +151,7 @@ paths:
       tags:
         - driveInternalPublishing
       summary: Ensure a signed WebsiteRoot event delivery channel
-      description: Creates or reconciles one root-scoped Drive-to-Web-Server webhook channel for a Web Node. The channel receives only typed events that affect this stable WebsiteRoot UUID. The verification token is write-only; Drive stores only its SHA-256 derived signing key.
+      description: Creates or reconciles one root-scoped Drive-to-Webserver webhook channel for a Web Node. The channel receives only typed events that affect this stable WebsiteRoot UUID. The verification token is write-only; Drive stores only its SHA-256 derived signing key.
       operationId: websiteRootEventDeliveries.replace
       x-sdkwork-owner: sdkwork-drive
       x-sdkwork-api-authority: sdkwork-drive-internal-api

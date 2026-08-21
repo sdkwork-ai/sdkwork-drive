@@ -6,7 +6,7 @@ use sqlx::PgPool;
 use crate::app_context::DriveRequestContext;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub(crate) struct RuntimeSandboxRoot {
+pub struct RuntimeSandboxRoot {
     pub(crate) display_name: String,
     pub(crate) path: PathBuf,
 }
