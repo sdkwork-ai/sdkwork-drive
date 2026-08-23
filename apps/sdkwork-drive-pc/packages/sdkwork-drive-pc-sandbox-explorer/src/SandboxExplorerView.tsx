@@ -396,6 +396,12 @@ export interface SandboxExplorerViewProps {
   readonly onDirectorySelected?: (selection: SandboxSelection) => void;
   readonly onDirectoryChanged?: (selection: SandboxSelection) => void;
   readonly className?: string;
+  /** Prefer this sandbox id when the first page of sandboxes loads. */
+  readonly preferredSandboxId?: string;
+  /** Open at this logical path after the preferred (or first) sandbox loads. */
+  readonly initialLogicalPath?: string;
+  /** Remount key when preferred sandbox / path selection changes. */
+  readonly navigationKey?: string;
   /** 界面文案覆盖；缺省使用内置英文文案。 */
   readonly labels?: SandboxExplorerLabels;
 }
@@ -507,6 +513,9 @@ export function SandboxExplorerView({
   onDirectorySelected,
   onDirectoryChanged,
   className,
+  preferredSandboxId,
+  initialLogicalPath,
+  navigationKey,
   labels: injectedLabels,
 }: SandboxExplorerViewProps) {
   const labels = useMemo(
@@ -739,14 +748,21 @@ export function SandboxExplorerView({
         setRoots(result.items);
         setSandboxPage(result.page);
         setSandboxTotalPages(Math.max(result.totalPages, 1));
-        const first = result.items[0];
-        if (!first) {
+        const preferred = preferredSandboxId
+          ? result.items.find((item) => item.id === preferredSandboxId)
+          : undefined;
+        const selected = preferred ?? result.items[0];
+        if (!selected) {
           setLoading(false);
           return;
         }
+        const logicalPath = (initialLogicalPath ?? '').replace(/^\/+|\/+$/g, '');
         void loadDirectory(
-          first,
-          { entryId: first.rootEntryId, logicalPath: '' },
+          selected,
+          {
+            entryId: selected.rootEntryId,
+            logicalPath,
+          },
           'replace',
         );
       })
@@ -759,7 +775,14 @@ export function SandboxExplorerView({
       active = false;
       requestSequence.current += 1;
     };
-  }, [loadDirectory, port, sandboxLoadAttempt]);
+  }, [
+    initialLogicalPath,
+    loadDirectory,
+    navigationKey,
+    port,
+    preferredSandboxId,
+    sandboxLoadAttempt,
+  ]);
 
   const breadcrumbs = useMemo(
     () => buildBreadcrumbs(root, directory, entryIdsByPath.current),

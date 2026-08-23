@@ -11,7 +11,8 @@
   },
   "dependencies": {
     "@sdkwork/drive-app-sdk": "workspace:*",
-    "@sdkwork/ui-mobile-react": "workspace:*"
+    "@sdkwork/ui-mobile-react": "workspace:*",
+    "@sdkwork/utils": "workspace:*"
   },
   "peerDependencies": {
     "lucide-react": ">=1.0.0",

@@ -1,9 +1,10 @@
+import { uuid } from '@sdkwork/utils/id';
+
 import type { DriveFile, DownloadJob } from './file';
 
 const DEFAULT_DOWNLOAD_SIZE_BYTES = 4_500_000;
 const DEFAULT_FOLDER_ARCHIVE_SIZE_BYTES = 18_500_000;
 const VIEW_SECTIONS = new Set(['recent', 'starred', 'shared', 'trash', 'transfer']);
-let fallbackJobIdCounter = 0;
 
 export interface CreateDownloadJobOptions {
   id?: string;
@@ -137,12 +138,7 @@ export function cancelTransferJob(job: DownloadJob): DownloadJob {
 }
 
 function makeJobId(): string {
-  const generatedId = globalThis.crypto?.randomUUID?.();
-  if (generatedId) {
-    return generatedId;
-  }
-  fallbackJobIdCounter += 1;
-  return `drive-job-${Date.now().toString(36)}-${fallbackJobIdCounter.toString(36)}`;
+  return uuid();
 }
 
 function fileSizeOrFallback(file: DriveFile, fallbackSizeBytes: number): number {

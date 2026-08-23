@@ -4,6 +4,7 @@ import type {
   QuotaSummary,
   SdkworkDriveAppClient,
 } from "@sdkwork/drive-app-sdk";
+import { uuid } from "@sdkwork/utils/id";
 
 export type CloudDriveView = "files" | "recent";
 
@@ -118,11 +119,7 @@ function mapStorageSummary(summary: QuotaSummary): CloudDriveStorageSummary {
 }
 
 function createShareLinkId(): string {
-  const randomUuid = globalThis.crypto?.randomUUID;
-  if (!randomUuid) {
-    throw new Error("Secure UUID generation is unavailable in this browser.");
-  }
-  return randomUuid.call(globalThis.crypto);
+  return uuid();
 }
 
 export function configureCloudDriveRuntime(nextRuntime: CloudDriveRuntime): void {

@@ -20,10 +20,18 @@ impl AppState {
     }
 
     pub fn with_urls(pool: PgPool, download_public_base_url: impl Into<String>) -> Self {
+        // When a deploy-scoped sandbox is configured, do not auto-expose the
+        // whole filesystem root (`/`) as a runtime sandbox for ops browsing.
+        let runtime_sandbox_roots = if crate::deploy_sandbox::deploy_sandbox_config_from_env().is_some()
+        {
+            Arc::from([])
+        } else {
+            discover_runtime_sandbox_roots().into()
+        };
         Self {
             pool,
             download_public_base_url: download_public_base_url.into(),
-            runtime_sandbox_roots: discover_runtime_sandbox_roots().into(),
+            runtime_sandbox_roots,
         }
     }
 }

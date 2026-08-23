@@ -38,6 +38,7 @@ mod tests {
             subject_type: "user".to_string(),
             subject_id: "user-1".to_string(),
             auth_level: sdkwork_web_core::WebAuthLevel::Password,
+            permission_scope: Vec::new(),
             request_id: "request-1".to_string(),
             trace_id: "trace-1".to_string(),
             from_token: true,

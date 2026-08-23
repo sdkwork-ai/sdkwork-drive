@@ -176,6 +176,7 @@ mod tests {
             subject_type: subject_type.to_owned(),
             subject_id: "user-001".to_owned(),
             auth_level,
+            permission_scope: Vec::new(),
             request_id: "request-001".to_owned(),
             trace_id: "trace-001".to_owned(),
             from_token: true,

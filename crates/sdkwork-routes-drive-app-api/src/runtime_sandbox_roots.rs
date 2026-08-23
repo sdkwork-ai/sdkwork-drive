@@ -181,6 +181,7 @@ mod tests {
             subject_type: "user".to_owned(),
             subject_id: "user-runtime".to_owned(),
             auth_level: sdkwork_web_core::WebAuthLevel::Password,
+            permission_scope: Vec::new(),
             request_id: "request-runtime".to_owned(),
             trace_id: "trace-runtime".to_owned(),
             from_token: true,

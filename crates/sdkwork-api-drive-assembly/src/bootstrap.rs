@@ -107,6 +107,12 @@ pub async fn assemble_app_api_contribution() -> Result<ApiAssemblyContribution, 
         .map_err(|error| format!("create drive database pool failed: {error}"))?;
     ensure_domain_outbox_dispatcher(pool.clone());
 
+    if let Some(config) = sdkwork_routes_drive_app_api::deploy_sandbox_config_from_env() {
+        sdkwork_routes_drive_app_api::ensure_deploy_sandbox_volume(&pool, &config)
+            .await
+            .map_err(|error| format!("ensure deploy sandbox volume failed: {error}"))?;
+    }
+
     let route_manifest = sdkwork_routes_drive_app_api::app_route_manifest();
     let router = sdkwork_routes_drive_app_api::build_app_business_router(pool.clone());
     ApiAssemblyContribution::from_manifest(

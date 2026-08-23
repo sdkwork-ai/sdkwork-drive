@@ -42,6 +42,7 @@ use crate::{
         success_offset_list_page, success_resource, DriveListHttpResponse,
     },
     runtime_sandbox_roots::ensure_runtime_sandbox_roots,
+    deploy_sandbox::{deploy_sandbox_config_from_env, ensure_deploy_sandbox_grants_for_context},
     sandbox_principals::token_bound_sandbox_principals,
     state::AppState,
     validators::validate_page_size_i64,
@@ -78,6 +79,17 @@ pub(crate) async fn list_sandboxes(
                 )),
             )
         })?;
+    if let Some(config) = deploy_sandbox_config_from_env() {
+        ensure_deploy_sandbox_grants_for_context(&state.pool, &ctx, &config)
+            .await
+            .map_err(|error| {
+                map_service_error(
+                    sdkwork_drive_workspace_service::DriveServiceError::Internal(format!(
+                        "initialize deploy sandbox failed: {error}"
+                    )),
+                )
+            })?;
+    }
     let principals = token_bound_sandbox_principals(&ctx);
     let service = DriveSandboxService::new(SqlSandboxStore::new(state.pool.clone()));
     let (volumes, total) = service
