@@ -1,3 +1,11 @@
+import { resolveBrowserDistOutDir } from '../../../sdkwork-specs/tools/browser-dist-layout.mjs';
+function resolveViteEnvironment(mode, processEnv = process.env) {
+  const profileMatch = /^(standalone|cloud)\.(development|test|staging|production)$/u.exec(mode ?? '');
+  return profileMatch?.[2]
+    ?? (['development', 'test', 'staging', 'production'].includes(processEnv.SDKWORK_ENVIRONMENT ?? '')
+      ? processEnv.SDKWORK_ENVIRONMENT
+      : 'production');
+}
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
@@ -29,6 +37,10 @@ export default defineConfig(({ mode }) => {
     || DEFAULT_ADMIN_API_PROXY_TARGET;
 
   return {
+    build: {
+      outDir: resolveBrowserDistOutDir(resolveViteEnvironment(mode, process.env)),
+      emptyOutDir: true,
+    },
     define: {
       'process.env.SDKWORK_ACCESS_TOKEN': JSON.stringify(env.SDKWORK_ACCESS_TOKEN ?? ''),
     },

@@ -142,7 +142,12 @@
     "_sdkwork:deploy:validate:standalone": "pnpm exec sdkwork-app deploy:validate --profile standalone.production",
     "_sdkwork:deploy:validate:cloud": "pnpm exec sdkwork-app deploy:validate --profile cloud.production",
     "dev:browser:postgres:standalone": "pnpm exec sdkwork-app dev --runtime-target browser --deployment-profile standalone",
-    "dev:desktop:postgres:standalone": "pnpm exec sdkwork-app dev --runtime-target desktop --deployment-profile standalone"
+    "dev:desktop:postgres:standalone": "pnpm exec sdkwork-app dev --runtime-target desktop --deployment-profile standalone",
+    "build:pc:dev": "node ../sdkwork-specs/tools/build-browser-client.mjs --root . --architecture pc --environment dev",
+    "build:pc:test": "node ../sdkwork-specs/tools/build-browser-client.mjs --root . --architecture pc --environment test",
+    "build:pc:staging": "node ../sdkwork-specs/tools/build-browser-client.mjs --root . --architecture pc --environment staging",
+    "build:pc:prod": "node ../sdkwork-specs/tools/build-browser-client.mjs --root . --architecture pc --environment prod",
+    "check:browser-build-scripts": "node ../sdkwork-specs/tools/check-browser-build-scripts.mjs --root ."
   },
   "exports": {
     ".": {

@@ -18,7 +18,11 @@
     "dev:desktop:postgres:standalone": "pnpm exec sdkwork-app dev --root ../.. --runtime-target desktop --deployment-profile standalone",
     "check": "pnpm typecheck && pnpm test && pnpm build",
     "verify": "pnpm check",
-    "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\""
+    "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\"",
+    "build:dev": "node ../../../sdkwork-specs/tools/build-browser-client.mjs --app-root . --environment dev",
+    "build:test": "node ../../../sdkwork-specs/tools/build-browser-client.mjs --app-root . --environment test",
+    "build:staging": "node ../../../sdkwork-specs/tools/build-browser-client.mjs --app-root . --environment staging",
+    "build:prod": "node ../../../sdkwork-specs/tools/build-browser-client.mjs --app-root . --environment prod"
   },
   "dependencies": {
     "@sdkwork/appbase-pc-react": "workspace:*",

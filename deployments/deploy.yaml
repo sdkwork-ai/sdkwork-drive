@@ -40,6 +40,38 @@ profiles:
         tls: dtupay.cn
         mode: web
         web: pc
+      - domain: drive-test.skubc.com
+        tls: skubc.com
+        mode: web
+        web: pc
+      - domain: drive-test.skubc.cn
+        tls: skubc.cn
+        mode: web
+        web: pc
+      - domain: drive-test.zowalk.com
+        tls: zowalk.com
+        mode: web
+        web: pc
+      - domain: drive-test.zowalk.cn
+        tls: zowalk.cn
+        mode: web
+        web: pc
+      - domain: drive-test.offer86.com
+        tls: offer86.com
+        mode: web
+        web: pc
+      - domain: drive-test.offer86.cn
+        tls: offer86.cn
+        mode: web
+        web: pc
+      - domain: drive-test.86offer.com
+        tls: 86offer.com
+        mode: web
+        web: pc
+      - domain: drive-test.86offer.cn
+        tls: 86offer.cn
+        mode: web
+        web: pc
     packages: []
     overrides:
       topology:
@@ -87,6 +119,38 @@ profiles:
         tls: dtupay.cn
         mode: web
         web: pc
+      - domain: drive-staging.skubc.com
+        tls: skubc.com
+        mode: web
+        web: pc
+      - domain: drive-staging.skubc.cn
+        tls: skubc.cn
+        mode: web
+        web: pc
+      - domain: drive-staging.zowalk.com
+        tls: zowalk.com
+        mode: web
+        web: pc
+      - domain: drive-staging.zowalk.cn
+        tls: zowalk.cn
+        mode: web
+        web: pc
+      - domain: drive-staging.offer86.com
+        tls: offer86.com
+        mode: web
+        web: pc
+      - domain: drive-staging.offer86.cn
+        tls: offer86.cn
+        mode: web
+        web: pc
+      - domain: drive-staging.86offer.com
+        tls: 86offer.com
+        mode: web
+        web: pc
+      - domain: drive-staging.86offer.cn
+        tls: 86offer.cn
+        mode: web
+        web: pc
     packages: []
     overrides:
       topology:
@@ -132,6 +196,38 @@ profiles:
         web: pc
       - domain: drive.dtupay.cn
         tls: dtupay.cn
+        mode: web
+        web: pc
+      - domain: drive.skubc.com
+        tls: skubc.com
+        mode: web
+        web: pc
+      - domain: drive.skubc.cn
+        tls: skubc.cn
+        mode: web
+        web: pc
+      - domain: drive.zowalk.com
+        tls: zowalk.com
+        mode: web
+        web: pc
+      - domain: drive.zowalk.cn
+        tls: zowalk.cn
+        mode: web
+        web: pc
+      - domain: drive.offer86.com
+        tls: offer86.com
+        mode: web
+        web: pc
+      - domain: drive.offer86.cn
+        tls: offer86.cn
+        mode: web
+        web: pc
+      - domain: drive.86offer.com
+        tls: 86offer.com
+        mode: web
+        web: pc
+      - domain: drive.86offer.cn
+        tls: 86offer.cn
         mode: web
         web: pc
     packages: []
@@ -184,6 +280,46 @@ profiles:
         apiPathStyle: full-prefix
       - domain: drive.dtupay.cn
         tls: dtupay.cn
+        mode: web+api
+        web: pc
+        apiPathStyle: full-prefix
+      - domain: drive.skubc.com
+        tls: skubc.com
+        mode: web+api
+        web: pc
+        apiPathStyle: full-prefix
+      - domain: drive.skubc.cn
+        tls: skubc.cn
+        mode: web+api
+        web: pc
+        apiPathStyle: full-prefix
+      - domain: drive.zowalk.com
+        tls: zowalk.com
+        mode: web+api
+        web: pc
+        apiPathStyle: full-prefix
+      - domain: drive.zowalk.cn
+        tls: zowalk.cn
+        mode: web+api
+        web: pc
+        apiPathStyle: full-prefix
+      - domain: drive.offer86.com
+        tls: offer86.com
+        mode: web+api
+        web: pc
+        apiPathStyle: full-prefix
+      - domain: drive.offer86.cn
+        tls: offer86.cn
+        mode: web+api
+        web: pc
+        apiPathStyle: full-prefix
+      - domain: drive.86offer.com
+        tls: 86offer.com
+        mode: web+api
+        web: pc
+        apiPathStyle: full-prefix
+      - domain: drive.86offer.cn
+        tls: 86offer.cn
         mode: web+api
         web: pc
         apiPathStyle: full-prefix
