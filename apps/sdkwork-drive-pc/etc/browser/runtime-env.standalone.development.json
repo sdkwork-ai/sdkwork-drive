@@ -1,12 +1,13 @@
 {
   "environment": "development",
+  "deploymentProfile": "standalone",
+  "profileId": "standalone.development",
+  "runtimeTarget": "browser",
+  "browserOriginMode": "same-origin",
   "configProfile": "dev",
   "buildMode": "development",
   "deploymentMode": "desktop",
-  "runtimeTarget": "browser",
   "appKey": "sdkwork-drive-pc",
-  "appApiBaseUrl": "http://127.0.0.1:3900",
-  "backendApiBaseUrl": "http://127.0.0.1:3900",
   "sdkBaseUrls": {
     "appApiBaseUrl": "http://127.0.0.1:3900",
     "backendApiBaseUrl": "http://127.0.0.1:3900",
@@ -33,5 +34,10 @@
     "runtimeEnvFile": "/runtime-env.json",
     "appApiBaseUrl": "http://127.0.0.1:3900",
     "backendApiBaseUrl": "http://127.0.0.1:3900"
-  }
+  },
+  "appApiBaseUrl": "/",
+  "backendApiBaseUrl": "/",
+  "driveAppApiBaseUrl": "/",
+  "appbaseAppApiBaseUrl": "/",
+  "deployAppApiBaseUrl": "/"
 }

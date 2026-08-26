@@ -1,0 +1,43 @@
+{
+  "environment": "development",
+  "deploymentProfile": "cloud",
+  "profileId": "cloud.development",
+  "runtimeTarget": "browser",
+  "browserOriginMode": "cross-origin",
+  "configProfile": "dev",
+  "buildMode": "development",
+  "deploymentMode": "desktop",
+  "appKey": "sdkwork-drive-pc",
+  "sdkBaseUrls": {
+    "appApiBaseUrl": "http://127.0.0.1:3900",
+    "backendApiBaseUrl": "http://127.0.0.1:3900",
+    "dependencySdkBaseUrls": {
+      "sdkwork-iam-app-sdk": {
+        "appApiBaseUrl": "http://127.0.0.1:3900"
+      },
+      "sdkwork-drive-app-sdk": {
+        "appApiBaseUrl": "http://127.0.0.1:3900"
+      },
+      "sdkwork-drive-admin-storage-sdk": {
+        "backendApiBaseUrl": "http://127.0.0.1:3900"
+      }
+    }
+  },
+  "auth": {
+    "tokenManagerMode": "appbase-global",
+    "tokenStorage": "browser-local",
+    "accessTokenHeader": "Access-Token",
+    "authTokenHeader": "Authorization",
+    "refreshEnabled": true
+  },
+  "publicRuntime": {
+    "runtimeEnvFile": "/runtime-env.json",
+    "appApiBaseUrl": "http://127.0.0.1:3900",
+    "backendApiBaseUrl": "http://127.0.0.1:3900"
+  },
+  "appApiBaseUrl": "https://api-dev.sdkwork.com",
+  "backendApiBaseUrl": "https://api-dev.sdkwork.com",
+  "driveAppApiBaseUrl": "https://api-dev.sdkwork.com",
+  "appbaseAppApiBaseUrl": "https://api-dev.sdkwork.com",
+  "deployAppApiBaseUrl": "https://api-dev.sdkwork.com"
+}

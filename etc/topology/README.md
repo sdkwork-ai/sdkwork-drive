@@ -9,7 +9,7 @@ Platform standard: `../../sdkwork-specs/APP_RUNTIME_TOPOLOGY_SPEC.md`.
 | --- | --- |
 | `standalone.development` | `pnpm dev`, `pnpm dev:standalone`, `pnpm dev:desktop` |
 | `cloud.development` | `pnpm dev:cloud`, `pnpm dev:desktop:cloud` |
-| `standalone.production` | `pnpm build:standalone` |
+| `standalone.production` | `pnpm build:prod` |
 | `cloud.production` | `pnpm build` |
 
 `cloud.development` declares only local browser/desktop clients. Both public
