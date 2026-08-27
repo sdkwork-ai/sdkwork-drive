@@ -24,7 +24,7 @@
     "@sdkwork/sdk-common": "^1.0.2"
   },
   "peerDependencies": {
-    "@sdkwork/iam-backend-sdk": "workspace:*"
+    "@sdkwork/iam-backend-sdk": "^0.1.4"
   },
   "peerDependenciesMeta": {
     "@sdkwork/iam-backend-sdk": {
