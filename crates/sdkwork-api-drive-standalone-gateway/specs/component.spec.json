@@ -85,7 +85,9 @@
     ],
     "runtimeEntrypoints": [
       "src/main.rs",
-      "Cargo.toml[[bin]].sdkwork-api-drive-standalone-gateway"
+      "Cargo.toml[[bin]].sdkwork-api-drive-standalone-gateway",
+      "sdkwork_api_drive_assembly::assemble_api_router_from_env",
+      "sdkwork_api_iam_assembly::assemble_app_api_contribution_with_pool"
     ],
     "routeManifest": null,
     "sdkClients": [],

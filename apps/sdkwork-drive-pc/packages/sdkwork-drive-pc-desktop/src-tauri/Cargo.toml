@@ -9,7 +9,7 @@ edition = "2021"
 [workspace]
 
 [workspace.dependencies]
-sdkwork-utils-rust = { path = "../../../../../../sdkwork-utils/packages/sdkwork-utils-rust" }
+sdkwork_utils_rust = { workspace = true }
 
 [build-dependencies]
 tauri-build = { version = "2", features = [] }

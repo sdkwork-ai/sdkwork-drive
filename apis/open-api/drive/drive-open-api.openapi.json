@@ -463,8 +463,9 @@
             "type": "string"
           },
           "contentLength": {
-            "type": "integer",
-            "format": "int64"
+            "type": "string",
+            "format": "int64",
+            "x-sdkwork-int64-string": true
           }
         }
       },
@@ -488,18 +489,21 @@
             "type": "string"
           },
           "expiresAtEpochMs": {
-            "type": "integer",
-            "format": "int64"
+            "type": "string",
+            "format": "int64",
+            "x-sdkwork-int64-string": true
           },
           "downloadLimit": {
-            "type": "integer",
+            "type": "string",
             "format": "int64",
-            "minimum": 0
+            "minimum": 0,
+            "x-sdkwork-int64-string": true
           },
           "downloadCount": {
-            "type": "integer",
+            "type": "string",
             "format": "int64",
-            "minimum": 0
+            "minimum": 0,
+            "x-sdkwork-int64-string": true
           },
           "accessCodeRequired": {
             "type": "boolean"
@@ -536,8 +540,9 @@
             "type": "string"
           },
           "expiresAtEpochMs": {
-            "type": "integer",
-            "format": "int64"
+            "type": "string",
+            "format": "int64",
+            "x-sdkwork-int64-string": true
           },
           "method": {
             "type": "string"

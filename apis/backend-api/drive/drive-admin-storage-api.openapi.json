@@ -283,7 +283,8 @@
         "x-sdkwork-api-authority": "sdkwork-drive.admin.storage",
         "x-sdkwork-request-context": "WebRequestContext",
         "x-sdkwork-api-surface": "backend-api",
-        "x-sdkwork-permission": "drive.storage.admin"
+        "x-sdkwork-permission": "drive.storage.admin",
+        "parameters": []
       },
       "delete": {
         "tags": [
@@ -553,7 +554,8 @@
         "x-sdkwork-api-authority": "sdkwork-drive.admin.storage",
         "x-sdkwork-request-context": "WebRequestContext",
         "x-sdkwork-api-surface": "backend-api",
-        "x-sdkwork-permission": "drive.storage.admin"
+        "x-sdkwork-permission": "drive.storage.admin",
+        "parameters": []
       }
     },
     "/backend/v3/api/drive/storage/providers/{providerId}": {
@@ -2696,15 +2698,16 @@
         "x-sdkwork-api-authority": "sdkwork-drive.admin.storage",
         "x-sdkwork-request-context": "WebRequestContext",
         "x-sdkwork-api-surface": "backend-api",
-        "x-sdkwork-permission": "drive.storage.admin"
+        "x-sdkwork-permission": "drive.storage.admin",
+        "parameters": []
       },
       "post": {
         "tags": [
           "storageAdmin"
         ],
-        "operationId": "storageProviderKinds.initialize",
+        "operationId": "storageProviderKinds.create",
         "responses": {
-          "200": {
+          "201": {
             "description": "OK",
             "content": {
               "application/json": {
@@ -2772,7 +2775,8 @@
         "x-sdkwork-api-authority": "sdkwork-drive.admin.storage",
         "x-sdkwork-request-context": "WebRequestContext",
         "x-sdkwork-api-surface": "backend-api",
-        "x-sdkwork-permission": "drive.storage.admin"
+        "x-sdkwork-permission": "drive.storage.admin",
+        "parameters": []
       }
     },
     "/backend/v3/api/drive/storage/provider-kinds/{providerKind}": {
@@ -3253,8 +3257,9 @@
             "type": "string"
           },
           "version": {
-            "type": "integer",
-            "format": "int64"
+            "type": "string",
+            "format": "int64",
+            "x-sdkwork-int64-string": true
           },
           "storageProvider": {
             "$ref": "#/components/schemas/StorageProvider"
@@ -3476,8 +3481,9 @@
             "type": "string"
           },
           "version": {
-            "type": "integer",
-            "format": "int64"
+            "type": "string",
+            "format": "int64",
+            "x-sdkwork-int64-string": true
           },
           "credentialConfigured": {
             "type": "boolean"
@@ -3684,9 +3690,10 @@
             "pattern": "^(?!/)(?!.*//)(?!.*(?:^|/)\\.{1,2}(?:/|$))(?!.*\\u0000).+$"
           },
           "contentLength": {
-            "type": "integer",
+            "type": "string",
             "format": "int64",
-            "minimum": 0
+            "minimum": 0,
+            "x-sdkwork-int64-string": true
           },
           "contentType": {
             "type": "string",
@@ -3705,9 +3712,10 @@
             "nullable": true
           },
           "lastModifiedEpochMs": {
-            "type": "integer",
+            "type": "string",
             "format": "int64",
-            "nullable": true
+            "nullable": true,
+            "x-sdkwork-int64-string": true
           }
         },
         "additionalProperties": false
@@ -3793,9 +3801,10 @@
             "type": "boolean"
           },
           "creationDateEpochMs": {
-            "type": "integer",
+            "type": "string",
             "format": "int64",
-            "minimum": 0
+            "minimum": 0,
+            "x-sdkwork-int64-string": true
           }
         }
       },
@@ -4012,19 +4021,22 @@
             "description": "Whether the provider kind is enabled for new or reactivated configurations."
           },
           "sortOrder": {
-            "type": "integer",
+            "type": "string",
             "format": "int64",
-            "description": "Display ordering for admin surfaces."
+            "description": "Display ordering for admin surfaces.",
+            "x-sdkwork-int64-string": true
           },
           "version": {
-            "type": "integer",
+            "type": "string",
             "format": "int64",
-            "description": "Optimistic locking version."
+            "description": "Optimistic locking version.",
+            "x-sdkwork-int64-string": true
           },
           "configCount": {
-            "type": "integer",
+            "type": "string",
             "format": "int64",
-            "description": "Number of non-deleted provider configurations of this kind."
+            "description": "Number of non-deleted provider configurations of this kind.",
+            "x-sdkwork-int64-string": true
           }
         },
         "additionalProperties": false
@@ -4068,8 +4080,9 @@
             "type": "string"
           },
           "sizeBytes": {
-            "type": "integer",
-            "format": "int64"
+            "type": "string",
+            "format": "int64",
+            "x-sdkwork-int64-string": true
           },
           "encoding": {
             "type": "string",

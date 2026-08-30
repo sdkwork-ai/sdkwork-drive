@@ -32,9 +32,10 @@
             "in": "query",
             "required": false,
             "schema": {
-              "type": "integer",
+              "type": "string",
               "format": "int64",
-              "deprecated": true
+              "deprecated": true,
+              "x-sdkwork-int64-string": true
             }
           },
           {
@@ -42,10 +43,11 @@
             "in": "query",
             "required": false,
             "schema": {
-              "type": "integer",
+              "type": "string",
               "format": "int64",
               "minimum": 1,
-              "maximum": 200
+              "maximum": 200,
+              "x-sdkwork-int64-string": true
             }
           }
         ],
@@ -415,7 +417,8 @@
         "x-sdkwork-owner": "sdkwork-drive",
         "x-sdkwork-api-authority": "sdkwork-drive-app-api",
         "x-sdkwork-request-context": "WebRequestContext",
-        "x-sdkwork-api-surface": "app-api"
+        "x-sdkwork-api-surface": "app-api",
+        "parameters": []
       }
     },
     "/app/v3/api/drive/favorites": {
@@ -438,10 +441,11 @@
             "in": "query",
             "required": false,
             "schema": {
-              "type": "integer",
+              "type": "string",
               "format": "int64",
               "minimum": 1,
-              "maximum": 200
+              "maximum": 200,
+              "x-sdkwork-int64-string": true
             }
           },
           {
@@ -611,7 +615,8 @@
         "x-sdkwork-owner": "sdkwork-drive",
         "x-sdkwork-api-authority": "sdkwork-drive-app-api",
         "x-sdkwork-request-context": "WebRequestContext",
-        "x-sdkwork-api-surface": "app-api"
+        "x-sdkwork-api-surface": "app-api",
+        "parameters": []
       }
     },
     "/app/v3/api/drive/quotas/summary": {
@@ -1049,10 +1054,11 @@
             "in": "query",
             "required": false,
             "schema": {
-              "type": "integer",
+              "type": "string",
               "format": "int64",
               "minimum": 1,
-              "maximum": 200
+              "maximum": 200,
+              "x-sdkwork-int64-string": true
             }
           },
           {
@@ -1607,10 +1613,11 @@
             "in": "query",
             "required": false,
             "schema": {
-              "type": "integer",
+              "type": "string",
               "format": "int64",
               "minimum": 1,
-              "maximum": 200
+              "maximum": 200,
+              "x-sdkwork-int64-string": true
             }
           },
           {
@@ -3267,10 +3274,11 @@
             "in": "query",
             "required": false,
             "schema": {
-              "type": "integer",
+              "type": "string",
               "format": "int64",
               "minimum": 1,
-              "maximum": 200
+              "maximum": 200,
+              "x-sdkwork-int64-string": true
             }
           },
           {
@@ -3817,10 +3825,11 @@
             "in": "query",
             "required": false,
             "schema": {
-              "type": "integer",
+              "type": "string",
               "format": "int64",
               "minimum": 1,
-              "maximum": 200
+              "maximum": 200,
+              "x-sdkwork-int64-string": true
             }
           },
           {
@@ -4388,10 +4397,11 @@
             "in": "query",
             "required": false,
             "schema": {
-              "type": "integer",
+              "type": "string",
               "format": "int64",
               "minimum": 1,
-              "maximum": 200
+              "maximum": 200,
+              "x-sdkwork-int64-string": true
             }
           },
           {
@@ -4617,10 +4627,11 @@
             "in": "query",
             "required": false,
             "schema": {
-              "type": "integer",
+              "type": "string",
               "format": "int64",
               "minimum": 1,
-              "maximum": 200
+              "maximum": 200,
+              "x-sdkwork-int64-string": true
             }
           },
           {
@@ -5138,7 +5149,8 @@
         "x-sdkwork-owner": "sdkwork-drive",
         "x-sdkwork-api-authority": "sdkwork-drive-app-api",
         "x-sdkwork-request-context": "WebRequestContext",
-        "x-sdkwork-api-surface": "app-api"
+        "x-sdkwork-api-surface": "app-api",
+        "parameters": []
       }
     },
     "/app/v3/api/drive/nodes/folders": {
@@ -5238,7 +5250,8 @@
         "x-sdkwork-owner": "sdkwork-drive",
         "x-sdkwork-api-authority": "sdkwork-drive-app-api",
         "x-sdkwork-request-context": "WebRequestContext",
-        "x-sdkwork-api-surface": "app-api"
+        "x-sdkwork-api-surface": "app-api",
+        "parameters": []
       }
     },
     "/app/v3/api/drive/nodes/shortcuts": {
@@ -5339,7 +5352,8 @@
         "x-sdkwork-owner": "sdkwork-drive",
         "x-sdkwork-api-authority": "sdkwork-drive-app-api",
         "x-sdkwork-request-context": "WebRequestContext",
-        "x-sdkwork-api-surface": "app-api"
+        "x-sdkwork-api-surface": "app-api",
+        "parameters": []
       }
     },
     "/app/v3/api/drive/properties/{propertyKey}/nodes": {
@@ -5368,10 +5382,11 @@
             "in": "query",
             "required": false,
             "schema": {
-              "type": "integer",
+              "type": "string",
               "format": "int64",
               "minimum": 1,
-              "maximum": 200
+              "maximum": 200,
+              "x-sdkwork-int64-string": true
             }
           },
           {
@@ -5487,10 +5502,11 @@
             "in": "query",
             "required": false,
             "schema": {
-              "type": "integer",
+              "type": "string",
               "format": "int64",
               "minimum": 1,
-              "maximum": 200
+              "maximum": 200,
+              "x-sdkwork-int64-string": true
             }
           },
           {
@@ -5641,10 +5657,11 @@
             "in": "query",
             "required": false,
             "schema": {
-              "type": "integer",
+              "type": "string",
               "format": "int64",
               "minimum": 1,
-              "maximum": 200
+              "maximum": 200,
+              "x-sdkwork-int64-string": true
             }
           },
           {
@@ -6184,10 +6201,11 @@
             "in": "query",
             "required": false,
             "schema": {
-              "type": "integer",
+              "type": "string",
               "format": "int64",
               "minimum": 1,
-              "maximum": 200
+              "maximum": 200,
+              "x-sdkwork-int64-string": true
             }
           },
           {
@@ -6579,7 +6597,7 @@
             "description": "Opaque caller-generated key binding retries to the same directory creation request.",
             "schema": {
               "type": "string",
-              "minLength": 8,
+              "minLength": 1,
               "maxLength": 128,
               "pattern": "^[A-Za-z0-9._:@-]+$"
             }
@@ -6706,7 +6724,7 @@
             "required": true,
             "schema": {
               "type": "string",
-              "minLength": 8,
+              "minLength": 1,
               "maxLength": 128,
               "pattern": "^[A-Za-z0-9._:@-]+$"
             }
@@ -7004,7 +7022,7 @@
             "required": true,
             "schema": {
               "type": "string",
-              "minLength": 8,
+              "minLength": 1,
               "maxLength": 128,
               "pattern": "^[A-Za-z0-9._:@-]+$"
             }
@@ -7183,7 +7201,7 @@
             "required": true,
             "schema": {
               "type": "string",
-              "minLength": 8,
+              "minLength": 1,
               "maxLength": 128,
               "pattern": "^[A-Za-z0-9._:@-]+$"
             }
@@ -7352,7 +7370,7 @@
             "required": true,
             "schema": {
               "type": "string",
-              "minLength": 8,
+              "minLength": 1,
               "maxLength": 128,
               "pattern": "^[A-Za-z0-9._:@-]+$"
             }
@@ -7674,7 +7692,8 @@
         "x-sdkwork-owner": "sdkwork-drive",
         "x-sdkwork-api-authority": "sdkwork-drive-app-api",
         "x-sdkwork-request-context": "WebRequestContext",
-        "x-sdkwork-api-surface": "app-api"
+        "x-sdkwork-api-surface": "app-api",
+        "parameters": []
       }
     },
     "/app/v3/api/drive/spaces/{spaceId}/website_roots": {
@@ -7793,6 +7812,16 @@
               "type": "string",
               "minLength": 1,
               "maxLength": 64
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
             }
           }
         ],
@@ -8178,6 +8207,16 @@
               "type": "string",
               "format": "uuid"
             }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            }
           }
         ],
         "requestBody": {
@@ -8281,6 +8320,16 @@
             "schema": {
               "type": "string",
               "format": "uuid"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
             }
           }
         ],
@@ -8482,10 +8531,11 @@
             "in": "query",
             "required": false,
             "schema": {
-              "type": "integer",
+              "type": "string",
               "format": "int64",
               "minimum": 1,
-              "maximum": 200
+              "maximum": 200,
+              "x-sdkwork-int64-string": true
             }
           },
           {
@@ -8863,10 +8913,11 @@
             "in": "query",
             "required": false,
             "schema": {
-              "type": "integer",
+              "type": "string",
               "format": "int64",
               "minimum": 1,
-              "maximum": 200
+              "maximum": 200,
+              "x-sdkwork-int64-string": true
             }
           },
           {
@@ -9009,10 +9060,11 @@
             "in": "query",
             "required": false,
             "schema": {
-              "type": "integer",
+              "type": "string",
               "format": "int64",
               "minimum": 1,
-              "maximum": 200
+              "maximum": 200,
+              "x-sdkwork-int64-string": true
             }
           },
           {
@@ -9350,7 +9402,8 @@
         "x-sdkwork-owner": "sdkwork-drive",
         "x-sdkwork-api-authority": "sdkwork-drive-app-api",
         "x-sdkwork-request-context": "WebRequestContext",
-        "x-sdkwork-api-surface": "app-api"
+        "x-sdkwork-api-surface": "app-api",
+        "parameters": []
       }
     },
     "/app/v3/api/drive/upload_sessions": {
@@ -9435,7 +9488,8 @@
         "x-sdkwork-owner": "sdkwork-drive",
         "x-sdkwork-api-authority": "sdkwork-drive-app-api",
         "x-sdkwork-request-context": "WebRequestContext",
-        "x-sdkwork-api-surface": "app-api"
+        "x-sdkwork-api-surface": "app-api",
+        "parameters": []
       }
     },
     "/app/v3/api/drive/upload_sessions/{uploadSessionId}": {
@@ -9976,7 +10030,8 @@
         "x-sdkwork-owner": "sdkwork-drive",
         "x-sdkwork-api-authority": "sdkwork-drive-app-api",
         "x-sdkwork-request-context": "WebRequestContext",
-        "x-sdkwork-api-surface": "app-api"
+        "x-sdkwork-api-surface": "app-api",
+        "parameters": []
       }
     },
     "/app/v3/api/drive/nodes/{nodeId}/watch": {
@@ -10563,7 +10618,8 @@
         "x-sdkwork-owner": "sdkwork-drive",
         "x-sdkwork-api-authority": "sdkwork-drive-app-api",
         "x-sdkwork-request-context": "WebRequestContext",
-        "x-sdkwork-api-surface": "app-api"
+        "x-sdkwork-api-surface": "app-api",
+        "parameters": []
       }
     },
     "/app/v3/api/drive/download_packages/{packageId}/download_url": {
@@ -10990,7 +11046,8 @@
         "x-sdkwork-owner": "sdkwork-drive",
         "x-sdkwork-api-authority": "sdkwork-drive-app-api",
         "x-sdkwork-request-context": "WebRequestContext",
-        "x-sdkwork-api-surface": "app-api"
+        "x-sdkwork-api-surface": "app-api",
+        "parameters": []
       }
     },
     "/app/v3/api/drive/uploader/uploads/{uploadItemId}/parts/{partNo}": {
@@ -12712,8 +12769,9 @@
         ],
         "properties": {
           "sequenceNo": {
-            "type": "integer",
-            "format": "int64"
+            "type": "string",
+            "format": "int64",
+            "x-sdkwork-int64-string": true
           },
           "tenantId": {
             "type": "string"
@@ -12769,9 +12827,10 @@
             "type": "string"
           },
           "contentLength": {
-            "type": "integer",
+            "type": "string",
             "format": "int64",
-            "minimum": 0
+            "minimum": 0,
+            "x-sdkwork-int64-string": true
           },
           "checksumSha256Hex": {
             "type": "string"
@@ -12883,9 +12942,10 @@
             "type": "string"
           },
           "expiresAtEpochMs": {
-            "type": "integer",
+            "type": "string",
             "format": "int64",
-            "minimum": 1
+            "minimum": 1,
+            "x-sdkwork-int64-string": true
           },
           "method": {
             "type": "string"
@@ -12922,9 +12982,10 @@
             "type": "string"
           },
           "expiresAtEpochMs": {
-            "type": "integer",
+            "type": "string",
             "format": "int64",
-            "minimum": 1
+            "minimum": 1,
+            "x-sdkwork-int64-string": true
           },
           "bucket": {
             "type": "string"
@@ -13051,14 +13112,16 @@
             ]
           },
           "expiresAtEpochMs": {
-            "type": "integer",
+            "type": "string",
             "format": "int64",
-            "minimum": 1
+            "minimum": 1,
+            "x-sdkwork-int64-string": true
           },
           "downloadLimit": {
-            "type": "integer",
+            "type": "string",
             "format": "int64",
-            "minimum": 0
+            "minimum": 0,
+            "x-sdkwork-int64-string": true
           },
           "accessCode": {
             "type": "string",
@@ -13189,9 +13252,10 @@
             "type": "string"
           },
           "expiresAtEpochMs": {
-            "type": "integer",
+            "type": "string",
             "format": "int64",
-            "minimum": 1
+            "minimum": 1,
+            "x-sdkwork-int64-string": true
           }
         }
       },
@@ -13232,8 +13296,9 @@
             "type": "string"
           },
           "version": {
-            "type": "integer",
-            "format": "int64"
+            "type": "string",
+            "format": "int64",
+            "x-sdkwork-int64-string": true
           },
           "createdBy": {
             "type": "string"
@@ -13285,8 +13350,9 @@
             "type": "string"
           },
           "version": {
-            "type": "integer",
-            "format": "int64"
+            "type": "string",
+            "format": "int64",
+            "x-sdkwork-int64-string": true
           },
           "createdBy": {
             "type": "string"
@@ -13640,8 +13706,9 @@
             ]
           },
           "version": {
-            "type": "integer",
-            "format": "int64"
+            "type": "string",
+            "format": "int64",
+            "x-sdkwork-int64-string": true
           },
           "shortcutTargetNodeId": {
             "type": "string",
@@ -13710,9 +13777,10 @@
             "description": "Coarse file category derived from contentType for list filtering and icons."
           },
           "contentLength": {
-            "type": "integer",
+            "type": "string",
             "format": "int64",
-            "description": "Byte size of the latest active file version."
+            "description": "Byte size of the latest active file version.",
+            "x-sdkwork-int64-string": true
           },
           "folderColor": {
             "type": "string",
@@ -13824,8 +13892,9 @@
             "type": "string"
           },
           "version": {
-            "type": "integer",
-            "format": "int64"
+            "type": "string",
+            "format": "int64",
+            "x-sdkwork-int64-string": true
           }
         }
       },
@@ -13976,19 +14045,22 @@
             "type": "string"
           },
           "expiresAtEpochMs": {
-            "type": "integer",
+            "type": "string",
             "format": "int64",
-            "minimum": 1
+            "minimum": 1,
+            "x-sdkwork-int64-string": true
           },
           "downloadLimit": {
-            "type": "integer",
+            "type": "string",
             "format": "int64",
-            "minimum": 0
+            "minimum": 0,
+            "x-sdkwork-int64-string": true
           },
           "downloadCount": {
-            "type": "integer",
+            "type": "string",
             "format": "int64",
-            "minimum": 0
+            "minimum": 0,
+            "x-sdkwork-int64-string": true
           },
           "accessCodeRequired": {
             "type": "boolean"
@@ -13997,8 +14069,9 @@
             "type": "string"
           },
           "version": {
-            "type": "integer",
-            "format": "int64"
+            "type": "string",
+            "format": "int64",
+            "x-sdkwork-int64-string": true
           }
         }
       },
@@ -14027,19 +14100,22 @@
             "type": "string"
           },
           "expiresAtEpochMs": {
-            "type": "integer",
+            "type": "string",
             "format": "int64",
-            "minimum": 1
+            "minimum": 1,
+            "x-sdkwork-int64-string": true
           },
           "downloadLimit": {
-            "type": "integer",
+            "type": "string",
             "format": "int64",
-            "minimum": 0
+            "minimum": 0,
+            "x-sdkwork-int64-string": true
           },
           "downloadCount": {
-            "type": "integer",
+            "type": "string",
             "format": "int64",
-            "minimum": 0
+            "minimum": 0,
+            "x-sdkwork-int64-string": true
           },
           "accessCodeRequired": {
             "type": "boolean"
@@ -14048,8 +14124,9 @@
             "type": "string"
           },
           "version": {
-            "type": "integer",
-            "format": "int64"
+            "type": "string",
+            "format": "int64",
+            "x-sdkwork-int64-string": true
           },
           "token": {
             "type": "string",
@@ -15309,8 +15386,9 @@
             "type": "string"
           },
           "version": {
-            "type": "integer",
-            "format": "int64"
+            "type": "string",
+            "format": "int64",
+            "x-sdkwork-int64-string": true
           },
           "createdBy": {
             "type": "string"
@@ -15366,12 +15444,14 @@
             ]
           },
           "expiresAtEpochMs": {
-            "type": "integer",
-            "format": "int64"
+            "type": "string",
+            "format": "int64",
+            "x-sdkwork-int64-string": true
           },
           "version": {
-            "type": "integer",
-            "format": "int64"
+            "type": "string",
+            "format": "int64",
+            "x-sdkwork-int64-string": true
           },
           "storageProviderId": {
             "type": "string",
@@ -15440,8 +15520,9 @@
             "type": "string"
           },
           "version": {
-            "type": "integer",
-            "format": "int64"
+            "type": "string",
+            "format": "int64",
+            "x-sdkwork-int64-string": true
           }
         }
       },
@@ -15463,12 +15544,14 @@
         ],
         "properties": {
           "deletedCount": {
-            "type": "integer",
-            "format": "int64"
+            "type": "string",
+            "format": "int64",
+            "x-sdkwork-int64-string": true
           },
           "skippedCount": {
-            "type": "integer",
-            "format": "int64"
+            "type": "string",
+            "format": "int64",
+            "x-sdkwork-int64-string": true
           },
           "hasMore": {
             "type": "boolean",
@@ -15552,15 +15635,17 @@
             "type": "string"
           },
           "versionNo": {
-            "type": "integer",
-            "format": "int64"
+            "type": "string",
+            "format": "int64",
+            "x-sdkwork-int64-string": true
           },
           "contentType": {
             "type": "string"
           },
           "contentLength": {
-            "type": "integer",
-            "format": "int64"
+            "type": "string",
+            "format": "int64",
+            "x-sdkwork-int64-string": true
           },
           "checksumSha256Hex": {
             "type": "string"
@@ -15848,8 +15933,9 @@
             "type": "string"
           },
           "expiresAtEpochMs": {
-            "type": "integer",
-            "format": "int64"
+            "type": "string",
+            "format": "int64",
+            "x-sdkwork-int64-string": true
           },
           "method": {
             "type": "string",
@@ -15943,20 +16029,23 @@
             "type": "string"
           },
           "usedBytes": {
-            "type": "integer",
+            "type": "string",
             "format": "int64",
-            "minimum": 0
+            "minimum": 0,
+            "x-sdkwork-int64-string": true
           },
           "objectCount": {
-            "type": "integer",
+            "type": "string",
             "format": "int64",
-            "minimum": 0
+            "minimum": 0,
+            "x-sdkwork-int64-string": true
           },
           "quotaBytes": {
-            "type": "integer",
+            "type": "string",
             "format": "int64",
             "minimum": 1,
-            "description": "Configured tenant storage quota cap from SDKWORK_DRIVE_TENANT_QUOTA_MAX_BYTES when set."
+            "description": "Configured tenant storage quota cap from SDKWORK_DRIVE_TENANT_QUOTA_MAX_BYTES when set.",
+            "x-sdkwork-int64-string": true
           }
         }
       },
@@ -16056,20 +16145,16 @@
             ]
           },
           "expiresAtEpochMs": {
-            "type": [
-              "integer",
-              "null"
-            ],
+            "type": "string",
             "format": "int64",
-            "minimum": 1
+            "minimum": 1,
+            "x-sdkwork-int64-string": true
           },
           "downloadLimit": {
-            "type": [
-              "integer",
-              "null"
-            ],
+            "type": "string",
             "format": "int64",
-            "minimum": 0
+            "minimum": 0,
+            "x-sdkwork-int64-string": true
           }
         }
       },
@@ -16136,12 +16221,14 @@
             ]
           },
           "expiresAtEpochMs": {
-            "type": "integer",
-            "format": "int64"
+            "type": "string",
+            "format": "int64",
+            "x-sdkwork-int64-string": true
           },
           "version": {
-            "type": "integer",
-            "format": "int64"
+            "type": "string",
+            "format": "int64",
+            "x-sdkwork-int64-string": true
           },
           "storageProviderId": {
             "type": "string",
@@ -16192,9 +16279,10 @@
             "default": "web_hook"
           },
           "expirationEpochMs": {
-            "type": "integer",
+            "type": "string",
             "format": "int64",
-            "minimum": 1
+            "minimum": 1,
+            "x-sdkwork-int64-string": true
           }
         },
         "additionalProperties": false
@@ -16268,9 +16356,10 @@
             "maxLength": 2048
           },
           "expirationEpochMs": {
-            "type": "integer",
+            "type": "string",
             "format": "int64",
-            "minimum": 1
+            "minimum": 1,
+            "x-sdkwork-int64-string": true
           },
           "lifecycleStatus": {
             "type": "string",
@@ -16363,9 +16452,10 @@
             "type": "string"
           },
           "contentLength": {
-            "type": "integer",
+            "type": "string",
             "format": "int64",
-            "minimum": 0
+            "minimum": 0,
+            "x-sdkwork-int64-string": true
           },
           "checksumSha256Hex": {
             "type": "string"
@@ -16426,23 +16516,27 @@
             ]
           },
           "fileCount": {
-            "type": "integer",
+            "type": "string",
             "format": "int64",
-            "minimum": 0
+            "minimum": 0,
+            "x-sdkwork-int64-string": true
           },
           "totalBytes": {
-            "type": "integer",
+            "type": "string",
             "format": "int64",
-            "minimum": 0
+            "minimum": 0,
+            "x-sdkwork-int64-string": true
           },
           "archiveSizeBytes": {
-            "type": "integer",
+            "type": "string",
             "format": "int64",
-            "minimum": 0
+            "minimum": 0,
+            "x-sdkwork-int64-string": true
           },
           "expiresAtEpochMs": {
-            "type": "integer",
-            "format": "int64"
+            "type": "string",
+            "format": "int64",
+            "x-sdkwork-int64-string": true
           },
           "downloadUrl": {
             "type": "string"
@@ -16488,14 +16582,16 @@
             "type": "boolean"
           },
           "uncompressedSizeBytes": {
-            "type": "integer",
+            "type": "string",
             "format": "int64",
-            "minimum": 0
+            "minimum": 0,
+            "x-sdkwork-int64-string": true
           },
           "compressedSizeBytes": {
-            "type": "integer",
+            "type": "string",
             "format": "int64",
-            "minimum": 0
+            "minimum": 0,
+            "x-sdkwork-int64-string": true
           },
           "contentType": {
             "type": "string"
@@ -16568,9 +16664,10 @@
             }
           },
           "extractedCount": {
-            "type": "integer",
+            "type": "string",
             "format": "int64",
-            "minimum": 0
+            "minimum": 0,
+            "x-sdkwork-int64-string": true
           }
         }
       },
@@ -16628,9 +16725,10 @@
             ]
           },
           "ttlSeconds": {
-            "type": "integer",
+            "type": "string",
             "format": "int64",
-            "minimum": 1
+            "minimum": 1,
+            "x-sdkwork-int64-string": true
           },
           "cleanupAction": {
             "type": "string",
@@ -16640,9 +16738,10 @@
             ]
           },
           "hardDeleteAfterSeconds": {
-            "type": "integer",
+            "type": "string",
             "format": "int64",
-            "minimum": 1
+            "minimum": 1,
+            "x-sdkwork-int64-string": true
           }
         }
       },
@@ -16713,14 +16812,16 @@
             "maxLength": 255
           },
           "contentLength": {
-            "type": "integer",
+            "type": "string",
             "format": "int64",
-            "minimum": 0
+            "minimum": 0,
+            "x-sdkwork-int64-string": true
           },
           "chunkSizeBytes": {
-            "type": "integer",
+            "type": "string",
             "format": "int64",
-            "minimum": 1
+            "minimum": 1,
+            "x-sdkwork-int64-string": true
           },
           "spaceId": {
             "type": "string",
@@ -16734,9 +16835,10 @@
             "$ref": "#/components/schemas/UploaderRetentionRequest"
           },
           "nowEpochMs": {
-            "type": "integer",
+            "type": "string",
             "format": "int64",
-            "minimum": 1
+            "minimum": 1,
+            "x-sdkwork-int64-string": true
           },
           "scene": {
             "type": "string",
@@ -16856,27 +16958,32 @@
             "type": "string"
           },
           "contentLength": {
-            "type": "integer",
-            "format": "int64"
+            "type": "string",
+            "format": "int64",
+            "x-sdkwork-int64-string": true
           },
           "checksumSha256Hex": {
             "type": "string"
           },
           "chunkSizeBytes": {
-            "type": "integer",
-            "format": "int64"
+            "type": "string",
+            "format": "int64",
+            "x-sdkwork-int64-string": true
           },
           "totalParts": {
-            "type": "integer",
-            "format": "int64"
+            "type": "string",
+            "format": "int64",
+            "x-sdkwork-int64-string": true
           },
           "uploadedPartsCount": {
-            "type": "integer",
-            "format": "int64"
+            "type": "string",
+            "format": "int64",
+            "x-sdkwork-int64-string": true
           },
           "uploadedBytes": {
-            "type": "integer",
-            "format": "int64"
+            "type": "string",
+            "format": "int64",
+            "x-sdkwork-int64-string": true
           },
           "status": {
             "type": "string"
@@ -16885,15 +16992,17 @@
             "type": "string"
           },
           "retentionExpiresAtEpochMs": {
-            "type": "integer",
-            "format": "int64"
+            "type": "string",
+            "format": "int64",
+            "x-sdkwork-int64-string": true
           },
           "cleanupAction": {
             "type": "string"
           },
           "hardDeleteAfterEpochMs": {
-            "type": "integer",
-            "format": "int64"
+            "type": "string",
+            "format": "int64",
+            "x-sdkwork-int64-string": true
           },
           "cleanupStatus": {
             "type": "string"
@@ -16946,14 +17055,16 @@
             "minLength": 1
           },
           "offsetBytes": {
-            "type": "integer",
+            "type": "string",
             "format": "int64",
-            "minimum": 0
+            "minimum": 0,
+            "x-sdkwork-int64-string": true
           },
           "sizeBytes": {
-            "type": "integer",
+            "type": "string",
             "format": "int64",
-            "minimum": 1
+            "minimum": 1,
+            "x-sdkwork-int64-string": true
           },
           "etag": {
             "type": "string",
@@ -16963,9 +17074,10 @@
             "type": "string"
           },
           "uploadedAtEpochMs": {
-            "type": "integer",
+            "type": "string",
             "format": "int64",
-            "minimum": 1
+            "minimum": 1,
+            "x-sdkwork-int64-string": true
           }
         }
       },
@@ -16996,16 +17108,19 @@
             "type": "string"
           },
           "partNo": {
-            "type": "integer",
-            "format": "int64"
+            "type": "string",
+            "format": "int64",
+            "x-sdkwork-int64-string": true
           },
           "offsetBytes": {
-            "type": "integer",
-            "format": "int64"
+            "type": "string",
+            "format": "int64",
+            "x-sdkwork-int64-string": true
           },
           "sizeBytes": {
-            "type": "integer",
-            "format": "int64"
+            "type": "string",
+            "format": "int64",
+            "x-sdkwork-int64-string": true
           },
           "etag": {
             "type": "string"
@@ -17017,12 +17132,14 @@
             "type": "string"
           },
           "retryCount": {
-            "type": "integer",
-            "format": "int64"
+            "type": "string",
+            "format": "int64",
+            "x-sdkwork-int64-string": true
           },
           "uploadedAtEpochMs": {
-            "type": "integer",
-            "format": "int64"
+            "type": "string",
+            "format": "int64",
+            "x-sdkwork-int64-string": true
           }
         }
       },
@@ -17230,10 +17347,11 @@
             "description": "Legacy alias for mimeType."
           },
           "durationMs": {
-            "type": "integer",
+            "type": "string",
             "format": "int64",
             "deprecated": true,
-            "description": "Legacy duration field. Use durationSeconds."
+            "description": "Legacy duration field. Use durationSeconds.",
+            "x-sdkwork-int64-string": true
           },
           "checksumSha256": {
             "type": "string",
@@ -17579,8 +17697,9 @@
             "type": "string"
           },
           "sortOrder": {
-            "type": "integer",
-            "format": "int64"
+            "type": "string",
+            "format": "int64",
+            "x-sdkwork-int64-string": true
           }
         }
       },
@@ -17606,8 +17725,9 @@
             "type": "string"
           },
           "sortOrder": {
-            "type": "integer",
-            "format": "int64"
+            "type": "string",
+            "format": "int64",
+            "x-sdkwork-int64-string": true
           }
         }
       },
