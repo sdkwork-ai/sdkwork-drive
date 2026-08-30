@@ -11,6 +11,8 @@ Platform standard: `../../sdkwork-specs/APP_RUNTIME_TOPOLOGY_SPEC.md`.
 | `cloud.development` | `pnpm dev:cloud`, `pnpm dev:desktop:cloud` |
 | `standalone.production` | `pnpm build:prod` |
 | `cloud.production` | `pnpm build` |
+| `standalone.demo` | Independent standalone demo deployment |
+| `cloud.demo` | Cloud independent demo deployment |
 
 `cloud.development` declares only local browser/desktop clients. Both public
 surfaces resolve to the deployed `platform.api-gateway` surface, and local gateway
