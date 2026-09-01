@@ -33,54 +33,6 @@ export declare const operations: {
         readonly method: "GET";
         readonly path: "/app/v3/api/drive/nodes/{nodeId}/archive_entries";
     };
-    readonly "assetCollectionItems.create": {
-        readonly method: "POST";
-        readonly path: "/app/v3/api/assets/collections/{collectionId}/items";
-    };
-    readonly "assetCollectionItems.delete": {
-        readonly method: "DELETE";
-        readonly path: "/app/v3/api/assets/collections/{collectionId}/items/{itemId}";
-    };
-    readonly "assetCollections.create": {
-        readonly method: "POST";
-        readonly path: "/app/v3/api/assets/collections";
-    };
-    readonly "assetCollections.list": {
-        readonly method: "GET";
-        readonly path: "/app/v3/api/assets/collections";
-    };
-    readonly "assetRelations.create": {
-        readonly method: "POST";
-        readonly path: "/app/v3/api/assets/{assetId}/relations";
-    };
-    readonly "assetRelations.delete": {
-        readonly method: "DELETE";
-        readonly path: "/app/v3/api/assets/{assetId}/relations/{relationId}";
-    };
-    readonly "assets.archive": {
-        readonly method: "POST";
-        readonly path: "/app/v3/api/assets/{assetId}/archive";
-    };
-    readonly "assets.create": {
-        readonly method: "POST";
-        readonly path: "/app/v3/api/assets";
-    };
-    readonly "assets.list": {
-        readonly method: "GET";
-        readonly path: "/app/v3/api/assets";
-    };
-    readonly "assets.restore": {
-        readonly method: "POST";
-        readonly path: "/app/v3/api/assets/{assetId}/restore";
-    };
-    readonly "assets.retrieve": {
-        readonly method: "GET";
-        readonly path: "/app/v3/api/assets/{assetId}";
-    };
-    readonly "assets.update": {
-        readonly method: "PATCH";
-        readonly path: "/app/v3/api/assets/{assetId}";
-    };
     readonly "changes.list": {
         readonly method: "GET";
         readonly path: "/app/v3/api/drive/changes";

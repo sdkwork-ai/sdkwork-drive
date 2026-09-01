@@ -1,6 +1,6 @@
 {
   "name": "@sdkwork/drive-admin-storage-sdk",
-  "version": "0.1.2",
+  "version": "0.1.4",
   "description": "SDKWork Drive Admin Storage SDK composed facade.",
   "type": "module",
   "private": false,

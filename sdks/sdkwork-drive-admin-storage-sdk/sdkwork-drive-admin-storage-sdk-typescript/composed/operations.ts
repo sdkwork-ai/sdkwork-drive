@@ -18,7 +18,7 @@ export const operations = {
   "storageProviderBindings.default.retrieve": { method: "GET", path: "/backend/v3/api/drive/storage/bindings/default" },
   "storageProviderBindings.default.update": { method: "PUT", path: "/backend/v3/api/drive/storage/bindings/default" },
   "storageProviderBindings.list": { method: "GET", path: "/backend/v3/api/drive/storage/bindings" },
-  "storageProviderKinds.initialize": { method: "POST", path: "/backend/v3/api/drive/storage/provider-kinds" },
+  "storageProviderKinds.create": { method: "POST", path: "/backend/v3/api/drive/storage/provider-kinds" },
   "storageProviderKinds.list": { method: "GET", path: "/backend/v3/api/drive/storage/provider-kinds" },
   "storageProviderKinds.update": { method: "PATCH", path: "/backend/v3/api/drive/storage/provider-kinds/{providerKind}" },
   "storageProviders.activate": { method: "POST", path: "/backend/v3/api/drive/storage/providers/{providerId}/activate" },

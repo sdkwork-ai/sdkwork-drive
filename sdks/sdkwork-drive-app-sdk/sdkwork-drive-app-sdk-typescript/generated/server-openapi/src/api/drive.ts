@@ -1,62 +1,8 @@
 import { appApiPath } from './paths';
 import type { ApiRequestOptions, HttpClient } from '../http/client';
 
-import type { ActivateWebsiteGenerationRequest, ApplyNodeLabelRequest, ArchiveEntry, AssetActionRequest, AssetItem, AssetListData, ChangeListData, CheckFavoriteNodesRequest, ClaimShareLinkResponse, CompleteUploadSessionRequest, CopyNodeRequest, CreateAssetRequest, CreateCommentReplyRequest, CreateCommentRequest, CreateDownloadGrantRequest, CreateDownloadPackageRequest, CreateDownloadUrlRequest, CreateDownloadUrlResponse, CreateDriveSandboxDirectoryRequest, CreateDriveSandboxFileRequest, CreateFileRequest, CreateFileResponse, CreateFolderRequest, CreatePermissionRequest, CreateShareLinkRequest, CreateShareLinkResponse, CreateShortcutRequest, CreateSpaceRequest, CreateUploadSessionRequest, CreateWatchChannelRequest, CreateWebsiteRootRequest, CreateWebsiteSyncRequest, DownloadPackageResponse, DriveComment, DriveCommentReply, DriveNode, DriveNodeListData, DriveNodeProperty, DrivePermission, DriveSandboxEntry, DriveSandboxEntryListData, DriveSandboxFileContent, DriveSandboxMutationCommandData, DriveSandboxVolumeListData, DriveShareLink, DriveSpace, DriveUploadSession, DriveWatchChannel, DriveWatchChannelListData, EffectivePermission, EmptyTrashRequest, EmptyTrashResponse, ExtractArchiveEntriesRequest, ExtractArchiveEntriesResponse, FavoriteNodeRequest, FavoriteNodeResponse, FileVersion, FileVersionListData, MarkUploaderPartUploadedRequest, MoveNodeRequest, NodeCapabilitiesResponse, NodeCommandRequest, NodeLabel, NodePathResponse, PageInfo, PositiveInt64String, PrepareUploaderUploadRequest, PrepareUploaderUploadResponse, PresignedUploadPart, PresignUploadPartRequest, PurgeDriveSandboxEntryRequest, QuotaSummary, SetNodePropertyRequest, StartPageTokenResponse, StopWatchChannelRequest, StopWatchChannelResponse, UpdateAssetRequest, UpdateCommentReplyRequest, UpdateCommentRequest, UpdateDriveSandboxEntryRequest, UpdateDriveSandboxFileContentRequest, UpdateNodeRequest, UpdatePermissionRequest, UpdateShareLinkRequest, UpdateSpaceRequest, UploaderUploadPart, WebsiteGenerationActivation, WebsiteRoot, WebsiteRootPageData, WebsiteSync, WebsiteSyncActivation, WebsiteSyncVersionRequest } from '../types';
+import type { ActivateWebsiteGenerationRequest, ApplyNodeLabelRequest, ArchiveEntry, ChangeListData, CheckFavoriteNodesRequest, ClaimShareLinkResponse, CompleteUploadSessionRequest, CopyNodeRequest, CreateCommentReplyRequest, CreateCommentRequest, CreateDownloadGrantRequest, CreateDownloadPackageRequest, CreateDownloadUrlRequest, CreateDownloadUrlResponse, CreateDriveSandboxDirectoryRequest, CreateDriveSandboxFileRequest, CreateFileRequest, CreateFileResponse, CreateFolderRequest, CreatePermissionRequest, CreateShareLinkRequest, CreateShareLinkResponse, CreateShortcutRequest, CreateSpaceRequest, CreateUploadSessionRequest, CreateWatchChannelRequest, CreateWebsiteRootRequest, CreateWebsiteSyncRequest, DownloadPackageResponse, DriveComment, DriveCommentReply, DriveNode, DriveNodeListData, DriveNodeProperty, DrivePermission, DriveSandboxEntry, DriveSandboxEntryListData, DriveSandboxFileContent, DriveSandboxMutationCommandData, DriveSandboxVolumeListData, DriveShareLink, DriveSpace, DriveUploadSession, DriveWatchChannel, DriveWatchChannelListData, EffectivePermission, EmptyTrashRequest, EmptyTrashResponse, ExtractArchiveEntriesRequest, ExtractArchiveEntriesResponse, FavoriteNodeRequest, FavoriteNodeResponse, FileVersion, FileVersionListData, MarkUploaderPartUploadedRequest, MoveNodeRequest, NodeCapabilitiesResponse, NodeCommandRequest, NodeLabel, NodePathResponse, PageInfo, PositiveInt64String, PrepareUploaderUploadRequest, PrepareUploaderUploadResponse, PresignedUploadPart, PresignUploadPartRequest, PurgeDriveSandboxEntryRequest, QuotaSummary, SetNodePropertyRequest, StartPageTokenResponse, StopWatchChannelRequest, StopWatchChannelResponse, UpdateCommentReplyRequest, UpdateCommentRequest, UpdateDriveSandboxEntryRequest, UpdateDriveSandboxFileContentRequest, UpdateNodeRequest, UpdatePermissionRequest, UpdateShareLinkRequest, UpdateSpaceRequest, UploaderUploadPart, WebsiteGenerationActivation, WebsiteRoot, WebsiteRootPageData, WebsiteSync, WebsiteSyncActivation, WebsiteSyncVersionRequest } from '../types';
 
-
-export interface DriveAssetsListParams {
-  cursor?: string;
-  pageSize?: number;
-  kind?: string;
-  sourceType?: string;
-  q?: string;
-}
-
-export class DriveAssetsApi {
-  private client: HttpClient;
-
-  constructor(client: HttpClient) {
-    this.client = client;
-  }
-
-
-/** List global assets */
-  async list(params?: DriveAssetsListParams, requestOptions?: ApiRequestOptions): Promise<AssetListData> {
-    const query = buildQueryString([
-      { name: 'cursor', value: params?.cursor, style: 'form', explode: true, allowReserved: false },
-      { name: 'page_size', value: params?.pageSize, style: 'form', explode: true, allowReserved: false },
-      { name: 'kind', value: params?.kind, style: 'form', explode: true, allowReserved: false },
-      { name: 'sourceType', value: params?.sourceType, style: 'form', explode: true, allowReserved: false },
-      { name: 'q', value: params?.q, style: 'form', explode: true, allowReserved: false },
-    ]);
-    return this.client.request<AssetListData>(appendQueryString(appApiPath(`/assets`), query), { ...(requestOptions?.signal !== undefined ? { signal: requestOptions.signal } : {}), ...(requestOptions?.timeout !== undefined ? { timeout: requestOptions.timeout } : {}), method: 'GET' as any, sdkworkUnwrapKind: 'page' });
-  }
-
-/** Create a global asset metadata record */
-  async create(body: CreateAssetRequest, requestOptions?: ApiRequestOptions): Promise<AssetItem> {
-    return this.client.request<AssetItem>(appApiPath(`/assets`), { ...(requestOptions?.signal !== undefined ? { signal: requestOptions.signal } : {}), ...(requestOptions?.timeout !== undefined ? { timeout: requestOptions.timeout } : {}), method: 'POST' as any, body, contentType: 'application/json', sdkworkUnwrapKind: 'item' });
-  }
-
-/** Get a global asset */
-  async retrieve(assetId: string, requestOptions?: ApiRequestOptions): Promise<AssetItem> {
-    return this.client.request<AssetItem>(appApiPath(`/assets/${serializePathParameter(assetId, { name: 'assetId', style: 'simple', explode: false })}`), { ...(requestOptions?.signal !== undefined ? { signal: requestOptions.signal } : {}), ...(requestOptions?.timeout !== undefined ? { timeout: requestOptions.timeout } : {}), method: 'GET' as any, sdkworkUnwrapKind: 'item' });
-  }
-
-/** Update a global asset */
-  async update(assetId: string, body: UpdateAssetRequest, requestOptions?: ApiRequestOptions): Promise<AssetItem> {
-    return this.client.request<AssetItem>(appApiPath(`/assets/${serializePathParameter(assetId, { name: 'assetId', style: 'simple', explode: false })}`), { ...(requestOptions?.signal !== undefined ? { signal: requestOptions.signal } : {}), ...(requestOptions?.timeout !== undefined ? { timeout: requestOptions.timeout } : {}), method: 'PATCH' as any, body, contentType: 'application/json', sdkworkUnwrapKind: 'item' });
-  }
-
-/** Archive a global asset */
-  async archive(assetId: string, body: AssetActionRequest, requestOptions?: ApiRequestOptions): Promise<AssetItem> {
-    return this.client.request<AssetItem>(appApiPath(`/assets/${serializePathParameter(assetId, { name: 'assetId', style: 'simple', explode: false })}/archive`), { ...(requestOptions?.signal !== undefined ? { signal: requestOptions.signal } : {}), ...(requestOptions?.timeout !== undefined ? { timeout: requestOptions.timeout } : {}), method: 'POST' as any, body, contentType: 'application/json', sdkworkUnwrapKind: 'item' });
-  }
-
-/** Restore an archived global asset */
-  async restore(assetId: string, body: AssetActionRequest, requestOptions?: ApiRequestOptions): Promise<AssetItem> {
-    return this.client.request<AssetItem>(appApiPath(`/assets/${serializePathParameter(assetId, { name: 'assetId', style: 'simple', explode: false })}/restore`), { ...(requestOptions?.signal !== undefined ? { signal: requestOptions.signal } : {}), ...(requestOptions?.timeout !== undefined ? { timeout: requestOptions.timeout } : {}), method: 'POST' as any, body, contentType: 'application/json', sdkworkUnwrapKind: 'item' });
-  }
-}
 
 export class DriveUploaderUploadsPartsApi {
   private client: HttpClient;
@@ -259,6 +205,14 @@ export interface DriveWebsiteRootsSyncsCreateParams {
   idempotencyKey: string;
 }
 
+export interface DriveWebsiteRootsSyncsFinalizeParams {
+  idempotencyKey: string;
+}
+
+export interface DriveWebsiteRootsSyncsAbortParams {
+  idempotencyKey: string;
+}
+
 export class DriveWebsiteRootsSyncsApi {
   private client: HttpClient;
 
@@ -284,19 +238,35 @@ export class DriveWebsiteRootsSyncsApi {
   }
 
 /** Validate and atomically activate a complete website tree */
-  async finalize(rootUuid: string, syncId: string, body: WebsiteSyncVersionRequest, requestOptions?: ApiRequestOptions): Promise<WebsiteSyncActivation> {
-    return this.client.request<WebsiteSyncActivation>(appApiPath(`/drive/website_roots/${serializePathParameter(rootUuid, { name: 'rootUuid', style: 'simple', explode: false })}/syncs/${serializePathParameter(syncId, { name: 'syncId', style: 'simple', explode: false })}/finalize`), { ...(requestOptions?.signal !== undefined ? { signal: requestOptions.signal } : {}), ...(requestOptions?.timeout !== undefined ? { timeout: requestOptions.timeout } : {}), method: 'POST' as any, body, contentType: 'application/json', sdkworkUnwrapKind: 'item' });
+  async finalize(rootUuid: string, syncId: string, body: WebsiteSyncVersionRequest, params: DriveWebsiteRootsSyncsFinalizeParams, requestOptions?: ApiRequestOptions): Promise<WebsiteSyncActivation> {
+    const requestHeaders = buildRequestHeaders(
+      {
+        'Idempotency-Key': { value: params.idempotencyKey, style: 'simple', explode: false },
+      },
+      {}
+    );
+    return this.client.request<WebsiteSyncActivation>(appApiPath(`/drive/website_roots/${serializePathParameter(rootUuid, { name: 'rootUuid', style: 'simple', explode: false })}/syncs/${serializePathParameter(syncId, { name: 'syncId', style: 'simple', explode: false })}/finalize`), { ...(requestOptions?.signal !== undefined ? { signal: requestOptions.signal } : {}), ...(requestOptions?.timeout !== undefined ? { timeout: requestOptions.timeout } : {}), method: 'POST' as any, body, contentType: 'application/json', ...(requestHeaders !== undefined ? { headers: requestHeaders } : {}), sdkworkUnwrapKind: 'item' });
   }
 
 /** Abort an unactivated website synchronization */
-  async abort(rootUuid: string, syncId: string, body: WebsiteSyncVersionRequest, requestOptions?: ApiRequestOptions): Promise<WebsiteSync> {
-    return this.client.request<WebsiteSync>(appApiPath(`/drive/website_roots/${serializePathParameter(rootUuid, { name: 'rootUuid', style: 'simple', explode: false })}/syncs/${serializePathParameter(syncId, { name: 'syncId', style: 'simple', explode: false })}/abort`), { ...(requestOptions?.signal !== undefined ? { signal: requestOptions.signal } : {}), ...(requestOptions?.timeout !== undefined ? { timeout: requestOptions.timeout } : {}), method: 'POST' as any, body, contentType: 'application/json', sdkworkUnwrapKind: 'item' });
+  async abort(rootUuid: string, syncId: string, body: WebsiteSyncVersionRequest, params: DriveWebsiteRootsSyncsAbortParams, requestOptions?: ApiRequestOptions): Promise<WebsiteSync> {
+    const requestHeaders = buildRequestHeaders(
+      {
+        'Idempotency-Key': { value: params.idempotencyKey, style: 'simple', explode: false },
+      },
+      {}
+    );
+    return this.client.request<WebsiteSync>(appApiPath(`/drive/website_roots/${serializePathParameter(rootUuid, { name: 'rootUuid', style: 'simple', explode: false })}/syncs/${serializePathParameter(syncId, { name: 'syncId', style: 'simple', explode: false })}/abort`), { ...(requestOptions?.signal !== undefined ? { signal: requestOptions.signal } : {}), ...(requestOptions?.timeout !== undefined ? { timeout: requestOptions.timeout } : {}), method: 'POST' as any, body, contentType: 'application/json', ...(requestHeaders !== undefined ? { headers: requestHeaders } : {}), sdkworkUnwrapKind: 'item' });
   }
 }
 
 export interface DriveWebsiteRootsListParams {
   pageSize?: number;
   cursor?: string;
+}
+
+export interface DriveWebsiteRootsCreateParams {
+  idempotencyKey: string;
 }
 
 export class DriveWebsiteRootsApi {
@@ -319,8 +289,14 @@ async list(spaceId: string, params?: DriveWebsiteRootsListParams, requestOptions
     return this.client.request<WebsiteRootPageData>(appendQueryString(appApiPath(`/drive/spaces/${serializePathParameter(spaceId, { name: 'spaceId', style: 'simple', explode: false })}/website_roots`), query), { ...(requestOptions?.signal !== undefined ? { signal: requestOptions.signal } : {}), ...(requestOptions?.timeout !== undefined ? { timeout: requestOptions.timeout } : {}), method: 'GET' as any, sdkworkUnwrapKind: 'page' });
   }
 
-async create(spaceId: string, body: CreateWebsiteRootRequest, requestOptions?: ApiRequestOptions): Promise<WebsiteRoot> {
-    return this.client.request<WebsiteRoot>(appApiPath(`/drive/spaces/${serializePathParameter(spaceId, { name: 'spaceId', style: 'simple', explode: false })}/website_roots`), { ...(requestOptions?.signal !== undefined ? { signal: requestOptions.signal } : {}), ...(requestOptions?.timeout !== undefined ? { timeout: requestOptions.timeout } : {}), method: 'POST' as any, body, contentType: 'application/json', sdkworkUnwrapKind: 'item' });
+async create(spaceId: string, body: CreateWebsiteRootRequest, params: DriveWebsiteRootsCreateParams, requestOptions?: ApiRequestOptions): Promise<WebsiteRoot> {
+    const requestHeaders = buildRequestHeaders(
+      {
+        'Idempotency-Key': { value: params.idempotencyKey, style: 'simple', explode: false },
+      },
+      {}
+    );
+    return this.client.request<WebsiteRoot>(appApiPath(`/drive/spaces/${serializePathParameter(spaceId, { name: 'spaceId', style: 'simple', explode: false })}/website_roots`), { ...(requestOptions?.signal !== undefined ? { signal: requestOptions.signal } : {}), ...(requestOptions?.timeout !== undefined ? { timeout: requestOptions.timeout } : {}), method: 'POST' as any, body, contentType: 'application/json', ...(requestHeaders !== undefined ? { headers: requestHeaders } : {}), sdkworkUnwrapKind: 'item' });
   }
 
 async retrieve(rootUuid: string, requestOptions?: ApiRequestOptions): Promise<WebsiteRoot> {
@@ -1299,7 +1275,6 @@ export class DriveApi {
   public readonly downloadPackages: DriveDownloadPackagesApi;
   public readonly archiveEntries: DriveArchiveEntriesApi;
   public readonly uploader: DriveUploaderApi;
-  public readonly assets: DriveAssetsApi;
 
   constructor(client: HttpClient) {
     this.changes = new DriveChangesApi(client);
@@ -1334,7 +1309,6 @@ export class DriveApi {
     this.downloadPackages = new DriveDownloadPackagesApi(client);
     this.archiveEntries = new DriveArchiveEntriesApi(client);
     this.uploader = new DriveUploaderApi(client);
-    this.assets = new DriveAssetsApi(client);
   }
 
 }

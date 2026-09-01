@@ -21,7 +21,6 @@ export class HttpClient extends BaseHttpClient {
   private static readonly ACCESS_TOKEN_HEADER: string = 'Access-Token';
   private static readonly API_KEY_USE_BEARER = false;
   private static readonly SDKWORK_V3_UNWRAP = false;
-  private static readonly SDKWORK_V3_REQUEST_FINGERPRINTS = false;
   private static readonly REQUIRES_SDKWORK_ACCESS_TOKEN = false;
 
   constructor(config: SdkworkCustomConfig) {

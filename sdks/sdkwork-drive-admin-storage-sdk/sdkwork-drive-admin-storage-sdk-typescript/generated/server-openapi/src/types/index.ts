@@ -46,7 +46,7 @@ export type { StorageProvidersObjectsCopyResponse } from './storage-providers-ob
 export type { StorageProvidersBucketsListResponse } from './storage-providers-buckets-list-response';
 export type { StorageProviderBindingsListResponse } from './storage-provider-bindings-list-response';
 export type { StorageProviderKindsListResponse } from './storage-provider-kinds-list-response';
-export type { StorageProviderKindsInitializeResponse } from './storage-provider-kinds-initialize-response';
+export type { StorageProviderKindsCreateResponse201 } from './storage-provider-kinds-create-response201';
 export type { StorageProviderKindsUpdateResponse } from './storage-provider-kinds-update-response';
 export type { StorageProvidersObjectsContentRetrieveResponse } from './storage-providers-objects-content-retrieve-response';
 export type { StorageProvidersObjectsContentUpdateResponse } from './storage-providers-objects-content-update-response';
