@@ -154,15 +154,7 @@ pub(crate) async fn list_property_nodes(
     )
     .await?;
 
-    present_node_list(
-        &state.pool,
-        &tenant_id,
-        items,
-        page,
-        next_page_token,
-        false,
-    )
-    .await
+    present_node_list(&state.pool, &tenant_id, items, page, next_page_token, false).await
 }
 pub(crate) async fn set_node_property(
     State(state): State<AppState>,

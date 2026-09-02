@@ -53,9 +53,7 @@ pub fn map_service_error(error: DriveServiceError) -> (StatusCode, Json<ProblemD
     }
 }
 
-pub fn map_download_token_error(
-    error: DriveServiceError,
-) -> (StatusCode, Json<ProblemDetail>) {
+pub fn map_download_token_error(error: DriveServiceError) -> (StatusCode, Json<ProblemDetail>) {
     match error {
         DriveServiceError::NotFound(detail) if detail.contains("expired") => problem(
             StatusCode::GONE,
@@ -190,9 +188,7 @@ pub fn validation_problem(detail: impl Into<String>) -> (StatusCode, Json<Proble
     )
 }
 
-pub fn invalid_parameter_problem(
-    detail: impl Into<String>,
-) -> (StatusCode, Json<ProblemDetail>) {
+pub fn invalid_parameter_problem(detail: impl Into<String>) -> (StatusCode, Json<ProblemDetail>) {
     problem(
         StatusCode::BAD_REQUEST,
         "invalid parameter",
@@ -212,9 +208,7 @@ pub fn missing_required_field_problem(
     )
 }
 
-pub fn malformed_request_problem(
-    detail: impl Into<String>,
-) -> (StatusCode, Json<ProblemDetail>) {
+pub fn malformed_request_problem(detail: impl Into<String>) -> (StatusCode, Json<ProblemDetail>) {
     problem(
         StatusCode::BAD_REQUEST,
         "malformed request",
@@ -234,9 +228,7 @@ pub fn precondition_required_problem(
     )
 }
 
-pub fn precondition_failed_problem(
-    detail: impl Into<String>,
-) -> (StatusCode, Json<ProblemDetail>) {
+pub fn precondition_failed_problem(detail: impl Into<String>) -> (StatusCode, Json<ProblemDetail>) {
     problem(
         StatusCode::PRECONDITION_FAILED,
         "precondition failed",
@@ -245,9 +237,7 @@ pub fn precondition_failed_problem(
     )
 }
 
-pub fn payload_too_large_problem(
-    detail: impl Into<String>,
-) -> (StatusCode, Json<ProblemDetail>) {
+pub fn payload_too_large_problem(detail: impl Into<String>) -> (StatusCode, Json<ProblemDetail>) {
     problem(
         StatusCode::PAYLOAD_TOO_LARGE,
         "payload too large",

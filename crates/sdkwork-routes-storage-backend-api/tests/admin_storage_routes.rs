@@ -84,20 +84,12 @@ async fn mock_s3_endpoint(
             .into_response();
     }
     if method == Method::HEAD {
-        return (
-            StatusCode::OK,
-            [("content-length", "0")],
-            Body::empty(),
-        )
-            .into_response();
+        return (StatusCode::OK, [("content-length", "0")], Body::empty()).into_response();
     }
     if method == Method::GET && uri.path() == "/bucket-admin/objects/notes.txt" {
         return (
             StatusCode::OK,
-            [
-                ("content-type", "text/plain"),
-                ("content-length", "11"),
-            ],
+            [("content-type", "text/plain"), ("content-length", "11")],
             Body::from("hello world"),
         )
             .into_response();
@@ -1200,7 +1192,10 @@ async fn admin_storage_object_content_routes_write_then_read_through_configured_
             .expect("object content read response body should be read"),
     )
     .expect("object content read response should be json");
-    assert_eq!(get_payload["data"]["item"]["objectKey"], "objects/notes.txt");
+    assert_eq!(
+        get_payload["data"]["item"]["objectKey"],
+        "objects/notes.txt"
+    );
     assert_eq!(get_payload["data"]["item"]["sizeBytes"], 11);
     assert_eq!(get_payload["data"]["item"]["encoding"], "base64");
     assert_eq!(get_payload["data"]["item"]["content"], "aGVsbG8gd29ybGQ=");
@@ -1242,30 +1237,41 @@ async fn admin_storage_object_content_routes_write_then_read_through_configured_
             .expect("object directory placeholder response body should be read"),
     )
     .expect("object directory placeholder response should be json");
-    assert_eq!(put_dir_payload["data"]["item"]["objectKey"], "objects/folder/");
+    assert_eq!(
+        put_dir_payload["data"]["item"]["objectKey"],
+        "objects/folder/"
+    );
 
     let requests = captured_requests
         .lock()
         .expect("captured s3 requests mutex should not be poisoned")
         .clone();
     assert!(
-        requests.iter().any(|request| request.method == "PUT"
-            && request.path == "/bucket-admin/objects/notes.txt"),
+        requests
+            .iter()
+            .any(|request| request.method == "PUT"
+                && request.path == "/bucket-admin/objects/notes.txt"),
         "object content write route should call S3 PutObject"
     );
     assert!(
-        requests.iter().any(|request| request.method == "PUT"
-            && request.path == "/bucket-admin/objects/blob.bin"),
+        requests
+            .iter()
+            .any(|request| request.method == "PUT"
+                && request.path == "/bucket-admin/objects/blob.bin"),
         "base64 object content write route should call S3 PutObject"
     );
     assert!(
-        requests.iter().any(|request| request.method == "PUT"
-            && request.path == "/bucket-admin/objects/folder/"),
+        requests
+            .iter()
+            .any(|request| request.method == "PUT"
+                && request.path == "/bucket-admin/objects/folder/"),
         "directory placeholder write route should call S3 PutObject with trailing slash key"
     );
     assert!(
-        requests.iter().any(|request| request.method == "GET"
-            && request.path == "/bucket-admin/objects/notes.txt"),
+        requests
+            .iter()
+            .any(|request| request.method == "GET"
+                && request.path == "/bucket-admin/objects/notes.txt"),
         "object content read route should call S3 GetObject"
     );
 }
@@ -1523,8 +1529,8 @@ async fn admin_storage_database_router_can_receive_explicit_plugin_config() {
         eprintln!("skip PostgreSQL integration test: SDKWORK_DATABASE_URL is not set");
         return;
     };
-    let database_config = DatabaseConfig::from_url(&database_url)
-        .expect("postgres database config should parse");
+    let database_config =
+        DatabaseConfig::from_url(&database_url).expect("postgres database config should parse");
     let router = build_router_with_database_config_and_admin_storage_config(
         &database_config,
         AdminStorageConfig {
@@ -2305,7 +2311,8 @@ async fn admin_storage_provider_kind_disable_blocks_reactivation() {
 }
 
 #[tokio::test]
-async fn admin_storage_object_content_routes_handle_literal_percent_keys_and_directory_placeholders() {
+async fn admin_storage_object_content_routes_handle_literal_percent_keys_and_directory_placeholders(
+) {
     let (s3_endpoint, captured_requests) = start_s3_mock_server().await;
     let Some((pool, _database_guard)) = sdkwork_drive_test_support::postgres_test_database().await
     else {
@@ -2352,8 +2359,7 @@ async fn admin_storage_object_content_routes_handle_literal_percent_keys_and_dir
     )
     .expect("response should be json");
     assert_eq!(
-        put_payload["data"]["item"]["objectKey"],
-        "objects/50%20off.txt",
+        put_payload["data"]["item"]["objectKey"], "objects/50%20off.txt",
         "literal percent signs must survive exactly one decode"
     );
 
@@ -2424,13 +2430,17 @@ async fn admin_storage_object_content_routes_handle_literal_percent_keys_and_dir
         "literal percent key should be stored verbatim"
     );
     assert!(
-        requests.iter().any(|request| request.method == "PUT"
-            && request.path == "/bucket-admin/objects/100%.txt"),
+        requests
+            .iter()
+            .any(|request| request.method == "PUT"
+                && request.path == "/bucket-admin/objects/100%.txt"),
         "trailing percent key should be stored verbatim"
     );
     assert!(
-        requests.iter().any(|request| request.method == "DELETE"
-            && request.path == "/bucket-admin/objects/docs/"),
+        requests
+            .iter()
+            .any(|request| request.method == "DELETE"
+                && request.path == "/bucket-admin/objects/docs/"),
         "directory placeholder object should be deletable"
     );
 }

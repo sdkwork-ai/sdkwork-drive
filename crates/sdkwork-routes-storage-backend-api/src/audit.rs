@@ -22,7 +22,14 @@ pub(crate) async fn record_storage_provider_kind_audit(
     provider_kind: &str,
     operator_id: &str,
 ) -> Result<(), (StatusCode, Json<ProblemDetail>)> {
-    record_audit_event(state, action, "storage_provider_kind", provider_kind, operator_id).await
+    record_audit_event(
+        state,
+        action,
+        "storage_provider_kind",
+        provider_kind,
+        operator_id,
+    )
+    .await
 }
 
 pub(crate) async fn record_audit_event(

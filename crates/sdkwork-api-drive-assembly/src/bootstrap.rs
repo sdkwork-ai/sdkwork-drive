@@ -4,6 +4,7 @@
 //! intentionally preserved by the assembly materializer. Business surfaces mount shared
 //! infrastructure exactly once at the assembly boundary.
 
+use sdkwork_web_bootstrap::WebModule;
 use std::sync::Arc;
 
 use axum::Router;
@@ -261,4 +262,25 @@ pub async fn assemble_api_router_from_env() -> Result<ApiAssembly, String> {
         .await
         .map_err(|error| format!("create drive database pool failed: {error}"))?;
     assemble_api_router(pool).await
+}
+
+/// Canonical Web Module definition for this application
+/// (API_ASSEMBLY_SPEC §4.1.1): the complete HTTP surface — every route,
+/// manifest, and OpenAPI document of this owner — as one installable module.
+pub async fn web_module() -> Result<WebModule, String> {
+    Ok(WebModule::from_contribution(
+        assemble_api_router_from_env().await?,
+    ))
+}
+
+/// Same as [`web_module`] but composed on a caller-owned PostgreSQL pool
+/// (platform gateways, API_ASSEMBLY_SPEC §4.1.1).
+///
+/// Drive's authoritative storage server is PostgreSQL-only, so the platform
+/// cloud gateway hands it the process-shared PostgreSQL pool rather than
+/// letting the module open a second connection pool from the environment.
+pub async fn web_module_with_postgres_pool(pool: sqlx::PgPool) -> Result<WebModule, String> {
+    Ok(WebModule::from_contribution(
+        assemble_api_router(pool).await?,
+    ))
 }

@@ -3,7 +3,7 @@ mod config;
 use config::{
     load_gateway_config, resolve_config_path, resolve_gateway_config, web_framework_env_projection,
 };
-use sdkwork_web_bootstrap::{infra_public_path_prefixes, ComposedApiAssembly};
+use sdkwork_web_bootstrap::{infra_public_path_prefixes, ApiModuleRegistry, ComposedApiAssembly};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
@@ -28,7 +28,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let iam = sdkwork_api_iam_assembly::assemble_app_api_contribution_with_pool(process_pool)
         .await
         .map_err(|error| format!("failed to assemble embedded IAM App API: {error}"))?;
-    let composed = ComposedApiAssembly::try_compose("SDKWork Drive API", vec![iam, drive])
+    let mut module_registry = ApiModuleRegistry::new();
+    module_registry.add_modules(vec![iam, drive]);
+    let composed = module_registry
+        .try_compose("SDKWork Drive API")
         .map_err(|error| format!("failed to compose Drive API profile: {error}"))?;
     let resolver = sdkwork_iam_web_adapter::iam_web_request_context_resolver_from_env().await;
     let framework = sdkwork_iam_web_adapter::build_web_framework_builder(

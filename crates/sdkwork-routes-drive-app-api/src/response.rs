@@ -16,8 +16,7 @@ pub struct DriveListPageData<T> {
     pub incomplete_page: bool,
 }
 
-pub type DriveNodeListHttpResponse =
-    Json<SdkWorkApiResponse<DriveListPageData<DriveNodeResponse>>>;
+pub type DriveNodeListHttpResponse = Json<SdkWorkApiResponse<DriveListPageData<DriveNodeResponse>>>;
 
 pub type DriveListHttpResponse<T> = Json<SdkWorkApiResponse<SdkWorkPageData<T>>>;
 
@@ -30,10 +29,7 @@ pub fn no_content() -> axum::http::StatusCode {
 }
 
 /// Build cursor-mode `PageInfo` for numeric cursor offset continuation.
-pub fn page_info_from_offset_token(
-    page: PageRequest,
-    next_page_token: Option<String>,
-) -> PageInfo {
+pub fn page_info_from_offset_token(page: PageRequest, next_page_token: Option<String>) -> PageInfo {
     PageInfo {
         mode: PageMode::Cursor,
         page: None,
@@ -135,9 +131,7 @@ pub fn success_created_command_data<T: Serialize>(
     )
 }
 
-pub fn success_resource<T: Serialize>(
-    item: T,
-) -> Json<SdkWorkApiResponse<SdkWorkResourceData<T>>> {
+pub fn success_resource<T: Serialize>(item: T) -> Json<SdkWorkApiResponse<SdkWorkResourceData<T>>> {
     Json(SdkWorkApiResponse::success(
         SdkWorkResourceData { item },
         current_trace_id(),

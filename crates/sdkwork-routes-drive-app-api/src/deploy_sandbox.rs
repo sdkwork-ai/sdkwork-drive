@@ -209,7 +209,8 @@ mod tests {
 
     #[tokio::test]
     async fn deploy_sandbox_volume_is_idempotent() {
-        let Some((pool, _guard)) = sdkwork_drive_test_support::postgres_test_database().await else {
+        let Some((pool, _guard)) = sdkwork_drive_test_support::postgres_test_database().await
+        else {
             return;
         };
         let root = tempfile::tempdir().expect("temp deploy root");
@@ -225,13 +226,12 @@ mod tests {
         ensure_deploy_sandbox_volume(&pool, &config)
             .await
             .expect("repeat");
-        let count: i64 = sqlx::query_scalar(
-            "SELECT COUNT(*) FROM dr_drive_sandbox_volume WHERE id = $1",
-        )
-        .bind(&config.key)
-        .fetch_one(&pool)
-        .await
-        .expect("count");
+        let count: i64 =
+            sqlx::query_scalar("SELECT COUNT(*) FROM dr_drive_sandbox_volume WHERE id = $1")
+                .bind(&config.key)
+                .fetch_one(&pool)
+                .await
+                .expect("count");
         assert_eq!(count, 1);
     }
 }

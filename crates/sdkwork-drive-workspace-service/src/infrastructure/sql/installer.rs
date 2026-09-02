@@ -21,7 +21,6 @@ pub fn postgres_pool_from_database_pool(
     })
 }
 
-
 /// Normalize a workspace PostgreSQL connection URL for pool construction.
 ///
 /// Trims surrounding whitespace, forces the `postgres` scheme, and strips a

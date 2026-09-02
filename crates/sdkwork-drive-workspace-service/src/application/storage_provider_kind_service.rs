@@ -58,11 +58,13 @@ where
     ) -> Result<Vec<DriveStorageProviderKindRegistry>, DriveServiceError> {
         let kinds = BUILTIN_STORAGE_PROVIDER_KIND_CATALOG
             .iter()
-            .map(|(provider_kind, display_name, sort_order)| NewDriveStorageProviderKind {
-                provider_kind: (*provider_kind).to_string(),
-                display_name: (*display_name).to_string(),
-                sort_order: *sort_order,
-            })
+            .map(
+                |(provider_kind, display_name, sort_order)| NewDriveStorageProviderKind {
+                    provider_kind: (*provider_kind).to_string(),
+                    display_name: (*display_name).to_string(),
+                    sort_order: *sort_order,
+                },
+            )
             .collect::<Vec<_>>();
         self.store.initialize_storage_provider_kinds(&kinds).await
     }
@@ -113,17 +115,14 @@ where
         command: SetStorageProviderKindEnabledCommand,
     ) -> Result<DriveStorageProviderKindRegistry, DriveServiceError> {
         let kind = parse_builtin_provider_kind_key(&command.provider_kind)?;
-        if self
-            .store
-            .find_storage_provider_kind(kind)
-            .await?
-            .is_none()
-        {
+        if self.store.find_storage_provider_kind(kind).await?.is_none() {
             return Err(DriveServiceError::NotFound(
                 "storage provider kind not found".to_string(),
             ));
         }
-        self.store.set_storage_provider_kind_enabled(kind, command.enabled).await
+        self.store
+            .set_storage_provider_kind_enabled(kind, command.enabled)
+            .await
     }
 
     /// Ensure a provider kind may host new or reactivated configurations.

@@ -1,8 +1,6 @@
 use crate::app_context::DriveRequestContext;
 use crate::audit::record_storage_provider_kind_audit;
-use crate::dto::{
-    OffsetPage, SetStorageProviderKindEnabledRequest, StorageProviderKindResponse,
-};
+use crate::dto::{OffsetPage, SetStorageProviderKindEnabledRequest, StorageProviderKindResponse};
 use crate::error::{invalid_json_problem, map_service_error, ProblemDetail};
 use crate::response::{success_list_page_simple, StorageListHttpResponse};
 use crate::state::AdminStorageState;
@@ -17,7 +15,9 @@ use sdkwork_drive_workspace_service::application::storage_provider_kind_service:
 };
 use sdkwork_drive_workspace_service::infrastructure::sql::storage_provider_kind_store::SqlStorageProviderKindStore;
 
-fn kind_service(state: &AdminStorageState) -> DriveStorageProviderKindService<SqlStorageProviderKindStore> {
+fn kind_service(
+    state: &AdminStorageState,
+) -> DriveStorageProviderKindService<SqlStorageProviderKindStore> {
     DriveStorageProviderKindService::new(SqlStorageProviderKindStore::new(state.pool.clone()))
 }
 
@@ -39,7 +39,8 @@ const ALL_KINDS_PAGE: OffsetPage = OffsetPage {
 
 pub(crate) async fn list_storage_provider_kinds(
     State(state): State<AdminStorageState>,
-) -> Result<StorageListHttpResponse<StorageProviderKindResponse>, (StatusCode, Json<ProblemDetail>)> {
+) -> Result<StorageListHttpResponse<StorageProviderKindResponse>, (StatusCode, Json<ProblemDetail>)>
+{
     let summaries = kind_service(&state)
         .list_storage_provider_kinds()
         .await
@@ -54,7 +55,8 @@ pub(crate) async fn list_storage_provider_kinds(
 pub(crate) async fn initialize_storage_provider_kinds(
     State(state): State<AdminStorageState>,
     Extension(ctx): Extension<DriveRequestContext>,
-) -> Result<StorageListHttpResponse<StorageProviderKindResponse>, (StatusCode, Json<ProblemDetail>)> {
+) -> Result<StorageListHttpResponse<StorageProviderKindResponse>, (StatusCode, Json<ProblemDetail>)>
+{
     let operator_id = ctx.resolve_operator_id()?;
     kind_service(&state)
         .initialize_storage_provider_kinds()
@@ -106,9 +108,11 @@ pub(crate) async fn set_storage_provider_kind_enabled(
         .into_iter()
         .find(|summary| summary.kind.provider_kind == updated.provider_kind)
         .ok_or_else(|| {
-            map_service_error(sdkwork_drive_workspace_service::DriveServiceError::NotFound(
-                "storage provider kind not found".to_string(),
-            ))
+            map_service_error(
+                sdkwork_drive_workspace_service::DriveServiceError::NotFound(
+                    "storage provider kind not found".to_string(),
+                ),
+            )
         })?;
     Ok(Json(map_storage_provider_kind(summary)))
 }

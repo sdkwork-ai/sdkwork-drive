@@ -1579,10 +1579,7 @@ impl From<CommentReplyRecord> for CommentReplyResponse {
     }
 }
 
-pub fn apply_optional_i64_patch(
-    value: OptionalI64Patch,
-    current: Option<i64>,
-) -> Option<i64> {
+pub fn apply_optional_i64_patch(value: OptionalI64Patch, current: Option<i64>) -> Option<i64> {
     match value {
         OptionalI64Patch::Missing => current,
         OptionalI64Patch::Null => None,
@@ -1600,7 +1597,6 @@ where
         None => OptionalI64Patch::Null,
     })
 }
-
 
 #[cfg(test)]
 mod auth_projection_request_tests {

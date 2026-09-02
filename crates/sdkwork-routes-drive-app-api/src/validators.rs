@@ -189,9 +189,7 @@ pub fn parse_change_page_request(
     Ok(PageRequest { limit, offset })
 }
 
-pub fn validate_permission_role(
-    role: &str,
-) -> Result<(), (StatusCode, Json<ProblemDetail>)> {
+pub fn validate_permission_role(role: &str) -> Result<(), (StatusCode, Json<ProblemDetail>)> {
     if matches!(role, "reader" | "commenter" | "writer" | "owner") {
         return Ok(());
     }
@@ -203,9 +201,7 @@ pub fn validate_permission_role(
     ))
 }
 
-pub fn validate_share_link_role(
-    role: &str,
-) -> Result<(), (StatusCode, Json<ProblemDetail>)> {
+pub fn validate_share_link_role(role: &str) -> Result<(), (StatusCode, Json<ProblemDetail>)> {
     if matches!(role, "reader" | "commenter" | "writer") {
         return Ok(());
     }
@@ -217,9 +213,7 @@ pub fn validate_share_link_role(
     ))
 }
 
-pub fn validate_share_link_token(
-    token: &str,
-) -> Result<(), (StatusCode, Json<ProblemDetail>)> {
+pub fn validate_share_link_token(token: &str) -> Result<(), (StatusCode, Json<ProblemDetail>)> {
     if let Err(error) = sdkwork_drive_workspace_service::validate_share_link_token(token) {
         let message = match error {
             sdkwork_drive_workspace_service::DriveServiceError::Validation(message) => message,
@@ -430,9 +424,7 @@ pub fn validate_object_key(
     Ok(trimmed)
 }
 
-pub fn validate_subject_type(
-    subject_type: &str,
-) -> Result<(), (StatusCode, Json<ProblemDetail>)> {
+pub fn validate_subject_type(subject_type: &str) -> Result<(), (StatusCode, Json<ProblemDetail>)> {
     if matches!(subject_type, "user" | "group" | "domain" | "app") {
         return Ok(());
     }
@@ -479,9 +471,7 @@ pub fn validate_node_property_visibility(
     ))
 }
 
-pub fn validate_label_key(
-    label_key: &str,
-) -> Result<&str, (StatusCode, Json<ProblemDetail>)> {
+pub fn validate_label_key(label_key: &str) -> Result<&str, (StatusCode, Json<ProblemDetail>)> {
     let trimmed = label_key.trim();
     if trimmed.is_empty()
         || trimmed.len() > 128

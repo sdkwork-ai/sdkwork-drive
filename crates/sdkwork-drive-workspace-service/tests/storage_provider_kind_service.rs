@@ -5,7 +5,9 @@ use sdkwork_drive_workspace_service::domain::storage_provider::DriveStorageProvi
 use sdkwork_drive_workspace_service::infrastructure::sql::storage_provider_kind_store::SqlStorageProviderKindStore;
 use sdkwork_drive_workspace_service::DriveServiceError;
 
-fn kind_service(pool: sqlx::PgPool) -> DriveStorageProviderKindService<SqlStorageProviderKindStore> {
+fn kind_service(
+    pool: sqlx::PgPool,
+) -> DriveStorageProviderKindService<SqlStorageProviderKindStore> {
     DriveStorageProviderKindService::new(SqlStorageProviderKindStore::new(pool))
 }
 

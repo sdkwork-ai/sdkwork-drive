@@ -9,6 +9,7 @@ mod change_handlers;
 mod collaboration_repository;
 mod comment_handlers;
 pub mod constants;
+mod deploy_sandbox;
 mod download_handlers;
 mod download_packages;
 pub mod dto;
@@ -34,7 +35,6 @@ pub mod response;
 mod route_change;
 mod routes;
 mod runtime_sandbox_roots;
-mod deploy_sandbox;
 mod sandbox_handlers;
 mod sandbox_principals;
 mod search_handlers;
@@ -68,21 +68,20 @@ pub mod composition_host {
     pub use super::ids;
     pub use super::mappers;
     pub use super::node_repository;
+    pub use super::pagination_guard;
+    pub use super::rate_limit;
     pub use super::response;
     pub use super::state;
     pub use super::validators;
-    pub use super::pagination_guard;
-    pub use super::rate_limit;
 }
 
+pub use deploy_sandbox::{
+    deploy_sandbox_config_from_env, ensure_deploy_opt_deploy_sandbox, ensure_deploy_sandbox_volume,
+    resolve_deploy_sandbox_grant_access, DeploySandboxConfig,
+};
 pub use http_route_manifest::app_route_manifest;
 pub use routes::*;
 pub use state::AppState;
-pub use deploy_sandbox::{
-    deploy_sandbox_config_from_env, ensure_deploy_opt_deploy_sandbox, ensure_deploy_sandbox_volume,
-    resolve_deploy_sandbox_grant_access,
-    DeploySandboxConfig,
-};
 pub use web_bootstrap::{
     drive_app_context_injector, wrap_router_with_iam_web_framework, wrap_router_with_web_framework,
     wrap_router_with_web_framework_from_env,

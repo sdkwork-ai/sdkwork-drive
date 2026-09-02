@@ -22,10 +22,7 @@ pub struct DriveRequestContext {
 }
 
 impl DriveRequestContext {
-    pub fn from_app_context(
-        app_context: &DriveAppContext,
-        auth_level: WebAuthLevel,
-    ) -> Self {
+    pub fn from_app_context(app_context: &DriveAppContext, auth_level: WebAuthLevel) -> Self {
         Self {
             tenant_id: app_context.tenant_id.clone(),
             user_id: app_context.user_id.clone(),
@@ -64,9 +61,7 @@ impl DriveRequestContext {
         })
     }
 
-    pub fn resolve_subject(
-        &self,
-    ) -> Result<(String, String), (StatusCode, Json<ProblemDetail>)> {
+    pub fn resolve_subject(&self) -> Result<(String, String), (StatusCode, Json<ProblemDetail>)> {
         self.require_verified_context()?;
         validate_subject_type(&self.subject_type)?;
         Ok((self.subject_type.clone(), self.subject_id.clone()))
