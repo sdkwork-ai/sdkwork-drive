@@ -22,9 +22,9 @@ pub struct UploadSessionMutationResponse {
     pub state: String,
 
     #[serde(rename = "expiresAtEpochMs")]
-    pub expires_at_epoch_ms: i64,
+    pub expires_at_epoch_ms: String,
 
-    pub version: i64,
+    pub version: String,
 
     /// Drive storage provider id bound to this upload session.
     #[serde(rename = "storageProviderId")]

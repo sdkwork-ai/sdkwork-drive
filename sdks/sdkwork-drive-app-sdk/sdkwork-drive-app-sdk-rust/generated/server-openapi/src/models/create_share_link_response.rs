@@ -15,14 +15,14 @@ pub struct CreateShareLinkResponse {
 
     #[serde(rename = "expiresAtEpochMs")]
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub expires_at_epoch_ms: Option<i64>,
+    pub expires_at_epoch_ms: Option<String>,
 
     #[serde(rename = "downloadLimit")]
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub download_limit: Option<i64>,
+    pub download_limit: Option<String>,
 
     #[serde(rename = "downloadCount")]
-    pub download_count: i64,
+    pub download_count: String,
 
     #[serde(rename = "accessCodeRequired")]
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -31,7 +31,7 @@ pub struct CreateShareLinkResponse {
     #[serde(rename = "lifecycleStatus")]
     pub lifecycle_status: String,
 
-    pub version: i64,
+    pub version: String,
 
     /// Raw share token returned only once when the share link is created.
     pub token: String,

@@ -20,7 +20,7 @@ pub struct DownloadPackageItem {
     pub content_type: String,
 
     #[serde(rename = "contentLength")]
-    pub content_length: i64,
+    pub content_length: String,
 
     #[serde(rename = "checksumSha256Hex")]
     pub checksum_sha256_hex: String,

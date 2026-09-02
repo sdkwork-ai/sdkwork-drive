@@ -16,7 +16,7 @@ pub struct ProviderObject {
     pub object_key: String,
 
     #[serde(rename = "contentLength")]
-    pub content_length: i64,
+    pub content_length: String,
 
     #[serde(rename = "contentType")]
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -35,5 +35,5 @@ pub struct ProviderObject {
 
     #[serde(rename = "lastModifiedEpochMs")]
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub last_modified_epoch_ms: Option<i64>,
+    pub last_modified_epoch_ms: Option<String>,
 }

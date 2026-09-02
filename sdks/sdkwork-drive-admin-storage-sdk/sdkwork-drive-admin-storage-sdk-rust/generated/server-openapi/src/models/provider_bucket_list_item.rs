@@ -8,5 +8,5 @@ pub struct ProviderBucketListItem {
 
     #[serde(rename = "creationDateEpochMs")]
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub creation_date_epoch_ms: Option<i64>,
+    pub creation_date_epoch_ms: Option<String>,
 }

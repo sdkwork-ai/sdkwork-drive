@@ -24,7 +24,7 @@ pub struct DriveNode {
     #[serde(rename = "lifecycleStatus")]
     pub lifecycle_status: String,
 
-    pub version: i64,
+    pub version: String,
 
     /// Target node id when nodeType is shortcut.
     #[serde(rename = "shortcutTargetNodeId")]
@@ -65,7 +65,7 @@ pub struct DriveNode {
     /// Byte size of the latest active file version.
     #[serde(rename = "contentLength")]
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub content_length: Option<i64>,
+    pub content_length: Option<String>,
 
     /// Optional UI folder color from node property ui.folderColor.
     #[serde(rename = "folderColor")]

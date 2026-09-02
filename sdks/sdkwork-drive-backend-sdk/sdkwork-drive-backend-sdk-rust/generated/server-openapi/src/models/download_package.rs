@@ -24,16 +24,16 @@ pub struct DownloadPackage {
     pub content_type: String,
 
     #[serde(rename = "fileCount")]
-    pub file_count: i64,
+    pub file_count: String,
 
     #[serde(rename = "totalBytes")]
-    pub total_bytes: i64,
+    pub total_bytes: String,
 
     #[serde(rename = "archiveSizeBytes")]
-    pub archive_size_bytes: i64,
+    pub archive_size_bytes: String,
 
     #[serde(rename = "expiresAtEpochMs")]
-    pub expires_at_epoch_ms: i64,
+    pub expires_at_epoch_ms: String,
 
     #[serde(rename = "errorMessage")]
     #[serde(default, skip_serializing_if = "Option::is_none")]

@@ -29,7 +29,7 @@ pub struct DriveWatchChannel {
     pub address: String,
 
     #[serde(rename = "expirationEpochMs")]
-    pub expiration_epoch_ms: i64,
+    pub expiration_epoch_ms: String,
 
     #[serde(rename = "lifecycleStatus")]
     pub lifecycle_status: String,

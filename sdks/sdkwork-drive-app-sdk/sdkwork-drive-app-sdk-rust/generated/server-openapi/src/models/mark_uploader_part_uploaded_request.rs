@@ -6,10 +6,10 @@ pub struct MarkUploaderPartUploadedRequest {
     pub upload_session_id: String,
 
     #[serde(rename = "offsetBytes")]
-    pub offset_bytes: i64,
+    pub offset_bytes: String,
 
     #[serde(rename = "sizeBytes")]
-    pub size_bytes: i64,
+    pub size_bytes: String,
 
     pub etag: String,
 
@@ -19,5 +19,5 @@ pub struct MarkUploaderPartUploadedRequest {
 
     #[serde(rename = "uploadedAtEpochMs")]
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub uploaded_at_epoch_ms: Option<i64>,
+    pub uploaded_at_epoch_ms: Option<String>,
 }

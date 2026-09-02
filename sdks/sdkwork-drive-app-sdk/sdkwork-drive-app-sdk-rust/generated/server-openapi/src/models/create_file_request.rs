@@ -21,7 +21,7 @@ pub struct CreateFileRequest {
     pub idempotency_key: String,
 
     #[serde(rename = "expiresAtEpochMs")]
-    pub expires_at_epoch_ms: i64,
+    pub expires_at_epoch_ms: String,
 
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub bucket: Option<String>,

@@ -6,12 +6,12 @@ pub struct QuotaSummary {
     pub tenant_id: String,
 
     #[serde(rename = "totalBytes")]
-    pub total_bytes: i64,
+    pub total_bytes: String,
 
     #[serde(rename = "objectCount")]
-    pub object_count: i64,
+    pub object_count: String,
 
     #[serde(rename = "quotaBytes")]
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub quota_bytes: Option<i64>,
+    pub quota_bytes: Option<String>,
 }

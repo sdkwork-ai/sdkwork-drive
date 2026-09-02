@@ -48,7 +48,7 @@
     },
     {
       "path": "src/api/drive.rs",
-      "sha256": "cca791594fe8f542f955e1092fcfb5ea88c9699b41de5f020075c1746f3d0f1f"
+      "sha256": "0504adafc1694015c67c9943f1f7326ad54c251a958288441f4f5d9885d290b7"
     },
     {
       "path": "src/api/mod.rs",
@@ -92,7 +92,7 @@
     },
     {
       "path": "src/models/mod.rs",
-      "sha256": "acc77faaa2da9255811438f630a154329c02bd9d68eda96707d187991fb88da6"
+      "sha256": "265bea29b29b648f2691684a8bdb0116721556d3f3a3cdea41e812b143908726"
     },
     {
       "path": "src/models/page_info.rs",
@@ -104,7 +104,7 @@
     },
     {
       "path": "src/models/provider_bucket_list_item.rs",
-      "sha256": "ae227eb05e5be7c97041a40b32a0879e6ebd0ad0cb4f053d2fdc762b97383c4a"
+      "sha256": "b2b58f4f8c6665b964f00c831076e2b6254d76c99049738865291895509e8ba5"
     },
     {
       "path": "src/models/provider_bucket_mutation.rs",
@@ -116,7 +116,7 @@
     },
     {
       "path": "src/models/provider_object_content.rs",
-      "sha256": "a90397037101e2aaa44e5ec6edd59677a2b13774415a92d7aa9ae65ff74b380d"
+      "sha256": "199c1e2e63a44e11314620f8aef1e531e728e20ccb5ef2f9d8d297cef2fb0b97"
     },
     {
       "path": "src/models/provider_object_mutation.rs",
@@ -124,7 +124,7 @@
     },
     {
       "path": "src/models/provider_object.rs",
-      "sha256": "5b8baabadb7e53c572938507189e2817082a258cfbd4a4428698715e697bb8a5"
+      "sha256": "e88af7a845f5f2771c842d1303034c424526e45eeec1c72578cea8f7cf8cf02e"
     },
     {
       "path": "src/models/rotate_storage_provider_credential_request.rs",
@@ -164,7 +164,7 @@
     },
     {
       "path": "src/models/storage_provider_binding.rs",
-      "sha256": "9e6b93614fcec3a5da95dcdb03d227dec6a6c281a067b287f91ea181d58f5c7c"
+      "sha256": "a7df095afec2c78dc9e16c50301e10d8569320bda23d65c05da98d37e774df9a"
     },
     {
       "path": "src/models/storage_provider_bindings_default_retrieve_response.rs",
@@ -184,11 +184,11 @@
     },
     {
       "path": "src/models/storage_provider_kind.rs",
-      "sha256": "23eaf8bf4597d9b4c34d613d6d90ed0ca9d8178fc02bc7c430a5cb6f97c1383f"
+      "sha256": "0b4f499e7df1fc7278b4c00291ca41bc361030de89f35e195b7d4bb0670860cc"
     },
     {
-      "path": "src/models/storage_provider_kinds_initialize_response.rs",
-      "sha256": "d11e35f189859aed7086a078755bf2da7acaf97a46c27b9393fc0d8137584e7e"
+      "path": "src/models/storage_provider_kinds_create_response201.rs",
+      "sha256": "a4c5365f601f5f3863aa4f94534aea900e42f8fa2327d7029f092cdf5349268a"
     },
     {
       "path": "src/models/storage_provider_kinds_list_response.rs",
@@ -200,7 +200,7 @@
     },
     {
       "path": "src/models/storage_provider.rs",
-      "sha256": "1063f5f0bacc6358a82954b8bd71d7099737ae9319004974beced359c183bf8b"
+      "sha256": "e093619a4bf8cae3fe5263d0de66d1e9ed963cb369071702b7ec3936108c978f"
     },
     {
       "path": "src/models/storage_providers_activate_response.rs",

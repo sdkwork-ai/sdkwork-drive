@@ -13,11 +13,11 @@ pub struct CreateShareLinkRequest {
 
     #[serde(rename = "expiresAtEpochMs")]
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub expires_at_epoch_ms: Option<i64>,
+    pub expires_at_epoch_ms: Option<String>,
 
     #[serde(rename = "downloadLimit")]
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub download_limit: Option<i64>,
+    pub download_limit: Option<String>,
 
     /// Optional extraction code required by recipients before resolving or downloading the shared link.
     #[serde(rename = "accessCode")]

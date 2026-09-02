@@ -76,23 +76,23 @@ pub struct UploaderUploadItem {
     pub detected_content_type: Option<String>,
 
     #[serde(rename = "contentLength")]
-    pub content_length: i64,
+    pub content_length: String,
 
     #[serde(rename = "checksumSha256Hex")]
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub checksum_sha256_hex: Option<String>,
 
     #[serde(rename = "chunkSizeBytes")]
-    pub chunk_size_bytes: i64,
+    pub chunk_size_bytes: String,
 
     #[serde(rename = "totalParts")]
-    pub total_parts: i64,
+    pub total_parts: String,
 
     #[serde(rename = "uploadedPartsCount")]
-    pub uploaded_parts_count: i64,
+    pub uploaded_parts_count: String,
 
     #[serde(rename = "uploadedBytes")]
-    pub uploaded_bytes: i64,
+    pub uploaded_bytes: String,
 
     pub status: String,
 
@@ -101,7 +101,7 @@ pub struct UploaderUploadItem {
 
     #[serde(rename = "retentionExpiresAtEpochMs")]
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub retention_expires_at_epoch_ms: Option<i64>,
+    pub retention_expires_at_epoch_ms: Option<String>,
 
     #[serde(rename = "cleanupAction")]
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -109,7 +109,7 @@ pub struct UploaderUploadItem {
 
     #[serde(rename = "hardDeleteAfterEpochMs")]
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub hard_delete_after_epoch_ms: Option<i64>,
+    pub hard_delete_after_epoch_ms: Option<String>,
 
     #[serde(rename = "cleanupStatus")]
     pub cleanup_status: String,

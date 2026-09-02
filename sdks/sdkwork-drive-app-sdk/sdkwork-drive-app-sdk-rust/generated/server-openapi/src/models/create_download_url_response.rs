@@ -9,7 +9,7 @@ pub struct CreateDownloadUrlResponse {
     pub signed_source_url: String,
 
     #[serde(rename = "expiresAtEpochMs")]
-    pub expires_at_epoch_ms: i64,
+    pub expires_at_epoch_ms: String,
 
     pub method: String,
 }

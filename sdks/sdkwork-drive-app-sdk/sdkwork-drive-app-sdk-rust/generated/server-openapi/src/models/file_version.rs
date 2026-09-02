@@ -16,13 +16,13 @@ pub struct FileVersion {
     pub storage_object_id: Option<String>,
 
     #[serde(rename = "versionNo")]
-    pub version_no: i64,
+    pub version_no: String,
 
     #[serde(rename = "contentType")]
     pub content_type: String,
 
     #[serde(rename = "contentLength")]
-    pub content_length: i64,
+    pub content_length: String,
 
     #[serde(rename = "checksumSha256Hex")]
     pub checksum_sha256_hex: String,

@@ -23,5 +23,5 @@ pub struct CreateUploadSessionRequest {
     pub idempotency_key: String,
 
     #[serde(rename = "expiresAtEpochMs")]
-    pub expires_at_epoch_ms: i64,
+    pub expires_at_epoch_ms: String,
 }

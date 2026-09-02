@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]
 pub struct Change {
     #[serde(rename = "sequenceNo")]
-    pub sequence_no: i64,
+    pub sequence_no: String,
 
     #[serde(rename = "tenantId")]
     #[serde(default, skip_serializing_if = "Option::is_none")]

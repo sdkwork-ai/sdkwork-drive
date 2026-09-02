@@ -84,7 +84,7 @@
     },
     {
       "path": "src/models/drive_open_share_link.rs",
-      "sha256": "55b94973805dfbaa71fe51b8ddb9c29726b21ddd5102e7c1064087a939061843"
+      "sha256": "17b8e2cc68c72bc223470d268b8013ba4c4ce26cdd2370fa8ef572f4d8ef934c"
     },
     {
       "path": "src/models/field_error.rs",
@@ -100,11 +100,11 @@
     },
     {
       "path": "src/models/open_download_url_response.rs",
-      "sha256": "45c7d32e9498ebefebe865a5c0f78501e2dc0c2cfa35ec55f577bfa2bcaa46aa"
+      "sha256": "3bd8278de0234f5c25e18917dff2e4570f503940092907cc588ec1425fc3756c"
     },
     {
       "path": "src/models/open_node.rs",
-      "sha256": "59ecd3623240823b05ff51bb24fb10e12ffec3c9ea6447be6f4800f83cabe1c2"
+      "sha256": "1749176b189a5f908f15374d1df50ff837a2a285c24885230f5cf31e0f5a9cc0"
     },
     {
       "path": "src/models/open_share_link_resolve_response.rs",

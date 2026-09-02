@@ -24,7 +24,7 @@ pub struct StorageProviderBinding {
     #[serde(rename = "lifecycleStatus")]
     pub lifecycle_status: String,
 
-    pub version: i64,
+    pub version: String,
 
     #[serde(rename = "storageProvider")]
     pub storage_provider: StorageProvider,

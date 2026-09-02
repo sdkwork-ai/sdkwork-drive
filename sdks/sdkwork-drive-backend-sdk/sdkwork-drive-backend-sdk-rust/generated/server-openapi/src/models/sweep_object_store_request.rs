@@ -6,5 +6,5 @@ pub struct SweepObjectStoreRequest {
     pub dry_run: bool,
 
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub limit: Option<i64>,
+    pub limit: Option<String>,
 }

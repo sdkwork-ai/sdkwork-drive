@@ -7,5 +7,5 @@ pub struct ExtractArchiveEntriesResponse {
     pub items: Vec<DriveNode>,
 
     #[serde(rename = "extractedCount")]
-    pub extracted_count: i64,
+    pub extracted_count: String,
 }

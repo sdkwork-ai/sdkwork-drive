@@ -129,7 +129,7 @@ impl DriveApi {
     }
 
     /// List server sandbox volumes
-    pub async fn sandbox_volumes_list(&self, lifecycle_status: Option<&str>, provider_kind: Option<&str>, page: Option<i64>, page_size: Option<i64>) -> Result<serde_json::Value, SdkworkError> {
+    pub async fn sandbox_volumes_list(&self, lifecycle_status: Option<&str>, provider_kind: Option<&str>, page: Option<&str>, page_size: Option<&str>) -> Result<serde_json::Value, SdkworkError> {
         let query = build_query_string(&[
             QueryParameterSpec::new("lifecycle_status", lifecycle_status, "form", true, false, None),
             QueryParameterSpec::new("provider_kind", provider_kind, "form", true, false, None),
@@ -165,7 +165,7 @@ impl DriveApi {
     }
 
     /// List explicit sandbox grants
-    pub async fn sandbox_grants_list(&self, sandbox_id: &str, page: Option<i64>, page_size: Option<i64>) -> Result<serde_json::Value, SdkworkError> {
+    pub async fn sandbox_grants_list(&self, sandbox_id: &str, page: Option<&str>, page_size: Option<&str>) -> Result<serde_json::Value, SdkworkError> {
         let query = build_query_string(&[
             QueryParameterSpec::new("page", page, "form", true, false, None),
             QueryParameterSpec::new("page_size", page_size, "form", true, false, None),

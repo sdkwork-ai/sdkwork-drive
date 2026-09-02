@@ -6,7 +6,7 @@ pub struct UploaderRetentionRequest {
 
     #[serde(rename = "ttlSeconds")]
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub ttl_seconds: Option<i64>,
+    pub ttl_seconds: Option<String>,
 
     #[serde(rename = "cleanupAction")]
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -14,5 +14,5 @@ pub struct UploaderRetentionRequest {
 
     #[serde(rename = "hardDeleteAfterSeconds")]
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub hard_delete_after_seconds: Option<i64>,
+    pub hard_delete_after_seconds: Option<String>,
 }

@@ -19,7 +19,7 @@ pub struct DriveCommentReply {
     #[serde(rename = "lifecycleStatus")]
     pub lifecycle_status: String,
 
-    pub version: i64,
+    pub version: String,
 
     #[serde(rename = "createdBy")]
     pub created_by: String,

@@ -9,13 +9,12 @@
     "protocol": "http",
     "packageName": "sdkwork-drive-app-sdk-generated-rust"
   },
-  "changeFingerprint": "706f65739a2ef49ce150bafae4b2a960f883f81bb9f2e6750af2da71f421b999",
+  "changeFingerprint": "00408060d5f771427d9eeb041310096c8db18262ab298e24581de62045f3282f",
   "changes": {
     "createdGeneratedFiles": [],
-    "updatedGeneratedFiles": [
-      "bin/publish-core.mjs"
-    ],
+    "updatedGeneratedFiles": [],
     "unchangedGeneratedFiles": [
+      "bin/publish-core.mjs",
       "bin/publish.ps1",
       "bin/publish.sh",
       "Cargo.toml",
@@ -23,7 +22,6 @@
       "LICENSE",
       "README.md",
       "sdkwork-sdk.json",
-      "src/api/assets.rs",
       "src/api/base.rs",
       "src/api/drive.rs",
       "src/api/mod.rs",
@@ -36,19 +34,6 @@
       "src/models/apply_node_label_request.rs",
       "src/models/archive_entry_list_http_response.rs",
       "src/models/archive_entry.rs",
-      "src/models/asset_action_request.rs",
-      "src/models/asset_collection_http_response.rs",
-      "src/models/asset_collection_item_http_response.rs",
-      "src/models/asset_collection_item.rs",
-      "src/models/asset_collection_list_data.rs",
-      "src/models/asset_collection_list_http_response.rs",
-      "src/models/asset_collection.rs",
-      "src/models/asset_item_http_response.rs",
-      "src/models/asset_item.rs",
-      "src/models/asset_list_data.rs",
-      "src/models/asset_list_http_response.rs",
-      "src/models/asset_relation_http_response.rs",
-      "src/models/asset_relation.rs",
       "src/models/change_list_data.rs",
       "src/models/change_list_http_response.rs",
       "src/models/change.rs",
@@ -59,10 +44,6 @@
       "src/models/complete_upload_session_request.rs",
       "src/models/completed_upload_part.rs",
       "src/models/copy_node_request.rs",
-      "src/models/create_asset_collection_item_request.rs",
-      "src/models/create_asset_collection_request.rs",
-      "src/models/create_asset_relation_request.rs",
-      "src/models/create_asset_request.rs",
       "src/models/create_comment_reply_request.rs",
       "src/models/create_comment_request.rs",
       "src/models/create_download_grant_request.rs",
@@ -147,7 +128,6 @@
       "src/models/file_version_list_http_response.rs",
       "src/models/file_version.rs",
       "src/models/mark_uploader_part_uploaded_request.rs",
-      "src/models/media_resource.rs",
       "src/models/mod.rs",
       "src/models/move_node_request.rs",
       "src/models/node_capabilities_http_response.rs",
@@ -178,7 +158,6 @@
       "src/models/stop_watch_channel_http_response.rs",
       "src/models/stop_watch_channel_request.rs",
       "src/models/stop_watch_channel_response.rs",
-      "src/models/update_asset_request.rs",
       "src/models/update_comment_reply_request.rs",
       "src/models/update_comment_request.rs",
       "src/models/update_drive_sandbox_entry_request.rs",
@@ -217,81 +196,33 @@
     "preservedScaffoldFiles": [
       "custom/README.md"
     ],
-    "backedUpFiles": [
-      "bin/publish-core.mjs"
-    ]
+    "backedUpFiles": []
   },
   "impact": {
     "schemaVersion": 1,
-    "areas": [
-      "publish-workflow"
-    ],
-    "details": [
-      {
-        "area": "publish-workflow",
-        "paths": [
-          "bin/publish-core.mjs"
-        ]
-      }
-    ],
-    "requiresVerification": true,
-    "summary": "Detected impact areas: publish-workflow. Verification is required."
+    "areas": [],
+    "details": [],
+    "requiresVerification": false,
+    "summary": "No generated, scaffold, or backup changes detected. Verification can be skipped."
   },
   "verificationPlan": {
-    "shouldRun": true,
-    "runPhase": "now",
-    "summary": "Detected impact areas: publish-workflow. Verification is required. Run the required verification commands now against the generated SDK output.",
-    "steps": [
-      {
-        "id": "check",
-        "title": "Unified package check",
-        "required": true,
-        "rationale": "Validate the generated package with the unified publish helper. Triggered by: publish-workflow.",
-        "workingDirectory": "E:\\sdkwork-space\\sdkwork-drive\\sdks\\sdkwork-drive-app-sdk\\sdkwork-drive-app-sdk-rust\\generated\\server-openapi",
-        "command": "node",
-        "args": [
-          "./bin/publish-core.mjs",
-          "--language",
-          "rust",
-          "--project-dir",
-          ".",
-          "--action",
-          "check"
-        ],
-        "displayCommand": "node ./bin/publish-core.mjs --language rust --project-dir . --action check"
-      },
-      {
-        "id": "build",
-        "title": "Unified package build",
-        "required": true,
-        "rationale": "Run the full package build because this language uses a lighter check path than the final build. Triggered by: publish-workflow.",
-        "workingDirectory": "E:\\sdkwork-space\\sdkwork-drive\\sdks\\sdkwork-drive-app-sdk\\sdkwork-drive-app-sdk-rust\\generated\\server-openapi",
-        "command": "node",
-        "args": [
-          "./bin/publish-core.mjs",
-          "--language",
-          "rust",
-          "--project-dir",
-          ".",
-          "--action",
-          "build"
-        ],
-        "displayCommand": "node ./bin/publish-core.mjs --language rust --project-dir . --action build"
-      }
-    ]
+    "shouldRun": false,
+    "runPhase": "skip",
+    "summary": "No generated, scaffold, or backup changes detected. Verification can be skipped.",
+    "steps": []
   },
   "executionDecision": {
     "schemaVersion": 1,
-    "riskLevel": "high",
-    "nextAction": "verify",
+    "riskLevel": "low",
+    "nextAction": "skip",
     "requiresManualReview": false,
     "applyRequiresExpectedFingerprint": false,
-    "summary": "Changes have been applied. Run the required verification plan now.",
+    "summary": "No actionable changes were detected. No apply or verification step is required.",
     "reasons": [
-      "backed-up-generated-files",
       "manual-review-required",
-      "verification-required"
+      "no-actionable-changes",
+      "preserved-legacy-files"
     ]
   },
-  "preservedLegacyFiles": false
+  "preservedLegacyFiles": true
 }

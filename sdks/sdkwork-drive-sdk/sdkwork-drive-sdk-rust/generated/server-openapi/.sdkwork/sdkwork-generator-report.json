@@ -12,29 +12,24 @@
   "mode": "apply",
   "hasChanges": true,
   "hasDestructiveChanges": false,
-  "changeFingerprint": "7dafe759ccbf6950500ef4ba05fa4f69227ecff57054c5c89dc023a6b1e30546",
+  "changeFingerprint": "d2d1fe35bc101dba6ab71e06b66884a262e4c5050480a864aee175780c718977",
   "changeImpact": {
     "schemaVersion": 1,
     "areas": [
-      "runtime",
-      "publish-workflow"
+      "models"
     ],
     "details": [
       {
-        "area": "runtime",
+        "area": "models",
         "paths": [
-          "src/http/client.rs"
-        ]
-      },
-      {
-        "area": "publish-workflow",
-        "paths": [
-          "bin/publish-core.mjs"
+          "src/models/drive_open_share_link.rs",
+          "src/models/open_download_url_response.rs",
+          "src/models/open_node.rs"
         ]
       }
     ],
     "requiresVerification": true,
-    "summary": "Detected impact areas: runtime, publish-workflow. Verification is required."
+    "summary": "Detected impact areas: models. Verification is required."
   },
   "executionDecision": {
     "schemaVersion": 1,
@@ -57,8 +52,8 @@
         "id": "verify-check",
         "title": "Unified package check",
         "required": true,
-        "rationale": "Validate the generated package with the unified publish helper. Triggered by: runtime, publish-workflow.",
-        "workingDirectory": "E:\\sdkwork-space\\sdkwork-drive\\sdks\\sdkwork-drive-sdk\\sdkwork-drive-sdk-rust\\generated\\server-openapi",
+        "rationale": "Validate the generated package with the unified publish helper. Triggered by: models.",
+        "workingDirectory": "/mnt/e/sdkwork-space/sdkwork-drive/sdks/sdkwork-drive-sdk/sdkwork-drive-sdk-rust/generated/server-openapi",
         "command": "node",
         "args": [
           "./bin/publish-core.mjs",
@@ -75,8 +70,8 @@
         "id": "verify-build",
         "title": "Unified package build",
         "required": true,
-        "rationale": "Run the full package build because this language uses a lighter check path than the final build. Triggered by: runtime, publish-workflow.",
-        "workingDirectory": "E:\\sdkwork-space\\sdkwork-drive\\sdks\\sdkwork-drive-sdk\\sdkwork-drive-sdk-rust\\generated\\server-openapi",
+        "rationale": "Run the full package build because this language uses a lighter check path than the final build. Triggered by: models.",
+        "workingDirectory": "/mnt/e/sdkwork-space/sdkwork-drive/sdks/sdkwork-drive-sdk/sdkwork-drive-sdk-rust/generated/server-openapi",
         "command": "node",
         "args": [
           "./bin/publish-core.mjs",
@@ -94,14 +89,14 @@
   "verificationPlan": {
     "shouldRun": true,
     "runPhase": "now",
-    "summary": "Detected impact areas: runtime, publish-workflow. Verification is required. Run the required verification commands now against the generated SDK output.",
+    "summary": "Detected impact areas: models. Verification is required. Run the required verification commands now against the generated SDK output.",
     "steps": [
       {
         "id": "check",
         "title": "Unified package check",
         "required": true,
-        "rationale": "Validate the generated package with the unified publish helper. Triggered by: runtime, publish-workflow.",
-        "workingDirectory": "E:\\sdkwork-space\\sdkwork-drive\\sdks\\sdkwork-drive-sdk\\sdkwork-drive-sdk-rust\\generated\\server-openapi",
+        "rationale": "Validate the generated package with the unified publish helper. Triggered by: models.",
+        "workingDirectory": "/mnt/e/sdkwork-space/sdkwork-drive/sdks/sdkwork-drive-sdk/sdkwork-drive-sdk-rust/generated/server-openapi",
         "command": "node",
         "args": [
           "./bin/publish-core.mjs",
@@ -118,8 +113,8 @@
         "id": "build",
         "title": "Unified package build",
         "required": true,
-        "rationale": "Run the full package build because this language uses a lighter check path than the final build. Triggered by: runtime, publish-workflow.",
-        "workingDirectory": "E:\\sdkwork-space\\sdkwork-drive\\sdks\\sdkwork-drive-sdk\\sdkwork-drive-sdk-rust\\generated\\server-openapi",
+        "rationale": "Run the full package build because this language uses a lighter check path than the final build. Triggered by: models.",
+        "workingDirectory": "/mnt/e/sdkwork-space/sdkwork-drive/sdks/sdkwork-drive-sdk/sdkwork-drive-sdk-rust/generated/server-openapi",
         "command": "node",
         "args": [
           "./bin/publish-core.mjs",
@@ -140,7 +135,7 @@
     "language": "rust",
     "sdkType": "custom",
     "protocol": "http",
-    "outputPath": "E:\\sdkwork-space\\sdkwork-drive\\sdks\\sdkwork-drive-sdk\\sdkwork-drive-sdk-rust\\generated\\server-openapi",
+    "outputPath": "/mnt/e/sdkwork-space/sdkwork-drive/sdks/sdkwork-drive-sdk/sdkwork-drive-sdk-rust/generated/server-openapi",
     "packageName": "sdkwork-drive-sdk-generated-rust"
   },
   "versioning": {
@@ -157,19 +152,21 @@
   "syncSummary": {
     "dryRun": false,
     "controlPlaneEnabled": true,
-    "writtenFiles": 2,
+    "writtenFiles": 3,
     "skippedScaffoldFiles": 1,
-    "skippedUnchangedGeneratedFiles": 29,
+    "skippedUnchangedGeneratedFiles": 28,
     "deletedGeneratedFiles": 0,
     "changeSummaryPath": ".sdkwork/sdkwork-generator-changes.json",
-    "changeFingerprint": "7dafe759ccbf6950500ef4ba05fa4f69227ecff57054c5c89dc023a6b1e30546",
+    "changeFingerprint": "d2d1fe35bc101dba6ab71e06b66884a262e4c5050480a864aee175780c718977",
     "changes": {
       "createdGeneratedFiles": [],
       "updatedGeneratedFiles": [
-        "bin/publish-core.mjs",
-        "src/http/client.rs"
+        "src/models/drive_open_share_link.rs",
+        "src/models/open_download_url_response.rs",
+        "src/models/open_node.rs"
       ],
       "unchangedGeneratedFiles": [
+        "bin/publish-core.mjs",
         "bin/publish.ps1",
         "bin/publish.sh",
         "Cargo.toml",
@@ -182,16 +179,14 @@
         "src/api/mod.rs",
         "src/api/paths.rs",
         "src/client.rs",
+        "src/http/client.rs",
         "src/http/mod.rs",
         "src/lib.rs",
         "src/models/common.rs",
         "src/models/create_open_download_url_request.rs",
-        "src/models/drive_open_share_link.rs",
         "src/models/field_error.rs",
         "src/models/mod.rs",
         "src/models/open_download_url_create_response.rs",
-        "src/models/open_download_url_response.rs",
-        "src/models/open_node.rs",
         "src/models/open_share_link_resolve_response.rs",
         "src/models/open_share_links_download_urls_create_response201.rs",
         "src/models/open_share_links_retrieve_response.rs",
@@ -206,44 +201,40 @@
         "custom/README.md"
       ],
       "backedUpFiles": [
-        "bin/publish-core.mjs",
-        "src/http/client.rs"
+        "src/models/drive_open_share_link.rs",
+        "src/models/open_download_url_response.rs",
+        "src/models/open_node.rs"
       ]
     },
     "impact": {
       "schemaVersion": 1,
       "areas": [
-        "runtime",
-        "publish-workflow"
+        "models"
       ],
       "details": [
         {
-          "area": "runtime",
+          "area": "models",
           "paths": [
-            "src/http/client.rs"
-          ]
-        },
-        {
-          "area": "publish-workflow",
-          "paths": [
-            "bin/publish-core.mjs"
+            "src/models/drive_open_share_link.rs",
+            "src/models/open_download_url_response.rs",
+            "src/models/open_node.rs"
           ]
         }
       ],
       "requiresVerification": true,
-      "summary": "Detected impact areas: runtime, publish-workflow. Verification is required."
+      "summary": "Detected impact areas: models. Verification is required."
     },
     "verificationPlan": {
       "shouldRun": true,
       "runPhase": "now",
-      "summary": "Detected impact areas: runtime, publish-workflow. Verification is required. Run the required verification commands now against the generated SDK output.",
+      "summary": "Detected impact areas: models. Verification is required. Run the required verification commands now against the generated SDK output.",
       "steps": [
         {
           "id": "check",
           "title": "Unified package check",
           "required": true,
-          "rationale": "Validate the generated package with the unified publish helper. Triggered by: runtime, publish-workflow.",
-          "workingDirectory": "E:\\sdkwork-space\\sdkwork-drive\\sdks\\sdkwork-drive-sdk\\sdkwork-drive-sdk-rust\\generated\\server-openapi",
+          "rationale": "Validate the generated package with the unified publish helper. Triggered by: models.",
+          "workingDirectory": "/mnt/e/sdkwork-space/sdkwork-drive/sdks/sdkwork-drive-sdk/sdkwork-drive-sdk-rust/generated/server-openapi",
           "command": "node",
           "args": [
             "./bin/publish-core.mjs",
@@ -260,8 +251,8 @@
           "id": "build",
           "title": "Unified package build",
           "required": true,
-          "rationale": "Run the full package build because this language uses a lighter check path than the final build. Triggered by: runtime, publish-workflow.",
-          "workingDirectory": "E:\\sdkwork-space\\sdkwork-drive\\sdks\\sdkwork-drive-sdk\\sdkwork-drive-sdk-rust\\generated\\server-openapi",
+          "rationale": "Run the full package build because this language uses a lighter check path than the final build. Triggered by: models.",
+          "workingDirectory": "/mnt/e/sdkwork-space/sdkwork-drive/sdks/sdkwork-drive-sdk/sdkwork-drive-sdk-rust/generated/server-openapi",
           "command": "node",
           "args": [
             "./bin/publish-core.mjs",
@@ -290,8 +281,9 @@
       ]
     },
     "backedUpFiles": [
-      "bin/publish-core.mjs",
-      "src/http/client.rs"
+      "src/models/drive_open_share_link.rs",
+      "src/models/open_download_url_response.rs",
+      "src/models/open_node.rs"
     ],
     "preservedLegacyFiles": false
   }

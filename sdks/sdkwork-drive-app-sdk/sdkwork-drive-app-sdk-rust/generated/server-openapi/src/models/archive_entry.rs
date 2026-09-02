@@ -10,10 +10,10 @@ pub struct ArchiveEntry {
     pub is_directory: bool,
 
     #[serde(rename = "uncompressedSizeBytes")]
-    pub uncompressed_size_bytes: i64,
+    pub uncompressed_size_bytes: String,
 
     #[serde(rename = "compressedSizeBytes")]
-    pub compressed_size_bytes: i64,
+    pub compressed_size_bytes: String,
 
     #[serde(rename = "contentType")]
     #[serde(default, skip_serializing_if = "Option::is_none")]

@@ -34,7 +34,7 @@ pub struct DriveSpace {
     #[serde(rename = "lifecycleStatus")]
     pub lifecycle_status: String,
 
-    pub version: i64,
+    pub version: String,
 
     #[serde(rename = "createdBy")]
     #[serde(default, skip_serializing_if = "Option::is_none")]

@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]
 pub struct MaintenanceJob {
-    pub id: i64,
+    pub id: String,
 
     #[serde(rename = "jobType")]
     pub job_type: String,
@@ -13,10 +13,10 @@ pub struct MaintenanceJob {
     pub dry_run: bool,
 
     #[serde(rename = "scannedCount")]
-    pub scanned_count: i64,
+    pub scanned_count: String,
 
     #[serde(rename = "affectedCount")]
-    pub affected_count: i64,
+    pub affected_count: String,
 
     #[serde(rename = "operatorId")]
     pub operator_id: String,

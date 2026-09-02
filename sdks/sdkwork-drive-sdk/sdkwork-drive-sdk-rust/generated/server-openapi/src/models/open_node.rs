@@ -22,5 +22,5 @@ pub struct OpenNode {
 
     #[serde(rename = "contentLength")]
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub content_length: Option<i64>,
+    pub content_length: Option<String>,
 }

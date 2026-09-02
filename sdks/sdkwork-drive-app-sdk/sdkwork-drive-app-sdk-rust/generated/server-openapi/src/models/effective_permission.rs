@@ -32,5 +32,5 @@ pub struct EffectivePermission {
     #[serde(rename = "lifecycleStatus")]
     pub lifecycle_status: String,
 
-    pub version: i64,
+    pub version: String,
 }

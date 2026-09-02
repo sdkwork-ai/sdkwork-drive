@@ -18,5 +18,5 @@ pub struct CreateWatchChannelRequest {
     pub channel_type: Option<String>,
 
     #[serde(rename = "expirationEpochMs")]
-    pub expiration_epoch_ms: i64,
+    pub expiration_epoch_ms: String,
 }

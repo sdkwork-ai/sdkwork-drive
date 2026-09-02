@@ -29,10 +29,10 @@ pub struct PrepareUploaderUploadRequest {
     pub content_type: String,
 
     #[serde(rename = "contentLength")]
-    pub content_length: i64,
+    pub content_length: String,
 
     #[serde(rename = "chunkSizeBytes")]
-    pub chunk_size_bytes: i64,
+    pub chunk_size_bytes: String,
 
     #[serde(rename = "spaceId")]
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -47,7 +47,7 @@ pub struct PrepareUploaderUploadRequest {
 
     #[serde(rename = "nowEpochMs")]
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub now_epoch_ms: Option<i64>,
+    pub now_epoch_ms: Option<String>,
 
     /// Drive uploader usage context identifier. Optional semantic context for idempotency, ownership, and cleanup scoping.
     #[serde(default, skip_serializing_if = "Option::is_none")]

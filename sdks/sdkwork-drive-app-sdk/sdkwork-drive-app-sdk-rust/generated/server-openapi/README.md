@@ -44,7 +44,6 @@ client.set_header("X-Custom-Header", "value");
 ## API Modules
 
 - `client.drive()` - drive API
-- `client.assets()` - assets API
 
 ## Usage Examples
 
@@ -53,18 +52,6 @@ client.set_header("X-Custom-Header", "value");
 ```rust
 // GET /app/v3/api/drive/quotas/summary
 let result = client.drive().quotas_retrieve().await?;
-println!("{result:?}");
-```
-
-### assets
-
-```rust
-use std::collections::HashMap;
-// List asset collections
-let mut query = HashMap::new();
-query.insert("cursor".to_string(), serde_json::json!("cursor"));
-query.insert("page_size".to_string(), serde_json::json!(2));
-let result = client.assets().asset_collections_list(Some(&query)).await?;
 println!("{result:?}");
 ```
 

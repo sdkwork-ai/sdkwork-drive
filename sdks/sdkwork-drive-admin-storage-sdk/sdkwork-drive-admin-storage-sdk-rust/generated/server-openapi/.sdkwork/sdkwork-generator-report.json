@@ -12,13 +12,12 @@
   "mode": "apply",
   "hasChanges": true,
   "hasDestructiveChanges": false,
-  "changeFingerprint": "cc8dae2cc6b3ae1e1ca5314eb7f8a5d3567c0d9c48b98382cd3897d0bd0465dc",
+  "changeFingerprint": "69bbeebfff82791b7c751fdf85ecee3553a52a95ef0a080a94bbb371ef4c0576",
   "changeImpact": {
     "schemaVersion": 1,
     "areas": [
       "api-surface",
-      "runtime",
-      "publish-workflow"
+      "models"
     ],
     "details": [
       {
@@ -28,20 +27,18 @@
         ]
       },
       {
-        "area": "runtime",
+        "area": "models",
         "paths": [
-          "src/http/client.rs"
-        ]
-      },
-      {
-        "area": "publish-workflow",
-        "paths": [
-          "bin/publish-core.mjs"
+          "src/models/mod.rs",
+          "src/models/provider_bucket_list_item.rs",
+          "src/models/provider_object.rs",
+          "src/models/storage_provider_binding.rs",
+          "src/models/storage_provider.rs"
         ]
       }
     ],
     "requiresVerification": true,
-    "summary": "Detected impact areas: api-surface, runtime, publish-workflow. Verification is required."
+    "summary": "Detected impact areas: api-surface, models. Verification is required."
   },
   "executionDecision": {
     "schemaVersion": 1,
@@ -64,8 +61,8 @@
         "id": "verify-check",
         "title": "Unified package check",
         "required": true,
-        "rationale": "Validate the generated package with the unified publish helper. Triggered by: api-surface, runtime, publish-workflow.",
-        "workingDirectory": "E:\\sdkwork-space\\sdkwork-drive\\sdks\\sdkwork-drive-admin-storage-sdk\\sdkwork-drive-admin-storage-sdk-rust\\generated\\server-openapi",
+        "rationale": "Validate the generated package with the unified publish helper. Triggered by: api-surface, models.",
+        "workingDirectory": "/mnt/e/sdkwork-space/sdkwork-drive/sdks/sdkwork-drive-admin-storage-sdk/sdkwork-drive-admin-storage-sdk-rust/generated/server-openapi",
         "command": "node",
         "args": [
           "./bin/publish-core.mjs",
@@ -82,8 +79,8 @@
         "id": "verify-build",
         "title": "Unified package build",
         "required": true,
-        "rationale": "Run the full package build because this language uses a lighter check path than the final build. Triggered by: api-surface, runtime, publish-workflow.",
-        "workingDirectory": "E:\\sdkwork-space\\sdkwork-drive\\sdks\\sdkwork-drive-admin-storage-sdk\\sdkwork-drive-admin-storage-sdk-rust\\generated\\server-openapi",
+        "rationale": "Run the full package build because this language uses a lighter check path than the final build. Triggered by: api-surface, models.",
+        "workingDirectory": "/mnt/e/sdkwork-space/sdkwork-drive/sdks/sdkwork-drive-admin-storage-sdk/sdkwork-drive-admin-storage-sdk-rust/generated/server-openapi",
         "command": "node",
         "args": [
           "./bin/publish-core.mjs",
@@ -101,14 +98,14 @@
   "verificationPlan": {
     "shouldRun": true,
     "runPhase": "now",
-    "summary": "Detected impact areas: api-surface, runtime, publish-workflow. Verification is required. Run the required verification commands now against the generated SDK output.",
+    "summary": "Detected impact areas: api-surface, models. Verification is required. Run the required verification commands now against the generated SDK output.",
     "steps": [
       {
         "id": "check",
         "title": "Unified package check",
         "required": true,
-        "rationale": "Validate the generated package with the unified publish helper. Triggered by: api-surface, runtime, publish-workflow.",
-        "workingDirectory": "E:\\sdkwork-space\\sdkwork-drive\\sdks\\sdkwork-drive-admin-storage-sdk\\sdkwork-drive-admin-storage-sdk-rust\\generated\\server-openapi",
+        "rationale": "Validate the generated package with the unified publish helper. Triggered by: api-surface, models.",
+        "workingDirectory": "/mnt/e/sdkwork-space/sdkwork-drive/sdks/sdkwork-drive-admin-storage-sdk/sdkwork-drive-admin-storage-sdk-rust/generated/server-openapi",
         "command": "node",
         "args": [
           "./bin/publish-core.mjs",
@@ -125,8 +122,8 @@
         "id": "build",
         "title": "Unified package build",
         "required": true,
-        "rationale": "Run the full package build because this language uses a lighter check path than the final build. Triggered by: api-surface, runtime, publish-workflow.",
-        "workingDirectory": "E:\\sdkwork-space\\sdkwork-drive\\sdks\\sdkwork-drive-admin-storage-sdk\\sdkwork-drive-admin-storage-sdk-rust\\generated\\server-openapi",
+        "rationale": "Run the full package build because this language uses a lighter check path than the final build. Triggered by: api-surface, models.",
+        "workingDirectory": "/mnt/e/sdkwork-space/sdkwork-drive/sdks/sdkwork-drive-admin-storage-sdk/sdkwork-drive-admin-storage-sdk-rust/generated/server-openapi",
         "command": "node",
         "args": [
           "./bin/publish-core.mjs",
@@ -147,7 +144,7 @@
     "language": "rust",
     "sdkType": "custom",
     "protocol": "http",
-    "outputPath": "E:\\sdkwork-space\\sdkwork-drive\\sdks\\sdkwork-drive-admin-storage-sdk\\sdkwork-drive-admin-storage-sdk-rust\\generated\\server-openapi",
+    "outputPath": "/mnt/e/sdkwork-space/sdkwork-drive/sdks/sdkwork-drive-admin-storage-sdk/sdkwork-drive-admin-storage-sdk-rust/generated/server-openapi",
     "packageName": "sdkwork-drive-admin-storage-sdk-generated-rust"
   },
   "versioning": {
@@ -164,20 +161,24 @@
   "syncSummary": {
     "dryRun": false,
     "controlPlaneEnabled": true,
-    "writtenFiles": 3,
+    "writtenFiles": 6,
     "skippedScaffoldFiles": 1,
-    "skippedUnchangedGeneratedFiles": 65,
+    "skippedUnchangedGeneratedFiles": 62,
     "deletedGeneratedFiles": 0,
     "changeSummaryPath": ".sdkwork/sdkwork-generator-changes.json",
-    "changeFingerprint": "cc8dae2cc6b3ae1e1ca5314eb7f8a5d3567c0d9c48b98382cd3897d0bd0465dc",
+    "changeFingerprint": "69bbeebfff82791b7c751fdf85ecee3553a52a95ef0a080a94bbb371ef4c0576",
     "changes": {
       "createdGeneratedFiles": [],
       "updatedGeneratedFiles": [
-        "bin/publish-core.mjs",
         "src/api/drive.rs",
-        "src/http/client.rs"
+        "src/models/mod.rs",
+        "src/models/provider_bucket_list_item.rs",
+        "src/models/provider_object.rs",
+        "src/models/storage_provider_binding.rs",
+        "src/models/storage_provider.rs"
       ],
       "unchangedGeneratedFiles": [
+        "bin/publish-core.mjs",
         "bin/publish.ps1",
         "bin/publish.sh",
         "Cargo.toml",
@@ -189,21 +190,19 @@
         "src/api/mod.rs",
         "src/api/paths.rs",
         "src/client.rs",
+        "src/http/client.rs",
         "src/http/mod.rs",
         "src/lib.rs",
         "src/models/common.rs",
         "src/models/copy_provider_object_request.rs",
         "src/models/create_storage_provider_request.rs",
         "src/models/field_error.rs",
-        "src/models/mod.rs",
         "src/models/page_info.rs",
         "src/models/problem_detail.rs",
-        "src/models/provider_bucket_list_item.rs",
         "src/models/provider_bucket_mutation.rs",
         "src/models/provider_bucket.rs",
         "src/models/provider_object_content.rs",
         "src/models/provider_object_mutation.rs",
-        "src/models/provider_object.rs",
         "src/models/rotate_storage_provider_credential_request.rs",
         "src/models/sdk_work_api_response.rs",
         "src/models/sdk_work_command_data.rs",
@@ -213,16 +212,14 @@
         "src/models/sdk_work_resource_response.rs",
         "src/models/set_default_storage_provider_binding_request.rs",
         "src/models/set_storage_provider_kind_enabled_request.rs",
-        "src/models/storage_provider_binding.rs",
         "src/models/storage_provider_bindings_default_retrieve_response.rs",
         "src/models/storage_provider_bindings_default_update_response.rs",
         "src/models/storage_provider_bindings_list_response.rs",
         "src/models/storage_provider_capabilities.rs",
         "src/models/storage_provider_kind.rs",
-        "src/models/storage_provider_kinds_initialize_response.rs",
+        "src/models/storage_provider_kinds_create_response201.rs",
         "src/models/storage_provider_kinds_list_response.rs",
         "src/models/storage_provider_kinds_update_response.rs",
-        "src/models/storage_provider.rs",
         "src/models/storage_providers_activate_response.rs",
         "src/models/storage_providers_bucket_retrieve_response.rs",
         "src/models/storage_providers_bucket_update_response.rs",
@@ -250,17 +247,19 @@
         "custom/README.md"
       ],
       "backedUpFiles": [
-        "bin/publish-core.mjs",
         "src/api/drive.rs",
-        "src/http/client.rs"
+        "src/models/mod.rs",
+        "src/models/provider_bucket_list_item.rs",
+        "src/models/provider_object.rs",
+        "src/models/storage_provider_binding.rs",
+        "src/models/storage_provider.rs"
       ]
     },
     "impact": {
       "schemaVersion": 1,
       "areas": [
         "api-surface",
-        "runtime",
-        "publish-workflow"
+        "models"
       ],
       "details": [
         {
@@ -270,32 +269,30 @@
           ]
         },
         {
-          "area": "runtime",
+          "area": "models",
           "paths": [
-            "src/http/client.rs"
-          ]
-        },
-        {
-          "area": "publish-workflow",
-          "paths": [
-            "bin/publish-core.mjs"
+            "src/models/mod.rs",
+            "src/models/provider_bucket_list_item.rs",
+            "src/models/provider_object.rs",
+            "src/models/storage_provider_binding.rs",
+            "src/models/storage_provider.rs"
           ]
         }
       ],
       "requiresVerification": true,
-      "summary": "Detected impact areas: api-surface, runtime, publish-workflow. Verification is required."
+      "summary": "Detected impact areas: api-surface, models. Verification is required."
     },
     "verificationPlan": {
       "shouldRun": true,
       "runPhase": "now",
-      "summary": "Detected impact areas: api-surface, runtime, publish-workflow. Verification is required. Run the required verification commands now against the generated SDK output.",
+      "summary": "Detected impact areas: api-surface, models. Verification is required. Run the required verification commands now against the generated SDK output.",
       "steps": [
         {
           "id": "check",
           "title": "Unified package check",
           "required": true,
-          "rationale": "Validate the generated package with the unified publish helper. Triggered by: api-surface, runtime, publish-workflow.",
-          "workingDirectory": "E:\\sdkwork-space\\sdkwork-drive\\sdks\\sdkwork-drive-admin-storage-sdk\\sdkwork-drive-admin-storage-sdk-rust\\generated\\server-openapi",
+          "rationale": "Validate the generated package with the unified publish helper. Triggered by: api-surface, models.",
+          "workingDirectory": "/mnt/e/sdkwork-space/sdkwork-drive/sdks/sdkwork-drive-admin-storage-sdk/sdkwork-drive-admin-storage-sdk-rust/generated/server-openapi",
           "command": "node",
           "args": [
             "./bin/publish-core.mjs",
@@ -312,8 +309,8 @@
           "id": "build",
           "title": "Unified package build",
           "required": true,
-          "rationale": "Run the full package build because this language uses a lighter check path than the final build. Triggered by: api-surface, runtime, publish-workflow.",
-          "workingDirectory": "E:\\sdkwork-space\\sdkwork-drive\\sdks\\sdkwork-drive-admin-storage-sdk\\sdkwork-drive-admin-storage-sdk-rust\\generated\\server-openapi",
+          "rationale": "Run the full package build because this language uses a lighter check path than the final build. Triggered by: api-surface, models.",
+          "workingDirectory": "/mnt/e/sdkwork-space/sdkwork-drive/sdks/sdkwork-drive-admin-storage-sdk/sdkwork-drive-admin-storage-sdk-rust/generated/server-openapi",
           "command": "node",
           "args": [
             "./bin/publish-core.mjs",
@@ -342,9 +339,12 @@
       ]
     },
     "backedUpFiles": [
-      "bin/publish-core.mjs",
       "src/api/drive.rs",
-      "src/http/client.rs"
+      "src/models/mod.rs",
+      "src/models/provider_bucket_list_item.rs",
+      "src/models/provider_object.rs",
+      "src/models/storage_provider_binding.rs",
+      "src/models/storage_provider.rs"
     ],
     "preservedLegacyFiles": false
   }

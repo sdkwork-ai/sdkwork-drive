@@ -35,7 +35,7 @@ pub struct StorageProvider {
 
     pub status: String,
 
-    pub version: i64,
+    pub version: String,
 
     #[serde(rename = "credentialConfigured")]
     pub credential_configured: bool,

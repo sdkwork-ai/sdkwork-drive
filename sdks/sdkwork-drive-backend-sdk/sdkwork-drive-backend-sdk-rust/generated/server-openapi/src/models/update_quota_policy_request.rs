@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 pub struct UpdateQuotaPolicyRequest {
     #[serde(rename = "quotaBytes")]
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub quota_bytes: Option<i64>,
+    pub quota_bytes: Option<String>,
 
     #[serde(rename = "clearTenantPolicy")]
     #[serde(default, skip_serializing_if = "Option::is_none")]
