@@ -27,7 +27,8 @@ coverage/
 !.env.*.example
 !apps/sdkwork-drive-pc/.env.standalone.*
 !apps/sdkwork-drive-pc/.env.cloud.*
-
+!apps/sdkwork-drive-pc/.env.standalone.demo
+!apps/sdkwork-drive-pc/.env.cloud.demo
 # Database files
 *.db
 *.sqlite
@@ -97,6 +98,8 @@ sdks/**/.sdkwork/manual-backups/
 .env.*
 !.env.example
 !.env.*.example
+!apps/sdkwork-drive-pc/.env.standalone.*
+!apps/sdkwork-drive-pc/.env.cloud.*
 **/build/
 *.log
 .DS_Store
