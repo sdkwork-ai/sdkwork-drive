@@ -8,7 +8,7 @@ public class CreateFileRequest {
     private String nodeName;
     private String uploadSessionId;
     private String idempotencyKey;
-    private Integer expiresAtEpochMs;
+    private String expiresAtEpochMs;
     private String bucket;
     private String objectKey;
 
@@ -60,11 +60,11 @@ public class CreateFileRequest {
         this.idempotencyKey = idempotencyKey;
     }
 
-    public Integer getExpiresAtEpochMs() {
+    public String getExpiresAtEpochMs() {
         return this.expiresAtEpochMs;
     }
 
-    public void setExpiresAtEpochMs(Integer expiresAtEpochMs) {
+    public void setExpiresAtEpochMs(String expiresAtEpochMs) {
         this.expiresAtEpochMs = expiresAtEpochMs;
     }
 

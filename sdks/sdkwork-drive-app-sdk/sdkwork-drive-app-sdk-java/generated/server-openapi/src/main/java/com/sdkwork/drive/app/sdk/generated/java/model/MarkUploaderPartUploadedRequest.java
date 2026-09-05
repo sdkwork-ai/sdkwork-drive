@@ -3,11 +3,11 @@ package com.sdkwork.drive.app.sdk.generated.java.model;
 
 public class MarkUploaderPartUploadedRequest {
     private String uploadSessionId;
-    private Integer offsetBytes;
-    private Integer sizeBytes;
+    private String offsetBytes;
+    private String sizeBytes;
     private String etag;
     private String checksumSha256Hex;
-    private Integer uploadedAtEpochMs;
+    private String uploadedAtEpochMs;
 
     public String getUploadSessionId() {
         return this.uploadSessionId;
@@ -17,19 +17,19 @@ public class MarkUploaderPartUploadedRequest {
         this.uploadSessionId = uploadSessionId;
     }
 
-    public Integer getOffsetBytes() {
+    public String getOffsetBytes() {
         return this.offsetBytes;
     }
 
-    public void setOffsetBytes(Integer offsetBytes) {
+    public void setOffsetBytes(String offsetBytes) {
         this.offsetBytes = offsetBytes;
     }
 
-    public Integer getSizeBytes() {
+    public String getSizeBytes() {
         return this.sizeBytes;
     }
 
-    public void setSizeBytes(Integer sizeBytes) {
+    public void setSizeBytes(String sizeBytes) {
         this.sizeBytes = sizeBytes;
     }
 
@@ -49,11 +49,11 @@ public class MarkUploaderPartUploadedRequest {
         this.checksumSha256Hex = checksumSha256Hex;
     }
 
-    public Integer getUploadedAtEpochMs() {
+    public String getUploadedAtEpochMs() {
         return this.uploadedAtEpochMs;
     }
 
-    public void setUploadedAtEpochMs(Integer uploadedAtEpochMs) {
+    public void setUploadedAtEpochMs(String uploadedAtEpochMs) {
         this.uploadedAtEpochMs = uploadedAtEpochMs;
     }
 }

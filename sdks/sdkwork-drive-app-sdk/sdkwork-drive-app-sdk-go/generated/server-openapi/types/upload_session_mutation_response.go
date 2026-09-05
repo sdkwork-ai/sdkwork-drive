@@ -9,8 +9,8 @@ type UploadSessionMutationResponse struct {
 	Bucket string `json:"bucket"`
 	ObjectKey string `json:"objectKey"`
 	State string `json:"state"`
-	ExpiresAtEpochMs int `json:"expiresAtEpochMs"`
-	Version int `json:"version"`
+	ExpiresAtEpochMs string `json:"expiresAtEpochMs"`
+	Version string `json:"version"`
 	StorageProviderId string `json:"storageProviderId"`
 	StorageUploadId string `json:"storageUploadId"`
 }

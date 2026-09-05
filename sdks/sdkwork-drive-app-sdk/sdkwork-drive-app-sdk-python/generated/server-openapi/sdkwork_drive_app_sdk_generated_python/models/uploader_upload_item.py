@@ -19,11 +19,11 @@ class UploaderUploadItem:
     original_file_name: str
     content_type: str
     content_type_group: str
-    content_length: int
-    chunk_size_bytes: int
-    total_parts: int
-    uploaded_parts_count: int
-    uploaded_bytes: int
+    content_length: str
+    chunk_size_bytes: str
+    total_parts: str
+    uploaded_parts_count: str
+    uploaded_bytes: str
     status: str
     retention_mode: str
     cleanup_status: str
@@ -37,8 +37,8 @@ class UploaderUploadItem:
     file_extension: Optional[str] = None
     detected_content_type: Optional[str] = None
     checksum_sha256hex: Optional[str] = None
-    retention_expires_at_epoch_ms: Optional[int] = None
+    retention_expires_at_epoch_ms: Optional[str] = None
     cleanup_action: Optional[str] = None
-    hard_delete_after_epoch_ms: Optional[int] = None
+    hard_delete_after_epoch_ms: Optional[str] = None
     scene: Optional[str] = None
     source: Optional[str] = None

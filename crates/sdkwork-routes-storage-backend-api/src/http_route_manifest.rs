@@ -37,7 +37,7 @@ const HTTP_ROUTES: &[HttpRoute] = &[
         HttpMethod::Post,
         "/backend/v3/api/drive/storage/provider-kinds",
         "drive-admin-storage-api",
-        "storageProviderKinds.initialize",
+        "storageProviderKinds.create",
     ),
     HttpRoute::dual_token(
         HttpMethod::Patch,

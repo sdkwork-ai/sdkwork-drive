@@ -2,6 +2,6 @@ package types
 
 
 type UpdateQuotaPolicyRequest struct {
-	QuotaBytes int `json:"quotaBytes"`
+	QuotaBytes string `json:"quotaBytes"`
 	ClearTenantPolicy bool `json:"clearTenantPolicy"`
 }

@@ -2,23 +2,23 @@ package com.sdkwork.drive.backend.sdk.generated.java.model;
 
 
 public class SweepResponse {
-    private Integer scannedCount;
-    private Integer affectedCount;
+    private String scannedCount;
+    private String affectedCount;
     private Boolean dryRun;
 
-    public Integer getScannedCount() {
+    public String getScannedCount() {
         return this.scannedCount;
     }
 
-    public void setScannedCount(Integer scannedCount) {
+    public void setScannedCount(String scannedCount) {
         this.scannedCount = scannedCount;
     }
 
-    public Integer getAffectedCount() {
+    public String getAffectedCount() {
         return this.affectedCount;
     }
 
-    public void setAffectedCount(Integer affectedCount) {
+    public void setAffectedCount(String affectedCount) {
         this.affectedCount = affectedCount;
     }
 

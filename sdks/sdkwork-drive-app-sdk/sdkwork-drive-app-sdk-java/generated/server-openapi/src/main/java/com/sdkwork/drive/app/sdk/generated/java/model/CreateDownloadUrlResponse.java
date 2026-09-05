@@ -4,7 +4,7 @@ package com.sdkwork.drive.app.sdk.generated.java.model;
 public class CreateDownloadUrlResponse {
     private String downloadUrl;
     private String signedSourceUrl;
-    private Integer expiresAtEpochMs;
+    private String expiresAtEpochMs;
     private String method;
 
     public String getDownloadUrl() {
@@ -23,11 +23,11 @@ public class CreateDownloadUrlResponse {
         this.signedSourceUrl = signedSourceUrl;
     }
 
-    public Integer getExpiresAtEpochMs() {
+    public String getExpiresAtEpochMs() {
         return this.expiresAtEpochMs;
     }
 
-    public void setExpiresAtEpochMs(Integer expiresAtEpochMs) {
+    public void setExpiresAtEpochMs(String expiresAtEpochMs) {
         this.expiresAtEpochMs = expiresAtEpochMs;
     }
 

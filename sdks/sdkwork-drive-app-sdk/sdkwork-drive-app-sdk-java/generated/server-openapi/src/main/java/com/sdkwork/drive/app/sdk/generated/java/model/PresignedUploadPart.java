@@ -4,7 +4,7 @@ import java.util.Map;
 
 public class PresignedUploadPart {
     private String uploadUrl;
-    private Integer expiresAtEpochMs;
+    private String expiresAtEpochMs;
     private String method;
     private Map<String, String> headers;
     private Integer partNo;
@@ -18,11 +18,11 @@ public class PresignedUploadPart {
         this.uploadUrl = uploadUrl;
     }
 
-    public Integer getExpiresAtEpochMs() {
+    public String getExpiresAtEpochMs() {
         return this.expiresAtEpochMs;
     }
 
-    public void setExpiresAtEpochMs(Integer expiresAtEpochMs) {
+    public void setExpiresAtEpochMs(String expiresAtEpochMs) {
         this.expiresAtEpochMs = expiresAtEpochMs;
     }
 

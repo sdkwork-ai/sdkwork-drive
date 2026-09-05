@@ -3,9 +3,9 @@ package com.sdkwork.drive.app.sdk.generated.java.model;
 
 public class UploaderRetentionRequest {
     private String mode;
-    private Integer ttlSeconds;
+    private String ttlSeconds;
     private String cleanupAction;
-    private Integer hardDeleteAfterSeconds;
+    private String hardDeleteAfterSeconds;
 
     public String getMode() {
         return this.mode;
@@ -15,11 +15,11 @@ public class UploaderRetentionRequest {
         this.mode = mode;
     }
 
-    public Integer getTtlSeconds() {
+    public String getTtlSeconds() {
         return this.ttlSeconds;
     }
 
-    public void setTtlSeconds(Integer ttlSeconds) {
+    public void setTtlSeconds(String ttlSeconds) {
         this.ttlSeconds = ttlSeconds;
     }
 
@@ -31,11 +31,11 @@ public class UploaderRetentionRequest {
         this.cleanupAction = cleanupAction;
     }
 
-    public Integer getHardDeleteAfterSeconds() {
+    public String getHardDeleteAfterSeconds() {
         return this.hardDeleteAfterSeconds;
     }
 
-    public void setHardDeleteAfterSeconds(Integer hardDeleteAfterSeconds) {
+    public void setHardDeleteAfterSeconds(String hardDeleteAfterSeconds) {
         this.hardDeleteAfterSeconds = hardDeleteAfterSeconds;
     }
 }

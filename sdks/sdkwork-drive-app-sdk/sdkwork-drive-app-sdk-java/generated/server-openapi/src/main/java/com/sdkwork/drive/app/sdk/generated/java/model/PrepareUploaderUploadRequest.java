@@ -10,12 +10,12 @@ public class PrepareUploaderUploadRequest {
     private String fileFingerprint;
     private String originalFileName;
     private String contentType;
-    private Integer contentLength;
-    private Integer chunkSizeBytes;
+    private String contentLength;
+    private String chunkSizeBytes;
     private String spaceId;
     private String parentNodeId;
     private UploaderRetentionRequest retention;
-    private Integer nowEpochMs;
+    private String nowEpochMs;
     private String scene;
     private String source;
     private String shareToken;
@@ -84,19 +84,19 @@ public class PrepareUploaderUploadRequest {
         this.contentType = contentType;
     }
 
-    public Integer getContentLength() {
+    public String getContentLength() {
         return this.contentLength;
     }
 
-    public void setContentLength(Integer contentLength) {
+    public void setContentLength(String contentLength) {
         this.contentLength = contentLength;
     }
 
-    public Integer getChunkSizeBytes() {
+    public String getChunkSizeBytes() {
         return this.chunkSizeBytes;
     }
 
-    public void setChunkSizeBytes(Integer chunkSizeBytes) {
+    public void setChunkSizeBytes(String chunkSizeBytes) {
         this.chunkSizeBytes = chunkSizeBytes;
     }
 
@@ -124,11 +124,11 @@ public class PrepareUploaderUploadRequest {
         this.retention = retention;
     }
 
-    public Integer getNowEpochMs() {
+    public String getNowEpochMs() {
         return this.nowEpochMs;
     }
 
-    public void setNowEpochMs(Integer nowEpochMs) {
+    public void setNowEpochMs(String nowEpochMs) {
         this.nowEpochMs = nowEpochMs;
     }
 

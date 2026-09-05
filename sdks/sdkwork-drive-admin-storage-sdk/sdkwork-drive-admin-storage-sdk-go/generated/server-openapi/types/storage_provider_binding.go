@@ -9,7 +9,7 @@ type StorageProviderBinding struct {
 	BindingScope string `json:"bindingScope"`
 	Purpose string `json:"purpose"`
 	LifecycleStatus string `json:"lifecycleStatus"`
-	Version int `json:"version"`
+	Version string `json:"version"`
 	StorageProvider StorageProvider `json:"storageProvider"`
 	StorageRootPrefix string `json:"storageRootPrefix"`
 }

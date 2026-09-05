@@ -8,7 +8,7 @@ public class OpenNode {
     private String nodeType;
     private String nodeName;
     private String contentType;
-    private Integer contentLength;
+    private String contentLength;
 
     public String getId() {
         return this.id;
@@ -58,11 +58,11 @@ public class OpenNode {
         this.contentType = contentType;
     }
 
-    public Integer getContentLength() {
+    public String getContentLength() {
         return this.contentLength;
     }
 
-    public void setContentLength(Integer contentLength) {
+    public void setContentLength(String contentLength) {
         this.contentLength = contentLength;
     }
 }

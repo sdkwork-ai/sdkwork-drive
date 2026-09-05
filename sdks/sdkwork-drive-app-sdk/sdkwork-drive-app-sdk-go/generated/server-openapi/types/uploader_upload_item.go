@@ -24,17 +24,17 @@ type UploaderUploadItem struct {
 	ContentType string `json:"contentType"`
 	ContentTypeGroup string `json:"contentTypeGroup"`
 	DetectedContentType string `json:"detectedContentType"`
-	ContentLength int `json:"contentLength"`
+	ContentLength string `json:"contentLength"`
 	ChecksumSha256Hex string `json:"checksumSha256Hex"`
-	ChunkSizeBytes int `json:"chunkSizeBytes"`
-	TotalParts int `json:"totalParts"`
-	UploadedPartsCount int `json:"uploadedPartsCount"`
-	UploadedBytes int `json:"uploadedBytes"`
+	ChunkSizeBytes string `json:"chunkSizeBytes"`
+	TotalParts string `json:"totalParts"`
+	UploadedPartsCount string `json:"uploadedPartsCount"`
+	UploadedBytes string `json:"uploadedBytes"`
 	Status string `json:"status"`
 	RetentionMode string `json:"retentionMode"`
-	RetentionExpiresAtEpochMs int `json:"retentionExpiresAtEpochMs"`
+	RetentionExpiresAtEpochMs string `json:"retentionExpiresAtEpochMs"`
 	CleanupAction string `json:"cleanupAction"`
-	HardDeleteAfterEpochMs int `json:"hardDeleteAfterEpochMs"`
+	HardDeleteAfterEpochMs string `json:"hardDeleteAfterEpochMs"`
 	CleanupStatus string `json:"cleanupStatus"`
 	PostProcessStatus string `json:"postProcessStatus"`
 	Scene string `json:"scene"`

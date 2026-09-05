@@ -7,5 +7,5 @@ from typing import TYPE_CHECKING, Optional, List, Dict, Any
 class CreateDownloadUrlResponse:
     download_url: str
     signed_source_url: str
-    expires_at_epoch_ms: int
+    expires_at_epoch_ms: str
     method: str

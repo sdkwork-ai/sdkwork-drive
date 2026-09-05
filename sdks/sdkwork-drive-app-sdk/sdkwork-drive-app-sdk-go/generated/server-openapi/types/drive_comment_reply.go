@@ -8,7 +8,7 @@ type DriveCommentReply struct {
 	CommentId string `json:"commentId"`
 	Content string `json:"content"`
 	LifecycleStatus string `json:"lifecycleStatus"`
-	Version int `json:"version"`
+	Version string `json:"version"`
 	CreatedBy string `json:"createdBy"`
 	UpdatedBy string `json:"updatedBy"`
 	CreatedAt string `json:"createdAt"`

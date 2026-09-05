@@ -10,5 +10,5 @@ type DrivePermission struct {
 	Role string `json:"role"`
 	Inherited bool `json:"inherited"`
 	LifecycleStatus string `json:"lifecycleStatus"`
-	Version int `json:"version"`
+	Version string `json:"version"`
 }

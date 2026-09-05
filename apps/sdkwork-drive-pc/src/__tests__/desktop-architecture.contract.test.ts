@@ -1361,32 +1361,34 @@ describe('desktop architecture contract', () => {
 
     expect(rootPackageJson.scripts.dev).toBe('pnpm dev:standalone');
     expect(rootPackageJson.scripts['dev:standalone']).toBe(
-      'pnpm exec sdkwork-app dev --deployment-profile standalone --environment development',
+      'pnpm exec sdkwork-app dev --deployment-profile standalone',
     );
     expect(rootPackageJson.scripts['dev:cloud']).toBe(
-      'pnpm exec sdkwork-app dev --deployment-profile cloud --environment development',
+      'pnpm exec sdkwork-app dev --deployment-profile cloud',
     );
     expect(rootPackageJson.scripts['dev:browser']).toBe(
-      'pnpm exec sdkwork-app dev --runtime-target browser --database postgres --deployment-profile standalone',
+      'pnpm dev:browser:postgres:standalone',
     );
-    expect(rootPackageJson.scripts['dev:desktop']).toBeUndefined();
+    expect(rootPackageJson.scripts['dev:browser:postgres:standalone']).toBe(
+      'pnpm exec sdkwork-app dev --runtime-target browser --deployment-profile standalone',
+    );
     expect(rootPackageJson.scripts['dev:desktop']).toBe(
-      'pnpm exec sdkwork-app dev --runtime-target desktop --database postgres --deployment-profile standalone',
+      'pnpm dev:desktop:postgres:standalone',
+    );
+    expect(rootPackageJson.scripts['dev:desktop:postgres:standalone']).toBe(
+      'pnpm exec sdkwork-app dev --runtime-target desktop --deployment-profile standalone',
     );
     const retiredDesktopScript = ['dev', 'desktop', 'postgres', 'unified-process', 'standalone'].join(':');
     expect(rootPackageJson.scripts[retiredDesktopScript]).toBeUndefined();
     expect(rootPackageJson.scripts['dev:browser:cloud']).toBe(
       'pnpm exec sdkwork-app dev --runtime-target browser --deployment-profile cloud',
     );
-    expect(rootPackageJson.scripts['dev:browser:cloud']).toBeUndefined();
-    expect(rootPackageJson.scripts['dev:desktop:sqlite']).toBe(
-      'node scripts/sdkwork-command.mjs dev --runtime-target desktop --database sqlite --deployment-profile standalone',
-    );
+    expect(rootPackageJson.scripts['dev:desktop:sqlite']).toBeUndefined();
     expect(rootPackageJson.scripts.build).toBe(
-      'pnpm exec sdkwork-app build --deployment-profile cloud',
+      'pnpm exec sdkwork-app build',
     );
     expect(rootPackageJson.scripts['dev:server']).toBeUndefined();
-    expect(appPackageJson.scripts.dev).toBe('vite');
+    expect(appPackageJson.scripts.dev).toBe('pnpm dev:standalone');
     expect(tauriConfig.build.devUrl).toBe('http://localhost:5183');
   });
 

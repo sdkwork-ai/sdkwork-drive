@@ -259,11 +259,11 @@ Sibling SDKWork repositories are consumed through a dual-track model that MUST s
 
 - **Local development** (`pnpm dev`, `pnpm build`): pnpm workspace protocol. Each sibling
   package is declared ONCE in this repository root `pnpm-workspace.yaml` `packages:` as a
-  `../sdkwork-*` relative path, and consumed with `workspace:*` in `package.json`. Never use
+  `../<sdkwork-sibling>` relative path, and consumed with `workspace:*` in `package.json`. Never use
   `file:`/`link:`/git-URL specifiers for SDKWork sibling packages in any environment.
 - **CI / release packaging**: git-repository dependency checkout. Every sibling referenced by the
   local workspace MUST have a matching `dependencies[]` entry in `sdkwork.workflow.json` so CI
-  clones the sibling into the same `../sdkwork-*` relative layout (`GITHUB_WORKFLOW_SPEC.md`).
+  clones the sibling into the same `../<sdkwork-sibling>` relative layout (`GITHUB_WORKFLOW_SPEC.md`).
   `package.json` is never rewritten for CI.
 
 Import rules for sibling SDKWork packages:

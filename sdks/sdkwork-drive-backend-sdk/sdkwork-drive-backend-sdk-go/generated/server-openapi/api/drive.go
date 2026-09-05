@@ -191,7 +191,7 @@ func (a *DriveApi) DownloadPackagesList(state *string, page *int, pageSize *int)
 }
 
 // List server sandbox volumes
-func (a *DriveApi) SandboxVolumesList(lifecycleStatus *sdktypes.SandboxLifecycleStatus, providerKind *sdktypes.SandboxProviderKind, page *int, pageSize *int) (sdktypes.SandboxVolumesListResponse, error) {
+func (a *DriveApi) SandboxVolumesList(lifecycleStatus *sdktypes.SandboxLifecycleStatus, providerKind *sdktypes.SandboxProviderKind, page *string, pageSize *string) (sdktypes.SandboxVolumesListResponse, error) {
     query := BuildQueryString([]QueryParameterSpec{
         {Name: "lifecycle_status", Value: func() interface{} { if lifecycleStatus == nil { return nil }; return *lifecycleStatus }(), Style: "form", Explode: true, AllowReserved: false},
         {Name: "provider_kind", Value: func() interface{} { if providerKind == nil { return nil }; return *providerKind }(), Style: "form", Explode: true, AllowReserved: false},
@@ -247,7 +247,7 @@ func (a *DriveApi) SandboxVolumesDelete(sandboxId string) (struct{}, error) {
 }
 
 // List explicit sandbox grants
-func (a *DriveApi) SandboxGrantsList(sandboxId string, page *int, pageSize *int) (sdktypes.SandboxGrantsListResponse, error) {
+func (a *DriveApi) SandboxGrantsList(sandboxId string, page *string, pageSize *string) (sdktypes.SandboxGrantsListResponse, error) {
     query := BuildQueryString([]QueryParameterSpec{
         {Name: "page", Value: func() interface{} { if page == nil { return nil }; return *page }(), Style: "form", Explode: true, AllowReserved: false},
         {Name: "page_size", Value: func() interface{} { if pageSize == nil { return nil }; return *pageSize }(), Style: "form", Explode: true, AllowReserved: false},

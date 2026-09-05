@@ -8,5 +8,5 @@ type CreateUploadSessionRequest struct {
 	Bucket string `json:"bucket"`
 	ObjectKey string `json:"objectKey"`
 	IdempotencyKey string `json:"idempotencyKey"`
-	ExpiresAtEpochMs int `json:"expiresAtEpochMs"`
+	ExpiresAtEpochMs string `json:"expiresAtEpochMs"`
 }

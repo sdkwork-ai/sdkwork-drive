@@ -5,8 +5,8 @@ public class ArchiveEntry {
     private String path;
     private String name;
     private Boolean isDirectory;
-    private Integer uncompressedSizeBytes;
-    private Integer compressedSizeBytes;
+    private String uncompressedSizeBytes;
+    private String compressedSizeBytes;
     private String contentType;
 
     public String getPath() {
@@ -33,19 +33,19 @@ public class ArchiveEntry {
         this.isDirectory = isDirectory;
     }
 
-    public Integer getUncompressedSizeBytes() {
+    public String getUncompressedSizeBytes() {
         return this.uncompressedSizeBytes;
     }
 
-    public void setUncompressedSizeBytes(Integer uncompressedSizeBytes) {
+    public void setUncompressedSizeBytes(String uncompressedSizeBytes) {
         this.uncompressedSizeBytes = uncompressedSizeBytes;
     }
 
-    public Integer getCompressedSizeBytes() {
+    public String getCompressedSizeBytes() {
         return this.compressedSizeBytes;
     }
 
-    public void setCompressedSizeBytes(Integer compressedSizeBytes) {
+    public void setCompressedSizeBytes(String compressedSizeBytes) {
         this.compressedSizeBytes = compressedSizeBytes;
     }
 

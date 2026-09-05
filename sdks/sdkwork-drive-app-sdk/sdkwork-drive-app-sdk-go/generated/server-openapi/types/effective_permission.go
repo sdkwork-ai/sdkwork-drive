@@ -12,5 +12,5 @@ type EffectivePermission struct {
 	Inherited bool `json:"inherited"`
 	InheritedFromNodeId string `json:"inheritedFromNodeId"`
 	LifecycleStatus string `json:"lifecycleStatus"`
-	Version int `json:"version"`
+	Version string `json:"version"`
 }

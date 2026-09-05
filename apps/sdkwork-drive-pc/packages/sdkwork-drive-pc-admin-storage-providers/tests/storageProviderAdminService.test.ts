@@ -36,7 +36,7 @@ function createFakeService() {
 }
 
 function responseFor(request: DriveAdminStorageSdkRequest): unknown {
-  if (request.operationId === 'storageProviderKinds.list' || request.operationId === 'storageProviderKinds.initialize') {
+  if (request.operationId === 'storageProviderKinds.list' || request.operationId === 'storageProviderKinds.create') {
     return {
       items: [
         {
@@ -437,7 +437,7 @@ describe('storage provider admin service', () => {
 
     const kinds = await service.initializeKinds();
 
-    expect(calls[0].operationId).toBe('storageProviderKinds.initialize');
+    expect(calls[0].operationId).toBe('storageProviderKinds.create');
     expect(kinds).toHaveLength(2);
   });
 

@@ -6,14 +6,14 @@ public class UploaderUploadPart {
     private String tenantId;
     private String uploadItemId;
     private String uploadSessionId;
-    private Integer partNo;
-    private Integer offsetBytes;
-    private Integer sizeBytes;
+    private String partNo;
+    private String offsetBytes;
+    private String sizeBytes;
     private String etag;
     private String checksumSha256Hex;
     private String status;
-    private Integer retryCount;
-    private Integer uploadedAtEpochMs;
+    private String retryCount;
+    private String uploadedAtEpochMs;
 
     public String getId() {
         return this.id;
@@ -47,27 +47,27 @@ public class UploaderUploadPart {
         this.uploadSessionId = uploadSessionId;
     }
 
-    public Integer getPartNo() {
+    public String getPartNo() {
         return this.partNo;
     }
 
-    public void setPartNo(Integer partNo) {
+    public void setPartNo(String partNo) {
         this.partNo = partNo;
     }
 
-    public Integer getOffsetBytes() {
+    public String getOffsetBytes() {
         return this.offsetBytes;
     }
 
-    public void setOffsetBytes(Integer offsetBytes) {
+    public void setOffsetBytes(String offsetBytes) {
         this.offsetBytes = offsetBytes;
     }
 
-    public Integer getSizeBytes() {
+    public String getSizeBytes() {
         return this.sizeBytes;
     }
 
-    public void setSizeBytes(Integer sizeBytes) {
+    public void setSizeBytes(String sizeBytes) {
         this.sizeBytes = sizeBytes;
     }
 
@@ -95,19 +95,19 @@ public class UploaderUploadPart {
         this.status = status;
     }
 
-    public Integer getRetryCount() {
+    public String getRetryCount() {
         return this.retryCount;
     }
 
-    public void setRetryCount(Integer retryCount) {
+    public void setRetryCount(String retryCount) {
         this.retryCount = retryCount;
     }
 
-    public Integer getUploadedAtEpochMs() {
+    public String getUploadedAtEpochMs() {
         return this.uploadedAtEpochMs;
     }
 
-    public void setUploadedAtEpochMs(Integer uploadedAtEpochMs) {
+    public void setUploadedAtEpochMs(String uploadedAtEpochMs) {
         this.uploadedAtEpochMs = uploadedAtEpochMs;
     }
 }

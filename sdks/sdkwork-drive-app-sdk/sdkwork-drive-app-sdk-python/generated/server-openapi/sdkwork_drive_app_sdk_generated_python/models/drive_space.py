@@ -11,7 +11,7 @@ class DriveSpace:
     display_name: str
     space_type: str
     lifecycle_status: str
-    version: int
+    version: str
     tenant_id: Optional[str] = None
     presentation_icon: Optional[str] = None
     presentation_color: Optional[str] = None

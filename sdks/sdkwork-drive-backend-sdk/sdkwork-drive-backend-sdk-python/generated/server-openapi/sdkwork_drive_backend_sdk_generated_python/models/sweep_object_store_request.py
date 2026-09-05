@@ -6,4 +6,4 @@ from typing import TYPE_CHECKING, Optional, List, Dict, Any
 @dataclass
 class SweepObjectStoreRequest:
     dry_run: bool
-    limit: Optional[int] = None
+    limit: Optional[str] = None

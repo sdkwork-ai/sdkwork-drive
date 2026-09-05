@@ -2,7 +2,7 @@ package types
 
 
 type Change struct {
-	SequenceNo int `json:"sequenceNo"`
+	SequenceNo string `json:"sequenceNo"`
 	TenantId string `json:"tenantId"`
 	SpaceId string `json:"spaceId"`
 	NodeId string `json:"nodeId"`

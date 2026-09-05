@@ -11,10 +11,10 @@ public class DownloadPackageResponse {
     private String bucket;
     private String archiveObjectKey;
     private String contentType;
-    private Integer fileCount;
-    private Integer totalBytes;
-    private Integer archiveSizeBytes;
-    private Integer expiresAtEpochMs;
+    private String fileCount;
+    private String totalBytes;
+    private String archiveSizeBytes;
+    private String expiresAtEpochMs;
     private String downloadUrl;
     private String signedSourceUrl;
     private String method;
@@ -84,35 +84,35 @@ public class DownloadPackageResponse {
         this.contentType = contentType;
     }
 
-    public Integer getFileCount() {
+    public String getFileCount() {
         return this.fileCount;
     }
 
-    public void setFileCount(Integer fileCount) {
+    public void setFileCount(String fileCount) {
         this.fileCount = fileCount;
     }
 
-    public Integer getTotalBytes() {
+    public String getTotalBytes() {
         return this.totalBytes;
     }
 
-    public void setTotalBytes(Integer totalBytes) {
+    public void setTotalBytes(String totalBytes) {
         this.totalBytes = totalBytes;
     }
 
-    public Integer getArchiveSizeBytes() {
+    public String getArchiveSizeBytes() {
         return this.archiveSizeBytes;
     }
 
-    public void setArchiveSizeBytes(Integer archiveSizeBytes) {
+    public void setArchiveSizeBytes(String archiveSizeBytes) {
         this.archiveSizeBytes = archiveSizeBytes;
     }
 
-    public Integer getExpiresAtEpochMs() {
+    public String getExpiresAtEpochMs() {
         return this.expiresAtEpochMs;
     }
 
-    public void setExpiresAtEpochMs(Integer expiresAtEpochMs) {
+    public void setExpiresAtEpochMs(String expiresAtEpochMs) {
         this.expiresAtEpochMs = expiresAtEpochMs;
     }
 

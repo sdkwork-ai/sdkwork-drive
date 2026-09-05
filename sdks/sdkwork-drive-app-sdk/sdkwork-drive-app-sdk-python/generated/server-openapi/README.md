@@ -49,7 +49,6 @@ client.set_header('X-Custom-Header', 'value')
 ## API Modules
 
 - `client.drive` - drive API
-- `client.assets` - assets API
 
 ## Usage Examples
 
@@ -58,18 +57,6 @@ client.set_header('X-Custom-Header', 'value')
 ```python
 # GET /app/v3/api/drive/quotas/summary
 result = client.drive.quotas.retrieve()
-print(result)
-```
-
-### assets
-
-```python
-# List asset collections
-params = {
-    'cursor': 'cursor',
-    'page_size': 2,
-}
-result = client.assets.asset_collections.list(params)
 print(result)
 ```
 

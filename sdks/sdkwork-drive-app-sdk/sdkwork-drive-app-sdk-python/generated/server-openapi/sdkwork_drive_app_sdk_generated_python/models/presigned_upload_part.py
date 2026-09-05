@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Optional, List, Dict, Any
 @dataclass
 class PresignedUploadPart:
     upload_url: str
-    expires_at_epoch_ms: int
+    expires_at_epoch_ms: str
     method: str
     headers: Dict[str, str]
     part_no: int

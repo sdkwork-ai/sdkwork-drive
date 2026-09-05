@@ -7,9 +7,9 @@ from typing import TYPE_CHECKING, Optional, List, Dict, Any
 class FileVersion:
     id: str
     node_id: str
-    version_no: int
+    version_no: str
     content_type: str
-    content_length: int
+    content_length: str
     checksum_sha256hex: str
     lifecycle_status: str
     created_at: str

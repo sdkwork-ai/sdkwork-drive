@@ -10,12 +10,12 @@ type PrepareUploaderUploadRequest struct {
 	FileFingerprint string `json:"fileFingerprint"`
 	OriginalFileName string `json:"originalFileName"`
 	ContentType string `json:"contentType"`
-	ContentLength int `json:"contentLength"`
-	ChunkSizeBytes int `json:"chunkSizeBytes"`
+	ContentLength string `json:"contentLength"`
+	ChunkSizeBytes string `json:"chunkSizeBytes"`
 	SpaceId string `json:"spaceId"`
 	ParentNodeId string `json:"parentNodeId"`
 	Retention UploaderRetentionRequest `json:"retention"`
-	NowEpochMs int `json:"nowEpochMs"`
+	NowEpochMs string `json:"nowEpochMs"`
 	Scene string `json:"scene"`
 	Source string `json:"source"`
 	ShareToken string `json:"shareToken"`

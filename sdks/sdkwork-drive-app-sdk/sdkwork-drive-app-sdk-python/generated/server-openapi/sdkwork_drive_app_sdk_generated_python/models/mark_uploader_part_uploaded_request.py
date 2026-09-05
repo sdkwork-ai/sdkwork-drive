@@ -6,8 +6,8 @@ from typing import TYPE_CHECKING, Optional, List, Dict, Any
 @dataclass
 class MarkUploaderPartUploadedRequest:
     upload_session_id: str
-    offset_bytes: int
-    size_bytes: int
+    offset_bytes: str
+    size_bytes: str
     etag: str
     checksum_sha256hex: Optional[str] = None
-    uploaded_at_epoch_ms: Optional[int] = None
+    uploaded_at_epoch_ms: Optional[str] = None

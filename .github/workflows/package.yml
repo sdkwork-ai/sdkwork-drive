@@ -79,6 +79,10 @@ on:
         description: sdkwork-app-topology commit/ref.
         required: false
         default: main
+      sdkwork_core_ref:
+        description: sdkwork-core commit/ref.
+        required: false
+        default: main
 
 permissions:
   contents: write
@@ -114,6 +118,7 @@ jobs:
           "SDKWORK_ID_REF": "${{ github.event.inputs.sdkwork_id_ref || vars.SDKWORK_ID_REF }}",
           "SDKWORK_WEB_FRAMEWORK_REF": "${{ github.event.inputs.sdkwork_web_framework_ref || vars.SDKWORK_WEB_FRAMEWORK_REF }}",
           "SDKWORK_UTILS_REF": "${{ github.event.inputs.sdkwork_utils_ref || vars.SDKWORK_UTILS_REF }}",
-          "SDKWORK_APP_TOPOLOGY_REF": "${{ github.event.inputs.sdkwork_app_topology_ref || vars.SDKWORK_APP_TOPOLOGY_REF }}"
+          "SDKWORK_APP_TOPOLOGY_REF": "${{ github.event.inputs.sdkwork_app_topology_ref || vars.SDKWORK_APP_TOPOLOGY_REF }}",
+          "SDKWORK_CORE_REF": "${{ github.event.inputs.sdkwork_core_ref || vars.SDKWORK_CORE_REF }}"
         }
     secrets: inherit

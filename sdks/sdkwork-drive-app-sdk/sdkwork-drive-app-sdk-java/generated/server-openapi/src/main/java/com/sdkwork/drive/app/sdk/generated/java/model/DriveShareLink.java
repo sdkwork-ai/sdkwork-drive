@@ -6,12 +6,12 @@ public class DriveShareLink {
     private String tenantId;
     private String nodeId;
     private String role;
-    private Integer expiresAtEpochMs;
-    private Integer downloadLimit;
-    private Integer downloadCount;
+    private String expiresAtEpochMs;
+    private String downloadLimit;
+    private String downloadCount;
     private Boolean accessCodeRequired;
     private String lifecycleStatus;
-    private Integer version;
+    private String version;
 
     public String getId() {
         return this.id;
@@ -45,27 +45,27 @@ public class DriveShareLink {
         this.role = role;
     }
 
-    public Integer getExpiresAtEpochMs() {
+    public String getExpiresAtEpochMs() {
         return this.expiresAtEpochMs;
     }
 
-    public void setExpiresAtEpochMs(Integer expiresAtEpochMs) {
+    public void setExpiresAtEpochMs(String expiresAtEpochMs) {
         this.expiresAtEpochMs = expiresAtEpochMs;
     }
 
-    public Integer getDownloadLimit() {
+    public String getDownloadLimit() {
         return this.downloadLimit;
     }
 
-    public void setDownloadLimit(Integer downloadLimit) {
+    public void setDownloadLimit(String downloadLimit) {
         this.downloadLimit = downloadLimit;
     }
 
-    public Integer getDownloadCount() {
+    public String getDownloadCount() {
         return this.downloadCount;
     }
 
-    public void setDownloadCount(Integer downloadCount) {
+    public void setDownloadCount(String downloadCount) {
         this.downloadCount = downloadCount;
     }
 
@@ -85,11 +85,11 @@ public class DriveShareLink {
         this.lifecycleStatus = lifecycleStatus;
     }
 
-    public Integer getVersion() {
+    public String getVersion() {
         return this.version;
     }
 
-    public void setVersion(Integer version) {
+    public void setVersion(String version) {
         this.version = version;
     }
 }

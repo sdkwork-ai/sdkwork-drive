@@ -6,6 +6,6 @@ from typing import TYPE_CHECKING, Optional, List, Dict, Any
 @dataclass
 class QuotaSummary:
     tenant_id: str
-    total_bytes: int
-    object_count: int
-    quota_bytes: Optional[int] = None
+    total_bytes: str
+    object_count: str
+    quota_bytes: Optional[str] = None

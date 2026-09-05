@@ -8,10 +8,10 @@ class DriveShareLink:
     id: str
     node_id: str
     role: str
-    download_count: int
+    download_count: str
     lifecycle_status: str
-    version: int
+    version: str
     tenant_id: Optional[str] = None
-    expires_at_epoch_ms: Optional[int] = None
-    download_limit: Optional[int] = None
+    expires_at_epoch_ms: Optional[str] = None
+    download_limit: Optional[str] = None
     access_code_required: Optional[bool] = None

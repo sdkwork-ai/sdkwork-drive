@@ -12,4 +12,4 @@ class DriveSpace:
     display_name: str
     space_type: str
     lifecycle_status: str
-    version: int
+    version: str

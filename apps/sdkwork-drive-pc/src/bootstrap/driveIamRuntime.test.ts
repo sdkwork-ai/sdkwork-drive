@@ -37,6 +37,7 @@ function createOAuthClient() {
       retrieve: vi.fn(),
       passwordCompletions: { create: vi.fn() },
       scans: { create: vi.fn() },
+      sessionCompletions: { create: vi.fn() },
       sessionExchanges: { create: vi.fn() },
     },
     accountLinks: {
@@ -45,6 +46,8 @@ function createOAuthClient() {
     },
     authorizationUrls: { create: vi.fn() },
     callbacks: {
+      create: vi.fn(),
+      retrieve: vi.fn(),
       handleGet: vi.fn(),
       handlePost: vi.fn(),
     },
@@ -54,6 +57,7 @@ function createOAuthClient() {
     },
     miniProgramSessions: { create: vi.fn() },
     providers: { list: vi.fn() },
+    scanLoginModes: { list: vi.fn() },
     sessions: { create: vi.fn() },
   };
 }
@@ -179,6 +183,11 @@ describe('drive IAM runtime bridge', () => {
     );
     vi.stubGlobal('fetch', fetchMock);
 
+    // system.iam.runtime.retrieve is an access-token-only endpoint; the IAM
+    // app SDK client resolves credentials through the session-backed token
+    // manager, so seed the session store (not the runtime memory tokenStore).
+    session.setSession({ accessToken: TEST_ACCESS_TOKEN });
+
     await runtime.service.system.iam.runtime.retrieve();
 
     expect(fetchMock).toHaveBeenCalledWith(
@@ -299,6 +308,7 @@ describe('drive IAM runtime bridge', () => {
             tenantSelection: { create: vi.fn() },
             loginContextSelection: { create: vi.fn() },
           },
+          verificationCodeRequests: { create: vi.fn() },
         },
         iam: createIamDirectoryClient(),
         oauth: createOAuthClient(),
@@ -389,6 +399,7 @@ describe('drive IAM runtime bridge', () => {
             tenantSelection: { create: vi.fn() },
             loginContextSelection: { create: vi.fn() },
           },
+          verificationCodeRequests: { create: vi.fn() },
         },
         iam: createIamDirectoryClient(),
         oauth: createOAuthClient(),

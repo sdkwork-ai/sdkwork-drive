@@ -10,7 +10,7 @@ type DriveWatchChannel struct {
 	ResourceId string `json:"resourceId"`
 	ChannelType string `json:"channelType"`
 	Address string `json:"address"`
-	ExpirationEpochMs int `json:"expirationEpochMs"`
+	ExpirationEpochMs string `json:"expirationEpochMs"`
 	LifecycleStatus string `json:"lifecycleStatus"`
 	Version int `json:"version"`
 }

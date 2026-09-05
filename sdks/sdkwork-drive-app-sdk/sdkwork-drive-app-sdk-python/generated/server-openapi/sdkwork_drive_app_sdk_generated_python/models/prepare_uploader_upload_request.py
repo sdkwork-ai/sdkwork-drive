@@ -15,13 +15,13 @@ class PrepareUploaderUploadRequest:
     file_fingerprint: str
     original_file_name: str
     content_type: str
-    content_length: int
-    chunk_size_bytes: int
+    content_length: str
+    chunk_size_bytes: str
     upload_profile_code: Optional[str] = None
     space_id: Optional[str] = None
     parent_node_id: Optional[str] = None
     retention: Optional[UploaderRetentionRequest] = None
-    now_epoch_ms: Optional[int] = None
+    now_epoch_ms: Optional[str] = None
     scene: Optional[str] = None
     source: Optional[str] = None
     share_token: Optional[str] = None

@@ -6,9 +6,9 @@ type FileVersion struct {
 	TenantId string `json:"tenantId"`
 	NodeId string `json:"nodeId"`
 	StorageObjectId string `json:"storageObjectId"`
-	VersionNo int `json:"versionNo"`
+	VersionNo string `json:"versionNo"`
 	ContentType string `json:"contentType"`
-	ContentLength int `json:"contentLength"`
+	ContentLength string `json:"contentLength"`
 	ChecksumSha256Hex string `json:"checksumSha256Hex"`
 	LifecycleStatus string `json:"lifecycleStatus"`
 	CreatedAt string `json:"createdAt"`

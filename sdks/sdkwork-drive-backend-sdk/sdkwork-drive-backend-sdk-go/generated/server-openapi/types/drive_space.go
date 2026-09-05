@@ -9,5 +9,5 @@ type DriveSpace struct {
 	DisplayName string `json:"displayName"`
 	SpaceType string `json:"spaceType"`
 	LifecycleStatus string `json:"lifecycleStatus"`
-	Version int `json:"version"`
+	Version string `json:"version"`
 }

@@ -7,5 +7,5 @@ type CreateWatchChannelRequest struct {
 	Address string `json:"address"`
 	Token string `json:"token"`
 	ChannelType string `json:"channelType"`
-	ExpirationEpochMs int `json:"expirationEpochMs"`
+	ExpirationEpochMs string `json:"expirationEpochMs"`
 }

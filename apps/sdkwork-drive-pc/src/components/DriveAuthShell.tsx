@@ -12,6 +12,9 @@ function isDesktopRuntime(): boolean {
 export function DriveAuthShell({ children }: { children: ReactNode }) {
   const [themeMode, setThemeMode] = useState<AuthThemeMode>(() => {
     if (typeof window === 'undefined') return 'dark';
+    // Host-managed mode root wins (THEME_DARKMODE_SPEC §7.2); OS preference is the standalone fallback.
+    const hostColorMode = document.documentElement.getAttribute('data-sdk-color-mode');
+    if (hostColorMode === 'light' || hostColorMode === 'dark') return hostColorMode;
     return window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
   });
 
@@ -19,6 +22,9 @@ export function DriveAuthShell({ children }: { children: ReactNode }) {
   const shouldRenderDesktopHeader = isDesktopRuntime();
 
   useEffect(() => {
+    if (document.documentElement.getAttribute('data-sdk-color-mode') !== null) {
+      return;
+    }
     document.documentElement.classList.toggle('light-mode', isLightMode);
     document.documentElement.style.colorScheme = themeMode;
   }, [themeMode, isLightMode]);

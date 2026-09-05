@@ -6,12 +6,12 @@ type UploaderUploadPart struct {
 	TenantId string `json:"tenantId"`
 	UploadItemId string `json:"uploadItemId"`
 	UploadSessionId string `json:"uploadSessionId"`
-	PartNo int `json:"partNo"`
-	OffsetBytes int `json:"offsetBytes"`
-	SizeBytes int `json:"sizeBytes"`
+	PartNo string `json:"partNo"`
+	OffsetBytes string `json:"offsetBytes"`
+	SizeBytes string `json:"sizeBytes"`
 	Etag string `json:"etag"`
 	ChecksumSha256Hex string `json:"checksumSha256Hex"`
 	Status string `json:"status"`
-	RetryCount int `json:"retryCount"`
-	UploadedAtEpochMs int `json:"uploadedAtEpochMs"`
+	RetryCount string `json:"retryCount"`
+	UploadedAtEpochMs string `json:"uploadedAtEpochMs"`
 }

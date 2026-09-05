@@ -1191,9 +1191,9 @@ function createSdkBackedDriveFileService(
     identity: RemoteIdentity,
     options: DriveFileReadOptions = {},
   ): Promise<Record<string, string | number | boolean | undefined>> => {
-    const query: Record<string, string | number | boolean | undefined> = {
-      pageSize: DEFAULT_PAGE_SIZE,
-    };
+    // PAGINATION_SPEC: page_size/cursor are appended by requestPageItems;
+    // legacy "pageSize" is forbidden on HTTP query strings.
+    const query: Record<string, string | number | boolean | undefined> = {};
     if (!parentId) {
       return query;
     }

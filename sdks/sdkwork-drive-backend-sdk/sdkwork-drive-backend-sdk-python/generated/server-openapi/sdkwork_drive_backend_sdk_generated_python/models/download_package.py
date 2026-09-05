@@ -13,10 +13,10 @@ class DownloadPackage:
     bucket: str
     archive_object_key: str
     content_type: str
-    file_count: int
-    total_bytes: int
-    archive_size_bytes: int
-    expires_at_epoch_ms: int
+    file_count: str
+    total_bytes: str
+    archive_size_bytes: str
+    expires_at_epoch_ms: str
     created_by: str
     updated_by: str
     created_at: str

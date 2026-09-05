@@ -4,7 +4,7 @@ import java.util.List;
 
 public class ExtractArchiveEntriesResponse {
     private List<DriveNode> items;
-    private Integer extractedCount;
+    private String extractedCount;
 
     public List<DriveNode> getItems() {
         return this.items;
@@ -14,11 +14,11 @@ public class ExtractArchiveEntriesResponse {
         this.items = items;
     }
 
-    public Integer getExtractedCount() {
+    public String getExtractedCount() {
         return this.extractedCount;
     }
 
-    public void setExtractedCount(Integer extractedCount) {
+    public void setExtractedCount(String extractedCount) {
         this.extractedCount = extractedCount;
     }
 }

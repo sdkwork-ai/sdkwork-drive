@@ -9,4 +9,4 @@ if TYPE_CHECKING:
 @dataclass
 class ExtractArchiveEntriesResponse:
     items: List[DriveNode]
-    extracted_count: int
+    extracted_count: str

@@ -9,6 +9,6 @@ class CreateUploadSessionRequest:
     space_id: str
     node_id: str
     idempotency_key: str
-    expires_at_epoch_ms: int
+    expires_at_epoch_ms: str
     bucket: Optional[str] = None
     object_key: Optional[str] = None

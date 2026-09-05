@@ -2,15 +2,15 @@ package com.sdkwork.drive.backend.sdk.generated.java.model;
 
 
 public class SweepUploadSessionsRequest {
-    private Integer nowEpochMs;
+    private String nowEpochMs;
     private Boolean dryRun;
-    private Integer limit;
+    private String limit;
 
-    public Integer getNowEpochMs() {
+    public String getNowEpochMs() {
         return this.nowEpochMs;
     }
 
-    public void setNowEpochMs(Integer nowEpochMs) {
+    public void setNowEpochMs(String nowEpochMs) {
         this.nowEpochMs = nowEpochMs;
     }
 
@@ -22,11 +22,11 @@ public class SweepUploadSessionsRequest {
         this.dryRun = dryRun;
     }
 
-    public Integer getLimit() {
+    public String getLimit() {
         return this.limit;
     }
 
-    public void setLimit(Integer limit) {
+    public void setLimit(String limit) {
         this.limit = limit;
     }
 }

@@ -90,7 +90,7 @@ describe('StorageProviderKindsAdminPage', () => {
       if (operationId === 'storageProviderKinds.list') {
         return { items: [] };
       }
-      if (operationId === 'storageProviderKinds.initialize') {
+      if (operationId === 'storageProviderKinds.create') {
         return {
           items: [
             {
@@ -118,7 +118,7 @@ describe('StorageProviderKindsAdminPage', () => {
     expect(await screen.findByText('Amazon S3 / S3 Compatible')).toBeTruthy();
     await waitFor(() => {
       expect(
-        request.mock.calls.some((call) => call[0].operationId === 'storageProviderKinds.initialize'),
+        request.mock.calls.some((call) => call[0].operationId === 'storageProviderKinds.create'),
       ).toBe(true);
     });
   });

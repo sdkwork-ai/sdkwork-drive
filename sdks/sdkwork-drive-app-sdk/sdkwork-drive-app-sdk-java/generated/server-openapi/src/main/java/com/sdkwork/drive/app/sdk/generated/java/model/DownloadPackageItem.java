@@ -8,7 +8,7 @@ public class DownloadPackageItem {
     private String bucket;
     private String objectKey;
     private String contentType;
-    private Integer contentLength;
+    private String contentLength;
     private String checksumSha256Hex;
 
     public String getNodeId() {
@@ -59,11 +59,11 @@ public class DownloadPackageItem {
         this.contentType = contentType;
     }
 
-    public Integer getContentLength() {
+    public String getContentLength() {
         return this.contentLength;
     }
 
-    public void setContentLength(Integer contentLength) {
+    public void setContentLength(String contentLength) {
         this.contentLength = contentLength;
     }
 

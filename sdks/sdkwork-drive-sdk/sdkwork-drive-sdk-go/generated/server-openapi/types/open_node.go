@@ -8,5 +8,5 @@ type OpenNode struct {
 	NodeType string `json:"nodeType"`
 	NodeName string `json:"nodeName"`
 	ContentType string `json:"contentType"`
-	ContentLength int `json:"contentLength"`
+	ContentLength string `json:"contentLength"`
 }

@@ -3,7 +3,7 @@ package com.sdkwork.drive.sdk.generated.java.model;
 
 public class OpenDownloadUrlResponse {
     private String downloadUrl;
-    private Integer expiresAtEpochMs;
+    private String expiresAtEpochMs;
     private String method;
 
     public String getDownloadUrl() {
@@ -14,11 +14,11 @@ public class OpenDownloadUrlResponse {
         this.downloadUrl = downloadUrl;
     }
 
-    public Integer getExpiresAtEpochMs() {
+    public String getExpiresAtEpochMs() {
         return this.expiresAtEpochMs;
     }
 
-    public void setExpiresAtEpochMs(Integer expiresAtEpochMs) {
+    public void setExpiresAtEpochMs(String expiresAtEpochMs) {
         this.expiresAtEpochMs = expiresAtEpochMs;
     }
 

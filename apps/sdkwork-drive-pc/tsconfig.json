@@ -76,11 +76,20 @@
       "react-dom/*": [
         "./node_modules/@types/react-dom/*"
       ],
+      "@sdkwork/auth-runtime-pc-react": [
+        "../../../sdkwork-iam/apps/sdkwork-iam-pc/packages/sdkwork-auth-runtime-pc-react/src/index.ts"
+      ],
+      "@sdkwork/iam-runtime": [
+        "../../../sdkwork-iam/apps/sdkwork-iam-common/packages/sdkwork-iam-runtime/src/index.ts"
+      ],
+      "@sdkwork/core-pc-react": [
+        "./src/bootstrap/sdkworkCorePcReactShim.ts"
+      ],
       "@sdkwork/sdk-common": [
-        "../../../../sdkwork-sdk-commons/sdkwork-sdk-common-typescript/src/index.ts"
+        "../../../sdkwork-sdk-commons/sdkwork-sdk-common-typescript/src/index.ts"
       ],
       "@sdkwork/sdk-common/*": [
-        "../../../../sdkwork-sdk-commons/sdkwork-sdk-common-typescript/src/*"
+        "../../../sdkwork-sdk-commons/sdkwork-sdk-common-typescript/src/*"
       ]
     },
     "allowImportingTsExtensions": true,

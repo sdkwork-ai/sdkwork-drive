@@ -8,7 +8,7 @@ public class CreateUploadSessionRequest {
     private String bucket;
     private String objectKey;
     private String idempotencyKey;
-    private Integer expiresAtEpochMs;
+    private String expiresAtEpochMs;
 
     public String getSessionId() {
         return this.sessionId;
@@ -58,11 +58,11 @@ public class CreateUploadSessionRequest {
         this.idempotencyKey = idempotencyKey;
     }
 
-    public Integer getExpiresAtEpochMs() {
+    public String getExpiresAtEpochMs() {
         return this.expiresAtEpochMs;
     }
 
-    public void setExpiresAtEpochMs(Integer expiresAtEpochMs) {
+    public void setExpiresAtEpochMs(String expiresAtEpochMs) {
         this.expiresAtEpochMs = expiresAtEpochMs;
     }
 }

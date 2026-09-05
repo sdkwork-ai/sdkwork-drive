@@ -127,7 +127,7 @@ public class DriveApi {
     }
 
     /** List server sandbox volumes */
-    public SandboxVolumesListResponse sandboxVolumesList(String lifecycleStatus, String providerKind, Integer page, Integer pageSize) throws Exception {
+    public SandboxVolumesListResponse sandboxVolumesList(String lifecycleStatus, String providerKind, String page, String pageSize) throws Exception {
         String query = buildQueryString(List.of(
             new QueryParameterSpec("lifecycle_status", lifecycleStatus, "form", true, false, null),
             new QueryParameterSpec("provider_kind", providerKind, "form", true, false, null),
@@ -163,7 +163,7 @@ public class DriveApi {
     }
 
     /** List explicit sandbox grants */
-    public SandboxGrantsListResponse sandboxGrantsList(String sandboxId, Integer page, Integer pageSize) throws Exception {
+    public SandboxGrantsListResponse sandboxGrantsList(String sandboxId, String page, String pageSize) throws Exception {
         String query = buildQueryString(List.of(
             new QueryParameterSpec("page", page, "form", true, false, null),
             new QueryParameterSpec("page_size", pageSize, "form", true, false, null)

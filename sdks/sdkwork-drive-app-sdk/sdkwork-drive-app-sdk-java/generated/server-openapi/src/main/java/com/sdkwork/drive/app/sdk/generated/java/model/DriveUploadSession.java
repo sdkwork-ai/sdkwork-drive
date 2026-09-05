@@ -10,8 +10,8 @@ public class DriveUploadSession {
     private String objectKey;
     private String idempotencyKey;
     private String state;
-    private Integer expiresAtEpochMs;
-    private Integer version;
+    private String expiresAtEpochMs;
+    private String version;
     private String storageProviderId;
     private String storageUploadId;
 
@@ -79,19 +79,19 @@ public class DriveUploadSession {
         this.state = state;
     }
 
-    public Integer getExpiresAtEpochMs() {
+    public String getExpiresAtEpochMs() {
         return this.expiresAtEpochMs;
     }
 
-    public void setExpiresAtEpochMs(Integer expiresAtEpochMs) {
+    public void setExpiresAtEpochMs(String expiresAtEpochMs) {
         this.expiresAtEpochMs = expiresAtEpochMs;
     }
 
-    public Integer getVersion() {
+    public String getVersion() {
         return this.version;
     }
 
-    public void setVersion(Integer version) {
+    public void setVersion(String version) {
         this.version = version;
     }
 

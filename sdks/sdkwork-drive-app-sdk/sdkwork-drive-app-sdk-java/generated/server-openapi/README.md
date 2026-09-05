@@ -62,7 +62,6 @@ client.getHttpClient().setHeader("X-Custom-Header", "value");
 ## API Modules
 
 - `client.getDrive()` - drive API
-- `client.getAssets()` - assets API
 
 ## Usage Examples
 
@@ -71,17 +70,6 @@ client.getHttpClient().setHeader("X-Custom-Header", "value");
 ```java
 // GET /app/v3/api/drive/quotas/summary
 QuotaSummaryHttpResponse result = client.getDrive().quotasRetrieve();
-System.out.println(result);
-```
-
-### assets
-
-```java
-// List asset collections
-Map<String, Object> params = new LinkedHashMap<>();
-params.put("cursor", "cursor");
-params.put("page_size", 2);
-AssetCollectionListHttpResponse result = client.getAssets().assetCollectionsList(params);
 System.out.println(result);
 ```
 

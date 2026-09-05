@@ -347,7 +347,7 @@ class DriveSandboxVolumesApi:
         self._client = client
 
 
-    def list(self, lifecycle_status: Optional[str] = None, provider_kind: Optional[str] = None, page: Optional[int] = None, page_size: Optional[int] = None) -> SandboxVolumesListResponse:
+    def list(self, lifecycle_status: Optional[str] = None, provider_kind: Optional[str] = None, page: Optional[str] = None, page_size: Optional[str] = None) -> SandboxVolumesListResponse:
         """List server sandbox volumes"""
         query = build_query_string([
             {'name': 'lifecycle_status', 'value': lifecycle_status, 'style': 'form', 'explode': True, 'allow_reserved': False},
@@ -380,7 +380,7 @@ class DriveSandboxGrantsApi:
         self._client = client
 
 
-    def list(self, sandbox_id: str, page: Optional[int] = None, page_size: Optional[int] = None) -> SandboxGrantsListResponse:
+    def list(self, sandbox_id: str, page: Optional[str] = None, page_size: Optional[str] = None) -> SandboxGrantsListResponse:
         """List explicit sandbox grants"""
         query = build_query_string([
             {'name': 'page', 'value': page, 'style': 'form', 'explode': True, 'allow_reserved': False},

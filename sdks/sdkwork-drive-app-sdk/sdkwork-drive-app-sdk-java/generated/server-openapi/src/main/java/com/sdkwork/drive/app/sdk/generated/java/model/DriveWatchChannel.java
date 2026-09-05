@@ -10,7 +10,7 @@ public class DriveWatchChannel {
     private String resourceId;
     private String channelType;
     private String address;
-    private Integer expirationEpochMs;
+    private String expirationEpochMs;
     private String lifecycleStatus;
     private Integer version;
 
@@ -78,11 +78,11 @@ public class DriveWatchChannel {
         this.address = address;
     }
 
-    public Integer getExpirationEpochMs() {
+    public String getExpirationEpochMs() {
         return this.expirationEpochMs;
     }
 
-    public void setExpirationEpochMs(Integer expirationEpochMs) {
+    public void setExpirationEpochMs(String expirationEpochMs) {
         this.expirationEpochMs = expirationEpochMs;
     }
 

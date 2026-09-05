@@ -12,6 +12,6 @@ type DriveSpace struct {
 	PresentationColor string `json:"presentationColor"`
 	Description string `json:"description"`
 	LifecycleStatus string `json:"lifecycleStatus"`
-	Version int `json:"version"`
+	Version string `json:"version"`
 	CreatedBy string `json:"createdBy"`
 }

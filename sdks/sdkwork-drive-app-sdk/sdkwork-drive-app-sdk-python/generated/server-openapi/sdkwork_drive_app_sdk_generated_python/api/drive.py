@@ -1,6 +1,6 @@
 from typing import Any, Dict, List, Optional
 from ..http_client import HttpClient
-from ..models import ActivateWebsiteGenerationRequest, ApplyNodeLabelRequest, ArchiveEntryListHttpResponse, AssetActionRequest, AssetItemHttpResponse, AssetListHttpResponse, ChangeListHttpResponse, CheckFavoriteNodesRequest, ClaimShareLinkHttpResponse, CompleteUploadSessionRequest, CopyNodeRequest, CreateAssetRequest, CreateCommentReplyRequest, CreateCommentRequest, CreateDownloadGrantRequest, CreateDownloadPackageRequest, CreateDownloadUrlHttpResponse, CreateDownloadUrlRequest, CreateDriveSandboxDirectoryRequest, CreateDriveSandboxFileRequest, CreateFileHttpResponse, CreateFileRequest, CreateFolderRequest, CreatePermissionRequest, CreateShareLinkHttpResponse, CreateShareLinkRequest, CreateShortcutRequest, CreateSpaceRequest, CreateUploadSessionRequest, CreateWatchChannelRequest, CreateWebsiteRootRequest, CreateWebsiteSyncRequest, DownloadPackageHttpResponse, DriveCommentHttpResponse, DriveCommentListHttpResponse, DriveCommentReplyHttpResponse, DriveCommentReplyListHttpResponse, DriveNodeHttpResponse, DriveNodeListHttpResponse, DriveNodePropertyHttpResponse, DriveNodePropertyListHttpResponse, DrivePermissionHttpResponse, DrivePermissionListHttpResponse, DriveSandboxEntryHttpResponse, DriveSandboxEntryListHttpResponse, DriveSandboxFileContentHttpResponse, DriveSandboxMutationCommandHttpResponse, DriveSandboxVolumeListHttpResponse, DriveSpaceHttpResponse, DriveSpaceListHttpResponse, DriveUploadSessionHttpResponse, DriveWatchChannelHttpResponse, DriveWatchChannelListHttpResponse, EffectivePermissionListHttpResponse, EmptyTrashHttpResponse, EmptyTrashRequest, ExtractArchiveEntriesHttpResponse, ExtractArchiveEntriesRequest, FavoriteNodeHttpResponse, FavoriteNodeRequest, FileVersionHttpResponse, FileVersionListHttpResponse, MarkUploaderPartUploadedRequest, MoveNodeRequest, NodeCapabilitiesHttpResponse, NodeCommandRequest, NodeLabelHttpResponse, NodeLabelListHttpResponse, NodePathHttpResponse, PrepareUploaderUploadHttpResponse, PrepareUploaderUploadRequest, PresignedUploadPartHttpResponse, PresignUploadPartRequest, PurgeDriveSandboxEntryRequest, QuotaSummaryHttpResponse, SdkWorkApiResponse, SetNodePropertyRequest, ShareLinkHttpResponse, ShareLinkListHttpResponse, StartPageTokenHttpResponse, StopWatchChannelHttpResponse, StopWatchChannelRequest, UpdateAssetRequest, UpdateCommentReplyRequest, UpdateCommentRequest, UpdateDriveSandboxEntryRequest, UpdateDriveSandboxFileContentRequest, UpdateNodeRequest, UpdatePermissionRequest, UpdateShareLinkRequest, UpdateSpaceRequest, UploaderUploadPartHttpResponse, WebsiteGenerationActivationHttpResponse, WebsiteRootHttpResponse, WebsiteRootListHttpResponse, WebsiteSyncActivationHttpResponse, WebsiteSyncHttpResponse, WebsiteSyncVersionRequest
+from ..models import ActivateWebsiteGenerationRequest, ApplyNodeLabelRequest, ArchiveEntryListHttpResponse, ChangeListHttpResponse, CheckFavoriteNodesRequest, ClaimShareLinkHttpResponse, CompleteUploadSessionRequest, CopyNodeRequest, CreateCommentReplyRequest, CreateCommentRequest, CreateDownloadGrantRequest, CreateDownloadPackageRequest, CreateDownloadUrlHttpResponse, CreateDownloadUrlRequest, CreateDriveSandboxDirectoryRequest, CreateDriveSandboxFileRequest, CreateFileHttpResponse, CreateFileRequest, CreateFolderRequest, CreatePermissionRequest, CreateShareLinkHttpResponse, CreateShareLinkRequest, CreateShortcutRequest, CreateSpaceRequest, CreateUploadSessionRequest, CreateWatchChannelRequest, CreateWebsiteRootRequest, CreateWebsiteSyncRequest, DownloadPackageHttpResponse, DriveCommentHttpResponse, DriveCommentListHttpResponse, DriveCommentReplyHttpResponse, DriveCommentReplyListHttpResponse, DriveNodeHttpResponse, DriveNodeListHttpResponse, DriveNodePropertyHttpResponse, DriveNodePropertyListHttpResponse, DrivePermissionHttpResponse, DrivePermissionListHttpResponse, DriveSandboxEntryHttpResponse, DriveSandboxEntryListHttpResponse, DriveSandboxFileContentHttpResponse, DriveSandboxMutationCommandHttpResponse, DriveSandboxVolumeListHttpResponse, DriveSpaceHttpResponse, DriveSpaceListHttpResponse, DriveUploadSessionHttpResponse, DriveWatchChannelHttpResponse, DriveWatchChannelListHttpResponse, EffectivePermissionListHttpResponse, EmptyTrashHttpResponse, EmptyTrashRequest, ExtractArchiveEntriesHttpResponse, ExtractArchiveEntriesRequest, FavoriteNodeHttpResponse, FavoriteNodeRequest, FileVersionHttpResponse, FileVersionListHttpResponse, MarkUploaderPartUploadedRequest, MoveNodeRequest, NodeCapabilitiesHttpResponse, NodeCommandRequest, NodeLabelHttpResponse, NodeLabelListHttpResponse, NodePathHttpResponse, PrepareUploaderUploadHttpResponse, PrepareUploaderUploadRequest, PresignedUploadPartHttpResponse, PresignUploadPartRequest, PurgeDriveSandboxEntryRequest, QuotaSummaryHttpResponse, SdkWorkApiResponse, SetNodePropertyRequest, ShareLinkHttpResponse, ShareLinkListHttpResponse, StartPageTokenHttpResponse, StopWatchChannelHttpResponse, StopWatchChannelRequest, UpdateCommentReplyRequest, UpdateCommentRequest, UpdateDriveSandboxEntryRequest, UpdateDriveSandboxFileContentRequest, UpdateNodeRequest, UpdatePermissionRequest, UpdateShareLinkRequest, UpdateSpaceRequest, UploaderUploadPartHttpResponse, WebsiteGenerationActivationHttpResponse, WebsiteRootHttpResponse, WebsiteRootListHttpResponse, WebsiteSyncActivationHttpResponse, WebsiteSyncHttpResponse, WebsiteSyncVersionRequest
 
 def _append_query_string(path: str, raw_query_string: str) -> str:
     query = raw_query_string.lstrip('?')
@@ -274,7 +274,6 @@ class DriveApi:
         self.download_packages = DriveDownloadPackagesApi(client)
         self.archive_entries = DriveArchiveEntriesApi(client)
         self.uploader = DriveUploaderApi(client)
-        self.assets = DriveAssetsApi(client)
 
 
 class DriveChangesApi:
@@ -285,7 +284,7 @@ class DriveChangesApi:
         self.start_page_token = DriveChangesStartPageTokenApi(client)
 
 
-    def list(self, space_id: str, cursor: Optional[int] = None, page_size: Optional[int] = None) -> ChangeListHttpResponse:
+    def list(self, space_id: str, cursor: Optional[str] = None, page_size: Optional[str] = None) -> ChangeListHttpResponse:
         query = build_query_string([
             {'name': 'spaceId', 'value': space_id, 'style': 'form', 'explode': True, 'allow_reserved': False},
             {'name': 'cursor', 'value': cursor, 'style': 'form', 'explode': True, 'allow_reserved': False},
@@ -337,7 +336,7 @@ class DriveFavoritesApi:
         self._client = client
 
 
-    def list(self, space_id: Optional[str] = None, page_size: Optional[int] = None, cursor: Optional[str] = None, sort_by: Optional[str] = None, sort_order: Optional[str] = None) -> DriveNodeListHttpResponse:
+    def list(self, space_id: Optional[str] = None, page_size: Optional[str] = None, cursor: Optional[str] = None, sort_by: Optional[str] = None, sort_order: Optional[str] = None) -> DriveNodeListHttpResponse:
         query = build_query_string([
             {'name': 'spaceId', 'value': space_id, 'style': 'form', 'explode': True, 'allow_reserved': False},
             {'name': 'page_size', 'value': page_size, 'style': 'form', 'explode': True, 'allow_reserved': False},
@@ -394,7 +393,7 @@ class DriveNodesApi:
     def move(self, node_id: str, body: MoveNodeRequest) -> DriveNodeHttpResponse:
         return self._client.post(f"/app/v3/api/drive/nodes/{serialize_path_parameter(node_id, {'name': 'nodeId', 'style': 'simple', 'explode': False})}/move", json=body)
 
-    def list(self, space_id: str, parent_node_id: Optional[str] = None, page_size: Optional[int] = None, cursor: Optional[str] = None, sort_by: Optional[str] = None, sort_order: Optional[str] = None) -> DriveNodeListHttpResponse:
+    def list(self, space_id: str, parent_node_id: Optional[str] = None, page_size: Optional[str] = None, cursor: Optional[str] = None, sort_by: Optional[str] = None, sort_order: Optional[str] = None) -> DriveNodeListHttpResponse:
         query = build_query_string([
             {'name': 'parentNodeId', 'value': parent_node_id, 'style': 'form', 'explode': True, 'allow_reserved': False},
             {'name': 'page_size', 'value': page_size, 'style': 'form', 'explode': True, 'allow_reserved': False},
@@ -479,7 +478,7 @@ class DriveCommentsApi:
         self._client = client
 
 
-    def list(self, node_id: str, page_size: Optional[int] = None, cursor: Optional[str] = None) -> DriveCommentListHttpResponse:
+    def list(self, node_id: str, page_size: Optional[str] = None, cursor: Optional[str] = None) -> DriveCommentListHttpResponse:
         query = build_query_string([
             {'name': 'page_size', 'value': page_size, 'style': 'form', 'explode': True, 'allow_reserved': False},
             {'name': 'cursor', 'value': cursor, 'style': 'form', 'explode': True, 'allow_reserved': False},
@@ -505,7 +504,7 @@ class DriveCommentRepliesApi:
         self._client = client
 
 
-    def list(self, node_id: str, comment_id: str, page_size: Optional[int] = None, cursor: Optional[str] = None) -> DriveCommentReplyListHttpResponse:
+    def list(self, node_id: str, comment_id: str, page_size: Optional[str] = None, cursor: Optional[str] = None) -> DriveCommentReplyListHttpResponse:
         query = build_query_string([
             {'name': 'page_size', 'value': page_size, 'style': 'form', 'explode': True, 'allow_reserved': False},
             {'name': 'cursor', 'value': cursor, 'style': 'form', 'explode': True, 'allow_reserved': False},
@@ -566,7 +565,7 @@ class DrivePermissionsApi:
         self.effective = DrivePermissionsEffectiveApi(client)
 
 
-    def list(self, node_id: str, page_size: Optional[int] = None, cursor: Optional[str] = None) -> DrivePermissionListHttpResponse:
+    def list(self, node_id: str, page_size: Optional[str] = None, cursor: Optional[str] = None) -> DrivePermissionListHttpResponse:
         query = build_query_string([
             {'name': 'page_size', 'value': page_size, 'style': 'form', 'explode': True, 'allow_reserved': False},
             {'name': 'cursor', 'value': cursor, 'style': 'form', 'explode': True, 'allow_reserved': False},
@@ -592,7 +591,7 @@ class DrivePermissionsEffectiveApi:
         self._client = client
 
 
-    def list(self, node_id: str, page_size: Optional[int] = None, cursor: Optional[str] = None) -> EffectivePermissionListHttpResponse:
+    def list(self, node_id: str, page_size: Optional[str] = None, cursor: Optional[str] = None) -> EffectivePermissionListHttpResponse:
         query = build_query_string([
             {'name': 'page_size', 'value': page_size, 'style': 'form', 'explode': True, 'allow_reserved': False},
             {'name': 'cursor', 'value': cursor, 'style': 'form', 'explode': True, 'allow_reserved': False},
@@ -636,7 +635,7 @@ class DriveShareLinksApi:
     def create(self, node_id: str, body: CreateShareLinkRequest) -> CreateShareLinkHttpResponse:
         return self._client.post(f"/app/v3/api/drive/nodes/{serialize_path_parameter(node_id, {'name': 'nodeId', 'style': 'simple', 'explode': False})}/share_links", json=body)
 
-    def list(self, node_id: str, page_size: Optional[int] = None, cursor: Optional[str] = None) -> ShareLinkListHttpResponse:
+    def list(self, node_id: str, page_size: Optional[str] = None, cursor: Optional[str] = None) -> ShareLinkListHttpResponse:
         query = build_query_string([
             {'name': 'page_size', 'value': page_size, 'style': 'form', 'explode': True, 'allow_reserved': False},
             {'name': 'cursor', 'value': cursor, 'style': 'form', 'explode': True, 'allow_reserved': False},
@@ -665,7 +664,7 @@ class DriveTrashApi:
     def create(self, node_id: str, body: NodeCommandRequest) -> DriveNodeHttpResponse:
         return self._client.post(f"/app/v3/api/drive/nodes/{serialize_path_parameter(node_id, {'name': 'nodeId', 'style': 'simple', 'explode': False})}/trash", json=body)
 
-    def list(self, space_id: Optional[str] = None, page_size: Optional[int] = None, cursor: Optional[str] = None, parent_node_id: Optional[str] = None, sort_by: Optional[str] = None, sort_order: Optional[str] = None) -> DriveNodeListHttpResponse:
+    def list(self, space_id: Optional[str] = None, page_size: Optional[str] = None, cursor: Optional[str] = None, parent_node_id: Optional[str] = None, sort_by: Optional[str] = None, sort_order: Optional[str] = None) -> DriveNodeListHttpResponse:
         query = build_query_string([
             {'name': 'spaceId', 'value': space_id, 'style': 'form', 'explode': True, 'allow_reserved': False},
             {'name': 'page_size', 'value': page_size, 'style': 'form', 'explode': True, 'allow_reserved': False},
@@ -689,7 +688,7 @@ class DriveVersionsApi:
         self._client = client
 
 
-    def list(self, node_id: str, page_size: Optional[int] = None, cursor: Optional[str] = None) -> FileVersionListHttpResponse:
+    def list(self, node_id: str, page_size: Optional[str] = None, cursor: Optional[str] = None) -> FileVersionListHttpResponse:
         query = build_query_string([
             {'name': 'page_size', 'value': page_size, 'style': 'form', 'explode': True, 'allow_reserved': False},
             {'name': 'cursor', 'value': cursor, 'style': 'form', 'explode': True, 'allow_reserved': False},
@@ -712,7 +711,7 @@ class DrivePropertyNodesApi:
         self._client = client
 
 
-    def list(self, property_key: str, page_size: Optional[int] = None, cursor: Optional[str] = None) -> DriveNodeListHttpResponse:
+    def list(self, property_key: str, page_size: Optional[str] = None, cursor: Optional[str] = None) -> DriveNodeListHttpResponse:
         """List nodes carrying an app_public property"""
         query = build_query_string([
             {'name': 'page_size', 'value': page_size, 'style': 'form', 'explode': True, 'allow_reserved': False},
@@ -727,7 +726,7 @@ class DriveRecentApi:
         self._client = client
 
 
-    def list(self, space_id: Optional[str] = None, page_size: Optional[int] = None, cursor: Optional[str] = None, sort_by: Optional[str] = None, sort_order: Optional[str] = None) -> DriveNodeListHttpResponse:
+    def list(self, space_id: Optional[str] = None, page_size: Optional[str] = None, cursor: Optional[str] = None, sort_by: Optional[str] = None, sort_order: Optional[str] = None) -> DriveNodeListHttpResponse:
         query = build_query_string([
             {'name': 'spaceId', 'value': space_id, 'style': 'form', 'explode': True, 'allow_reserved': False},
             {'name': 'page_size', 'value': page_size, 'style': 'form', 'explode': True, 'allow_reserved': False},
@@ -744,7 +743,7 @@ class DriveSearchApi:
         self._client = client
 
 
-    def list(self, q: Optional[str] = None, space_id: Optional[str] = None, page_size: Optional[int] = None, cursor: Optional[str] = None) -> DriveNodeListHttpResponse:
+    def list(self, q: Optional[str] = None, space_id: Optional[str] = None, page_size: Optional[str] = None, cursor: Optional[str] = None) -> DriveNodeListHttpResponse:
         query = build_query_string([
             {'name': 'q', 'value': q, 'style': 'form', 'explode': True, 'allow_reserved': False},
             {'name': 'spaceId', 'value': space_id, 'style': 'form', 'explode': True, 'allow_reserved': False},
@@ -760,7 +759,7 @@ class DriveSharedWithMeApi:
         self._client = client
 
 
-    def list(self, space_id: Optional[str] = None, page_size: Optional[int] = None, cursor: Optional[str] = None, sort_by: Optional[str] = None, sort_order: Optional[str] = None) -> DriveNodeListHttpResponse:
+    def list(self, space_id: Optional[str] = None, page_size: Optional[str] = None, cursor: Optional[str] = None, sort_by: Optional[str] = None, sort_order: Optional[str] = None) -> DriveNodeListHttpResponse:
         query = build_query_string([
             {'name': 'spaceId', 'value': space_id, 'style': 'form', 'explode': True, 'allow_reserved': False},
             {'name': 'page_size', 'value': page_size, 'style': 'form', 'explode': True, 'allow_reserved': False},
@@ -920,8 +919,14 @@ class DriveWebsiteRootsApi:
         ])
         return self._client.get(_append_query_string(f"/app/v3/api/drive/spaces/{serialize_path_parameter(space_id, {'name': 'spaceId', 'style': 'simple', 'explode': False})}/website_roots", query))
 
-    def create(self, space_id: str, body: CreateWebsiteRootRequest) -> WebsiteRootHttpResponse:
-        return self._client.post(f"/app/v3/api/drive/spaces/{serialize_path_parameter(space_id, {'name': 'spaceId', 'style': 'simple', 'explode': False})}/website_roots", json=body)
+    def create(self, space_id: str, body: CreateWebsiteRootRequest, idempotency_key: str) -> WebsiteRootHttpResponse:
+        request_headers = build_request_headers(
+            {
+                'Idempotency-Key': {'value': idempotency_key, 'style': 'simple', 'explode': False},
+            },
+            {}
+        )
+        return self._client.post(f"/app/v3/api/drive/spaces/{serialize_path_parameter(space_id, {'name': 'spaceId', 'style': 'simple', 'explode': False})}/website_roots", json=body, headers=request_headers)
 
     def retrieve(self, root_uuid: str) -> WebsiteRootHttpResponse:
         return self._client.get(f"/app/v3/api/drive/website_roots/{serialize_path_parameter(root_uuid, {'name': 'rootUuid', 'style': 'simple', 'explode': False})}")
@@ -947,13 +952,25 @@ class DriveWebsiteRootsSyncsApi:
         """Retrieve an atomic website synchronization"""
         return self._client.get(f"/app/v3/api/drive/website_roots/{serialize_path_parameter(root_uuid, {'name': 'rootUuid', 'style': 'simple', 'explode': False})}/syncs/{serialize_path_parameter(sync_id, {'name': 'syncId', 'style': 'simple', 'explode': False})}")
 
-    def finalize(self, root_uuid: str, sync_id: str, body: WebsiteSyncVersionRequest) -> WebsiteSyncActivationHttpResponse:
+    def finalize(self, root_uuid: str, sync_id: str, body: WebsiteSyncVersionRequest, idempotency_key: str) -> WebsiteSyncActivationHttpResponse:
         """Validate and atomically activate a complete website tree"""
-        return self._client.post(f"/app/v3/api/drive/website_roots/{serialize_path_parameter(root_uuid, {'name': 'rootUuid', 'style': 'simple', 'explode': False})}/syncs/{serialize_path_parameter(sync_id, {'name': 'syncId', 'style': 'simple', 'explode': False})}/finalize", json=body)
+        request_headers = build_request_headers(
+            {
+                'Idempotency-Key': {'value': idempotency_key, 'style': 'simple', 'explode': False},
+            },
+            {}
+        )
+        return self._client.post(f"/app/v3/api/drive/website_roots/{serialize_path_parameter(root_uuid, {'name': 'rootUuid', 'style': 'simple', 'explode': False})}/syncs/{serialize_path_parameter(sync_id, {'name': 'syncId', 'style': 'simple', 'explode': False})}/finalize", json=body, headers=request_headers)
 
-    def abort(self, root_uuid: str, sync_id: str, body: WebsiteSyncVersionRequest) -> WebsiteSyncHttpResponse:
+    def abort(self, root_uuid: str, sync_id: str, body: WebsiteSyncVersionRequest, idempotency_key: str) -> WebsiteSyncHttpResponse:
         """Abort an unactivated website synchronization"""
-        return self._client.post(f"/app/v3/api/drive/website_roots/{serialize_path_parameter(root_uuid, {'name': 'rootUuid', 'style': 'simple', 'explode': False})}/syncs/{serialize_path_parameter(sync_id, {'name': 'syncId', 'style': 'simple', 'explode': False})}/abort", json=body)
+        request_headers = build_request_headers(
+            {
+                'Idempotency-Key': {'value': idempotency_key, 'style': 'simple', 'explode': False},
+            },
+            {}
+        )
+        return self._client.post(f"/app/v3/api/drive/website_roots/{serialize_path_parameter(root_uuid, {'name': 'rootUuid', 'style': 'simple', 'explode': False})}/syncs/{serialize_path_parameter(sync_id, {'name': 'syncId', 'style': 'simple', 'explode': False})}/abort", json=body, headers=request_headers)
 
 class DriveWebsiteRootsGenerationsApi:
     """drive drive.website_roots.generations API client."""
@@ -973,7 +990,7 @@ class DriveMoveDestinationsApi:
         self._client = client
 
 
-    def list(self, space_id: str, exclude_node_ids: Optional[str] = None, page_size: Optional[int] = None, cursor: Optional[str] = None) -> DriveNodeListHttpResponse:
+    def list(self, space_id: str, exclude_node_ids: Optional[str] = None, page_size: Optional[str] = None, cursor: Optional[str] = None) -> DriveNodeListHttpResponse:
         query = build_query_string([
             {'name': 'excludeNodeIds', 'value': exclude_node_ids, 'style': 'form', 'explode': True, 'allow_reserved': False},
             {'name': 'page_size', 'value': page_size, 'style': 'form', 'explode': True, 'allow_reserved': False},
@@ -1098,41 +1115,3 @@ class DriveUploaderUploadsPartsApi:
 
     def update(self, upload_item_id: str, part_no: int, body: MarkUploaderPartUploadedRequest) -> UploaderUploadPartHttpResponse:
         return self._client.put(f"/app/v3/api/drive/uploader/uploads/{serialize_path_parameter(upload_item_id, {'name': 'uploadItemId', 'style': 'simple', 'explode': False})}/parts/{serialize_path_parameter(part_no, {'name': 'partNo', 'style': 'simple', 'explode': False})}", json=body)
-
-class DriveAssetsApi:
-    """drive drive.assets API client."""
-
-    def __init__(self, client: HttpClient):
-        self._client = client
-
-
-    def list(self, cursor: Optional[str] = None, page_size: Optional[int] = None, kind: Optional[str] = None, source_type: Optional[str] = None, q: Optional[str] = None) -> AssetListHttpResponse:
-        """List global assets"""
-        query = build_query_string([
-            {'name': 'cursor', 'value': cursor, 'style': 'form', 'explode': True, 'allow_reserved': False},
-            {'name': 'page_size', 'value': page_size, 'style': 'form', 'explode': True, 'allow_reserved': False},
-            {'name': 'kind', 'value': kind, 'style': 'form', 'explode': True, 'allow_reserved': False},
-            {'name': 'sourceType', 'value': source_type, 'style': 'form', 'explode': True, 'allow_reserved': False},
-            {'name': 'q', 'value': q, 'style': 'form', 'explode': True, 'allow_reserved': False},
-        ])
-        return self._client.get(_append_query_string(f"/app/v3/api/assets", query))
-
-    def create(self, body: CreateAssetRequest) -> AssetItemHttpResponse:
-        """Create a global asset metadata record"""
-        return self._client.post(f"/app/v3/api/assets", json=body)
-
-    def retrieve(self, asset_id: str) -> AssetItemHttpResponse:
-        """Get a global asset"""
-        return self._client.get(f"/app/v3/api/assets/{serialize_path_parameter(asset_id, {'name': 'assetId', 'style': 'simple', 'explode': False})}")
-
-    def update(self, asset_id: str, body: UpdateAssetRequest) -> AssetItemHttpResponse:
-        """Update a global asset"""
-        return self._client.patch(f"/app/v3/api/assets/{serialize_path_parameter(asset_id, {'name': 'assetId', 'style': 'simple', 'explode': False})}", json=body)
-
-    def archive(self, asset_id: str, body: AssetActionRequest) -> AssetItemHttpResponse:
-        """Archive a global asset"""
-        return self._client.post(f"/app/v3/api/assets/{serialize_path_parameter(asset_id, {'name': 'assetId', 'style': 'simple', 'explode': False})}/archive", json=body)
-
-    def restore(self, asset_id: str, body: AssetActionRequest) -> AssetItemHttpResponse:
-        """Restore an archived global asset"""
-        return self._client.post(f"/app/v3/api/assets/{serialize_path_parameter(asset_id, {'name': 'assetId', 'style': 'simple', 'explode': False})}/restore", json=body)

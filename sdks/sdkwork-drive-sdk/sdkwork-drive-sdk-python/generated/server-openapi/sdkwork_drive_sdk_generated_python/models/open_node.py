@@ -11,4 +11,4 @@ class OpenNode:
     node_type: str
     node_name: str
     content_type: Optional[str] = None
-    content_length: Optional[int] = None
+    content_length: Optional[str] = None

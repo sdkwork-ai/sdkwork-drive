@@ -3,8 +3,8 @@ package com.sdkwork.drive.app.sdk.generated.java.model;
 
 public class UpdateShareLinkRequest {
     private String role;
-    private Integer expiresAtEpochMs;
-    private Integer downloadLimit;
+    private String expiresAtEpochMs;
+    private String downloadLimit;
 
     public String getRole() {
         return this.role;
@@ -14,19 +14,19 @@ public class UpdateShareLinkRequest {
         this.role = role;
     }
 
-    public Integer getExpiresAtEpochMs() {
+    public String getExpiresAtEpochMs() {
         return this.expiresAtEpochMs;
     }
 
-    public void setExpiresAtEpochMs(Integer expiresAtEpochMs) {
+    public void setExpiresAtEpochMs(String expiresAtEpochMs) {
         this.expiresAtEpochMs = expiresAtEpochMs;
     }
 
-    public Integer getDownloadLimit() {
+    public String getDownloadLimit() {
         return this.downloadLimit;
     }
 
-    public void setDownloadLimit(Integer downloadLimit) {
+    public void setDownloadLimit(String downloadLimit) {
         this.downloadLimit = downloadLimit;
     }
 }

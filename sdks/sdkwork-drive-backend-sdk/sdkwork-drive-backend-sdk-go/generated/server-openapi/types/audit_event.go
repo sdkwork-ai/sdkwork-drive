@@ -2,7 +2,7 @@ package types
 
 
 type AuditEvent struct {
-	Id int `json:"id"`
+	Id string `json:"id"`
 	TenantId string `json:"tenantId"`
 	Action string `json:"action"`
 	ResourceType string `json:"resourceType"`

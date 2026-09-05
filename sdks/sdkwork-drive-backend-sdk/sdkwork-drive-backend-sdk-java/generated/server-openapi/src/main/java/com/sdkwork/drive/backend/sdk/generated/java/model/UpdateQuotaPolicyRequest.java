@@ -2,14 +2,14 @@ package com.sdkwork.drive.backend.sdk.generated.java.model;
 
 
 public class UpdateQuotaPolicyRequest {
-    private Integer quotaBytes;
+    private String quotaBytes;
     private Boolean clearTenantPolicy;
 
-    public Integer getQuotaBytes() {
+    public String getQuotaBytes() {
         return this.quotaBytes;
     }
 
-    public void setQuotaBytes(Integer quotaBytes) {
+    public void setQuotaBytes(String quotaBytes) {
         this.quotaBytes = quotaBytes;
     }
 

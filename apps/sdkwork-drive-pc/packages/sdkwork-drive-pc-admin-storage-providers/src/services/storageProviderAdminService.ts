@@ -150,7 +150,7 @@ export function createStorageProviderAdminService({
     },
     async initializeKinds(options) {
       const response = await adminStorageSdkClient.request<unknown>({
-        operationId: 'storageProviderKinds.initialize',
+        operationId: 'storageProviderKinds.create',
         signal: options?.signal,
         body: {},
       });

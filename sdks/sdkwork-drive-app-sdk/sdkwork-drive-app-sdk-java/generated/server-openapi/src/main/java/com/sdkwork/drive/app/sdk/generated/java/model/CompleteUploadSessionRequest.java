@@ -5,7 +5,7 @@ import java.util.List;
 public class CompleteUploadSessionRequest {
     private String uploadId;
     private String contentType;
-    private Integer contentLength;
+    private String contentLength;
     private String checksumSha256Hex;
     private List<CompletedUploadPart> parts;
 
@@ -25,11 +25,11 @@ public class CompleteUploadSessionRequest {
         this.contentType = contentType;
     }
 
-    public Integer getContentLength() {
+    public String getContentLength() {
         return this.contentLength;
     }
 
-    public void setContentLength(Integer contentLength) {
+    public void setContentLength(String contentLength) {
         this.contentLength = contentLength;
     }
 

@@ -9,7 +9,7 @@ if TYPE_CHECKING:
 @dataclass
 class CompleteUploadSessionRequest:
     content_type: str
-    content_length: int
+    content_length: str
     checksum_sha256hex: str
     parts: List[CompletedUploadPart]
     upload_id: Optional[str] = None

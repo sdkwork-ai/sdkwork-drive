@@ -12,7 +12,7 @@ public class EffectivePermission {
     private Boolean inherited;
     private String inheritedFromNodeId;
     private String lifecycleStatus;
-    private Integer version;
+    private String version;
 
     public String getId() {
         return this.id;
@@ -94,11 +94,11 @@ public class EffectivePermission {
         this.lifecycleStatus = lifecycleStatus;
     }
 
-    public Integer getVersion() {
+    public String getVersion() {
         return this.version;
     }
 
-    public void setVersion(Integer version) {
+    public void setVersion(String version) {
         this.version = version;
     }
 }

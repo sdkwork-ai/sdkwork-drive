@@ -8,7 +8,6 @@ import (
 type SdkworkAppClient struct {
     http *sdkhttp.Client
     Drive *api.DriveApi
-    Assets *api.AssetsApi
 }
 
 func NewSdkworkAppClient(baseURL string) *SdkworkAppClient {
@@ -21,7 +20,6 @@ func NewSdkworkAppClientWithConfig(config sdkhttp.Config) *SdkworkAppClient {
     return &SdkworkAppClient{
         http: client,
         Drive: api.NewDriveApi(client),
-        Assets: api.NewAssetsApi(client),
     }
 }
 

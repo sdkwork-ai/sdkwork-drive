@@ -9,7 +9,7 @@ type DriveNode struct {
 	NodeType string `json:"nodeType"`
 	NodeName string `json:"nodeName"`
 	LifecycleStatus string `json:"lifecycleStatus"`
-	Version int `json:"version"`
+	Version string `json:"version"`
 	ShortcutTargetNodeId string `json:"shortcutTargetNodeId"`
 	Scene string `json:"scene"`
 	Source string `json:"source"`
@@ -18,7 +18,7 @@ type DriveNode struct {
 	FileExtension string `json:"fileExtension"`
 	ContentType string `json:"contentType"`
 	ContentTypeGroup string `json:"contentTypeGroup"`
-	ContentLength int `json:"contentLength"`
+	ContentLength string `json:"contentLength"`
 	FolderColor string `json:"folderColor"`
 	CreatedAt string `json:"createdAt"`
 	UpdatedAt string `json:"updatedAt"`

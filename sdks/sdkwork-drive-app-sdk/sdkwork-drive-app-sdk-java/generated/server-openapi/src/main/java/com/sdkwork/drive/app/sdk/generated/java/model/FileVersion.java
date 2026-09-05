@@ -6,9 +6,9 @@ public class FileVersion {
     private String tenantId;
     private String nodeId;
     private String storageObjectId;
-    private Integer versionNo;
+    private String versionNo;
     private String contentType;
-    private Integer contentLength;
+    private String contentLength;
     private String checksumSha256Hex;
     private String lifecycleStatus;
     private String createdAt;
@@ -45,11 +45,11 @@ public class FileVersion {
         this.storageObjectId = storageObjectId;
     }
 
-    public Integer getVersionNo() {
+    public String getVersionNo() {
         return this.versionNo;
     }
 
-    public void setVersionNo(Integer versionNo) {
+    public void setVersionNo(String versionNo) {
         this.versionNo = versionNo;
     }
 
@@ -61,11 +61,11 @@ public class FileVersion {
         this.contentType = contentType;
     }
 
-    public Integer getContentLength() {
+    public String getContentLength() {
         return this.contentLength;
     }
 
-    public void setContentLength(Integer contentLength) {
+    public void setContentLength(String contentLength) {
         this.contentLength = contentLength;
     }
 

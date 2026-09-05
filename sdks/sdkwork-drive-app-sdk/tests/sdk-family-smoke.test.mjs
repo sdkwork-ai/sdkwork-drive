@@ -437,7 +437,7 @@ test("sdkwork-drive-app-sdk generated TypeScript exposes typed recent node metad
 
   assert.match(
     driveApiSource,
-    /async list\(params\?: DriveRecentListParams\): Promise<DriveNodeListData>/,
+    /async list\(params\?: DriveRecentListParams(?:, requestOptions\?: ApiRequestOptions)?\): Promise<DriveNodeListData>/,
   );
   assert.match(driveApiSource, /appApiPath\(`\/drive\/recent`\)/);
   assert.match(driveNodeSource, /createdAt: string/);

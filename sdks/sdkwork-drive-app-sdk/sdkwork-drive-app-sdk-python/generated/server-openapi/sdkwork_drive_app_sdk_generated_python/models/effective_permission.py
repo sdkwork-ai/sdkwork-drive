@@ -12,7 +12,7 @@ class EffectivePermission:
     inherited: bool
     inherited_from_node_id: str
     lifecycle_status: str
-    version: int
+    version: str
     tenant_id: Optional[str] = None
     subject_type: Optional[str] = None
     subject_id: Optional[str] = None

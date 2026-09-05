@@ -37,6 +37,8 @@ coverage/
 # IDE and editor
 .idea/
 .vscode/
+.workbuddy/
+**/.workbuddy/
 *.swp
 *.swo
 
@@ -69,6 +71,9 @@ sdks/**/.sdkwork/manual-backups/
 # Test artifacts
 *.test.tmp
 *.tmp
+# Local temp scratch files (e.g. _tmp_<pid>_<hash>)
+_tmp_*
+**_tmp_*
 
 # SDKWork local runtime state
 .runtime/

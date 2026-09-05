@@ -9,7 +9,7 @@ public class DriveSpace {
     private String displayName;
     private String spaceType;
     private String lifecycleStatus;
-    private Integer version;
+    private String version;
 
     public String getId() {
         return this.id;
@@ -67,11 +67,11 @@ public class DriveSpace {
         this.lifecycleStatus = lifecycleStatus;
     }
 
-    public Integer getVersion() {
+    public String getVersion() {
         return this.version;
     }
 
-    public void setVersion(Integer version) {
+    public void setVersion(String version) {
         this.version = version;
     }
 }

@@ -178,7 +178,7 @@ export function TransferPage({
       case 'failed':
         return { text: 'text-rose-500', bg: 'bg-rose-50 dark:bg-rose-950/20', border: 'border-rose-100 dark:border-rose-950/35' };
       default:
-        return { text: 'text-gray-500', bg: 'bg-gray-50', border: 'border-gray-100' };
+        return { text: 'text-gray-500 dark:text-zinc-400', bg: 'bg-gray-50 dark:bg-zinc-800', border: 'border-gray-100 dark:border-zinc-700' };
     }
   };
 

@@ -9,7 +9,7 @@ public class DriveComment {
     private String anchor;
     private Boolean resolved;
     private String lifecycleStatus;
-    private Integer version;
+    private String version;
     private String createdBy;
     private String updatedBy;
     private String createdAt;
@@ -71,11 +71,11 @@ public class DriveComment {
         this.lifecycleStatus = lifecycleStatus;
     }
 
-    public Integer getVersion() {
+    public String getVersion() {
         return this.version;
     }
 
-    public void setVersion(Integer version) {
+    public void setVersion(String version) {
         this.version = version;
     }
 

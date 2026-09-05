@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Optional, List, Dict, Any
 
 @dataclass
 class AuditEvent:
-    id: int
+    id: str
     tenant_id: str
     action: str
     resource_type: str

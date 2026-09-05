@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Optional, List, Dict, Any
 
 @dataclass
 class Change:
-    sequence_no: int
+    sequence_no: str
     space_id: str
     event_type: str
     actor_id: str

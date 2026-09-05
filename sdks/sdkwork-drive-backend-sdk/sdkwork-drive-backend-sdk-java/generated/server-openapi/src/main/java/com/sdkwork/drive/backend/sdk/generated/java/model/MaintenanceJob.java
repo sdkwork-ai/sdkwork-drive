@@ -2,12 +2,12 @@ package com.sdkwork.drive.backend.sdk.generated.java.model;
 
 
 public class MaintenanceJob {
-    private Integer id;
+    private String id;
     private String jobType;
     private String status;
     private Boolean dryRun;
-    private Integer scannedCount;
-    private Integer affectedCount;
+    private String scannedCount;
+    private String affectedCount;
     private String operatorId;
     private String correlationId;
     private String traceId;
@@ -16,11 +16,11 @@ public class MaintenanceJob {
     private String finishedAt;
     private String createdAt;
 
-    public Integer getId() {
+    public String getId() {
         return this.id;
     }
 
-    public void setId(Integer id) {
+    public void setId(String id) {
         this.id = id;
     }
 
@@ -48,19 +48,19 @@ public class MaintenanceJob {
         this.dryRun = dryRun;
     }
 
-    public Integer getScannedCount() {
+    public String getScannedCount() {
         return this.scannedCount;
     }
 
-    public void setScannedCount(Integer scannedCount) {
+    public void setScannedCount(String scannedCount) {
         this.scannedCount = scannedCount;
     }
 
-    public Integer getAffectedCount() {
+    public String getAffectedCount() {
         return this.affectedCount;
     }
 
-    public void setAffectedCount(Integer affectedCount) {
+    public void setAffectedCount(String affectedCount) {
         this.affectedCount = affectedCount;
     }
 

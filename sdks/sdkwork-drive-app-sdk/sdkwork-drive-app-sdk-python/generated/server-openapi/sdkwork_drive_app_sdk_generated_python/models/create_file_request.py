@@ -10,7 +10,7 @@ class CreateFileRequest:
     node_name: str
     upload_session_id: str
     idempotency_key: str
-    expires_at_epoch_ms: int
+    expires_at_epoch_ms: str
     parent_node_id: Optional[str] = None
     bucket: Optional[str] = None
     object_key: Optional[str] = None

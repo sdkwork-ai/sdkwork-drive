@@ -9,7 +9,7 @@ public class DriveNode {
     private String nodeType;
     private String nodeName;
     private String lifecycleStatus;
-    private Integer version;
+    private String version;
     private String shortcutTargetNodeId;
     private String scene;
     private String source;
@@ -18,7 +18,7 @@ public class DriveNode {
     private String fileExtension;
     private String contentType;
     private String contentTypeGroup;
-    private Integer contentLength;
+    private String contentLength;
     private String folderColor;
     private String createdAt;
     private String updatedAt;
@@ -79,11 +79,11 @@ public class DriveNode {
         this.lifecycleStatus = lifecycleStatus;
     }
 
-    public Integer getVersion() {
+    public String getVersion() {
         return this.version;
     }
 
-    public void setVersion(Integer version) {
+    public void setVersion(String version) {
         this.version = version;
     }
 
@@ -151,11 +151,11 @@ public class DriveNode {
         this.contentTypeGroup = contentTypeGroup;
     }
 
-    public Integer getContentLength() {
+    public String getContentLength() {
         return this.contentLength;
     }
 
-    public void setContentLength(Integer contentLength) {
+    public void setContentLength(String contentLength) {
         this.contentLength = contentLength;
     }
 

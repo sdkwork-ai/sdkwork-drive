@@ -2,7 +2,7 @@ package types
 
 
 type SweepResponse struct {
-	ScannedCount int `json:"scannedCount"`
-	AffectedCount int `json:"affectedCount"`
+	ScannedCount string `json:"scannedCount"`
+	AffectedCount string `json:"affectedCount"`
 	DryRun bool `json:"dryRun"`
 }

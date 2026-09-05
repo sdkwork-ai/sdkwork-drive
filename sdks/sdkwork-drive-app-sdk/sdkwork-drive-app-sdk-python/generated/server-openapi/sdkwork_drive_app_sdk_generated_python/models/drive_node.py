@@ -10,7 +10,7 @@ class DriveNode:
     node_type: str
     node_name: str
     lifecycle_status: str
-    version: int
+    version: str
     space_type: str
     created_at: str
     updated_at: str
@@ -23,5 +23,5 @@ class DriveNode:
     file_extension: Optional[str] = None
     content_type: Optional[str] = None
     content_type_group: Optional[str] = None
-    content_length: Optional[int] = None
+    content_length: Optional[str] = None
     folder_color: Optional[str] = None

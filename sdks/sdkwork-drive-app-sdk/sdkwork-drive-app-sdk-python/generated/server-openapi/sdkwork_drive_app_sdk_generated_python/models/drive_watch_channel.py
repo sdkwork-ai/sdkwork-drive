@@ -9,7 +9,7 @@ class DriveWatchChannel:
     resource_type: str
     channel_type: str
     address: str
-    expiration_epoch_ms: int
+    expiration_epoch_ms: str
     lifecycle_status: str
     version: int
     tenant_id: Optional[str] = None

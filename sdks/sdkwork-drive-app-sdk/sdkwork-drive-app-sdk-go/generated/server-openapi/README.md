@@ -56,7 +56,6 @@ client.SetHeader("X-Custom-Header", "value")
 ## API Modules
 
 - `client.Drive` - drive API
-- `client.Assets` - assets API
 
 ## Usage Examples
 
@@ -65,21 +64,6 @@ client.SetHeader("X-Custom-Header", "value")
 ```go
 // GET /app/v3/api/drive/quotas/summary
 result, err := client.Drive.QuotasRetrieve()
-if err != nil {
-    panic(err)
-}
-fmt.Println(result)
-```
-
-### assets
-
-```go
-// List asset collections
-params := map[string]interface{}{
-    "cursor": "cursor",
-    "page_size": 2,
-}
-result, err := client.Assets.AssetCollectionsList(params)
 if err != nil {
     panic(err)
 }

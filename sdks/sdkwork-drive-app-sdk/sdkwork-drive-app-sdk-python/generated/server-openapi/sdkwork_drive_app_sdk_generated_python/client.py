@@ -1,6 +1,5 @@
 from .http_client import HttpClient, SdkConfig
 from .api.drive import DriveApi
-from .api.assets import AssetsApi
 
 
 class SdkworkAppClient:
@@ -9,11 +8,9 @@ class SdkworkAppClient:
     def __init__(self, config: SdkConfig):
         self._client = HttpClient(config)
         self.drive: DriveApi
-        self.assets: AssetsApi
 
         # Initialize API modules
         self.drive = DriveApi(self._client)
-        self.assets = AssetsApi(self._client)
     def set_auth_token(self, token: str) -> 'SdkworkAppClient':
         """Set auth token for authentication."""
         self._client.set_auth_token(token)

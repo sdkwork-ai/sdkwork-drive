@@ -8,6 +8,6 @@ type DownloadPackageItem struct {
 	Bucket string `json:"bucket"`
 	ObjectKey string `json:"objectKey"`
 	ContentType string `json:"contentType"`
-	ContentLength int `json:"contentLength"`
+	ContentLength string `json:"contentLength"`
 	ChecksumSha256Hex string `json:"checksumSha256Hex"`
 }

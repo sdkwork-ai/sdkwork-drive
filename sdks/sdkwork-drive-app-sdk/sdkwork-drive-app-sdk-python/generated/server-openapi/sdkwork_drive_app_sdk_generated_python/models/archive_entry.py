@@ -8,6 +8,6 @@ class ArchiveEntry:
     path: str
     name: str
     is_directory: bool
-    uncompressed_size_bytes: int
-    compressed_size_bytes: int
+    uncompressed_size_bytes: str
+    compressed_size_bytes: str
     content_type: Optional[str] = None

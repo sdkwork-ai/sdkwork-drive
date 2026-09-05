@@ -16,8 +16,8 @@
   "dependencies": {
     "sdkwork-drive-pc-types": "workspace:*",
     "sdkwork-drive-pc-commons": "workspace:*",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0",
+    "react": "catalog:",
+    "react-dom": "catalog:",
     "lucide-react": "^0.546.0"
   }
 }

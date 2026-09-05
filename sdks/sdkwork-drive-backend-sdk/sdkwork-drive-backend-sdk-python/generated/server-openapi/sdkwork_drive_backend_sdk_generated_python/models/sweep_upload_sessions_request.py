@@ -5,6 +5,6 @@ from typing import TYPE_CHECKING, Optional, List, Dict, Any
 
 @dataclass
 class SweepUploadSessionsRequest:
-    now_epoch_ms: int
+    now_epoch_ms: str
     dry_run: bool
-    limit: Optional[int] = None
+    limit: Optional[str] = None

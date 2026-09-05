@@ -253,13 +253,13 @@ func (a *DriveApi) StorageProviderKindsList() (sdktypes.StorageProviderKindsList
     return decodeResult[sdktypes.StorageProviderKindsListResponse](raw)
 }
 
-func (a *DriveApi) StorageProviderKindsInitialize() (sdktypes.StorageProviderKindsInitializeResponse, error) {
+func (a *DriveApi) StorageProviderKindsCreate() (sdktypes.StorageProviderKindsCreateResponse201, error) {
     raw, err := a.client.Post(CustomApiPath("/drive/storage/provider-kinds"), nil, nil, nil, "")
     if err != nil {
-        var zero sdktypes.StorageProviderKindsInitializeResponse
+        var zero sdktypes.StorageProviderKindsCreateResponse201
         return zero, err
     }
-    return decodeResult[sdktypes.StorageProviderKindsInitializeResponse](raw)
+    return decodeResult[sdktypes.StorageProviderKindsCreateResponse201](raw)
 }
 
 func (a *DriveApi) StorageProviderKindsUpdate(providerKind string, body sdktypes.SetStorageProviderKindEnabledRequest) (sdktypes.StorageProviderKindsUpdateResponse, error) {

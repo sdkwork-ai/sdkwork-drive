@@ -13,7 +13,7 @@ type StorageProvider struct {
 	ServerSideEncryptionMode string `json:"serverSideEncryptionMode"`
 	DefaultStorageClass string `json:"defaultStorageClass"`
 	Status string `json:"status"`
-	Version int `json:"version"`
+	Version string `json:"version"`
 	CredentialConfigured bool `json:"credentialConfigured"`
 	StrictTls bool `json:"strictTls"`
 }

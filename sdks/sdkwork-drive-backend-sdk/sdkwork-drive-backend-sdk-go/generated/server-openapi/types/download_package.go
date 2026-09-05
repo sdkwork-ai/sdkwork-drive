@@ -10,10 +10,10 @@ type DownloadPackage struct {
 	Bucket string `json:"bucket"`
 	ArchiveObjectKey string `json:"archiveObjectKey"`
 	ContentType string `json:"contentType"`
-	FileCount int `json:"fileCount"`
-	TotalBytes int `json:"totalBytes"`
-	ArchiveSizeBytes int `json:"archiveSizeBytes"`
-	ExpiresAtEpochMs int `json:"expiresAtEpochMs"`
+	FileCount string `json:"fileCount"`
+	TotalBytes string `json:"totalBytes"`
+	ArchiveSizeBytes string `json:"archiveSizeBytes"`
+	ExpiresAtEpochMs string `json:"expiresAtEpochMs"`
 	ErrorMessage string `json:"errorMessage"`
 	CreatedBy string `json:"createdBy"`
 	UpdatedBy string `json:"updatedBy"`

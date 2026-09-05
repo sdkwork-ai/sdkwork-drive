@@ -3,7 +3,7 @@ package com.sdkwork.drive.backend.sdk.generated.java.model;
 
 public class SweepObjectStoreRequest {
     private Boolean dryRun;
-    private Integer limit;
+    private String limit;
 
     public Boolean getDryRun() {
         return this.dryRun;
@@ -13,11 +13,11 @@ public class SweepObjectStoreRequest {
         this.dryRun = dryRun;
     }
 
-    public Integer getLimit() {
+    public String getLimit() {
         return this.limit;
     }
 
-    public void setLimit(Integer limit) {
+    public void setLimit(String limit) {
         this.limit = limit;
     }
 }

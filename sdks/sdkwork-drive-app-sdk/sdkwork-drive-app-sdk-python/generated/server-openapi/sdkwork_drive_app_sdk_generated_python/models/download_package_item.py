@@ -11,5 +11,5 @@ class DownloadPackageItem:
     bucket: str
     object_key: str
     content_type: str
-    content_length: int
+    content_length: str
     checksum_sha256hex: str

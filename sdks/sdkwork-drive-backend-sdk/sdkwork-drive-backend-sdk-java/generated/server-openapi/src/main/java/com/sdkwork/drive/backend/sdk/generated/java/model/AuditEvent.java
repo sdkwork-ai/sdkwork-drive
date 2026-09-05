@@ -2,7 +2,7 @@ package com.sdkwork.drive.backend.sdk.generated.java.model;
 
 
 public class AuditEvent {
-    private Integer id;
+    private String id;
     private String tenantId;
     private String action;
     private String resourceType;
@@ -12,11 +12,11 @@ public class AuditEvent {
     private String traceId;
     private String createdAt;
 
-    public Integer getId() {
+    public String getId() {
         return this.id;
     }
 
-    public void setId(Integer id) {
+    public void setId(String id) {
         this.id = id;
     }
 

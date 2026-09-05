@@ -11,8 +11,8 @@ class UploadSessionMutationResponse:
     bucket: str
     object_key: str
     state: str
-    expires_at_epoch_ms: int
-    version: int
+    expires_at_epoch_ms: str
+    version: str
     storage_provider_id: str
     storage_upload_id: str
     tenant_id: Optional[str] = None

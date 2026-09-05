@@ -49,6 +49,15 @@ export default defineConfig(({ mode }) => {
       alias: {
         '@': path.resolve(__dirname, '.'),
         react: path.resolve(__dirname, 'node_modules/react'),
+        '@sdkwork/auth-runtime-pc-react': path.resolve(
+          iamRoot,
+          'apps/sdkwork-iam-pc/packages/sdkwork-auth-runtime-pc-react/src/index.ts',
+        ),
+        '@sdkwork/iam-runtime': path.resolve(
+          iamRoot,
+          'apps/sdkwork-iam-common/packages/sdkwork-iam-runtime/src/index.ts',
+        ),
+        '@sdkwork/core-pc-react': path.resolve(__dirname, 'src/bootstrap/sdkworkCorePcReactShim.ts'),
       },
       dedupe: ['react', 'react-dom'],
     },

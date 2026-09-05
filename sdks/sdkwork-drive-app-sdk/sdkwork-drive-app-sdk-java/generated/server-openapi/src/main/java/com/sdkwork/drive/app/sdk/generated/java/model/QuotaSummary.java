@@ -3,9 +3,9 @@ package com.sdkwork.drive.app.sdk.generated.java.model;
 
 public class QuotaSummary {
     private String tenantId;
-    private Integer usedBytes;
-    private Integer objectCount;
-    private Integer quotaBytes;
+    private String usedBytes;
+    private String objectCount;
+    private String quotaBytes;
 
     public String getTenantId() {
         return this.tenantId;
@@ -15,27 +15,27 @@ public class QuotaSummary {
         this.tenantId = tenantId;
     }
 
-    public Integer getUsedBytes() {
+    public String getUsedBytes() {
         return this.usedBytes;
     }
 
-    public void setUsedBytes(Integer usedBytes) {
+    public void setUsedBytes(String usedBytes) {
         this.usedBytes = usedBytes;
     }
 
-    public Integer getObjectCount() {
+    public String getObjectCount() {
         return this.objectCount;
     }
 
-    public void setObjectCount(Integer objectCount) {
+    public void setObjectCount(String objectCount) {
         this.objectCount = objectCount;
     }
 
-    public Integer getQuotaBytes() {
+    public String getQuotaBytes() {
         return this.quotaBytes;
     }
 
-    public void setQuotaBytes(Integer quotaBytes) {
+    public void setQuotaBytes(String quotaBytes) {
         this.quotaBytes = quotaBytes;
     }
 }

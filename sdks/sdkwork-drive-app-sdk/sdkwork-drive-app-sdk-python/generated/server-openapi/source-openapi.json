@@ -32,9 +32,10 @@
             "in": "query",
             "required": false,
             "schema": {
-              "type": "integer",
+              "type": "string",
               "format": "int64",
-              "deprecated": true
+              "deprecated": true,
+              "x-sdkwork-int64-string": true
             }
           },
           {
@@ -42,10 +43,11 @@
             "in": "query",
             "required": false,
             "schema": {
-              "type": "integer",
+              "type": "string",
               "format": "int64",
               "minimum": 1,
-              "maximum": 200
+              "maximum": 200,
+              "x-sdkwork-int64-string": true
             }
           }
         ],
@@ -415,7 +417,8 @@
         "x-sdkwork-owner": "sdkwork-drive",
         "x-sdkwork-api-authority": "sdkwork-drive-app-api",
         "x-sdkwork-request-context": "WebRequestContext",
-        "x-sdkwork-api-surface": "app-api"
+        "x-sdkwork-api-surface": "app-api",
+        "parameters": []
       }
     },
     "/app/v3/api/drive/favorites": {
@@ -438,10 +441,11 @@
             "in": "query",
             "required": false,
             "schema": {
-              "type": "integer",
+              "type": "string",
               "format": "int64",
               "minimum": 1,
-              "maximum": 200
+              "maximum": 200,
+              "x-sdkwork-int64-string": true
             }
           },
           {
@@ -611,7 +615,8 @@
         "x-sdkwork-owner": "sdkwork-drive",
         "x-sdkwork-api-authority": "sdkwork-drive-app-api",
         "x-sdkwork-request-context": "WebRequestContext",
-        "x-sdkwork-api-surface": "app-api"
+        "x-sdkwork-api-surface": "app-api",
+        "parameters": []
       }
     },
     "/app/v3/api/drive/quotas/summary": {
@@ -1049,10 +1054,11 @@
             "in": "query",
             "required": false,
             "schema": {
-              "type": "integer",
+              "type": "string",
               "format": "int64",
               "minimum": 1,
-              "maximum": 200
+              "maximum": 200,
+              "x-sdkwork-int64-string": true
             }
           },
           {
@@ -1607,10 +1613,11 @@
             "in": "query",
             "required": false,
             "schema": {
-              "type": "integer",
+              "type": "string",
               "format": "int64",
               "minimum": 1,
-              "maximum": 200
+              "maximum": 200,
+              "x-sdkwork-int64-string": true
             }
           },
           {
@@ -3267,10 +3274,11 @@
             "in": "query",
             "required": false,
             "schema": {
-              "type": "integer",
+              "type": "string",
               "format": "int64",
               "minimum": 1,
-              "maximum": 200
+              "maximum": 200,
+              "x-sdkwork-int64-string": true
             }
           },
           {
@@ -3817,10 +3825,11 @@
             "in": "query",
             "required": false,
             "schema": {
-              "type": "integer",
+              "type": "string",
               "format": "int64",
               "minimum": 1,
-              "maximum": 200
+              "maximum": 200,
+              "x-sdkwork-int64-string": true
             }
           },
           {
@@ -4388,10 +4397,11 @@
             "in": "query",
             "required": false,
             "schema": {
-              "type": "integer",
+              "type": "string",
               "format": "int64",
               "minimum": 1,
-              "maximum": 200
+              "maximum": 200,
+              "x-sdkwork-int64-string": true
             }
           },
           {
@@ -4617,10 +4627,11 @@
             "in": "query",
             "required": false,
             "schema": {
-              "type": "integer",
+              "type": "string",
               "format": "int64",
               "minimum": 1,
-              "maximum": 200
+              "maximum": 200,
+              "x-sdkwork-int64-string": true
             }
           },
           {
@@ -5138,7 +5149,8 @@
         "x-sdkwork-owner": "sdkwork-drive",
         "x-sdkwork-api-authority": "sdkwork-drive-app-api",
         "x-sdkwork-request-context": "WebRequestContext",
-        "x-sdkwork-api-surface": "app-api"
+        "x-sdkwork-api-surface": "app-api",
+        "parameters": []
       }
     },
     "/app/v3/api/drive/nodes/folders": {
@@ -5238,7 +5250,8 @@
         "x-sdkwork-owner": "sdkwork-drive",
         "x-sdkwork-api-authority": "sdkwork-drive-app-api",
         "x-sdkwork-request-context": "WebRequestContext",
-        "x-sdkwork-api-surface": "app-api"
+        "x-sdkwork-api-surface": "app-api",
+        "parameters": []
       }
     },
     "/app/v3/api/drive/nodes/shortcuts": {
@@ -5339,7 +5352,8 @@
         "x-sdkwork-owner": "sdkwork-drive",
         "x-sdkwork-api-authority": "sdkwork-drive-app-api",
         "x-sdkwork-request-context": "WebRequestContext",
-        "x-sdkwork-api-surface": "app-api"
+        "x-sdkwork-api-surface": "app-api",
+        "parameters": []
       }
     },
     "/app/v3/api/drive/properties/{propertyKey}/nodes": {
@@ -5368,10 +5382,11 @@
             "in": "query",
             "required": false,
             "schema": {
-              "type": "integer",
+              "type": "string",
               "format": "int64",
               "minimum": 1,
-              "maximum": 200
+              "maximum": 200,
+              "x-sdkwork-int64-string": true
             }
           },
           {
@@ -5487,10 +5502,11 @@
             "in": "query",
             "required": false,
             "schema": {
-              "type": "integer",
+              "type": "string",
               "format": "int64",
               "minimum": 1,
-              "maximum": 200
+              "maximum": 200,
+              "x-sdkwork-int64-string": true
             }
           },
           {
@@ -5641,10 +5657,11 @@
             "in": "query",
             "required": false,
             "schema": {
-              "type": "integer",
+              "type": "string",
               "format": "int64",
               "minimum": 1,
-              "maximum": 200
+              "maximum": 200,
+              "x-sdkwork-int64-string": true
             }
           },
           {
@@ -6184,10 +6201,11 @@
             "in": "query",
             "required": false,
             "schema": {
-              "type": "integer",
+              "type": "string",
               "format": "int64",
               "minimum": 1,
-              "maximum": 200
+              "maximum": 200,
+              "x-sdkwork-int64-string": true
             }
           },
           {
@@ -6579,7 +6597,7 @@
             "description": "Opaque caller-generated key binding retries to the same directory creation request.",
             "schema": {
               "type": "string",
-              "minLength": 8,
+              "minLength": 1,
               "maxLength": 128,
               "pattern": "^[A-Za-z0-9._:@-]+$"
             }
@@ -6706,7 +6724,7 @@
             "required": true,
             "schema": {
               "type": "string",
-              "minLength": 8,
+              "minLength": 1,
               "maxLength": 128,
               "pattern": "^[A-Za-z0-9._:@-]+$"
             }
@@ -7004,7 +7022,7 @@
             "required": true,
             "schema": {
               "type": "string",
-              "minLength": 8,
+              "minLength": 1,
               "maxLength": 128,
               "pattern": "^[A-Za-z0-9._:@-]+$"
             }
@@ -7183,7 +7201,7 @@
             "required": true,
             "schema": {
               "type": "string",
-              "minLength": 8,
+              "minLength": 1,
               "maxLength": 128,
               "pattern": "^[A-Za-z0-9._:@-]+$"
             }
@@ -7352,7 +7370,7 @@
             "required": true,
             "schema": {
               "type": "string",
-              "minLength": 8,
+              "minLength": 1,
               "maxLength": 128,
               "pattern": "^[A-Za-z0-9._:@-]+$"
             }
@@ -7674,7 +7692,8 @@
         "x-sdkwork-owner": "sdkwork-drive",
         "x-sdkwork-api-authority": "sdkwork-drive-app-api",
         "x-sdkwork-request-context": "WebRequestContext",
-        "x-sdkwork-api-surface": "app-api"
+        "x-sdkwork-api-surface": "app-api",
+        "parameters": []
       }
     },
     "/app/v3/api/drive/spaces/{spaceId}/website_roots": {
@@ -7793,6 +7812,16 @@
               "type": "string",
               "minLength": 1,
               "maxLength": 64
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
             }
           }
         ],
@@ -8178,6 +8207,16 @@
               "type": "string",
               "format": "uuid"
             }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            }
           }
         ],
         "requestBody": {
@@ -8281,6 +8320,16 @@
             "schema": {
               "type": "string",
               "format": "uuid"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
             }
           }
         ],
@@ -8482,10 +8531,11 @@
             "in": "query",
             "required": false,
             "schema": {
-              "type": "integer",
+              "type": "string",
               "format": "int64",
               "minimum": 1,
-              "maximum": 200
+              "maximum": 200,
+              "x-sdkwork-int64-string": true
             }
           },
           {
@@ -8863,10 +8913,11 @@
             "in": "query",
             "required": false,
             "schema": {
-              "type": "integer",
+              "type": "string",
               "format": "int64",
               "minimum": 1,
-              "maximum": 200
+              "maximum": 200,
+              "x-sdkwork-int64-string": true
             }
           },
           {
@@ -9009,10 +9060,11 @@
             "in": "query",
             "required": false,
             "schema": {
-              "type": "integer",
+              "type": "string",
               "format": "int64",
               "minimum": 1,
-              "maximum": 200
+              "maximum": 200,
+              "x-sdkwork-int64-string": true
             }
           },
           {
@@ -9350,7 +9402,8 @@
         "x-sdkwork-owner": "sdkwork-drive",
         "x-sdkwork-api-authority": "sdkwork-drive-app-api",
         "x-sdkwork-request-context": "WebRequestContext",
-        "x-sdkwork-api-surface": "app-api"
+        "x-sdkwork-api-surface": "app-api",
+        "parameters": []
       }
     },
     "/app/v3/api/drive/upload_sessions": {
@@ -9435,7 +9488,8 @@
         "x-sdkwork-owner": "sdkwork-drive",
         "x-sdkwork-api-authority": "sdkwork-drive-app-api",
         "x-sdkwork-request-context": "WebRequestContext",
-        "x-sdkwork-api-surface": "app-api"
+        "x-sdkwork-api-surface": "app-api",
+        "parameters": []
       }
     },
     "/app/v3/api/drive/upload_sessions/{uploadSessionId}": {
@@ -9976,7 +10030,8 @@
         "x-sdkwork-owner": "sdkwork-drive",
         "x-sdkwork-api-authority": "sdkwork-drive-app-api",
         "x-sdkwork-request-context": "WebRequestContext",
-        "x-sdkwork-api-surface": "app-api"
+        "x-sdkwork-api-surface": "app-api",
+        "parameters": []
       }
     },
     "/app/v3/api/drive/nodes/{nodeId}/watch": {
@@ -10563,7 +10618,8 @@
         "x-sdkwork-owner": "sdkwork-drive",
         "x-sdkwork-api-authority": "sdkwork-drive-app-api",
         "x-sdkwork-request-context": "WebRequestContext",
-        "x-sdkwork-api-surface": "app-api"
+        "x-sdkwork-api-surface": "app-api",
+        "parameters": []
       }
     },
     "/app/v3/api/drive/download_packages/{packageId}/download_url": {
@@ -10990,7 +11046,8 @@
         "x-sdkwork-owner": "sdkwork-drive",
         "x-sdkwork-api-authority": "sdkwork-drive-app-api",
         "x-sdkwork-request-context": "WebRequestContext",
-        "x-sdkwork-api-surface": "app-api"
+        "x-sdkwork-api-surface": "app-api",
+        "parameters": []
       }
     },
     "/app/v3/api/drive/uploader/uploads/{uploadItemId}/parts/{partNo}": {
@@ -11088,1493 +11145,6 @@
           },
           "500": {
             "description": "Internal Server Error",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "AuthToken": [],
-            "AccessToken": []
-          }
-        ],
-        "x-sdkwork-owner": "sdkwork-drive",
-        "x-sdkwork-api-authority": "sdkwork-drive-app-api",
-        "x-sdkwork-request-context": "WebRequestContext",
-        "x-sdkwork-api-surface": "app-api"
-      }
-    },
-    "/app/v3/api/assets": {
-      "get": {
-        "tags": [
-          "drive"
-        ],
-        "operationId": "assets.list",
-        "summary": "List global assets",
-        "parameters": [
-          {
-            "name": "cursor",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "page_size",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "integer",
-              "format": "int32",
-              "minimum": 1,
-              "maximum": 100
-            }
-          },
-          {
-            "name": "kind",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "sourceType",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "q",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "string",
-              "maxLength": 128
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AssetListHttpResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Problem detail",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Problem detail",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Problem detail",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "Problem detail",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Problem detail",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "AuthToken": [],
-            "AccessToken": []
-          }
-        ],
-        "x-sdkwork-owner": "sdkwork-drive",
-        "x-sdkwork-api-authority": "sdkwork-drive-app-api",
-        "x-sdkwork-request-context": "WebRequestContext",
-        "x-sdkwork-api-surface": "app-api"
-      },
-      "post": {
-        "tags": [
-          "drive"
-        ],
-        "operationId": "assets.create",
-        "summary": "Create a global asset metadata record",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateAssetRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Created",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AssetItemHttpResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Problem detail",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Problem detail",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Problem detail",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "Problem detail",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Problem detail",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "AuthToken": [],
-            "AccessToken": []
-          }
-        ],
-        "x-sdkwork-owner": "sdkwork-drive",
-        "x-sdkwork-api-authority": "sdkwork-drive-app-api",
-        "x-sdkwork-request-context": "WebRequestContext",
-        "x-sdkwork-api-surface": "app-api"
-      }
-    },
-    "/app/v3/api/assets/{assetId}": {
-      "get": {
-        "tags": [
-          "drive"
-        ],
-        "operationId": "assets.retrieve",
-        "summary": "Get a global asset",
-        "parameters": [
-          {
-            "name": "assetId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AssetItemHttpResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Problem detail",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Problem detail",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Problem detail",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "Problem detail",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Problem detail",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "AuthToken": [],
-            "AccessToken": []
-          }
-        ],
-        "x-sdkwork-owner": "sdkwork-drive",
-        "x-sdkwork-api-authority": "sdkwork-drive-app-api",
-        "x-sdkwork-request-context": "WebRequestContext",
-        "x-sdkwork-api-surface": "app-api"
-      },
-      "patch": {
-        "tags": [
-          "drive"
-        ],
-        "operationId": "assets.update",
-        "summary": "Update a global asset",
-        "parameters": [
-          {
-            "name": "assetId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/UpdateAssetRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AssetItemHttpResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Problem detail",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Problem detail",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Problem detail",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "Problem detail",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Problem detail",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "AuthToken": [],
-            "AccessToken": []
-          }
-        ],
-        "x-sdkwork-owner": "sdkwork-drive",
-        "x-sdkwork-api-authority": "sdkwork-drive-app-api",
-        "x-sdkwork-request-context": "WebRequestContext",
-        "x-sdkwork-api-surface": "app-api"
-      }
-    },
-    "/app/v3/api/assets/{assetId}/archive": {
-      "post": {
-        "tags": [
-          "drive"
-        ],
-        "operationId": "assets.archive",
-        "summary": "Archive a global asset",
-        "parameters": [
-          {
-            "name": "assetId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/AssetActionRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AssetItemHttpResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Problem detail",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Problem detail",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Problem detail",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "Problem detail",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Problem detail",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "AuthToken": [],
-            "AccessToken": []
-          }
-        ],
-        "x-sdkwork-owner": "sdkwork-drive",
-        "x-sdkwork-api-authority": "sdkwork-drive-app-api",
-        "x-sdkwork-request-context": "WebRequestContext",
-        "x-sdkwork-api-surface": "app-api"
-      }
-    },
-    "/app/v3/api/assets/{assetId}/restore": {
-      "post": {
-        "tags": [
-          "drive"
-        ],
-        "operationId": "assets.restore",
-        "summary": "Restore an archived global asset",
-        "parameters": [
-          {
-            "name": "assetId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/AssetActionRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AssetItemHttpResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Problem detail",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Problem detail",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Problem detail",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "Problem detail",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Problem detail",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "AuthToken": [],
-            "AccessToken": []
-          }
-        ],
-        "x-sdkwork-owner": "sdkwork-drive",
-        "x-sdkwork-api-authority": "sdkwork-drive-app-api",
-        "x-sdkwork-request-context": "WebRequestContext",
-        "x-sdkwork-api-surface": "app-api"
-      }
-    },
-    "/app/v3/api/assets/collections": {
-      "get": {
-        "tags": [
-          "assets"
-        ],
-        "operationId": "assetCollections.list",
-        "summary": "List asset collections",
-        "parameters": [
-          {
-            "name": "cursor",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "page_size",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "integer",
-              "format": "int32",
-              "minimum": 1,
-              "maximum": 100
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AssetCollectionListHttpResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Problem detail",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Problem detail",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Problem detail",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "Problem detail",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Problem detail",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "AuthToken": [],
-            "AccessToken": []
-          }
-        ],
-        "x-sdkwork-owner": "sdkwork-drive",
-        "x-sdkwork-api-authority": "sdkwork-drive-app-api",
-        "x-sdkwork-request-context": "WebRequestContext",
-        "x-sdkwork-api-surface": "app-api"
-      },
-      "post": {
-        "tags": [
-          "assets"
-        ],
-        "operationId": "assetCollections.create",
-        "summary": "Create an asset collection",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateAssetCollectionRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Created",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AssetCollectionHttpResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Problem detail",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Problem detail",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Problem detail",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "Problem detail",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Problem detail",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "AuthToken": [],
-            "AccessToken": []
-          }
-        ],
-        "x-sdkwork-owner": "sdkwork-drive",
-        "x-sdkwork-api-authority": "sdkwork-drive-app-api",
-        "x-sdkwork-request-context": "WebRequestContext",
-        "x-sdkwork-api-surface": "app-api"
-      }
-    },
-    "/app/v3/api/assets/collections/{collectionId}/items": {
-      "post": {
-        "tags": [
-          "assets"
-        ],
-        "operationId": "assetCollectionItems.create",
-        "summary": "Add an asset to a collection",
-        "parameters": [
-          {
-            "name": "collectionId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateAssetCollectionItemRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Created",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AssetCollectionItemHttpResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Problem detail",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Problem detail",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Problem detail",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "Problem detail",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Problem detail",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "AuthToken": [],
-            "AccessToken": []
-          }
-        ],
-        "x-sdkwork-owner": "sdkwork-drive",
-        "x-sdkwork-api-authority": "sdkwork-drive-app-api",
-        "x-sdkwork-request-context": "WebRequestContext",
-        "x-sdkwork-api-surface": "app-api"
-      }
-    },
-    "/app/v3/api/assets/collections/{collectionId}/items/{itemId}": {
-      "delete": {
-        "tags": [
-          "assets"
-        ],
-        "operationId": "assetCollectionItems.delete",
-        "summary": "Remove an asset from a collection",
-        "parameters": [
-          {
-            "name": "collectionId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "itemId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "204": {
-            "description": "No Content"
-          },
-          "400": {
-            "description": "Problem detail",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Problem detail",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Problem detail",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "Problem detail",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Problem detail",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "AuthToken": [],
-            "AccessToken": []
-          }
-        ],
-        "x-sdkwork-owner": "sdkwork-drive",
-        "x-sdkwork-api-authority": "sdkwork-drive-app-api",
-        "x-sdkwork-request-context": "WebRequestContext",
-        "x-sdkwork-api-surface": "app-api"
-      }
-    },
-    "/app/v3/api/assets/{assetId}/relations": {
-      "post": {
-        "tags": [
-          "assets"
-        ],
-        "operationId": "assetRelations.create",
-        "summary": "Create an asset relation",
-        "parameters": [
-          {
-            "name": "assetId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateAssetRelationRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Created",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AssetRelationHttpResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Problem detail",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Problem detail",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Problem detail",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "Problem detail",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Problem detail",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "AuthToken": [],
-            "AccessToken": []
-          }
-        ],
-        "x-sdkwork-owner": "sdkwork-drive",
-        "x-sdkwork-api-authority": "sdkwork-drive-app-api",
-        "x-sdkwork-request-context": "WebRequestContext",
-        "x-sdkwork-api-surface": "app-api"
-      }
-    },
-    "/app/v3/api/assets/{assetId}/relations/{relationId}": {
-      "delete": {
-        "tags": [
-          "assets"
-        ],
-        "operationId": "assetRelations.delete",
-        "summary": "Delete an asset relation",
-        "parameters": [
-          {
-            "name": "assetId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "relationId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "204": {
-            "description": "No Content"
-          },
-          "400": {
-            "description": "Problem detail",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Problem detail",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Problem detail",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "Problem detail",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Problem detail",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -12712,8 +11282,9 @@
         ],
         "properties": {
           "sequenceNo": {
-            "type": "integer",
-            "format": "int64"
+            "type": "string",
+            "format": "int64",
+            "x-sdkwork-int64-string": true
           },
           "tenantId": {
             "type": "string"
@@ -12769,9 +11340,10 @@
             "type": "string"
           },
           "contentLength": {
-            "type": "integer",
+            "type": "string",
             "format": "int64",
-            "minimum": 0
+            "minimum": 0,
+            "x-sdkwork-int64-string": true
           },
           "checksumSha256Hex": {
             "type": "string"
@@ -12883,9 +11455,10 @@
             "type": "string"
           },
           "expiresAtEpochMs": {
-            "type": "integer",
+            "type": "string",
             "format": "int64",
-            "minimum": 1
+            "minimum": 1,
+            "x-sdkwork-int64-string": true
           },
           "method": {
             "type": "string"
@@ -12922,9 +11495,10 @@
             "type": "string"
           },
           "expiresAtEpochMs": {
-            "type": "integer",
+            "type": "string",
             "format": "int64",
-            "minimum": 1
+            "minimum": 1,
+            "x-sdkwork-int64-string": true
           },
           "bucket": {
             "type": "string"
@@ -13051,14 +11625,16 @@
             ]
           },
           "expiresAtEpochMs": {
-            "type": "integer",
+            "type": "string",
             "format": "int64",
-            "minimum": 1
+            "minimum": 1,
+            "x-sdkwork-int64-string": true
           },
           "downloadLimit": {
-            "type": "integer",
+            "type": "string",
             "format": "int64",
-            "minimum": 0
+            "minimum": 0,
+            "x-sdkwork-int64-string": true
           },
           "accessCode": {
             "type": "string",
@@ -13189,9 +11765,10 @@
             "type": "string"
           },
           "expiresAtEpochMs": {
-            "type": "integer",
+            "type": "string",
             "format": "int64",
-            "minimum": 1
+            "minimum": 1,
+            "x-sdkwork-int64-string": true
           }
         }
       },
@@ -13232,8 +11809,9 @@
             "type": "string"
           },
           "version": {
-            "type": "integer",
-            "format": "int64"
+            "type": "string",
+            "format": "int64",
+            "x-sdkwork-int64-string": true
           },
           "createdBy": {
             "type": "string"
@@ -13285,8 +11863,9 @@
             "type": "string"
           },
           "version": {
-            "type": "integer",
-            "format": "int64"
+            "type": "string",
+            "format": "int64",
+            "x-sdkwork-int64-string": true
           },
           "createdBy": {
             "type": "string"
@@ -13640,8 +12219,9 @@
             ]
           },
           "version": {
-            "type": "integer",
-            "format": "int64"
+            "type": "string",
+            "format": "int64",
+            "x-sdkwork-int64-string": true
           },
           "shortcutTargetNodeId": {
             "type": "string",
@@ -13710,9 +12290,10 @@
             "description": "Coarse file category derived from contentType for list filtering and icons."
           },
           "contentLength": {
-            "type": "integer",
+            "type": "string",
             "format": "int64",
-            "description": "Byte size of the latest active file version."
+            "description": "Byte size of the latest active file version.",
+            "x-sdkwork-int64-string": true
           },
           "folderColor": {
             "type": "string",
@@ -13824,8 +12405,9 @@
             "type": "string"
           },
           "version": {
-            "type": "integer",
-            "format": "int64"
+            "type": "string",
+            "format": "int64",
+            "x-sdkwork-int64-string": true
           }
         }
       },
@@ -13976,19 +12558,22 @@
             "type": "string"
           },
           "expiresAtEpochMs": {
-            "type": "integer",
+            "type": "string",
             "format": "int64",
-            "minimum": 1
+            "minimum": 1,
+            "x-sdkwork-int64-string": true
           },
           "downloadLimit": {
-            "type": "integer",
+            "type": "string",
             "format": "int64",
-            "minimum": 0
+            "minimum": 0,
+            "x-sdkwork-int64-string": true
           },
           "downloadCount": {
-            "type": "integer",
+            "type": "string",
             "format": "int64",
-            "minimum": 0
+            "minimum": 0,
+            "x-sdkwork-int64-string": true
           },
           "accessCodeRequired": {
             "type": "boolean"
@@ -13997,8 +12582,9 @@
             "type": "string"
           },
           "version": {
-            "type": "integer",
-            "format": "int64"
+            "type": "string",
+            "format": "int64",
+            "x-sdkwork-int64-string": true
           }
         }
       },
@@ -14027,19 +12613,22 @@
             "type": "string"
           },
           "expiresAtEpochMs": {
-            "type": "integer",
+            "type": "string",
             "format": "int64",
-            "minimum": 1
+            "minimum": 1,
+            "x-sdkwork-int64-string": true
           },
           "downloadLimit": {
-            "type": "integer",
+            "type": "string",
             "format": "int64",
-            "minimum": 0
+            "minimum": 0,
+            "x-sdkwork-int64-string": true
           },
           "downloadCount": {
-            "type": "integer",
+            "type": "string",
             "format": "int64",
-            "minimum": 0
+            "minimum": 0,
+            "x-sdkwork-int64-string": true
           },
           "accessCodeRequired": {
             "type": "boolean"
@@ -14048,8 +12637,9 @@
             "type": "string"
           },
           "version": {
-            "type": "integer",
-            "format": "int64"
+            "type": "string",
+            "format": "int64",
+            "x-sdkwork-int64-string": true
           },
           "token": {
             "type": "string",
@@ -15309,8 +13899,9 @@
             "type": "string"
           },
           "version": {
-            "type": "integer",
-            "format": "int64"
+            "type": "string",
+            "format": "int64",
+            "x-sdkwork-int64-string": true
           },
           "createdBy": {
             "type": "string"
@@ -15366,12 +13957,14 @@
             ]
           },
           "expiresAtEpochMs": {
-            "type": "integer",
-            "format": "int64"
+            "type": "string",
+            "format": "int64",
+            "x-sdkwork-int64-string": true
           },
           "version": {
-            "type": "integer",
-            "format": "int64"
+            "type": "string",
+            "format": "int64",
+            "x-sdkwork-int64-string": true
           },
           "storageProviderId": {
             "type": "string",
@@ -15440,8 +14033,9 @@
             "type": "string"
           },
           "version": {
-            "type": "integer",
-            "format": "int64"
+            "type": "string",
+            "format": "int64",
+            "x-sdkwork-int64-string": true
           }
         }
       },
@@ -15463,12 +14057,14 @@
         ],
         "properties": {
           "deletedCount": {
-            "type": "integer",
-            "format": "int64"
+            "type": "string",
+            "format": "int64",
+            "x-sdkwork-int64-string": true
           },
           "skippedCount": {
-            "type": "integer",
-            "format": "int64"
+            "type": "string",
+            "format": "int64",
+            "x-sdkwork-int64-string": true
           },
           "hasMore": {
             "type": "boolean",
@@ -15552,15 +14148,17 @@
             "type": "string"
           },
           "versionNo": {
-            "type": "integer",
-            "format": "int64"
+            "type": "string",
+            "format": "int64",
+            "x-sdkwork-int64-string": true
           },
           "contentType": {
             "type": "string"
           },
           "contentLength": {
-            "type": "integer",
-            "format": "int64"
+            "type": "string",
+            "format": "int64",
+            "x-sdkwork-int64-string": true
           },
           "checksumSha256Hex": {
             "type": "string"
@@ -15848,8 +14446,9 @@
             "type": "string"
           },
           "expiresAtEpochMs": {
-            "type": "integer",
-            "format": "int64"
+            "type": "string",
+            "format": "int64",
+            "x-sdkwork-int64-string": true
           },
           "method": {
             "type": "string",
@@ -15943,20 +14542,23 @@
             "type": "string"
           },
           "usedBytes": {
-            "type": "integer",
+            "type": "string",
             "format": "int64",
-            "minimum": 0
+            "minimum": 0,
+            "x-sdkwork-int64-string": true
           },
           "objectCount": {
-            "type": "integer",
+            "type": "string",
             "format": "int64",
-            "minimum": 0
+            "minimum": 0,
+            "x-sdkwork-int64-string": true
           },
           "quotaBytes": {
-            "type": "integer",
+            "type": "string",
             "format": "int64",
             "minimum": 1,
-            "description": "Configured tenant storage quota cap from SDKWORK_DRIVE_TENANT_QUOTA_MAX_BYTES when set."
+            "description": "Configured tenant storage quota cap from SDKWORK_DRIVE_TENANT_QUOTA_MAX_BYTES when set.",
+            "x-sdkwork-int64-string": true
           }
         }
       },
@@ -16056,20 +14658,16 @@
             ]
           },
           "expiresAtEpochMs": {
-            "type": [
-              "integer",
-              "null"
-            ],
+            "type": "string",
             "format": "int64",
-            "minimum": 1
+            "minimum": 1,
+            "x-sdkwork-int64-string": true
           },
           "downloadLimit": {
-            "type": [
-              "integer",
-              "null"
-            ],
+            "type": "string",
             "format": "int64",
-            "minimum": 0
+            "minimum": 0,
+            "x-sdkwork-int64-string": true
           }
         }
       },
@@ -16136,12 +14734,14 @@
             ]
           },
           "expiresAtEpochMs": {
-            "type": "integer",
-            "format": "int64"
+            "type": "string",
+            "format": "int64",
+            "x-sdkwork-int64-string": true
           },
           "version": {
-            "type": "integer",
-            "format": "int64"
+            "type": "string",
+            "format": "int64",
+            "x-sdkwork-int64-string": true
           },
           "storageProviderId": {
             "type": "string",
@@ -16192,9 +14792,10 @@
             "default": "web_hook"
           },
           "expirationEpochMs": {
-            "type": "integer",
+            "type": "string",
             "format": "int64",
-            "minimum": 1
+            "minimum": 1,
+            "x-sdkwork-int64-string": true
           }
         },
         "additionalProperties": false
@@ -16268,9 +14869,10 @@
             "maxLength": 2048
           },
           "expirationEpochMs": {
-            "type": "integer",
+            "type": "string",
             "format": "int64",
-            "minimum": 1
+            "minimum": 1,
+            "x-sdkwork-int64-string": true
           },
           "lifecycleStatus": {
             "type": "string",
@@ -16363,9 +14965,10 @@
             "type": "string"
           },
           "contentLength": {
-            "type": "integer",
+            "type": "string",
             "format": "int64",
-            "minimum": 0
+            "minimum": 0,
+            "x-sdkwork-int64-string": true
           },
           "checksumSha256Hex": {
             "type": "string"
@@ -16426,23 +15029,27 @@
             ]
           },
           "fileCount": {
-            "type": "integer",
+            "type": "string",
             "format": "int64",
-            "minimum": 0
+            "minimum": 0,
+            "x-sdkwork-int64-string": true
           },
           "totalBytes": {
-            "type": "integer",
+            "type": "string",
             "format": "int64",
-            "minimum": 0
+            "minimum": 0,
+            "x-sdkwork-int64-string": true
           },
           "archiveSizeBytes": {
-            "type": "integer",
+            "type": "string",
             "format": "int64",
-            "minimum": 0
+            "minimum": 0,
+            "x-sdkwork-int64-string": true
           },
           "expiresAtEpochMs": {
-            "type": "integer",
-            "format": "int64"
+            "type": "string",
+            "format": "int64",
+            "x-sdkwork-int64-string": true
           },
           "downloadUrl": {
             "type": "string"
@@ -16488,14 +15095,16 @@
             "type": "boolean"
           },
           "uncompressedSizeBytes": {
-            "type": "integer",
+            "type": "string",
             "format": "int64",
-            "minimum": 0
+            "minimum": 0,
+            "x-sdkwork-int64-string": true
           },
           "compressedSizeBytes": {
-            "type": "integer",
+            "type": "string",
             "format": "int64",
-            "minimum": 0
+            "minimum": 0,
+            "x-sdkwork-int64-string": true
           },
           "contentType": {
             "type": "string"
@@ -16568,9 +15177,10 @@
             }
           },
           "extractedCount": {
-            "type": "integer",
+            "type": "string",
             "format": "int64",
-            "minimum": 0
+            "minimum": 0,
+            "x-sdkwork-int64-string": true
           }
         }
       },
@@ -16628,9 +15238,10 @@
             ]
           },
           "ttlSeconds": {
-            "type": "integer",
+            "type": "string",
             "format": "int64",
-            "minimum": 1
+            "minimum": 1,
+            "x-sdkwork-int64-string": true
           },
           "cleanupAction": {
             "type": "string",
@@ -16640,9 +15251,10 @@
             ]
           },
           "hardDeleteAfterSeconds": {
-            "type": "integer",
+            "type": "string",
             "format": "int64",
-            "minimum": 1
+            "minimum": 1,
+            "x-sdkwork-int64-string": true
           }
         }
       },
@@ -16713,14 +15325,16 @@
             "maxLength": 255
           },
           "contentLength": {
-            "type": "integer",
+            "type": "string",
             "format": "int64",
-            "minimum": 0
+            "minimum": 0,
+            "x-sdkwork-int64-string": true
           },
           "chunkSizeBytes": {
-            "type": "integer",
+            "type": "string",
             "format": "int64",
-            "minimum": 1
+            "minimum": 1,
+            "x-sdkwork-int64-string": true
           },
           "spaceId": {
             "type": "string",
@@ -16734,9 +15348,10 @@
             "$ref": "#/components/schemas/UploaderRetentionRequest"
           },
           "nowEpochMs": {
-            "type": "integer",
+            "type": "string",
             "format": "int64",
-            "minimum": 1
+            "minimum": 1,
+            "x-sdkwork-int64-string": true
           },
           "scene": {
             "type": "string",
@@ -16856,27 +15471,32 @@
             "type": "string"
           },
           "contentLength": {
-            "type": "integer",
-            "format": "int64"
+            "type": "string",
+            "format": "int64",
+            "x-sdkwork-int64-string": true
           },
           "checksumSha256Hex": {
             "type": "string"
           },
           "chunkSizeBytes": {
-            "type": "integer",
-            "format": "int64"
+            "type": "string",
+            "format": "int64",
+            "x-sdkwork-int64-string": true
           },
           "totalParts": {
-            "type": "integer",
-            "format": "int64"
+            "type": "string",
+            "format": "int64",
+            "x-sdkwork-int64-string": true
           },
           "uploadedPartsCount": {
-            "type": "integer",
-            "format": "int64"
+            "type": "string",
+            "format": "int64",
+            "x-sdkwork-int64-string": true
           },
           "uploadedBytes": {
-            "type": "integer",
-            "format": "int64"
+            "type": "string",
+            "format": "int64",
+            "x-sdkwork-int64-string": true
           },
           "status": {
             "type": "string"
@@ -16885,15 +15505,17 @@
             "type": "string"
           },
           "retentionExpiresAtEpochMs": {
-            "type": "integer",
-            "format": "int64"
+            "type": "string",
+            "format": "int64",
+            "x-sdkwork-int64-string": true
           },
           "cleanupAction": {
             "type": "string"
           },
           "hardDeleteAfterEpochMs": {
-            "type": "integer",
-            "format": "int64"
+            "type": "string",
+            "format": "int64",
+            "x-sdkwork-int64-string": true
           },
           "cleanupStatus": {
             "type": "string"
@@ -16946,14 +15568,16 @@
             "minLength": 1
           },
           "offsetBytes": {
-            "type": "integer",
+            "type": "string",
             "format": "int64",
-            "minimum": 0
+            "minimum": 0,
+            "x-sdkwork-int64-string": true
           },
           "sizeBytes": {
-            "type": "integer",
+            "type": "string",
             "format": "int64",
-            "minimum": 1
+            "minimum": 1,
+            "x-sdkwork-int64-string": true
           },
           "etag": {
             "type": "string",
@@ -16963,9 +15587,10 @@
             "type": "string"
           },
           "uploadedAtEpochMs": {
-            "type": "integer",
+            "type": "string",
             "format": "int64",
-            "minimum": 1
+            "minimum": 1,
+            "x-sdkwork-int64-string": true
           }
         }
       },
@@ -16996,16 +15621,19 @@
             "type": "string"
           },
           "partNo": {
-            "type": "integer",
-            "format": "int64"
+            "type": "string",
+            "format": "int64",
+            "x-sdkwork-int64-string": true
           },
           "offsetBytes": {
-            "type": "integer",
-            "format": "int64"
+            "type": "string",
+            "format": "int64",
+            "x-sdkwork-int64-string": true
           },
           "sizeBytes": {
-            "type": "integer",
-            "format": "int64"
+            "type": "string",
+            "format": "int64",
+            "x-sdkwork-int64-string": true
           },
           "etag": {
             "type": "string"
@@ -17017,688 +15645,14 @@
             "type": "string"
           },
           "retryCount": {
-            "type": "integer",
-            "format": "int64"
+            "type": "string",
+            "format": "int64",
+            "x-sdkwork-int64-string": true
           },
           "uploadedAtEpochMs": {
-            "type": "integer",
-            "format": "int64"
-          }
-        }
-      },
-      "MediaResource": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "kind",
-          "source"
-        ],
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "kind": {
             "type": "string",
-            "enum": [
-              "image",
-              "video",
-              "audio",
-              "voice",
-              "document",
-              "archive",
-              "model",
-              "other"
-            ]
-          },
-          "source": {
-            "type": "string",
-            "enum": [
-              "drive",
-              "external_url",
-              "data_url",
-              "provider_asset",
-              "generated"
-            ]
-          },
-          "url": {
-            "type": "string",
-            "format": "uri"
-          },
-          "publicUrl": {
-            "type": "string",
-            "format": "uri"
-          },
-          "uri": {
-            "type": "string"
-          },
-          "objectBlobId": {
-            "type": "string"
-          },
-          "fileName": {
-            "type": "string",
-            "maxLength": 512
-          },
-          "mimeType": {
-            "type": "string",
-            "maxLength": 256
-          },
-          "sizeBytes": {
-            "type": "string",
-            "pattern": "^[0-9]+$"
-          },
-          "checksum": {
-            "type": "object",
-            "additionalProperties": false,
-            "properties": {
-              "algorithm": {
-                "type": "string"
-              },
-              "value": {
-                "type": "string"
-              }
-            }
-          },
-          "width": {
-            "type": "integer",
-            "format": "int32",
-            "minimum": 0
-          },
-          "height": {
-            "type": "integer",
-            "format": "int32",
-            "minimum": 0
-          },
-          "durationSeconds": {
-            "type": "number",
-            "minimum": 0
-          },
-          "altText": {
-            "type": "string",
-            "maxLength": 512
-          },
-          "title": {
-            "type": "string",
-            "maxLength": 255
-          },
-          "poster": {
-            "$ref": "#/components/schemas/MediaResource"
-          },
-          "thumbnails": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/MediaResource"
-            }
-          },
-          "variants": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/MediaResource"
-            }
-          },
-          "access": {
-            "type": "object",
-            "additionalProperties": false,
-            "properties": {
-              "visibility": {
-                "type": "string",
-                "enum": [
-                  "private",
-                  "tenant",
-                  "organization",
-                  "public",
-                  "signed"
-                ]
-              },
-              "expiresAt": {
-                "type": "string",
-                "format": "date-time"
-              }
-            },
-            "required": [
-              "visibility"
-            ]
-          },
-          "ai": {
-            "type": "object",
-            "additionalProperties": false,
-            "properties": {
-              "provenance": {
-                "type": "string",
-                "enum": [
-                  "uploaded",
-                  "generated",
-                  "edited",
-                  "imported"
-                ]
-              },
-              "provider": {
-                "type": "string"
-              },
-              "model": {
-                "type": "string"
-              },
-              "promptId": {
-                "type": "string"
-              },
-              "generationTaskId": {
-                "type": "string"
-              },
-              "sourceMediaIds": {
-                "type": "array",
-                "items": {
-                  "type": "string"
-                }
-              },
-              "seed": {
-                "type": "string"
-              },
-              "moderationStatus": {
-                "type": "string",
-                "enum": [
-                  "unknown",
-                  "pending",
-                  "approved",
-                  "rejected",
-                  "blocked"
-                ]
-              },
-              "safetyLabels": {
-                "type": "array",
-                "items": {
-                  "type": "string"
-                }
-              }
-            }
-          },
-          "metadata": {
-            "type": "object",
-            "additionalProperties": true
-          },
-          "mediaResourceId": {
-            "type": "string",
-            "deprecated": true,
-            "description": "Legacy alias for id."
-          },
-          "mediaType": {
-            "type": "string",
-            "deprecated": true,
-            "description": "Legacy alias for kind."
-          },
-          "contentType": {
-            "type": "string",
-            "deprecated": true,
-            "description": "Legacy alias for mimeType."
-          },
-          "durationMs": {
-            "type": "integer",
             "format": "int64",
-            "deprecated": true,
-            "description": "Legacy duration field. Use durationSeconds."
-          },
-          "checksumSha256": {
-            "type": "string",
-            "deprecated": true,
-            "description": "Legacy checksum field. Use checksum."
-          }
-        }
-      },
-      "AssetItem": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "assetId",
-          "driveNodeId",
-          "driveSpaceId",
-          "assetKind",
-          "title",
-          "nodeType",
-          "lifecycleStatus",
-          "createdAt",
-          "updatedAt"
-        ],
-        "properties": {
-          "assetId": {
-            "type": "string",
-            "description": "Alias of driveNodeId."
-          },
-          "id": {
-            "type": "string",
-            "deprecated": true,
-            "description": "Deprecated alias of assetId."
-          },
-          "tenantId": {
-            "type": "string"
-          },
-          "organizationId": {
-            "type": "string"
-          },
-          "userId": {
-            "type": "string"
-          },
-          "driveSpaceId": {
-            "type": "string"
-          },
-          "driveNodeId": {
-            "type": "string"
-          },
-          "driveUri": {
-            "type": "string"
-          },
-          "nodeType": {
-            "type": "string",
-            "enum": [
-              "file",
-              "virtual_reference"
-            ]
-          },
-          "assetKind": {
-            "type": "string",
-            "enum": [
-              "file",
-              "image",
-              "video",
-              "audio",
-              "document",
-              "model",
-              "other"
-            ]
-          },
-          "assetType": {
-            "type": "string"
-          },
-          "title": {
-            "type": "string"
-          },
-          "description": {
-            "type": "string"
-          },
-          "scene": {
-            "type": "string"
-          },
-          "source": {
-            "type": "string"
-          },
-          "sourceType": {
-            "type": "string",
-            "enum": [
-              "upload",
-              "ai_generated",
-              "imported",
-              "edited",
-              "system"
-            ]
-          },
-          "sourceDomain": {
-            "type": "string"
-          },
-          "sourceResourceType": {
-            "type": "string"
-          },
-          "sourceResourceId": {
-            "type": "string"
-          },
-          "tags": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "visibility": {
-            "type": "string",
-            "enum": [
-              "private",
-              "organization",
-              "public"
-            ]
-          },
-          "lifecycleStatus": {
-            "type": "string",
-            "enum": [
-              "active",
-              "trashed",
-              "archived",
-              "deleted"
-            ]
-          },
-          "resourceSnapshot": {
-            "$ref": "#/components/schemas/MediaResource"
-          },
-          "thumbnailDriveNodeId": {
-            "type": "string"
-          },
-          "createdAt": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "updatedAt": {
-            "type": "string",
-            "format": "date-time"
-          }
-        }
-      },
-      "CreateAssetRequest": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [],
-        "properties": {
-          "driveNodeId": {
-            "type": "string",
-            "description": "Existing Drive node to expose through /assets."
-          },
-          "virtualReference": {
-            "type": "object",
-            "additionalProperties": false,
-            "properties": {
-              "driveSpaceId": {
-                "type": "string"
-              },
-              "title": {
-                "type": "string"
-              },
-              "sourceDomain": {
-                "type": "string"
-              },
-              "sourceResourceType": {
-                "type": "string"
-              },
-              "sourceResourceId": {
-                "type": "string"
-              },
-              "resourceSnapshot": {
-                "$ref": "#/components/schemas/MediaResource"
-              }
-            }
-          },
-          "title": {
-            "type": "string"
-          },
-          "description": {
-            "type": "string"
-          },
-          "scene": {
-            "type": "string"
-          },
-          "source": {
-            "type": "string"
-          },
-          "tags": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          }
-        }
-      },
-      "UpdateAssetRequest": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [],
-        "properties": {
-          "title": {
-            "type": "string"
-          },
-          "description": {
-            "type": "string"
-          },
-          "scene": {
-            "type": "string"
-          },
-          "source": {
-            "type": "string"
-          },
-          "tags": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "visibility": {
-            "type": "string",
-            "enum": [
-              "private",
-              "organization",
-              "public"
-            ]
-          }
-        }
-      },
-      "AssetActionRequest": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [],
-        "properties": {
-          "reason": {
-            "type": "string",
-            "maxLength": 256
-          }
-        }
-      },
-      "AssetCollection": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "id",
-          "userId",
-          "title",
-          "lifecycleStatus",
-          "createdAt",
-          "updatedAt"
-        ],
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "tenantId": {
-            "type": "string"
-          },
-          "organizationId": {
-            "type": "string"
-          },
-          "userId": {
-            "type": "string"
-          },
-          "title": {
-            "type": "string"
-          },
-          "description": {
-            "type": "string"
-          },
-          "collectionType": {
-            "type": "string",
-            "enum": [
-              "manual",
-              "smart",
-              "system"
-            ]
-          },
-          "visibility": {
-            "type": "string",
-            "enum": [
-              "private",
-              "organization",
-              "public"
-            ]
-          },
-          "lifecycleStatus": {
-            "type": "string",
-            "enum": [
-              "active",
-              "archived",
-              "deleted"
-            ]
-          },
-          "createdAt": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "updatedAt": {
-            "type": "string",
-            "format": "date-time"
-          }
-        }
-      },
-      "CreateAssetCollectionRequest": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "title"
-        ],
-        "properties": {
-          "title": {
-            "type": "string"
-          },
-          "description": {
-            "type": "string"
-          },
-          "collectionType": {
-            "type": "string",
-            "enum": [
-              "manual",
-              "smart",
-              "system"
-            ]
-          },
-          "visibility": {
-            "type": "string",
-            "enum": [
-              "private",
-              "organization",
-              "public"
-            ]
-          }
-        }
-      },
-      "CreateAssetCollectionItemRequest": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "assetId"
-        ],
-        "properties": {
-          "assetId": {
-            "type": "string"
-          },
-          "sortOrder": {
-            "type": "integer",
-            "format": "int64"
-          }
-        }
-      },
-      "AssetCollectionItem": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "id",
-          "collectionId",
-          "assetId"
-        ],
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "tenantId": {
-            "type": "string"
-          },
-          "collectionId": {
-            "type": "string"
-          },
-          "assetId": {
-            "type": "string"
-          },
-          "sortOrder": {
-            "type": "integer",
-            "format": "int64"
-          }
-        }
-      },
-      "AssetRelation": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "id",
-          "assetId",
-          "relationType",
-          "lifecycleStatus"
-        ],
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "tenantId": {
-            "type": "string"
-          },
-          "assetId": {
-            "type": "string"
-          },
-          "relatedAssetId": {
-            "type": "string"
-          },
-          "relationType": {
-            "type": "string",
-            "enum": [
-              "derived_from",
-              "variant_of",
-              "used_by",
-              "references",
-              "collection_cover",
-              "external_ref"
-            ]
-          },
-          "sourceDomain": {
-            "type": "string"
-          },
-          "sourceResourceType": {
-            "type": "string"
-          },
-          "sourceResourceId": {
-            "type": "string"
-          },
-          "metadata": {
-            "type": "object",
-            "additionalProperties": true
-          },
-          "lifecycleStatus": {
-            "type": "string",
-            "enum": [
-              "active",
-              "deleted"
-            ]
-          }
-        }
-      },
-      "CreateAssetRelationRequest": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "relationType"
-        ],
-        "properties": {
-          "relatedAssetId": {
-            "type": "string"
-          },
-          "relationType": {
-            "type": "string",
-            "enum": [
-              "derived_from",
-              "variant_of",
-              "used_by",
-              "references",
-              "collection_cover",
-              "external_ref"
-            ]
-          },
-          "sourceDomain": {
-            "type": "string"
-          },
-          "sourceResourceType": {
-            "type": "string"
-          },
-          "sourceResourceId": {
-            "type": "string"
-          },
-          "metadata": {
-            "type": "object",
-            "additionalProperties": true
+            "x-sdkwork-int64-string": true
           }
         }
       },
@@ -18106,110 +16060,6 @@
           }
         ]
       },
-      "AssetItemHttpResponse": {
-        "allOf": [
-          {
-            "$ref": "#/components/schemas/SdkWorkApiResponse"
-          },
-          {
-            "type": "object",
-            "required": [
-              "data"
-            ],
-            "properties": {
-              "data": {
-                "type": "object",
-                "required": [
-                  "item"
-                ],
-                "properties": {
-                  "item": {
-                    "$ref": "#/components/schemas/AssetItem"
-                  }
-                }
-              }
-            }
-          }
-        ]
-      },
-      "AssetCollectionHttpResponse": {
-        "allOf": [
-          {
-            "$ref": "#/components/schemas/SdkWorkApiResponse"
-          },
-          {
-            "type": "object",
-            "required": [
-              "data"
-            ],
-            "properties": {
-              "data": {
-                "type": "object",
-                "required": [
-                  "item"
-                ],
-                "properties": {
-                  "item": {
-                    "$ref": "#/components/schemas/AssetCollection"
-                  }
-                }
-              }
-            }
-          }
-        ]
-      },
-      "AssetCollectionItemHttpResponse": {
-        "allOf": [
-          {
-            "$ref": "#/components/schemas/SdkWorkApiResponse"
-          },
-          {
-            "type": "object",
-            "required": [
-              "data"
-            ],
-            "properties": {
-              "data": {
-                "type": "object",
-                "required": [
-                  "item"
-                ],
-                "properties": {
-                  "item": {
-                    "$ref": "#/components/schemas/AssetCollectionItem"
-                  }
-                }
-              }
-            }
-          }
-        ]
-      },
-      "AssetRelationHttpResponse": {
-        "allOf": [
-          {
-            "$ref": "#/components/schemas/SdkWorkApiResponse"
-          },
-          {
-            "type": "object",
-            "required": [
-              "data"
-            ],
-            "properties": {
-              "data": {
-                "type": "object",
-                "required": [
-                  "item"
-                ],
-                "properties": {
-                  "item": {
-                    "$ref": "#/components/schemas/AssetRelation"
-                  }
-                }
-              }
-            }
-          }
-        ]
-      },
       "DriveNodeListHttpResponse": {
         "allOf": [
           {
@@ -18277,42 +16127,6 @@
             "properties": {
               "data": {
                 "$ref": "#/components/schemas/DriveWatchChannelListData"
-              }
-            }
-          }
-        ]
-      },
-      "AssetListHttpResponse": {
-        "allOf": [
-          {
-            "$ref": "#/components/schemas/SdkWorkApiResponse"
-          },
-          {
-            "type": "object",
-            "required": [
-              "data"
-            ],
-            "properties": {
-              "data": {
-                "$ref": "#/components/schemas/AssetListData"
-              }
-            }
-          }
-        ]
-      },
-      "AssetCollectionListHttpResponse": {
-        "allOf": [
-          {
-            "$ref": "#/components/schemas/SdkWorkApiResponse"
-          },
-          {
-            "type": "object",
-            "required": [
-              "data"
-            ],
-            "properties": {
-              "data": {
-                "$ref": "#/components/schemas/AssetCollectionListData"
               }
             }
           }
@@ -18391,44 +16205,6 @@
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/DriveWatchChannel"
-            }
-          },
-          "pageInfo": {
-            "$ref": "#/components/schemas/PageInfo"
-          }
-        }
-      },
-      "AssetListData": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "items",
-          "pageInfo"
-        ],
-        "properties": {
-          "items": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/AssetItem"
-            }
-          },
-          "pageInfo": {
-            "$ref": "#/components/schemas/PageInfo"
-          }
-        }
-      },
-      "AssetCollectionListData": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "items",
-          "pageInfo"
-        ],
-        "properties": {
-          "items": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/AssetCollection"
             }
           },
           "pageInfo": {

@@ -17,7 +17,7 @@ func NewDriveApi(client *sdkhttp.Client) *DriveApi {
     return &DriveApi{client: client}
 }
 
-func (a *DriveApi) ChangesList(spaceId string, cursor *int, pageSize *int) (sdktypes.ChangeListHttpResponse, error) {
+func (a *DriveApi) ChangesList(spaceId string, cursor *string, pageSize *string) (sdktypes.ChangeListHttpResponse, error) {
     query := BuildQueryString([]QueryParameterSpec{
         {Name: "spaceId", Value: spaceId, Style: "form", Explode: true, AllowReserved: false},
         {Name: "cursor", Value: func() interface{} { if cursor == nil { return nil }; return *cursor }(), Style: "form", Explode: true, AllowReserved: false},
@@ -61,7 +61,7 @@ func (a *DriveApi) DownloadUrlsCreate(body sdktypes.CreateDownloadUrlRequest) (s
     return decodeResult[sdktypes.CreateDownloadUrlHttpResponse](raw)
 }
 
-func (a *DriveApi) FavoritesList(spaceId *string, pageSize *int, cursor *string, sortBy *string, sortOrder *string) (sdktypes.DriveNodeListHttpResponse, error) {
+func (a *DriveApi) FavoritesList(spaceId *string, pageSize *string, cursor *string, sortBy *string, sortOrder *string) (sdktypes.DriveNodeListHttpResponse, error) {
     query := BuildQueryString([]QueryParameterSpec{
         {Name: "spaceId", Value: func() interface{} { if spaceId == nil { return nil }; return *spaceId }(), Style: "form", Explode: true, AllowReserved: false},
         {Name: "page_size", Value: func() interface{} { if pageSize == nil { return nil }; return *pageSize }(), Style: "form", Explode: true, AllowReserved: false},
@@ -131,7 +131,7 @@ func (a *DriveApi) NodesCapabilitiesList(nodeId string) (sdktypes.NodeCapabiliti
     return decodeResult[sdktypes.NodeCapabilitiesHttpResponse](raw)
 }
 
-func (a *DriveApi) CommentsList(nodeId string, pageSize *int, cursor *string) (sdktypes.DriveCommentListHttpResponse, error) {
+func (a *DriveApi) CommentsList(nodeId string, pageSize *string, cursor *string) (sdktypes.DriveCommentListHttpResponse, error) {
     query := BuildQueryString([]QueryParameterSpec{
         {Name: "page_size", Value: func() interface{} { if pageSize == nil { return nil }; return *pageSize }(), Style: "form", Explode: true, AllowReserved: false},
         {Name: "cursor", Value: func() interface{} { if cursor == nil { return nil }; return *cursor }(), Style: "form", Explode: true, AllowReserved: false},
@@ -180,7 +180,7 @@ func (a *DriveApi) CommentsDelete(nodeId string, commentId string) (struct{}, er
     return decodeResult[struct{}](raw)
 }
 
-func (a *DriveApi) CommentRepliesList(nodeId string, commentId string, pageSize *int, cursor *string) (sdktypes.DriveCommentReplyListHttpResponse, error) {
+func (a *DriveApi) CommentRepliesList(nodeId string, commentId string, pageSize *string, cursor *string) (sdktypes.DriveCommentReplyListHttpResponse, error) {
     query := BuildQueryString([]QueryParameterSpec{
         {Name: "page_size", Value: func() interface{} { if pageSize == nil { return nil }; return *pageSize }(), Style: "form", Explode: true, AllowReserved: false},
         {Name: "cursor", Value: func() interface{} { if cursor == nil { return nil }; return *cursor }(), Style: "form", Explode: true, AllowReserved: false},
@@ -330,7 +330,7 @@ func (a *DriveApi) NodesPathRetrieve(nodeId string) (sdktypes.NodePathHttpRespon
     return decodeResult[sdktypes.NodePathHttpResponse](raw)
 }
 
-func (a *DriveApi) PermissionsList(nodeId string, pageSize *int, cursor *string) (sdktypes.DrivePermissionListHttpResponse, error) {
+func (a *DriveApi) PermissionsList(nodeId string, pageSize *string, cursor *string) (sdktypes.DrivePermissionListHttpResponse, error) {
     query := BuildQueryString([]QueryParameterSpec{
         {Name: "page_size", Value: func() interface{} { if pageSize == nil { return nil }; return *pageSize }(), Style: "form", Explode: true, AllowReserved: false},
         {Name: "cursor", Value: func() interface{} { if cursor == nil { return nil }; return *cursor }(), Style: "form", Explode: true, AllowReserved: false},
@@ -379,7 +379,7 @@ func (a *DriveApi) PermissionsRetrieve(nodeId string, permissionId string) (sdkt
     return decodeResult[sdktypes.DrivePermissionHttpResponse](raw)
 }
 
-func (a *DriveApi) PermissionsEffectiveList(nodeId string, pageSize *int, cursor *string) (sdktypes.EffectivePermissionListHttpResponse, error) {
+func (a *DriveApi) PermissionsEffectiveList(nodeId string, pageSize *string, cursor *string) (sdktypes.EffectivePermissionListHttpResponse, error) {
     query := BuildQueryString([]QueryParameterSpec{
         {Name: "page_size", Value: func() interface{} { if pageSize == nil { return nil }; return *pageSize }(), Style: "form", Explode: true, AllowReserved: false},
         {Name: "cursor", Value: func() interface{} { if cursor == nil { return nil }; return *cursor }(), Style: "form", Explode: true, AllowReserved: false},
@@ -439,7 +439,7 @@ func (a *DriveApi) ShareLinksCreate(nodeId string, body sdktypes.CreateShareLink
     return decodeResult[sdktypes.CreateShareLinkHttpResponse](raw)
 }
 
-func (a *DriveApi) ShareLinksList(nodeId string, pageSize *int, cursor *string) (sdktypes.ShareLinkListHttpResponse, error) {
+func (a *DriveApi) ShareLinksList(nodeId string, pageSize *string, cursor *string) (sdktypes.ShareLinkListHttpResponse, error) {
     query := BuildQueryString([]QueryParameterSpec{
         {Name: "page_size", Value: func() interface{} { if pageSize == nil { return nil }; return *pageSize }(), Style: "form", Explode: true, AllowReserved: false},
         {Name: "cursor", Value: func() interface{} { if cursor == nil { return nil }; return *cursor }(), Style: "form", Explode: true, AllowReserved: false},
@@ -461,7 +461,7 @@ func (a *DriveApi) TrashCreate(nodeId string, body sdktypes.NodeCommandRequest) 
     return decodeResult[sdktypes.DriveNodeHttpResponse](raw)
 }
 
-func (a *DriveApi) VersionsList(nodeId string, pageSize *int, cursor *string) (sdktypes.FileVersionListHttpResponse, error) {
+func (a *DriveApi) VersionsList(nodeId string, pageSize *string, cursor *string) (sdktypes.FileVersionListHttpResponse, error) {
     query := BuildQueryString([]QueryParameterSpec{
         {Name: "page_size", Value: func() interface{} { if pageSize == nil { return nil }; return *pageSize }(), Style: "form", Explode: true, AllowReserved: false},
         {Name: "cursor", Value: func() interface{} { if cursor == nil { return nil }; return *cursor }(), Style: "form", Explode: true, AllowReserved: false},
@@ -530,7 +530,7 @@ func (a *DriveApi) NodesShortcutsCreate(body sdktypes.CreateShortcutRequest) (sd
 }
 
 // List nodes carrying an app_public property
-func (a *DriveApi) PropertyNodesList(propertyKey string, pageSize *int, cursor *string) (sdktypes.DriveNodeListHttpResponse, error) {
+func (a *DriveApi) PropertyNodesList(propertyKey string, pageSize *string, cursor *string) (sdktypes.DriveNodeListHttpResponse, error) {
     query := BuildQueryString([]QueryParameterSpec{
         {Name: "page_size", Value: func() interface{} { if pageSize == nil { return nil }; return *pageSize }(), Style: "form", Explode: true, AllowReserved: false},
         {Name: "cursor", Value: func() interface{} { if cursor == nil { return nil }; return *cursor }(), Style: "form", Explode: true, AllowReserved: false},
@@ -543,7 +543,7 @@ func (a *DriveApi) PropertyNodesList(propertyKey string, pageSize *int, cursor *
     return decodeResult[sdktypes.DriveNodeListHttpResponse](raw)
 }
 
-func (a *DriveApi) RecentList(spaceId *string, pageSize *int, cursor *string, sortBy *string, sortOrder *string) (sdktypes.DriveNodeListHttpResponse, error) {
+func (a *DriveApi) RecentList(spaceId *string, pageSize *string, cursor *string, sortBy *string, sortOrder *string) (sdktypes.DriveNodeListHttpResponse, error) {
     query := BuildQueryString([]QueryParameterSpec{
         {Name: "spaceId", Value: func() interface{} { if spaceId == nil { return nil }; return *spaceId }(), Style: "form", Explode: true, AllowReserved: false},
         {Name: "page_size", Value: func() interface{} { if pageSize == nil { return nil }; return *pageSize }(), Style: "form", Explode: true, AllowReserved: false},
@@ -559,7 +559,7 @@ func (a *DriveApi) RecentList(spaceId *string, pageSize *int, cursor *string, so
     return decodeResult[sdktypes.DriveNodeListHttpResponse](raw)
 }
 
-func (a *DriveApi) SearchList(q *string, spaceId *string, pageSize *int, cursor *string) (sdktypes.DriveNodeListHttpResponse, error) {
+func (a *DriveApi) SearchList(q *string, spaceId *string, pageSize *string, cursor *string) (sdktypes.DriveNodeListHttpResponse, error) {
     query := BuildQueryString([]QueryParameterSpec{
         {Name: "q", Value: func() interface{} { if q == nil { return nil }; return *q }(), Style: "form", Explode: true, AllowReserved: false},
         {Name: "spaceId", Value: func() interface{} { if spaceId == nil { return nil }; return *spaceId }(), Style: "form", Explode: true, AllowReserved: false},
@@ -610,7 +610,7 @@ func (a *DriveApi) ShareLinksRetrieve(shareLinkId string) (sdktypes.ShareLinkHtt
     return decodeResult[sdktypes.ShareLinkHttpResponse](raw)
 }
 
-func (a *DriveApi) SharedWithMeList(spaceId *string, pageSize *int, cursor *string, sortBy *string, sortOrder *string) (sdktypes.DriveNodeListHttpResponse, error) {
+func (a *DriveApi) SharedWithMeList(spaceId *string, pageSize *string, cursor *string, sortBy *string, sortOrder *string) (sdktypes.DriveNodeListHttpResponse, error) {
     query := BuildQueryString([]QueryParameterSpec{
         {Name: "spaceId", Value: func() interface{} { if spaceId == nil { return nil }; return *spaceId }(), Style: "form", Explode: true, AllowReserved: false},
         {Name: "page_size", Value: func() interface{} { if pageSize == nil { return nil }; return *pageSize }(), Style: "form", Explode: true, AllowReserved: false},
@@ -778,8 +778,12 @@ func (a *DriveApi) WebsiteRootsList(spaceId string, pageSize *int, cursor *strin
     return decodeResult[sdktypes.WebsiteRootListHttpResponse](raw)
 }
 
-func (a *DriveApi) WebsiteRootsCreate(spaceId string, body sdktypes.CreateWebsiteRootRequest) (sdktypes.WebsiteRootHttpResponse, error) {
-    raw, err := a.client.Post(AppApiPath(fmt.Sprintf("/drive/spaces/%s/website_roots", SerializePathParameter(spaceId, PathParameterSpec{Name: "spaceId", Style: "simple", Explode: false}))), body, nil, nil, "application/json")
+func (a *DriveApi) WebsiteRootsCreate(spaceId string, body sdktypes.CreateWebsiteRootRequest, idempotencyKey string) (sdktypes.WebsiteRootHttpResponse, error) {
+    headers := BuildRequestHeaders(
+        map[string]ParameterSpec{"Idempotency-Key": ParameterSpec{Value: idempotencyKey, Style: "simple", Explode: false},},
+        map[string]ParameterSpec{},
+    )
+    raw, err := a.client.Post(AppApiPath(fmt.Sprintf("/drive/spaces/%s/website_roots", SerializePathParameter(spaceId, PathParameterSpec{Name: "spaceId", Style: "simple", Explode: false}))), body, nil, headers, "application/json")
     if err != nil {
         var zero sdktypes.WebsiteRootHttpResponse
         return zero, err
@@ -821,8 +825,12 @@ func (a *DriveApi) WebsiteRootsSyncsRetrieve(rootUuid string, syncId string) (sd
 }
 
 // Validate and atomically activate a complete website tree
-func (a *DriveApi) WebsiteRootsSyncsFinalize(rootUuid string, syncId string, body sdktypes.WebsiteSyncVersionRequest) (sdktypes.WebsiteSyncActivationHttpResponse, error) {
-    raw, err := a.client.Post(AppApiPath(fmt.Sprintf("/drive/website_roots/%s/syncs/%s/finalize", SerializePathParameter(rootUuid, PathParameterSpec{Name: "rootUuid", Style: "simple", Explode: false}), SerializePathParameter(syncId, PathParameterSpec{Name: "syncId", Style: "simple", Explode: false}))), body, nil, nil, "application/json")
+func (a *DriveApi) WebsiteRootsSyncsFinalize(rootUuid string, syncId string, body sdktypes.WebsiteSyncVersionRequest, idempotencyKey string) (sdktypes.WebsiteSyncActivationHttpResponse, error) {
+    headers := BuildRequestHeaders(
+        map[string]ParameterSpec{"Idempotency-Key": ParameterSpec{Value: idempotencyKey, Style: "simple", Explode: false},},
+        map[string]ParameterSpec{},
+    )
+    raw, err := a.client.Post(AppApiPath(fmt.Sprintf("/drive/website_roots/%s/syncs/%s/finalize", SerializePathParameter(rootUuid, PathParameterSpec{Name: "rootUuid", Style: "simple", Explode: false}), SerializePathParameter(syncId, PathParameterSpec{Name: "syncId", Style: "simple", Explode: false}))), body, nil, headers, "application/json")
     if err != nil {
         var zero sdktypes.WebsiteSyncActivationHttpResponse
         return zero, err
@@ -831,8 +839,12 @@ func (a *DriveApi) WebsiteRootsSyncsFinalize(rootUuid string, syncId string, bod
 }
 
 // Abort an unactivated website synchronization
-func (a *DriveApi) WebsiteRootsSyncsAbort(rootUuid string, syncId string, body sdktypes.WebsiteSyncVersionRequest) (sdktypes.WebsiteSyncHttpResponse, error) {
-    raw, err := a.client.Post(AppApiPath(fmt.Sprintf("/drive/website_roots/%s/syncs/%s/abort", SerializePathParameter(rootUuid, PathParameterSpec{Name: "rootUuid", Style: "simple", Explode: false}), SerializePathParameter(syncId, PathParameterSpec{Name: "syncId", Style: "simple", Explode: false}))), body, nil, nil, "application/json")
+func (a *DriveApi) WebsiteRootsSyncsAbort(rootUuid string, syncId string, body sdktypes.WebsiteSyncVersionRequest, idempotencyKey string) (sdktypes.WebsiteSyncHttpResponse, error) {
+    headers := BuildRequestHeaders(
+        map[string]ParameterSpec{"Idempotency-Key": ParameterSpec{Value: idempotencyKey, Style: "simple", Explode: false},},
+        map[string]ParameterSpec{},
+    )
+    raw, err := a.client.Post(AppApiPath(fmt.Sprintf("/drive/website_roots/%s/syncs/%s/abort", SerializePathParameter(rootUuid, PathParameterSpec{Name: "rootUuid", Style: "simple", Explode: false}), SerializePathParameter(syncId, PathParameterSpec{Name: "syncId", Style: "simple", Explode: false}))), body, nil, headers, "application/json")
     if err != nil {
         var zero sdktypes.WebsiteSyncHttpResponse
         return zero, err
@@ -850,7 +862,7 @@ func (a *DriveApi) WebsiteRootsGenerationsActivate(rootUuid string, generation s
     return decodeResult[sdktypes.WebsiteGenerationActivationHttpResponse](raw)
 }
 
-func (a *DriveApi) MoveDestinationsList(spaceId string, excludeNodeIds *string, pageSize *int, cursor *string) (sdktypes.DriveNodeListHttpResponse, error) {
+func (a *DriveApi) MoveDestinationsList(spaceId string, excludeNodeIds *string, pageSize *string, cursor *string) (sdktypes.DriveNodeListHttpResponse, error) {
     query := BuildQueryString([]QueryParameterSpec{
         {Name: "excludeNodeIds", Value: func() interface{} { if excludeNodeIds == nil { return nil }; return *excludeNodeIds }(), Style: "form", Explode: true, AllowReserved: false},
         {Name: "page_size", Value: func() interface{} { if pageSize == nil { return nil }; return *pageSize }(), Style: "form", Explode: true, AllowReserved: false},
@@ -891,7 +903,7 @@ func (a *DriveApi) SpacesDelete(spaceId string) (struct{}, error) {
     return decodeResult[struct{}](raw)
 }
 
-func (a *DriveApi) NodesList(spaceId string, parentNodeId *string, pageSize *int, cursor *string, sortBy *string, sortOrder *string) (sdktypes.DriveNodeListHttpResponse, error) {
+func (a *DriveApi) NodesList(spaceId string, parentNodeId *string, pageSize *string, cursor *string, sortBy *string, sortOrder *string) (sdktypes.DriveNodeListHttpResponse, error) {
     query := BuildQueryString([]QueryParameterSpec{
         {Name: "parentNodeId", Value: func() interface{} { if parentNodeId == nil { return nil }; return *parentNodeId }(), Style: "form", Explode: true, AllowReserved: false},
         {Name: "page_size", Value: func() interface{} { if pageSize == nil { return nil }; return *pageSize }(), Style: "form", Explode: true, AllowReserved: false},
@@ -907,7 +919,7 @@ func (a *DriveApi) NodesList(spaceId string, parentNodeId *string, pageSize *int
     return decodeResult[sdktypes.DriveNodeListHttpResponse](raw)
 }
 
-func (a *DriveApi) TrashList(spaceId *string, pageSize *int, cursor *string, parentNodeId *string, sortBy *string, sortOrder *string) (sdktypes.DriveNodeListHttpResponse, error) {
+func (a *DriveApi) TrashList(spaceId *string, pageSize *string, cursor *string, parentNodeId *string, sortBy *string, sortOrder *string) (sdktypes.DriveNodeListHttpResponse, error) {
     query := BuildQueryString([]QueryParameterSpec{
         {Name: "spaceId", Value: func() interface{} { if spaceId == nil { return nil }; return *spaceId }(), Style: "form", Explode: true, AllowReserved: false},
         {Name: "page_size", Value: func() interface{} { if pageSize == nil { return nil }; return *pageSize }(), Style: "form", Explode: true, AllowReserved: false},
@@ -1095,73 +1107,6 @@ func (a *DriveApi) UploaderUploadsPartsUpdate(uploadItemId string, partNo int, b
         return zero, err
     }
     return decodeResult[sdktypes.UploaderUploadPartHttpResponse](raw)
-}
-
-// List global assets
-func (a *DriveApi) AssetsList(cursor *string, pageSize *int, kind *string, sourceType *string, q *string) (sdktypes.AssetListHttpResponse, error) {
-    query := BuildQueryString([]QueryParameterSpec{
-        {Name: "cursor", Value: func() interface{} { if cursor == nil { return nil }; return *cursor }(), Style: "form", Explode: true, AllowReserved: false},
-        {Name: "page_size", Value: func() interface{} { if pageSize == nil { return nil }; return *pageSize }(), Style: "form", Explode: true, AllowReserved: false},
-        {Name: "kind", Value: func() interface{} { if kind == nil { return nil }; return *kind }(), Style: "form", Explode: true, AllowReserved: false},
-        {Name: "sourceType", Value: func() interface{} { if sourceType == nil { return nil }; return *sourceType }(), Style: "form", Explode: true, AllowReserved: false},
-        {Name: "q", Value: func() interface{} { if q == nil { return nil }; return *q }(), Style: "form", Explode: true, AllowReserved: false},
-    })
-    raw, err := a.client.Get(AppendQueryString(AppApiPath("/assets"), query), nil, nil)
-    if err != nil {
-        var zero sdktypes.AssetListHttpResponse
-        return zero, err
-    }
-    return decodeResult[sdktypes.AssetListHttpResponse](raw)
-}
-
-// Create a global asset metadata record
-func (a *DriveApi) AssetsCreate(body sdktypes.CreateAssetRequest) (sdktypes.AssetItemHttpResponse, error) {
-    raw, err := a.client.Post(AppApiPath("/assets"), body, nil, nil, "application/json")
-    if err != nil {
-        var zero sdktypes.AssetItemHttpResponse
-        return zero, err
-    }
-    return decodeResult[sdktypes.AssetItemHttpResponse](raw)
-}
-
-// Get a global asset
-func (a *DriveApi) AssetsRetrieve(assetId string) (sdktypes.AssetItemHttpResponse, error) {
-    raw, err := a.client.Get(AppApiPath(fmt.Sprintf("/assets/%s", SerializePathParameter(assetId, PathParameterSpec{Name: "assetId", Style: "simple", Explode: false}))), nil, nil)
-    if err != nil {
-        var zero sdktypes.AssetItemHttpResponse
-        return zero, err
-    }
-    return decodeResult[sdktypes.AssetItemHttpResponse](raw)
-}
-
-// Update a global asset
-func (a *DriveApi) AssetsUpdate(assetId string, body sdktypes.UpdateAssetRequest) (sdktypes.AssetItemHttpResponse, error) {
-    raw, err := a.client.Patch(AppApiPath(fmt.Sprintf("/assets/%s", SerializePathParameter(assetId, PathParameterSpec{Name: "assetId", Style: "simple", Explode: false}))), body, nil, nil, "application/json")
-    if err != nil {
-        var zero sdktypes.AssetItemHttpResponse
-        return zero, err
-    }
-    return decodeResult[sdktypes.AssetItemHttpResponse](raw)
-}
-
-// Archive a global asset
-func (a *DriveApi) AssetsArchive(assetId string, body sdktypes.AssetActionRequest) (sdktypes.AssetItemHttpResponse, error) {
-    raw, err := a.client.Post(AppApiPath(fmt.Sprintf("/assets/%s/archive", SerializePathParameter(assetId, PathParameterSpec{Name: "assetId", Style: "simple", Explode: false}))), body, nil, nil, "application/json")
-    if err != nil {
-        var zero sdktypes.AssetItemHttpResponse
-        return zero, err
-    }
-    return decodeResult[sdktypes.AssetItemHttpResponse](raw)
-}
-
-// Restore an archived global asset
-func (a *DriveApi) AssetsRestore(assetId string, body sdktypes.AssetActionRequest) (sdktypes.AssetItemHttpResponse, error) {
-    raw, err := a.client.Post(AppApiPath(fmt.Sprintf("/assets/%s/restore", SerializePathParameter(assetId, PathParameterSpec{Name: "assetId", Style: "simple", Explode: false}))), body, nil, nil, "application/json")
-    if err != nil {
-        var zero sdktypes.AssetItemHttpResponse
-        return zero, err
-    }
-    return decodeResult[sdktypes.AssetItemHttpResponse](raw)
 }
 
 type PathParameterSpec struct {

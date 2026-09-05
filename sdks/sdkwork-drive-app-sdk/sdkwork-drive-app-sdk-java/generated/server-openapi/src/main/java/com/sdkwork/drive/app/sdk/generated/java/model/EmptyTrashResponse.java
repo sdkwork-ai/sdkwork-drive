@@ -2,23 +2,23 @@ package com.sdkwork.drive.app.sdk.generated.java.model;
 
 
 public class EmptyTrashResponse {
-    private Integer deletedCount;
-    private Integer skippedCount;
+    private String deletedCount;
+    private String skippedCount;
     private Boolean hasMore;
 
-    public Integer getDeletedCount() {
+    public String getDeletedCount() {
         return this.deletedCount;
     }
 
-    public void setDeletedCount(Integer deletedCount) {
+    public void setDeletedCount(String deletedCount) {
         this.deletedCount = deletedCount;
     }
 
-    public Integer getSkippedCount() {
+    public String getSkippedCount() {
         return this.skippedCount;
     }
 
-    public void setSkippedCount(Integer skippedCount) {
+    public void setSkippedCount(String skippedCount) {
         this.skippedCount = skippedCount;
     }
 

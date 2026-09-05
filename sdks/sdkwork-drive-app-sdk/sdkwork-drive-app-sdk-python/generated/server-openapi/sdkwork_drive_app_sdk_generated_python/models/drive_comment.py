@@ -10,7 +10,7 @@ class DriveComment:
     content: str
     resolved: bool
     lifecycle_status: str
-    version: int
+    version: str
     created_by: str
     updated_by: str
     created_at: str

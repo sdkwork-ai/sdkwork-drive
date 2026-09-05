@@ -101,7 +101,7 @@ export function StorageProviderDetailDrawer({ provider, providers, service, pend
   const loadObjects = useCallback(async (prefix: string, token?: string) => { setLoading(true); try { const result = await service.listObjects(provider.id, { prefix, pageToken: token }); if (token) setObjects((prev) => [...prev, ...result.items]); else setObjects(result.items); setPageToken(result.nextPageToken || null); setHasMore(result.hasMore); setCurrentPrefix(prefix); } catch (e) { setError(formatMutationError(e, t('errorLoadObjects'))); } finally { setLoading(false); } }, [provider.id, service, t]);
   const deleteObject = useCallback(async (key: string) => { setDeleteTarget(null); setLoading(true); try { await service.deleteObject(provider.id, key); await loadObjects(currentPrefix); } catch (e) { setError(formatMutationError(e, t('errorDeleteObject'))); } finally { setLoading(false); } }, [provider.id, currentPrefix, service, loadObjects, t]);
 
-  const tabClass = (d: DrawerTab) => `px-3 py-2 text-xs font-medium border-b-2 transition-colors ${tab === d ? 'border-blue-600 text-blue-600' : 'border-transparent text-neutral-500 hover:text-neutral-700'}`;
+  const tabClass = (d: DrawerTab) => `px-3 py-2 text-xs font-medium border-b-2 transition-colors ${tab === d ? 'border-blue-600 text-blue-600' : 'border-transparent text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300'}`;
 
   const readinessChecks = [
     {

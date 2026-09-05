@@ -459,7 +459,7 @@ export function StorageProviderEditor({
                           className={`${INPUT_CLASS} pr-9 font-mono text-xs`}
                           placeholder={meta.credentialHint}
                         />
-                        <button type="button" className="absolute right-2 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600" aria-label={showCredential ? t('hideCredential') : t('showCredential')} title={showCredential ? t('hideCredential') : t('showCredential')} onClick={() => setShowCredential(!showCredential)}>
+                        <button type="button" className="absolute right-2 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300" aria-label={showCredential ? t('hideCredential') : t('showCredential')} title={showCredential ? t('hideCredential') : t('showCredential')} onClick={() => setShowCredential(!showCredential)}>
                           {showCredential ? <EyeOff aria-hidden="true" size={16} /> : <Eye aria-hidden="true" size={16} />}
                         </button>
                       </div>

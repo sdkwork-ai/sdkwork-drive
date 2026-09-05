@@ -91,11 +91,18 @@ async function resolveSessionStorage(
 }
 
 function migrateLegacyBrowserSession(): void {
-  const legacySession = window.sessionStorage.getItem(DEFAULT_SESSION_STORAGE_KEY);
-  if (legacySession && !window.localStorage.getItem(DEFAULT_SESSION_STORAGE_KEY)) {
-    window.localStorage.setItem(DEFAULT_SESSION_STORAGE_KEY, legacySession);
+  // Storage may be partially unavailable (sandboxed webviews, test harnesses):
+  // guard each handle independently instead of assuming the full pair exists.
+  const sessionStorage = window.sessionStorage as SessionStorageLike | undefined;
+  const localStorage = window.localStorage as SessionStorageLike | undefined;
+  if (!sessionStorage && !localStorage) {
+    return;
   }
-  if (legacySession) {
-    window.sessionStorage.removeItem(DEFAULT_SESSION_STORAGE_KEY);
+  const legacySession = sessionStorage?.getItem(DEFAULT_SESSION_STORAGE_KEY) ?? null;
+  if (legacySession && localStorage && !localStorage.getItem(DEFAULT_SESSION_STORAGE_KEY)) {
+    localStorage.setItem(DEFAULT_SESSION_STORAGE_KEY, legacySession);
+  }
+  if (legacySession && sessionStorage) {
+    sessionStorage.removeItem(DEFAULT_SESSION_STORAGE_KEY);
   }
 }

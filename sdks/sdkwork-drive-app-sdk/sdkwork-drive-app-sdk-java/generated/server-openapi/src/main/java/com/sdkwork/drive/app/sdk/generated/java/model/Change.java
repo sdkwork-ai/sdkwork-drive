@@ -2,7 +2,7 @@ package com.sdkwork.drive.app.sdk.generated.java.model;
 
 
 public class Change {
-    private Integer sequenceNo;
+    private String sequenceNo;
     private String tenantId;
     private String spaceId;
     private String nodeId;
@@ -10,11 +10,11 @@ public class Change {
     private String actorId;
     private String createdAt;
 
-    public Integer getSequenceNo() {
+    public String getSequenceNo() {
         return this.sequenceNo;
     }
 
-    public void setSequenceNo(Integer sequenceNo) {
+    public void setSequenceNo(String sequenceNo) {
         this.sequenceNo = sequenceNo;
     }
 

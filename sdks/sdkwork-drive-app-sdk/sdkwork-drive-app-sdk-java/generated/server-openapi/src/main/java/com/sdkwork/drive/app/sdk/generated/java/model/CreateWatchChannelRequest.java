@@ -7,7 +7,7 @@ public class CreateWatchChannelRequest {
     private String address;
     private String token;
     private String channelType;
-    private Integer expirationEpochMs;
+    private String expirationEpochMs;
 
     public String getId() {
         return this.id;
@@ -49,11 +49,11 @@ public class CreateWatchChannelRequest {
         this.channelType = channelType;
     }
 
-    public Integer getExpirationEpochMs() {
+    public String getExpirationEpochMs() {
         return this.expirationEpochMs;
     }
 
-    public void setExpirationEpochMs(Integer expirationEpochMs) {
+    public void setExpirationEpochMs(String expirationEpochMs) {
         this.expirationEpochMs = expirationEpochMs;
     }
 }

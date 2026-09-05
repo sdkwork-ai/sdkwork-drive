@@ -5,5 +5,5 @@ from typing import TYPE_CHECKING, Optional, List, Dict, Any
 
 @dataclass
 class UpdateQuotaPolicyRequest:
-    quota_bytes: Optional[int] = None
+    quota_bytes: Optional[str] = None
     clear_tenant_policy: Optional[bool] = None

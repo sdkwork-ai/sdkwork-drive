@@ -24,17 +24,17 @@ public class UploaderUploadItem {
     private String contentType;
     private String contentTypeGroup;
     private String detectedContentType;
-    private Integer contentLength;
+    private String contentLength;
     private String checksumSha256Hex;
-    private Integer chunkSizeBytes;
-    private Integer totalParts;
-    private Integer uploadedPartsCount;
-    private Integer uploadedBytes;
+    private String chunkSizeBytes;
+    private String totalParts;
+    private String uploadedPartsCount;
+    private String uploadedBytes;
     private String status;
     private String retentionMode;
-    private Integer retentionExpiresAtEpochMs;
+    private String retentionExpiresAtEpochMs;
     private String cleanupAction;
-    private Integer hardDeleteAfterEpochMs;
+    private String hardDeleteAfterEpochMs;
     private String cleanupStatus;
     private String postProcessStatus;
     private String scene;
@@ -216,11 +216,11 @@ public class UploaderUploadItem {
         this.detectedContentType = detectedContentType;
     }
 
-    public Integer getContentLength() {
+    public String getContentLength() {
         return this.contentLength;
     }
 
-    public void setContentLength(Integer contentLength) {
+    public void setContentLength(String contentLength) {
         this.contentLength = contentLength;
     }
 
@@ -232,35 +232,35 @@ public class UploaderUploadItem {
         this.checksumSha256Hex = checksumSha256Hex;
     }
 
-    public Integer getChunkSizeBytes() {
+    public String getChunkSizeBytes() {
         return this.chunkSizeBytes;
     }
 
-    public void setChunkSizeBytes(Integer chunkSizeBytes) {
+    public void setChunkSizeBytes(String chunkSizeBytes) {
         this.chunkSizeBytes = chunkSizeBytes;
     }
 
-    public Integer getTotalParts() {
+    public String getTotalParts() {
         return this.totalParts;
     }
 
-    public void setTotalParts(Integer totalParts) {
+    public void setTotalParts(String totalParts) {
         this.totalParts = totalParts;
     }
 
-    public Integer getUploadedPartsCount() {
+    public String getUploadedPartsCount() {
         return this.uploadedPartsCount;
     }
 
-    public void setUploadedPartsCount(Integer uploadedPartsCount) {
+    public void setUploadedPartsCount(String uploadedPartsCount) {
         this.uploadedPartsCount = uploadedPartsCount;
     }
 
-    public Integer getUploadedBytes() {
+    public String getUploadedBytes() {
         return this.uploadedBytes;
     }
 
-    public void setUploadedBytes(Integer uploadedBytes) {
+    public void setUploadedBytes(String uploadedBytes) {
         this.uploadedBytes = uploadedBytes;
     }
 
@@ -280,11 +280,11 @@ public class UploaderUploadItem {
         this.retentionMode = retentionMode;
     }
 
-    public Integer getRetentionExpiresAtEpochMs() {
+    public String getRetentionExpiresAtEpochMs() {
         return this.retentionExpiresAtEpochMs;
     }
 
-    public void setRetentionExpiresAtEpochMs(Integer retentionExpiresAtEpochMs) {
+    public void setRetentionExpiresAtEpochMs(String retentionExpiresAtEpochMs) {
         this.retentionExpiresAtEpochMs = retentionExpiresAtEpochMs;
     }
 
@@ -296,11 +296,11 @@ public class UploaderUploadItem {
         this.cleanupAction = cleanupAction;
     }
 
-    public Integer getHardDeleteAfterEpochMs() {
+    public String getHardDeleteAfterEpochMs() {
         return this.hardDeleteAfterEpochMs;
     }
 
-    public void setHardDeleteAfterEpochMs(Integer hardDeleteAfterEpochMs) {
+    public void setHardDeleteAfterEpochMs(String hardDeleteAfterEpochMs) {
         this.hardDeleteAfterEpochMs = hardDeleteAfterEpochMs;
     }
 

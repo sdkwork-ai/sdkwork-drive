@@ -10,7 +10,7 @@ class DrivePermission:
     role: str
     inherited: bool
     lifecycle_status: str
-    version: int
+    version: str
     tenant_id: Optional[str] = None
     subject_type: Optional[str] = None
     subject_id: Optional[str] = None

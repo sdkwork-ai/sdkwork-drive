@@ -6,6 +6,6 @@ from typing import TYPE_CHECKING, Optional, List, Dict, Any
 @dataclass
 class UploaderRetentionRequest:
     mode: str
-    ttl_seconds: Optional[int] = None
+    ttl_seconds: Optional[str] = None
     cleanup_action: Optional[str] = None
-    hard_delete_after_seconds: Optional[int] = None
+    hard_delete_after_seconds: Optional[str] = None
