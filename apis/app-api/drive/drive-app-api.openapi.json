@@ -7501,22 +7501,6 @@
         "operationId": "spaces.list",
         "parameters": [
           {
-            "name": "ownerSubjectType",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "ownerSubjectId",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
             "name": "spaceType",
             "in": "query",
             "required": false,
@@ -11689,8 +11673,6 @@
         "type": "object",
         "required": [
           "id",
-          "ownerSubjectType",
-          "ownerSubjectId",
           "displayName",
           "spaceType"
         ],

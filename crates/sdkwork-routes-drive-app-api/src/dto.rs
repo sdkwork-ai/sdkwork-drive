@@ -126,8 +126,12 @@ pub struct SandboxMutationCommandResponse {
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct CreateSpaceRequest {
     pub id: String,
-    pub owner_subject_type: String,
-    pub owner_subject_id: String,
+    /// Owner identity is derived from the verified `WebRequestContext` by the
+    /// route handler. Team spaces may bind an explicit group/organization
+    /// owner; any client value that conflicts with the token context is
+    /// rejected.
+    pub owner_subject_type: Option<String>,
+    pub owner_subject_id: Option<String>,
     pub display_name: String,
     pub space_type: String,
     pub presentation_icon: Option<String>,
@@ -436,8 +440,6 @@ pub struct ExtractArchiveEntriesResponse {
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ListSpacesQuery {
-    pub owner_subject_type: Option<String>,
-    pub owner_subject_id: Option<String>,
     pub space_type: Option<String>,
     #[serde(rename = "page_size")]
     pub page_size: Option<i64>,

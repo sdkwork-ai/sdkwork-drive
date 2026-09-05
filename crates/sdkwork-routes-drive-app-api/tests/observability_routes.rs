@@ -321,7 +321,7 @@ async fn app_routes_emit_standardized_observability_events() {
                     common::access_token("tenant-001", "user-001", "appbase"),
                 )
                 .method(Method::GET)
-                .uri("/app/v3/api/drive/spaces?ownerSubjectType=user&ownerSubjectId=user-001")
+                .uri("/app/v3/api/drive/spaces?spaceType=personal")
                 .body(Body::empty())
                 .expect("request should be built"),
         )
@@ -469,8 +469,7 @@ async fn app_routes_emit_standardized_observability_events() {
         "sdkwork.drive:",
         "drive.http.request",
         "result=\"ok\"",
-        "filter_has_owner_subject_type=true",
-        "filter_has_owner_subject_id=true",
+        "owner_filter_derived=true",
         "space_id=\"space-obs-001\"",
         "lifecycle_status=\"deleted\"",
         "method=\"GET\"",

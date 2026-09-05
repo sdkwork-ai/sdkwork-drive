@@ -405,6 +405,170 @@ async fn create_space_route_persists_user_git_repository_space() {
 }
 
 #[tokio::test]
+async fn create_space_route_derives_owner_from_token_context() {
+    let Some((pool, _database_guard)) = sdkwork_drive_test_support::postgres_test_database().await
+    else {
+        return;
+    };
+
+    let app = common::test_router_with_pool(pool.clone());
+    let request_body = r#"{
+        "id":"space-personal-derived-owner",
+        "displayName":"My Storage",
+        "spaceType":"personal"
+    }"#;
+
+    let response = app
+        .oneshot(
+            Request::builder()
+                .header(
+                    "authorization",
+                    format!(
+                        "Bearer {}",
+                        common::auth_token("tenant-001", "user-001", "appbase")
+                    ),
+                )
+                .header(
+                    "access-token",
+                    common::access_token("tenant-001", "user-001", "appbase"),
+                )
+                .method(Method::POST)
+                .uri("/app/v3/api/drive/spaces")
+                .header("content-type", "application/json")
+                .body(Body::from(request_body))
+                .expect("request should be built"),
+        )
+        .await
+        .expect("create space request should be handled");
+
+    assert_eq!(response.status(), StatusCode::CREATED);
+    let count: i64 = sqlx::query_scalar(
+        "SELECT COUNT(1) FROM dr_drive_space
+         WHERE id=$1 AND owner_subject_type='user' AND owner_subject_id='user-001' AND space_type='personal'",
+    )
+    .bind("space-personal-derived-owner")
+    .fetch_one(&pool)
+    .await
+    .expect("space with derived owner should be persisted");
+    assert_eq!(count, 1);
+}
+
+#[tokio::test]
+async fn create_team_space_route_derives_organization_owner_from_context() {
+    let Some((pool, _database_guard)) = sdkwork_drive_test_support::postgres_test_database().await
+    else {
+        return;
+    };
+
+    let app = common::test_router_with_pool(pool.clone());
+    let request_body = r#"{
+        "id":"space-team-derived-owner",
+        "displayName":"Org Team",
+        "spaceType":"team"
+    }"#;
+
+    let response = app
+        .oneshot(
+            Request::builder()
+                .header(
+                    "authorization",
+                    format!(
+                        "Bearer {}",
+                        common::auth_token_for_organization(
+                            "tenant-001",
+                            "user-001",
+                            "org-001",
+                            "appbase",
+                        )
+                    ),
+                )
+                .header(
+                    "access-token",
+                    common::access_token_for_organization("tenant-001", "user-001", "org-001", "appbase"),
+                )
+                .method(Method::POST)
+                .uri("/app/v3/api/drive/spaces")
+                .header("content-type", "application/json")
+                .body(Body::from(request_body))
+                .expect("request should be built"),
+        )
+        .await
+        .expect("create team space request should be handled");
+
+    assert_eq!(response.status(), StatusCode::CREATED);
+    let count: i64 = sqlx::query_scalar(
+        "SELECT COUNT(1) FROM dr_drive_space
+         WHERE id=$1 AND owner_subject_type='organization' AND owner_subject_id='org-001' AND space_type='team'",
+    )
+    .bind("space-team-derived-owner")
+    .fetch_one(&pool)
+    .await
+    .expect("team space with derived organization owner should be persisted");
+    assert_eq!(count, 1);
+}
+
+#[tokio::test]
+async fn list_spaces_route_derives_owner_filter_from_token_context() {
+    let Some((pool, _database_guard)) = sdkwork_drive_test_support::postgres_test_database().await
+    else {
+        return;
+    };
+
+    sqlx::query(
+        "INSERT INTO dr_drive_space (
+            id, tenant_id, owner_subject_type, owner_subject_id, space_type,
+            display_name, lifecycle_status, version, created_by, updated_by
+        ) VALUES
+            ('space-personal-user-001', 'tenant-001', 'user', 'user-001', 'personal',
+             'My Storage', 'active', 1, 'user-001', 'user-001'),
+            ('space-personal-user-002', 'tenant-001', 'user', 'user-002', 'personal',
+             'Other Storage', 'active', 1, 'user-002', 'user-002')",
+    )
+    .execute(&pool)
+    .await
+    .expect("personal spaces should be seeded");
+
+    let app = common::test_router_with_pool(pool);
+    let response = app
+        .oneshot(
+            Request::builder()
+                .header(
+                    "authorization",
+                    format!(
+                        "Bearer {}",
+                        common::auth_token("tenant-001", "user-001", "appbase")
+                    ),
+                )
+                .header(
+                    "access-token",
+                    common::access_token("tenant-001", "user-001", "appbase"),
+                )
+                .method(Method::GET)
+                .uri("/app/v3/api/drive/spaces?spaceType=personal")
+                .body(Body::empty())
+                .expect("request should be built"),
+        )
+        .await
+        .expect("list spaces request should be handled");
+
+    assert_eq!(response.status(), StatusCode::OK);
+    let payload: serde_json::Value = serde_json::from_slice(
+        &to_bytes(response.into_body(), usize::MAX)
+            .await
+            .expect("list spaces response should be read"),
+    )
+    .expect("list spaces response should be json");
+    let space_ids = common::envelope_items(&payload)
+        .as_array()
+        .expect("items array")
+        .iter()
+        .filter_map(|item| item["id"].as_str().map(str::to_owned))
+        .collect::<Vec<_>>();
+    assert!(space_ids.contains(&"space-personal-user-001".to_string()));
+    assert!(!space_ids.contains(&"space-personal-user-002".to_string()));
+}
+
+#[tokio::test]
 async fn delete_space_route_rejects_user_git_repository_space() {
     let Some((pool, _database_guard)) = sdkwork_drive_test_support::postgres_test_database().await
     else {

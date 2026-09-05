@@ -20,7 +20,7 @@ use axum::http::StatusCode;
 use axum::Extension;
 use axum::Json;
 use sdkwork_drive_contract::drive::domain_events as drive_events;
-use sdkwork_drive_observability::{elapsed_ms, error_kinds, events, has_value, start_timer};
+use sdkwork_drive_observability::{elapsed_ms, error_kinds, events, start_timer};
 use sdkwork_drive_workspace_service::application::space_lifecycle_service::{
     BootstrapTeamSpaceCreatorAccessCommand, DeleteSpaceWithContentsCommand,
     SqlDriveSpaceLifecycleService,
@@ -41,8 +41,6 @@ pub(crate) async fn list_spaces(
     Query(query): Query<ListSpacesQuery>,
 ) -> Result<DriveListHttpResponse<CreateSpaceResponse>, (StatusCode, Json<ProblemDetail>)> {
     let started = start_timer();
-    let filter_has_owner_subject_type = has_value(&query.owner_subject_type);
-    let filter_has_owner_subject_id = has_value(&query.owner_subject_id);
     let tenant_id = match ctx.resolve_tenant_id() {
         Ok(tenant_id) => tenant_id,
         Err(error) => {
@@ -50,9 +48,7 @@ pub(crate) async fn list_spaces(
                 event = events::APP_SPACES_LIST,
                 result = "err",
                 latency_ms = elapsed_ms(started),
-                error_kind = error_kinds::VALIDATION,
-                filter_has_owner_subject_type = filter_has_owner_subject_type,
-                filter_has_owner_subject_id = filter_has_owner_subject_id
+                error_kind = error_kinds::VALIDATION
             );
             return Err(error);
         }
@@ -60,9 +56,24 @@ pub(crate) async fn list_spaces(
 
     let page = parse_page_request(query.page_size, query.page_token)?;
     let (subject_type, subject_id) = ctx.resolve_subject()?;
-    let owner_subject_type = normalize_optional_text(query.owner_subject_type);
-    let owner_subject_id = normalize_optional_text(query.owner_subject_id);
     let space_type = normalize_optional_text(query.space_type);
+    // Owner scope is derived from the verified WebRequestContext, never from
+    // client request parameters (API_SPEC 14, DRIVE_SPEC feature-service rules).
+    let derived_owner = space_type
+        .as_deref()
+        .and_then(DriveSpaceType::try_from_str)
+        .filter(|space_type| {
+            matches!(
+                space_type,
+                DriveSpaceType::Personal | DriveSpaceType::GitRepository | DriveSpaceType::Rtc
+            )
+        })
+        .map(|_| (subject_type.clone(), subject_id.clone()));
+    let (owner_subject_type, owner_subject_id) = match &derived_owner {
+        Some((owner_type, owner_id)) => (Some(owner_type.clone()), Some(owner_id.clone())),
+        None => (None, None),
+    };
+    let owner_filter_derived = derived_owner.is_some();
     let service = DriveSpaceService::new(SqlSpaceStore::new(state.pool.clone()));
     let spaces = service
         .list_accessible_spaces(ListAccessibleSpacesCommand {
@@ -82,8 +93,7 @@ pub(crate) async fn list_spaces(
                 result = "err",
                 latency_ms = elapsed_ms(started),
                 error_kind = service_error_kind(&error),
-                filter_has_owner_subject_type = filter_has_owner_subject_type,
-                filter_has_owner_subject_id = filter_has_owner_subject_id
+                owner_filter_derived = owner_filter_derived
             );
             map_service_error(error)
         })?;
@@ -98,8 +108,7 @@ pub(crate) async fn list_spaces(
         event = events::APP_SPACES_LIST,
         result = "ok",
         latency_ms = latency_ms,
-        filter_has_owner_subject_type = filter_has_owner_subject_type,
-        filter_has_owner_subject_id = filter_has_owner_subject_id,
+        owner_filter_derived = owner_filter_derived,
         returned_items = items.len() as u64
     );
 
@@ -139,13 +148,13 @@ pub(crate) async fn create_space(
     let service = DriveSpaceService::new(SqlSpaceStore::new(state.pool.clone()));
     let tenant_id = ctx.resolve_tenant_id()?;
     let (subject_type, subject_id) = ctx.resolve_subject()?;
-    ensure_create_space_owner_matches_caller(
+    let (owner_subject_type, owner_subject_id) = resolve_create_space_owner(
         &space_type,
         payload.id.trim(),
         &subject_type,
         &subject_id,
-        payload.owner_subject_type.trim(),
-        payload.owner_subject_id.trim(),
+        payload.owner_subject_type.as_deref(),
+        payload.owner_subject_id.as_deref(),
         ctx.organization_id.as_deref(),
     )?;
     let operator_id = ctx.resolve_operator_id()?;
@@ -155,8 +164,8 @@ pub(crate) async fn create_space(
         .create_space(CreateSpaceCommand {
             id: payload.id,
             tenant_id,
-            owner_subject_type: payload.owner_subject_type,
-            owner_subject_id: payload.owner_subject_id,
+            owner_subject_type,
+            owner_subject_id,
             display_name: payload.display_name,
             space_type,
             presentation_icon: payload.presentation_icon,
@@ -407,56 +416,83 @@ pub(crate) async fn delete_space(
     );
     Ok(no_content())
 }
-fn ensure_create_space_owner_matches_caller(
+fn resolve_create_space_owner(
     space_type: &DriveSpaceType,
     space_id: &str,
     subject_type: &str,
     subject_id: &str,
-    owner_subject_type: &str,
-    owner_subject_id: &str,
+    owner_subject_type: Option<&str>,
+    owner_subject_id: Option<&str>,
     organization_id: Option<&str>,
-) -> Result<(), (StatusCode, Json<ProblemDetail>)> {
-    let owner_must_match_caller = matches!(
-        space_type,
-        DriveSpaceType::Personal | DriveSpaceType::GitRepository | DriveSpaceType::Rtc
-    );
-    if owner_must_match_caller
-        && (subject_type != owner_subject_type || subject_id != owner_subject_id)
-    {
-        return Err(acl::permission_denied_problem());
-    }
+) -> Result<(String, String), (StatusCode, Json<ProblemDetail>)> {
+    let payload_owner_type = owner_subject_type.map(str::trim).filter(|v| !v.is_empty());
+    let payload_owner_id = owner_subject_id.map(str::trim).filter(|v| !v.is_empty());
 
     if *space_type == DriveSpaceType::Team {
         let organization_id = organization_id
             .map(str::trim)
             .filter(|value| !value.is_empty() && *value != "0")
             .ok_or_else(acl::permission_denied_problem)?;
-        match owner_subject_type {
-            "group" => {
-                if owner_subject_id != space_id.trim() {
-                    return Err(acl::permission_denied_problem());
-                }
-                if !space_id.starts_with(&format!("{organization_id}:"))
-                    && !space_id.starts_with(&format!("{organization_id}-"))
-                {
-                    return Err(acl::permission_denied_problem());
-                }
+        let owner_subject_id = match (payload_owner_type, payload_owner_id) {
+            (None, None) => {
+                // Owner binding defaults to the verified organization context.
+                return Ok(("organization".to_string(), organization_id.to_string()));
             }
-            "organization" => {
-                if owner_subject_id != organization_id {
+            (Some(owner_type), Some(owner_id)) => {
+                if owner_type != "group" && owner_type != "organization" {
+                    return Err(problem(
+                        StatusCode::BAD_REQUEST,
+                        "validation failed",
+                        "team spaces must bind ownerSubjectType to group or organization",
+                        SdkWorkResultCode::InvalidParameter,
+                    ));
+                }
+                if owner_type == "group" {
+                    if owner_id != space_id {
+                        return Err(acl::permission_denied_problem());
+                    }
+                    if !space_id.starts_with(&format!("{organization_id}:"))
+                        && !space_id.starts_with(&format!("{organization_id}-"))
+                    {
+                        return Err(acl::permission_denied_problem());
+                    }
+                } else if owner_id != organization_id {
                     return Err(acl::permission_denied_problem());
                 }
+                owner_id
             }
-            _ => {
+            (Some(_), None) | (None, Some(_)) => {
                 return Err(problem(
                     StatusCode::BAD_REQUEST,
                     "validation failed",
-                    "team spaces must bind ownerSubjectType to group or organization",
+                    "ownerSubjectType and ownerSubjectId must be provided together",
                     SdkWorkResultCode::InvalidParameter,
                 ));
             }
-        }
+        };
+        return Ok((
+            payload_owner_type.unwrap_or("organization").to_string(),
+            owner_subject_id.to_string(),
+        ));
     }
 
-    Ok(())
+    // Non-team spaces are owned by the verified caller; a client-supplied owner
+    // must match the token context or the request is rejected.
+    match (payload_owner_type, payload_owner_id) {
+        (None, None) => {}
+        (Some(owner_type), Some(owner_id)) => {
+            if owner_type != subject_type || owner_id != subject_id {
+                return Err(acl::permission_denied_problem());
+            }
+        }
+        (Some(_), None) | (None, Some(_)) => {
+            return Err(problem(
+                StatusCode::BAD_REQUEST,
+                "validation failed",
+                "ownerSubjectType and ownerSubjectId must be provided together",
+                SdkWorkResultCode::InvalidParameter,
+            ));
+        }
+    }
+    Ok((subject_type.to_string(), subject_id.to_string()))
 }
