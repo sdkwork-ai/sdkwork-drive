@@ -5,10 +5,12 @@ pub struct CreateSpaceRequest {
     pub id: String,
 
     #[serde(rename = "ownerSubjectType")]
-    pub owner_subject_type: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub owner_subject_type: Option<String>,
 
     #[serde(rename = "ownerSubjectId")]
-    pub owner_subject_id: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub owner_subject_id: Option<String>,
 
     #[serde(rename = "displayName")]
     pub display_name: String,

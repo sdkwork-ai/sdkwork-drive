@@ -305,8 +305,6 @@ async retrieve(rootUuid: string, requestOptions?: ApiRequestOptions): Promise<We
 }
 
 export interface DriveSpacesListParams {
-  ownerSubjectType?: string;
-  ownerSubjectId?: string;
   spaceType?: 'personal' | 'team' | 'knowledge_base' | 'ai_generated' | 'git_repository' | 'deployment' | 'app_upload' | 'im' | 'rtc' | 'notary' | 'website';
   pageSize?: number;
   cursor?: string;
@@ -322,8 +320,6 @@ export class DriveSpacesApi {
 
 async list(params?: DriveSpacesListParams, requestOptions?: ApiRequestOptions): Promise<{ items: DriveSpace[]; pageInfo: PageInfo; }> {
     const query = buildQueryString([
-      { name: 'ownerSubjectType', value: params?.ownerSubjectType, style: 'form', explode: true, allowReserved: false },
-      { name: 'ownerSubjectId', value: params?.ownerSubjectId, style: 'form', explode: true, allowReserved: false },
       { name: 'spaceType', value: params?.spaceType, style: 'form', explode: true, allowReserved: false },
       { name: 'page_size', value: params?.pageSize, style: 'form', explode: true, allowReserved: false },
       { name: 'cursor', value: params?.cursor, style: 'form', explode: true, allowReserved: false },

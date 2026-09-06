@@ -479,10 +479,8 @@ impl DriveApi {
         self.client.post(&path, Some(body), None, headers.as_ref(), Some("application/json")).await
     }
 
-    pub async fn spaces_list(&self, owner_subject_type: Option<&str>, owner_subject_id: Option<&str>, space_type: Option<&str>, page_size: Option<i64>, cursor: Option<&str>) -> Result<serde_json::Value, SdkworkError> {
+    pub async fn spaces_list(&self, space_type: Option<&str>, page_size: Option<i64>, cursor: Option<&str>) -> Result<serde_json::Value, SdkworkError> {
         let query = build_query_string(&[
-            QueryParameterSpec::new("ownerSubjectType", owner_subject_type, "form", true, false, None),
-            QueryParameterSpec::new("ownerSubjectId", owner_subject_id, "form", true, false, None),
             QueryParameterSpec::new("spaceType", space_type, "form", true, false, None),
             QueryParameterSpec::new("page_size", page_size, "form", true, false, None),
             QueryParameterSpec::new("cursor", cursor, "form", true, false, None),

@@ -881,10 +881,8 @@ class DriveSpacesApi:
         self._client = client
 
 
-    def list(self, owner_subject_type: Optional[str] = None, owner_subject_id: Optional[str] = None, space_type: Optional[str] = None, page_size: Optional[int] = None, cursor: Optional[str] = None) -> DriveSpaceListHttpResponse:
+    def list(self, space_type: Optional[str] = None, page_size: Optional[int] = None, cursor: Optional[str] = None) -> DriveSpaceListHttpResponse:
         query = build_query_string([
-            {'name': 'ownerSubjectType', 'value': owner_subject_type, 'style': 'form', 'explode': True, 'allow_reserved': False},
-            {'name': 'ownerSubjectId', 'value': owner_subject_id, 'style': 'form', 'explode': True, 'allow_reserved': False},
             {'name': 'spaceType', 'value': space_type, 'style': 'form', 'explode': True, 'allow_reserved': False},
             {'name': 'page_size', 'value': page_size, 'style': 'form', 'explode': True, 'allow_reserved': False},
             {'name': 'cursor', 'value': cursor, 'style': 'form', 'explode': True, 'allow_reserved': False},

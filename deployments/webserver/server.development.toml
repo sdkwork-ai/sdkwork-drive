@@ -4,6 +4,6 @@ environment = "development"
 
 [[http.server]]
 listen = ["80"]
-serverName = ["drive-dev.sdkwork.com", "drive-dev.birdcoder.com", "drive-dev.dtupay.com", "drive-dev.sdkwork.cn", "drive-dev.birdcoder.cn", "drive-dev.dtupay.cn", "drive-dev.skubc.com", "drive-dev.skubc.cn", "drive-dev.zowalk.com", "drive-dev.zowalk.cn", "drive-dev.offer86.com", "drive-dev.offer86.cn", "drive-dev.86offer.com", "drive-dev.86offer.cn"]
+serverName = ["drive-dev.sdkwork.com", "drive-dev.birdcoder.com", "drive-dev.dtupay.com", "drive-dev.noaper.com", "drive-dev.sdkwork.cn", "drive-dev.birdcoder.cn", "drive-dev.dtupay.cn", "drive-dev.noaper.cn", "drive-dev.skubc.com", "drive-dev.skubc.cn", "drive-dev.zowalk.com", "drive-dev.zowalk.cn", "drive-dev.offer86.com", "drive-dev.offer86.cn", "drive-dev.86offer.com", "drive-dev.86offer.cn"]
 include = ["snippets/gateway-locations.nonproduction.conf"]
 

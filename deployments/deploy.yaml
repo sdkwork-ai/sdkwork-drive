@@ -28,6 +28,10 @@ profiles:
         tls: dtupay.com
         mode: web
         web: pc
+      - domain: drive-test.noaper.com
+        tls: noaper.com
+        mode: web
+        web: pc
       - domain: drive-test.sdkwork.cn
         tls: sdkwork.cn
         mode: web
@@ -38,6 +42,10 @@ profiles:
         web: pc
       - domain: drive-test.dtupay.cn
         tls: dtupay.cn
+        mode: web
+        web: pc
+      - domain: drive-test.noaper.cn
+        tls: noaper.cn
         mode: web
         web: pc
       - domain: drive-test.skubc.com
@@ -107,6 +115,10 @@ profiles:
         tls: dtupay.com
         mode: web
         web: pc
+      - domain: drive-staging.noaper.com
+        tls: noaper.com
+        mode: web
+        web: pc
       - domain: drive-staging.sdkwork.cn
         tls: sdkwork.cn
         mode: web
@@ -117,6 +129,10 @@ profiles:
         web: pc
       - domain: drive-staging.dtupay.cn
         tls: dtupay.cn
+        mode: web
+        web: pc
+      - domain: drive-staging.noaper.cn
+        tls: noaper.cn
         mode: web
         web: pc
       - domain: drive-staging.skubc.com
@@ -186,6 +202,10 @@ profiles:
         tls: dtupay.com
         mode: web
         web: pc
+      - domain: drive.noaper.com
+        tls: noaper.com
+        mode: web
+        web: pc
       - domain: drive.sdkwork.cn
         tls: sdkwork.cn
         mode: web
@@ -196,6 +216,10 @@ profiles:
         web: pc
       - domain: drive.dtupay.cn
         tls: dtupay.cn
+        mode: web
+        web: pc
+      - domain: drive.noaper.cn
+        tls: noaper.cn
         mode: web
         web: pc
       - domain: drive.skubc.com
@@ -268,6 +292,11 @@ profiles:
         mode: web+api
         web: pc
         apiPathStyle: full-prefix
+      - domain: drive.noaper.com
+        tls: noaper.com
+        mode: web+api
+        web: pc
+        apiPathStyle: full-prefix
       - domain: drive.sdkwork.cn
         tls: sdkwork.cn
         mode: web+api
@@ -280,6 +309,11 @@ profiles:
         apiPathStyle: full-prefix
       - domain: drive.dtupay.cn
         tls: dtupay.cn
+        mode: web+api
+        web: pc
+        apiPathStyle: full-prefix
+      - domain: drive.noaper.cn
+        tls: noaper.cn
         mode: web+api
         web: pc
         apiPathStyle: full-prefix

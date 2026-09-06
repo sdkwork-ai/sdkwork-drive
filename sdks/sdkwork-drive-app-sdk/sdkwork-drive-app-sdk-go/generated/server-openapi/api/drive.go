@@ -740,10 +740,8 @@ func (a *DriveApi) SandboxEntriesPurge(sandboxId string, entryId string, body sd
     return decodeResult[sdktypes.DriveSandboxMutationCommandHttpResponse](raw)
 }
 
-func (a *DriveApi) SpacesList(ownerSubjectType *string, ownerSubjectId *string, spaceType *string, pageSize *int, cursor *string) (sdktypes.DriveSpaceListHttpResponse, error) {
+func (a *DriveApi) SpacesList(spaceType *string, pageSize *int, cursor *string) (sdktypes.DriveSpaceListHttpResponse, error) {
     query := BuildQueryString([]QueryParameterSpec{
-        {Name: "ownerSubjectType", Value: func() interface{} { if ownerSubjectType == nil { return nil }; return *ownerSubjectType }(), Style: "form", Explode: true, AllowReserved: false},
-        {Name: "ownerSubjectId", Value: func() interface{} { if ownerSubjectId == nil { return nil }; return *ownerSubjectId }(), Style: "form", Explode: true, AllowReserved: false},
         {Name: "spaceType", Value: func() interface{} { if spaceType == nil { return nil }; return *spaceType }(), Style: "form", Explode: true, AllowReserved: false},
         {Name: "page_size", Value: func() interface{} { if pageSize == nil { return nil }; return *pageSize }(), Style: "form", Explode: true, AllowReserved: false},
         {Name: "cursor", Value: func() interface{} { if cursor == nil { return nil }; return *cursor }(), Style: "form", Explode: true, AllowReserved: false},

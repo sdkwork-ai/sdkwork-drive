@@ -463,10 +463,8 @@ public class DriveApi {
         return client.convertValue(raw, new TypeReference<DriveSandboxMutationCommandHttpResponse>() {});
     }
 
-    public DriveSpaceListHttpResponse spacesList(String ownerSubjectType, String ownerSubjectId, String spaceType, Integer pageSize, String cursor) throws Exception {
+    public DriveSpaceListHttpResponse spacesList(String spaceType, Integer pageSize, String cursor) throws Exception {
         String query = buildQueryString(List.of(
-            new QueryParameterSpec("ownerSubjectType", ownerSubjectType, "form", true, false, null),
-            new QueryParameterSpec("ownerSubjectId", ownerSubjectId, "form", true, false, null),
             new QueryParameterSpec("spaceType", spaceType, "form", true, false, null),
             new QueryParameterSpec("page_size", pageSize, "form", true, false, null),
             new QueryParameterSpec("cursor", cursor, "form", true, false, null)
