@@ -596,13 +596,13 @@ function normalizeSubjectType(value: string | undefined): RemoteIdentity['subjec
 }
 
 function resolveIdentity(getSession: () => SessionSnapshot): RemoteIdentity {
+  // Ambient identity (tenant/user) is derived server-side from the verified
+  // auth/access tokens (DRIVE_SPEC feature-service rules). The session
+  // snapshot only feeds local display labels, cache keys, and offline ids, so
+  // a missing context degrades gracefully instead of blocking operations.
   const snapshot = getSession();
-  const tenantId = snapshot.context?.tenantId;
-  const userId = snapshot.context?.userId ?? snapshot.user?.id;
-
-  if (!tenantId || !userId) {
-    throw new Error('Drive App SDK session context is missing tenantId or userId.');
-  }
+  const tenantId = snapshot.context?.tenantId ?? '';
+  const userId = snapshot.context?.userId ?? snapshot.user?.id ?? '';
 
   return {
     tenantId,
@@ -954,12 +954,7 @@ function createSdkBackedDriveFileService(
 
   const listSpacesByType = async (
     spaceType: string,
-    options: DriveFileReadOptions & {
-      ownerSubjectType?: string;
-      ownerSubjectId?: string;
-      pageSize?: number;
-      pageToken?: string;
-    } = {},
+    options: DriveFileReadOptions = {},
   ): Promise<{ items: unknown[]; nextPageToken?: string }> => {
     const page = await requestPageItems(
       {
@@ -967,12 +962,6 @@ function createSdkBackedDriveFileService(
         signal: options.signal,
         query: {
           spaceType,
-          ...(options.ownerSubjectType && options.ownerSubjectId
-            ? {
-                ownerSubjectType: options.ownerSubjectType,
-                ownerSubjectId: options.ownerSubjectId,
-              }
-            : {}),
         },
       },
       {
@@ -984,7 +973,6 @@ function createSdkBackedDriveFileService(
   };
 
   const findOwnedSpaceIdByType = async (
-    identity: RemoteIdentity,
     spaceType: string,
     options: DriveFileReadOptions = {},
   ): Promise<string | undefined> =>
@@ -996,8 +984,6 @@ function createSdkBackedDriveFileService(
             signal: options.signal,
             query: {
               spaceType,
-              ownerSubjectType: identity.subjectType,
-              ownerSubjectId: identity.userId,
             },
           },
           { pageSize: 1 },
@@ -1230,10 +1216,9 @@ function createSdkBackedDriveFileService(
   };
 
   const findOwnedSpaceId = async (
-    identity: RemoteIdentity,
     spaceType: string,
     options: DriveFileReadOptions = {},
-  ): Promise<string | undefined> => findOwnedSpaceIdByType(identity, spaceType, options);
+  ): Promise<string | undefined> => findOwnedSpaceIdByType(spaceType, options);
 
   const ownerSpaceCacheKey = (identity: RemoteIdentity): string =>
     `${identity.tenantId}:${identity.subjectType}:${identity.userId}`;
@@ -1248,7 +1233,7 @@ function createSdkBackedDriveFileService(
       return cachedSpaceId;
     }
 
-    const existingPersonalSpaceId = await findOwnedSpaceId(identity, 'personal', options);
+    const existingPersonalSpaceId = await findOwnedSpaceId('personal', options);
     if (existingPersonalSpaceId) {
       personalSpaceIds.set(cacheKey, existingPersonalSpaceId);
       return existingPersonalSpaceId;
@@ -1261,15 +1246,13 @@ function createSdkBackedDriveFileService(
         signal: options.signal,
         body: {
           id: makeId('space'),
-          ownerSubjectType: identity.subjectType,
-          ownerSubjectId: identity.userId,
           displayName: PERSONAL_SPACE_DISPLAY_NAME,
           spaceType: 'personal',
         },
       });
     } catch (error) {
       if (isConflictError(error)) {
-        const resolvedSpaceId = await findOwnedSpaceId(identity, 'personal', options);
+        const resolvedSpaceId = await findOwnedSpaceId('personal', options);
         if (resolvedSpaceId) {
           personalSpaceIds.set(cacheKey, resolvedSpaceId);
           return resolvedSpaceId;
@@ -1295,7 +1278,7 @@ function createSdkBackedDriveFileService(
       return cachedSpaceId;
     }
 
-    const existingGitRepositorySpaceId = await findOwnedSpaceId(identity, 'git_repository', options);
+    const existingGitRepositorySpaceId = await findOwnedSpaceId('git_repository', options);
     if (existingGitRepositorySpaceId) {
       gitRepositorySpaceIds.set(cacheKey, existingGitRepositorySpaceId);
       return existingGitRepositorySpaceId;
@@ -1308,15 +1291,13 @@ function createSdkBackedDriveFileService(
         signal: options.signal,
         body: {
           id: makeId('space'),
-          ownerSubjectType: identity.subjectType,
-          ownerSubjectId: identity.userId,
           displayName: GIT_REPOSITORY_SPACE_DISPLAY_NAME,
           spaceType: 'git_repository',
         },
       });
     } catch (error) {
       if (isConflictError(error)) {
-        const resolvedSpaceId = await findOwnedSpaceId(identity, 'git_repository', options);
+        const resolvedSpaceId = await findOwnedSpaceId('git_repository', options);
         if (resolvedSpaceId) {
           gitRepositorySpaceIds.set(cacheKey, resolvedSpaceId);
           return resolvedSpaceId;
@@ -2283,8 +2264,6 @@ function createSdkBackedDriveFileService(
         signal: options?.signal,
         body: {
           id: spaceId,
-          ownerSubjectType: 'organization',
-          ownerSubjectId: organizationId,
           displayName: name,
           spaceType: 'team',
           presentationIcon: icon,

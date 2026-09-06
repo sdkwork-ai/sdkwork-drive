@@ -240,37 +240,23 @@ function createFakeClient(
         }
         return {};
       }
-      if (request.operationId === 'spaces.list' && isRecord(response) && Array.isArray(response.items)) {
-        const spaceType =
-          typeof request.query?.spaceType === 'string' ? request.query.spaceType : undefined;
-        const ownerSubjectType =
-          typeof request.query?.ownerSubjectType === 'string'
-            ? request.query.ownerSubjectType
-            : undefined;
-        const ownerSubjectId =
-          typeof request.query?.ownerSubjectId === 'string'
-            ? request.query.ownerSubjectId
-            : undefined;
-        const items = response.items.filter((item) => {
-          if (!isRecord(item)) {
-            return false;
-          }
-          if (spaceType && item.spaceType !== spaceType) {
-            return false;
-          }
-          if (ownerSubjectType && item.ownerSubjectType !== ownerSubjectType) {
-            return false;
-          }
-          if (ownerSubjectId && item.ownerSubjectId !== ownerSubjectId) {
-            return false;
-          }
-          return true;
-        });
-        return wrapListEnvelope({
-          ...response,
-          items,
-        });
+  if (request.operationId === 'spaces.list' && isRecord(response) && Array.isArray(response.items)) {
+    const spaceType =
+      typeof request.query?.spaceType === 'string' ? request.query.spaceType : undefined;
+    const items = response.items.filter((item) => {
+      if (!isRecord(item)) {
+        return false;
       }
+      if (spaceType && item.spaceType !== spaceType) {
+        return false;
+      }
+      return true;
+    });
+    return wrapListEnvelope({
+      ...response,
+      items,
+    });
+  }
       if (LIST_OPERATION_IDS.has(request.operationId)) {
         return wrapListEnvelope(response);
       }
@@ -338,6 +324,7 @@ function createRemoteService(
   uploadFetch?: typeof fetch,
   downloadFetch?: typeof fetch,
   hostAdapter?: HostAdapter,
+  sessionSnapshot: SessionSnapshot = session,
 ): {
   service: DriveFileService;
   appSdkClient: DriveAppSdkClient;
@@ -347,7 +334,7 @@ function createRemoteService(
   const appSdkClient = createFakeClient(responses, requests);
   const service = createDriveFileService({
     appSdkClient,
-    getSession: () => session,
+    getSession: () => sessionSnapshot,
     hostAdapter,
     uploadFetch,
     downloadFetch,
@@ -376,6 +363,51 @@ describe('drive file service', () => {
     }));
   });
 
+  it('resolves and provisions the personal space without client-passed tenant or user identity', async () => {
+    // Regression: ambient identity is derived server-side from the verified
+    // tokens, so a session snapshot without context must not block operations
+    // and no request may carry tenantId/userId/owner subject fields.
+    const sessionWithoutContext: SessionSnapshot = {
+      user: {
+        id: 'user-001',
+        displayName: 'Ada',
+      },
+    };
+    const { service, requests } = createRemoteService(
+      {
+        'spaces.list': {
+          items: [],
+        },
+        'spaces.create': {
+          id: 'space-personal-no-context',
+          spaceType: 'personal',
+          displayName: 'My Storage',
+        },
+      },
+      undefined,
+      undefined,
+      undefined,
+      sessionWithoutContext,
+    );
+
+    const files = await service.listFiles('my-storage');
+
+    expect(files).toEqual([]);
+    const listRequest = requests.find((request) => request.operationId === 'spaces.list');
+    expect(listRequest).toBeDefined();
+    expect(listRequest?.query).toEqual({ spaceType: 'personal', page_size: 1, cursor: undefined });
+    const createRequest = requests.find((request) => request.operationId === 'spaces.create');
+    expect(createRequest).toBeDefined();
+    expect(createRequest?.body).toEqual({
+      id: expect.any(String),
+      displayName: 'My Storage',
+      spaceType: 'personal',
+    });
+    expect(JSON.stringify(createRequest?.body)).not.toContain('ownerSubject');
+    expect(JSON.stringify(listRequest?.query)).not.toContain('tenantId');
+    expect(JSON.stringify(listRequest?.query)).not.toContain('userId');
+  });
+
   it('lists Drive nodes through the generated App SDK contract and maps them to DriveFile view models', async () => {
     const { service, requests } = createRemoteService({
       'nodes.list': {
@@ -390,10 +422,7 @@ describe('drive file service', () => {
 
     expect(requests[0]).toMatchObject({
       operationId: 'spaces.list',
-      query: expect.objectContaining({
-        ownerSubjectType: 'user',
-        ownerSubjectId: 'user-001',
-      }),
+      query: expect.objectContaining({ spaceType: 'personal' }),
     });
     expect(requests[1]).toMatchObject({
       operationId: 'nodes.list',
@@ -507,10 +536,7 @@ describe('drive file service', () => {
     expect(requests).toEqual([
       expect.objectContaining({
         operationId: 'spaces.list',
-        query: expect.objectContaining({
-          ownerSubjectType: 'user',
-          ownerSubjectId: 'user-001',
-        }),
+        query: expect.objectContaining({ spaceType: 'personal' }),
       }),
       expect.objectContaining({
         operationId: 'nodes.list',
@@ -578,8 +604,6 @@ describe('drive file service', () => {
     ]);
     expect(requests.find((request) => request.operationId === 'spaces.create')).toMatchObject({
       body: expect.objectContaining({
-        ownerSubjectType: 'user',
-        ownerSubjectId: 'user-001',
         displayName: 'My Storage',
         spaceType: 'personal',
       }),
@@ -1360,10 +1384,7 @@ describe('drive file service', () => {
     expect(requests).toEqual([
       expect.objectContaining({
         operationId: 'spaces.list',
-        query: expect.objectContaining({
-          ownerSubjectType: 'user',
-          ownerSubjectId: 'user-001',
-        }),
+        query: expect.objectContaining({ spaceType: 'git_repository' }),
       }),
       expect.objectContaining({
         operationId: 'nodes.list',
@@ -1424,8 +1445,6 @@ describe('drive file service', () => {
     ]);
     expect(requests.find((request) => request.operationId === 'spaces.create')).toMatchObject({
       body: expect.objectContaining({
-        ownerSubjectType: 'user',
-        ownerSubjectId: 'user-001',
         displayName: 'Git Repositories',
         spaceType: 'git_repository',
       }),
@@ -2711,8 +2730,6 @@ describe('drive file service', () => {
     expect(requests.find((request) => request.operationId === 'spaces.create')).toMatchObject({
       signal: createAbortController.signal,
       body: {
-        ownerSubjectType: 'organization',
-        ownerSubjectId: 'org-001',
         displayName: 'Design Team',
         spaceType: 'team',
         presentationIcon: 'Palette',

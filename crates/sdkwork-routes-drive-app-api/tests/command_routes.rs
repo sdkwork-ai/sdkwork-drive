@@ -14948,7 +14948,7 @@ async fn app_drive_collaboration_and_metadata_writes_reject_trashed_nodes_withou
         ("dr_drive_node_comment", 0_i64),
     ] {
         let query = format!("SELECT COUNT(1) FROM {table} WHERE tenant_id='tenant-trashed-write'");
-        let count: i64 = sqlx::query_scalar(&query)
+        let count: i64 = sqlx::query_scalar(sqlx::AssertSqlSafe(query))
             .fetch_one(&pool)
             .await
             .expect("side effect count should be queryable");
@@ -15123,7 +15123,7 @@ async fn app_drive_metadata_deletes_reject_trashed_nodes_without_side_effects() 
     ] {
         let query =
             format!("SELECT lifecycle_status FROM {table} WHERE tenant_id='tenant-trashed-delete'");
-        let status: String = sqlx::query_scalar(&query)
+        let status: String = sqlx::query_scalar(sqlx::AssertSqlSafe(query))
             .fetch_one(&pool)
             .await
             .expect("metadata status should be queryable");
