@@ -38,7 +38,7 @@ effective(<profile>.<environment>) =
 | development | `server.development.toml` | 16 | `drive-dev.sdkwork.com` | 80 |
 | test | `server.test.toml` | 16 | `drive-test.sdkwork.com` | 80 |
 | staging | `server.staging.toml` | 16 | `drive-staging.sdkwork.com` | 80 |
-| demo | `server.demo.toml` | 14 | `drive-demo.sdkwork.com` | 80 |
+| demo | `server.demo.toml` | 16 | `drive-demo.sdkwork.com` | 80 |
 | production | `server.production.toml` | 16 | `drive.sdkwork.com` | 443 ssl + 80 |
 
 Surfaces: application.public-ingress.
