@@ -1,3 +1,5 @@
+import { resolveBaseUrl } from '@sdkwork/sdk-common';
+
 export type SdkworkEnvironment = 'development' | 'test' | 'staging' | 'production';
 export type SdkworkConfigProfile = 'dev' | 'test' | 'staging' | 'prod';
 export type SdkworkBuildMode = 'development' | 'test' | 'staging' | 'production';
@@ -76,6 +78,7 @@ export interface RuntimeEnv {
   VITE_DRIVE_PC_APPBASE_APP_API_BASE_URL?: string;
   VITE_DRIVE_PC_DRIVE_APP_API_BASE_URL?: string;
   VITE_DRIVE_PC_DRIVE_ADMIN_STORAGE_API_BASE_URL?: string;
+  SDKWORK_API_BASE_URL?: string;
   VITE_DRIVE_PC_DEV_SAME_ORIGIN_API?: string;
   VITE_DRIVE_PC_TOKEN_MANAGER_MODE?: string;
   VITE_DRIVE_PC_TOKEN_STORAGE?: string;
@@ -329,13 +332,19 @@ export function createRuntimeConfig(env: RuntimeEnv = {}): DriveRuntimeConfig {
     || env.VITE_DRIVE_PC_API_GATEWAY_BASE_URL
     || defaultPlatformApiGatewayBaseUrl(deploymentProfile, environment);
 
+  const sharedApiBaseUrl = env.SDKWORK_API_BASE_URL
+    ? resolveBaseUrl({ envKey: 'SDKWORK_API_BASE_URL', readEnv: (key) => env[key as keyof RuntimeEnv] as string | undefined, preservePath: false }).url || undefined
+    : undefined;
+
   const appApiBaseUrl =
-    env.VITE_DRIVE_PC_DRIVE_APP_API_BASE_URL
+    (sharedApiBaseUrl ? `${sharedApiBaseUrl}/app/v3/api` : undefined)
+    || env.VITE_DRIVE_PC_DRIVE_APP_API_BASE_URL
     || env.VITE_DRIVE_PC_APP_API_BASE_URL
     || env.VITE_DRIVE_PC_APPLICATION_PUBLIC_HTTP_URL
     || platformApiGatewayBaseUrl;
   const adminStorageApiBaseUrl =
-    env.VITE_DRIVE_PC_DRIVE_ADMIN_STORAGE_API_BASE_URL
+    (sharedApiBaseUrl ? `${sharedApiBaseUrl}/backend/v3/api` : undefined)
+    || env.VITE_DRIVE_PC_DRIVE_ADMIN_STORAGE_API_BASE_URL
     || env.VITE_DRIVE_PC_BACKEND_API_BASE_URL
     || platformApiGatewayBaseUrl;
   const backendApiBaseUrl =
@@ -343,7 +352,9 @@ export function createRuntimeConfig(env: RuntimeEnv = {}): DriveRuntimeConfig {
   const appbaseAppApiBaseUrl = applyDevSameOriginApiBaseUrl(
     env,
     environment,
-    env.VITE_DRIVE_PC_APPBASE_APP_API_BASE_URL || platformApiGatewayBaseUrl,
+    (sharedApiBaseUrl ? `${sharedApiBaseUrl}/app/v3/api` : undefined)
+      || env.VITE_DRIVE_PC_APPBASE_APP_API_BASE_URL
+      || platformApiGatewayBaseUrl,
   );
 
   const resolvedAppApiBaseUrl = applyDevSameOriginApiBaseUrl(env, environment, appApiBaseUrl);

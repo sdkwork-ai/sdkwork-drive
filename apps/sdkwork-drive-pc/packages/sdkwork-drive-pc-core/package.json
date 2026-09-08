@@ -50,6 +50,7 @@
   },
   "dependencies": {
     "@sdkwork/drive-app-sdk": "workspace:*",
+    "@sdkwork/sdk-common": "workspace:*",
     "@sdkwork/utils": "workspace:*"
   },
   "peerDependencies": {
