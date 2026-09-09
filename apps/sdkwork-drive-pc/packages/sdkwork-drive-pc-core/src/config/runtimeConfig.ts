@@ -1,4 +1,4 @@
-import { resolveBaseUrl } from '@sdkwork/sdk-common';
+import {resolveBaseUrlWithAlignProtocol} from '@sdkwork/sdk-common';
 
 export type SdkworkEnvironment = 'development' | 'test' | 'staging' | 'production';
 export type SdkworkConfigProfile = 'dev' | 'test' | 'staging' | 'prod';
@@ -333,7 +333,7 @@ export function createRuntimeConfig(env: RuntimeEnv = {}): DriveRuntimeConfig {
     || defaultPlatformApiGatewayBaseUrl(deploymentProfile, environment);
 
   const sharedApiBaseUrl = env.SDKWORK_API_BASE_URL
-    ? resolveBaseUrl({ envKey: 'SDKWORK_API_BASE_URL', readEnv: (key) => env[key as keyof RuntimeEnv] as string | undefined, preservePath: false }).url || undefined
+    ? resolveBaseUrlWithAlignProtocol({ envKey: 'SDKWORK_API_BASE_URL', readEnv: (key) => env[key as keyof RuntimeEnv] as string | undefined, preservePath: false }).url || undefined
     : undefined;
 
   const appApiBaseUrl =
