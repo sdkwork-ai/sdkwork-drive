@@ -1,8 +1,12 @@
 [package]
+rust-version.workspace = true
 name = "sdkwork-drive-storage-opendal"
 version.workspace = true
 edition.workspace = true
 
+
+[lints]
+workspace = true
 [dependencies]
 async-trait.workspace = true
 http.workspace = true

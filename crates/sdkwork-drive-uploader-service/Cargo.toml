@@ -1,8 +1,12 @@
 [package]
+rust-version.workspace = true
 name = "sdkwork-drive-uploader-service"
 version.workspace = true
 edition.workspace = true
 
+
+[lints]
+workspace = true
 [dependencies]
 sdkwork-drive-workspace-service.workspace = true
 

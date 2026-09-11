@@ -1,7 +1,7 @@
 {
   "name": "sdkwork-drive-admin-storage-sdk-generated-typescript",
   "version": "0.1.0",
-  "description": "sdkwork-drive-admin-storage-sdk",
+  "description": "Generator-owned TypeScript transport SDK for sdkwork-drive-admin-storage-sdk.",
   "author": "SDKWork Team",
   "license": "MIT",
   "type": "module",
@@ -36,5 +36,7 @@
     "api",
     "custom",
     "sdkwork"
-  ]
+  ],
+  "private": true,
+  "sdkworkRole": "transport"
 }

@@ -1,8 +1,12 @@
 [package]
+rust-version.workspace = true
 name = "sdkwork-routes-storage-backend-api"
 version.workspace = true
 edition.workspace = true
 
+
+[lints]
+workspace = true
 [features]
 default = []
 opendal-s3-plugin = ["dep:sdkwork-drive-storage-opendal"]

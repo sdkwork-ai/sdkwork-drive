@@ -1,8 +1,11 @@
 [package]
+rust-version.workspace = true
 name = "sdkwork-drive-workspace-service"
 version.workspace = true
 edition.workspace = true
 
+[lints]
+workspace = true
 [features]
 default = ["postgres"]
 postgres = ["sdkwork-database-repository/postgres"]

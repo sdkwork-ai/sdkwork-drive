@@ -1,8 +1,12 @@
 [package]
+rust-version.workspace = true
 name = "sdkwork-drive-object-runtime"
 version.workspace = true
 edition.workspace = true
 
+
+[lints]
+workspace = true
 [dependencies]
 sdkwork-drive-storage-contract.workspace = true
 sdkwork-drive-storage-local.workspace = true

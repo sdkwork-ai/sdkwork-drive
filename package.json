@@ -16,6 +16,7 @@
   "scripts": {
     "workflow:materialize-client-env": "node ../sdkwork-specs/tools/materialize-client-env.mjs --root .",
     "check:client-env": "node ../sdkwork-specs/tools/materialize-client-env.mjs --root . --check",
+    "check:cors-standard": "node ../sdkwork-specs/tools/check-cors-standard.mjs --root .",
     "stop": "pnpm exec sdkwork-app stop",
     "dev": "pnpm dev:standalone",
     "dev:standalone": "pnpm exec sdkwork-app dev --deployment-profile standalone",
@@ -35,7 +36,7 @@
     "_sdkwork:build": "node scripts/sdkwork-command.mjs build",
     "_sdkwork:test": "node scripts/sdkwork-command.mjs test",
     "_sdkwork:check": "pnpm run check:app-composition && cargo check --workspace && pnpm check:architecture-alignment && pnpm check:dependency-management && pnpm check:app-sdk-consumers && pnpm check:package-standard && pnpm check:component-spec-standard && pnpm check:pc-standard && pnpm check:docs-standard && pnpm check:pnpm-script-standard && pnpm check:agent-workflow-standard && pnpm check:release-readiness && pnpm test:iam-application-bootstrap-standard && pnpm test:sdkwork-command-dev-topology && node ../sdkwork-specs/tools/audit-iam-embedded-bootstrap-workspace.mjs && pnpm test:staging-admin-smoke-contract && node --test tools/check_drive_deployments.test.mjs && pnpm deploy:validate && pnpm topology:validate && pnpm api:assembly:validate && pnpm db:validate && pnpm db:pool:validate && pnpm api:envelope:check && pnpm api:schema:check",
-    "_sdkwork:verify": "node scripts/sdkwork-verify.mjs && pnpm run check:app-composition",
+    "_sdkwork:verify": "node scripts/sdkwork-verify.mjs && pnpm run check:app-composition && pnpm check:cors-standard",
     "_sdkwork:clean": "node scripts/sdkwork-command.mjs clean",
     "_sdkwork:gateway:standalone": "node scripts/gateway-standalone-run.mjs --environment development",
     "_sdkwork:client:browser:standalone": "node scripts/drive-dev.mjs --target browser --client-only --deployment-profile standalone",

@@ -1,8 +1,12 @@
 [package]
+rust-version.workspace = true
 name = "sdkwork-drive-security"
 version.workspace = true
 edition.workspace = true
 
+
+[lints]
+workspace = true
 [dependencies]
 sdkwork-utils-rust.workspace = true
 http.workspace = true

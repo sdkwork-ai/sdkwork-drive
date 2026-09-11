@@ -27,8 +27,24 @@ members = [
 resolver = "2"
 
 [workspace.package]
+rust-version = "1.85"
 edition = "2021"
 version = "0.1.0"
+
+[workspace.lints.rust]
+# RUST_CODE_SPEC.md section 13 baseline.
+# Deny-tier lints (unsafe_code, panic, unwrap_used, expect_used, pedantic) are
+# promoted per crate together with their cleanup: enabling them fleet-wide
+# today floods or fails builds that have not paid that debt yet.
+unsafe_op_in_unsafe_fn = "warn"
+trivial_casts = "warn"
+trivial_numeric_casts = "warn"
+
+[workspace.lints.clippy]
+dbg_macro = "warn"
+todo = "warn"
+unimplemented = "warn"
+exit = "warn"
 
 [workspace.dependencies]
 sdkwork-api-iam-assembly = { path = "../sdkwork-iam/crates/sdkwork-api-iam-assembly" }
@@ -101,5 +117,3 @@ sdkwork-web-core = { path = "../sdkwork-web-framework/crates/sdkwork-web-core" }
 sdkwork-web-axum = { path = "../sdkwork-web-framework/crates/sdkwork-web-axum" }
 sdkwork-web-contract = { path = "../sdkwork-web-framework/crates/sdkwork-web-contract" }
 sdkwork-iam-web-adapter = { path = "../sdkwork-iam/crates/sdkwork-iam-web-adapter" }
-
-sdkwork_utils_rust = { path = "../sdkwork-utils/packages/sdkwork-utils-rust", package = "sdkwork-utils-rust" }

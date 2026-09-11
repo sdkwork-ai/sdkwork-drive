@@ -1,8 +1,12 @@
 [package]
+rust-version.workspace = true
 name = "sdkwork-drive-http"
 version.workspace = true
 edition.workspace = true
 
+
+[lints]
+workspace = true
 [dependencies]
 axum.workspace = true
 http.workspace = true
