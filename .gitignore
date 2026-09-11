@@ -112,7 +112,6 @@ Thumbs.db
 
 # Runtime-generated env config (modified by local dev server)
 **/public/runtime-env.json
-/bin/
 # --- SDKWork: generated TypeScript SDK build outputs (never committed) ---
 **/generated/server-openapi/src/**/*.js
 **/generated/server-openapi/src/**/*.js.map
