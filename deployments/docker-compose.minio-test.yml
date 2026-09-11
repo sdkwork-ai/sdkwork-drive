@@ -1,5 +1,13 @@
 version: "3.9"
 
+# Shared log rotation policy (OPERATIONS_SPEC.md §2.3): every service rotates
+# at 10MB, keeping 3 files, so container logs cannot fill the host disk.
+x-default-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   minio:
     image: minio/minio:RELEASE.2026-02-20T00-00-00Z
@@ -13,6 +21,7 @@ services:
       - "9001:9001"
     volumes:
       - minio-data:/data
+    logging: *default-logging
 
 volumes:
   minio-data:
