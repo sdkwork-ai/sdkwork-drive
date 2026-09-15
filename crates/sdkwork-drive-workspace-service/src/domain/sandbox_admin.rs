@@ -151,7 +151,7 @@ pub struct SandboxAdminPage<T> {
     pub total_items: i64,
 }
 
-#[cfg(test)]
+#[cfg(test)] // WORKSPACE-PATH:allow-fixture-block: this module is the file's #[cfg(test)] unit-test fixture data
 mod tests {
     use super::SandboxAdminVolume;
 

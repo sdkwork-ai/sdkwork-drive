@@ -123,7 +123,7 @@ fn stable_hash(parts: &[&[u8]]) -> String {
     sha256_hash(&input)
 }
 
-#[cfg(test)]
+#[cfg(test)] // WORKSPACE-PATH:allow-fixture-block: this module is the file's #[cfg(test)] unit-test fixture data
 mod tests {
     use super::*;
 
