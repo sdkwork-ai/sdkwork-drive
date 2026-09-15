@@ -336,6 +336,51 @@ describe('storage provider admin service', () => {
     });
   });
 
+  it('forwards every editable provider field on update, strict TLS included', async () => {
+    // Regression: `updateProvider` built its body field-by-field and dropped
+    // `strictTls`, so toggling "强制 TLS (仅 HTTPS)" in the edit form silently
+    // reverted to the server-side default while every other field persisted.
+    const { calls, service } = createFakeService();
+
+    await service.updateProvider('provider-s3', {
+      name: 'AWS Primary',
+      endpointUrl: 'https://s3.us-east-1.amazonaws.com',
+      region: 'us-east-1',
+      bucket: 'drive-prod',
+      pathStyle: true,
+      strictTls: false,
+      credentialRef: 'secret/aws-s3',
+      serverSideEncryptionMode: 'AES256',
+      defaultStorageClass: 'STANDARD',
+      status: 'active',
+    });
+
+    expect(lastCall(calls)).toMatchObject({
+      operationId: 'storageProviders.update',
+      pathParams: { providerId: 'provider-s3' },
+      body: {
+        name: 'AWS Primary',
+        endpointUrl: 'https://s3.us-east-1.amazonaws.com',
+        region: 'us-east-1',
+        bucket: 'drive-prod',
+        pathStyle: true,
+        strictTls: false,
+        credentialRef: 'secret/aws-s3',
+        serverSideEncryptionMode: 'AES256',
+        defaultStorageClass: 'STANDARD',
+        status: 'active',
+      },
+    });
+  });
+
+  it('omits untouched fields on update so the server keeps their current values', async () => {
+    const { calls, service } = createFakeService();
+
+    await service.updateProvider('provider-s3', { name: 'AWS Primary' });
+
+    expect(lastCall(calls).body).toEqual({ name: 'AWS Primary' });
+  });
+
   it('maps provider object list fields from the OpenAPI contract', async () => {
     const { service } = createFakeService();
 

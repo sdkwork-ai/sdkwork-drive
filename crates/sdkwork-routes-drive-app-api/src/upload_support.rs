@@ -574,6 +574,98 @@ pub(crate) fn validate_mutable_upload_session(
         )),
     }
 }
+/// Rejects an upload session whose deadline has passed even though the maintenance
+/// sweeper has not flagged it as `expired` yet.
+///
+/// `sweep_expired_upload_sessions` only runs periodically, so relying on
+/// `state = 'expired'` alone lets a client keep presigning parts and finalizing a
+/// session long after its TTL elapsed. Aborting stays allowed: releasing a session
+/// that can no longer be completed is cleanup, not a content mutation.
+pub(crate) fn ensure_upload_session_not_expired(
+    upload_session: &UploadSessionRecord,
+    now_epoch_ms: i64,
+) -> Result<(), (StatusCode, Json<ProblemDetail>)> {
+    if upload_session.expires_at_epoch_ms <= now_epoch_ms {
+        return Err(problem(
+            StatusCode::CONFLICT,
+            "conflict",
+            "upload session has expired",
+            SdkWorkResultCode::Conflict,
+        ));
+    }
+    Ok(())
+}
+
+/// Moves an upload session back to `uploading` while presigning a part.
+///
+/// [`update_upload_session_state`] writes unconditionally, so the presign flow --
+/// which reads the session first and updates it afterwards -- could revert a session
+/// that was concurrently completed, aborted, or expired back to `uploading`, and the
+/// already published storage object would then be re-completed against a dead
+/// multipart upload. This variant guards both the source state and the deadline.
+pub(crate) async fn mark_upload_session_uploading(
+    pool: &PgPool,
+    tenant_id: &str,
+    upload_session_id: &str,
+    operator_id: &str,
+    now_epoch_ms: i64,
+) -> Result<(), (StatusCode, Json<ProblemDetail>)> {
+    let affected = sqlx::query(
+        "UPDATE dr_drive_upload_session
+         SET state='uploading', updated_by=$1, updated_at=CURRENT_TIMESTAMP, version=version + 1
+         WHERE tenant_id=$2
+           AND id=$3
+           AND state IN ('created', 'uploading')
+           AND expires_at_epoch_ms > $4",
+    )
+    .bind(operator_id)
+    .bind(tenant_id)
+    .bind(upload_session_id)
+    .bind(now_epoch_ms)
+    .execute(pool)
+    .await
+    .map_err(internal_sql_error(
+        "mark dr_drive_upload_session uploading failed",
+    ))?
+    .rows_affected();
+    if affected == 0 {
+        return Err(problem(
+            StatusCode::CONFLICT,
+            "conflict",
+            "upload session is no longer mutable",
+            SdkWorkResultCode::Conflict,
+        ));
+    }
+    Ok(())
+}
+
+/// Releases the `completing` claim so the client can retry completion.
+///
+/// Guarded on `state = 'completing'` so a concurrent abort (or the maintenance
+/// sweeper) is not overwritten and the session is not resurrected into `uploading`.
+pub(crate) async fn release_upload_session_completion_claim(
+    pool: &PgPool,
+    tenant_id: &str,
+    upload_session_id: &str,
+    operator_id: &str,
+) -> Result<bool, (StatusCode, Json<ProblemDetail>)> {
+    let affected = sqlx::query(
+        "UPDATE dr_drive_upload_session
+         SET state='uploading', updated_by=$1, updated_at=CURRENT_TIMESTAMP, version=version + 1
+         WHERE tenant_id=$2 AND id=$3 AND state='completing'",
+    )
+    .bind(operator_id)
+    .bind(tenant_id)
+    .bind(upload_session_id)
+    .execute(pool)
+    .await
+    .map_err(internal_sql_error(
+        "release dr_drive_upload_session completion claim failed",
+    ))?
+    .rows_affected();
+    Ok(affected > 0)
+}
+
 pub(crate) async fn plan_completed_storage_object_insert(
     pool: &PgPool,
     tenant_id: &str,
@@ -834,22 +926,27 @@ pub(crate) async fn recover_upload_completion_after_db_failure(
     upload_session: &UploadSessionRecord,
     operator_id: &str,
 ) {
-    if let Err(error) = update_upload_session_state(
-        pool,
-        tenant_id,
-        &upload_session.id,
-        "uploading",
-        operator_id,
-    )
-    .await
+    match release_upload_session_completion_claim(pool, tenant_id, &upload_session.id, operator_id)
+        .await
     {
-        tracing::error!(
-            event = "drive.upload.completion_db_failure_session_reset_failed",
-            tenant_id = %tenant_id,
-            upload_session_id = %upload_session.id,
-            error = ?error,
-            "failed to reset upload session after DB completion failure"
-        );
+        Ok(true) => {}
+        Ok(false) => {
+            tracing::warn!(
+                event = "drive.upload.completion_db_failure_session_reset_skipped",
+                tenant_id = %tenant_id,
+                upload_session_id = %upload_session.id,
+                "upload session left the completing state concurrently; reset skipped"
+            );
+        }
+        Err(error) => {
+            tracing::error!(
+                event = "drive.upload.completion_db_failure_session_reset_failed",
+                tenant_id = %tenant_id,
+                upload_session_id = %upload_session.id,
+                error = ?error,
+                "failed to reset upload session after DB completion failure"
+            );
+        }
     }
 
     if let Ok(Some(provider)) =
@@ -1157,4 +1254,39 @@ pub(crate) fn sensitive_operation_id(
         .strip_prefix("sha256:")
         .expect("sha256_hex should include prefix")
         .to_string()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn session_in_state(state: &str, expires_at_epoch_ms: i64) -> UploadSessionRecord {
+        UploadSessionRecord {
+            id: "session-1".to_string(),
+            tenant_id: "tenant-1".to_string(),
+            space_id: "space-1".to_string(),
+            node_id: "node-1".to_string(),
+            bucket: "bucket-1".to_string(),
+            object_key: "objects/node-1/v1".to_string(),
+            idempotency_key: "idem-1".to_string(),
+            storage_provider_id: "provider-1".to_string(),
+            storage_upload_id: "upload-1".to_string(),
+            state: state.to_string(),
+            expires_at_epoch_ms,
+            version: 1,
+        }
+    }
+
+    #[test]
+    fn expired_session_is_rejected_while_still_marked_mutable() {
+        let session = session_in_state("uploading", 1_000);
+        let error = ensure_upload_session_not_expired(&session, 1_000).expect_err("expired");
+        assert_eq!(error.0, StatusCode::CONFLICT);
+    }
+
+    #[test]
+    fn session_within_its_deadline_is_accepted() {
+        let session = session_in_state("created", 1_000);
+        ensure_upload_session_not_expired(&session, 999).expect("not expired");
+    }
 }

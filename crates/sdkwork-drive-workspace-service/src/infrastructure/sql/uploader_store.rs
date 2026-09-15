@@ -359,19 +359,56 @@ impl DriveUploaderStore for SqlUploaderStore {
     async fn find_default_storage_provider(
         &self,
         tenant_id: &str,
+        space_id: &str,
     ) -> Result<Option<(String, String)>, DriveServiceError> {
         let row = sqlx::query(
-            "SELECT id, bucket
-             FROM dr_drive_storage_provider
-             WHERE status='active'
-             ORDER BY created_at ASC
+            "SELECT provider.id AS id, provider.bucket AS bucket
+             FROM dr_drive_storage_provider_binding binding
+             INNER JOIN dr_drive_storage_provider provider ON provider.id = binding.provider_id
+             WHERE binding.tenant_id=$1
+               AND binding.purpose='primary'
+               AND binding.lifecycle_status='active'
+               AND provider.status='active'
+               AND (binding.space_id = $2 OR binding.space_id IS NULL)
+             ORDER BY (binding.space_id IS NULL) ASC, binding.created_at ASC
              LIMIT 1",
         )
         .bind(tenant_id)
+        .bind(space_id)
         .fetch_optional(&self.pool)
         .await
         .map_err(|error| {
-            DriveServiceError::Internal(format!("find uploader storage provider failed: {error}"))
+            DriveServiceError::Internal(format!(
+                "find uploader space storage provider binding failed: {error}"
+            ))
+        })?;
+        if let Some(row) = row {
+            return Ok(Some((row.get("id"), row.get("bucket"))));
+        }
+
+        let row = sqlx::query(
+            "SELECT provider.id AS id, provider.bucket AS bucket
+             FROM dr_drive_storage_provider_binding binding
+             INNER JOIN dr_drive_storage_provider provider ON provider.id = binding.provider_id
+             INNER JOIN dr_drive_space space ON space.tenant_id = binding.tenant_id
+               AND space.id = $2
+               AND space.lifecycle_status = 'active'
+             WHERE binding.tenant_id=$1
+               AND binding.binding_scope='space_type'
+               AND binding.purpose = space.space_type
+               AND binding.lifecycle_status='active'
+               AND provider.status='active'
+             ORDER BY binding.created_at ASC
+             LIMIT 1",
+        )
+        .bind(tenant_id)
+        .bind(space_id)
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(|error| {
+            DriveServiceError::Internal(format!(
+                "find uploader space_type storage provider binding failed: {error}"
+            ))
         })?;
 
         Ok(row.map(|row| (row.get("id"), row.get("bucket"))))
@@ -890,6 +927,27 @@ async fn complete_stored_upload_in_transaction(
     )
     .await?;
 
+    // The client declares both the byte length and the part count, so completion must be
+    // checked against the parts it actually reported. Without this, `dr_drive_upload_item`
+    // was finalized with the declared numbers, and a session could be completed while the
+    // recorded parts covered less (or more) than the declared content length -- corrupting
+    // resume state and the tenant byte accounting derived from the node head snapshot.
+    let (recorded_parts_count, recorded_bytes) =
+        read_recorded_upload_part_totals(connection, &completion.tenant_id, &target.item.id)
+            .await?;
+    if recorded_parts_count != completion.uploaded_parts_count {
+        return Err(DriveServiceError::Conflict(format!(
+            "uploaded_parts_count {} does not match the {recorded_parts_count} recorded upload parts",
+            completion.uploaded_parts_count
+        )));
+    }
+    if completion.content_length > 0 && recorded_bytes != completion.content_length {
+        return Err(DriveServiceError::Conflict(format!(
+            "recorded upload parts cover {recorded_bytes} bytes but content_length is {}",
+            completion.content_length
+        )));
+    }
+
     if !matches!(
         target.item.status.as_str(),
         "prepared" | "uploading" | "paused" | "completing"
@@ -948,8 +1006,8 @@ async fn complete_stored_upload_in_transaction(
            AND upload_session_id=$7",
     )
     .bind(&completion.checksum_sha256_hex)
-    .bind(completion.content_length)
-    .bind(completion.uploaded_parts_count)
+    .bind(recorded_bytes)
+    .bind(recorded_parts_count)
     .bind(&completion.operator_id)
     .bind(&completion.tenant_id)
     .bind(&target.item.id)
@@ -1231,6 +1289,33 @@ async fn insert_stored_upload_object(
         content_length: completion.content_length,
         checksum_sha256_hex: completion.checksum_sha256_hex.clone(),
     })
+}
+
+/// Returns the number of parts and the total byte count the client actually reported.
+///
+/// `ux_dr_drive_upload_part_item_part` guarantees at most one row per part number, so the
+/// aggregate cannot double count a retried or concurrently marked part.
+async fn read_recorded_upload_part_totals(
+    connection: &mut PgConnection,
+    tenant_id: &str,
+    upload_item_id: &str,
+) -> Result<(i64, i64), DriveServiceError> {
+    let row = sqlx::query(
+        "SELECT COUNT(1) AS part_count,
+                COALESCE(SUM(size_bytes), 0)::BIGINT AS total_bytes
+         FROM dr_drive_upload_part
+         WHERE tenant_id=$1
+           AND upload_item_id=$2
+           AND status='uploaded'",
+    )
+    .bind(tenant_id)
+    .bind(upload_item_id)
+    .fetch_one(connection)
+    .await
+    .map_err(|error| {
+        DriveServiceError::Internal(format!("sum dr_drive_upload_part failed: {error}"))
+    })?;
+    Ok((row.get("part_count"), row.get("total_bytes")))
 }
 
 fn ensure_stored_object_matches_completion(

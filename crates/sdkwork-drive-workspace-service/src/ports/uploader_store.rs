@@ -183,9 +183,16 @@ pub trait DriveUploaderStore: Send + Sync {
         session: &NewDriveUploaderSession,
     ) -> Result<String, DriveServiceError>;
 
+    /// Resolve the default storage provider target for a tenant/space pair.
+    ///
+    /// `dr_drive_storage_provider` is a platform-level table without tenant
+    /// columns, so the tenant and space scope MUST be resolved through
+    /// `dr_drive_storage_provider_binding`; a bare provider lookup would leak
+    /// another tenant's bucket.
     async fn find_default_storage_provider(
         &self,
         tenant_id: &str,
+        space_id: &str,
     ) -> Result<Option<(String, String)>, DriveServiceError>;
 
     async fn insert_upload_item(

@@ -43,6 +43,32 @@ pub async fn cleanup_expired_sessions(pool: &PgPool) -> Result<CleanupResult, sq
         .await?
         .rows_affected() as i64;
 
+        // Retire the storage objects of the expired uploads *before* the node rows are
+        // mutated, and only for nodes that are actually abandoned mid-upload. Matching on
+        // a bare `node_id` would also retire objects belonging to an earlier, completed
+        // version of the same node, leaving a `ready` node whose content 404s.
+        let retired_storage_objects = sqlx::query(
+            "UPDATE dr_drive_storage_object
+             SET lifecycle_status = 'deleted',
+                 updated_by = 'install-worker',
+                 updated_at = CURRENT_TIMESTAMP
+             WHERE lifecycle_status = 'active'
+               AND node_id IN (
+                   SELECT node.id
+                   FROM dr_drive_node node
+                   INNER JOIN dr_drive_upload_session session
+                     ON session.node_id = node.id
+                   WHERE session.state = 'expired'
+                     AND session.expires_at_epoch_ms < $1
+                     AND node.content_state IN ('uploading', 'empty')
+                     AND node.lifecycle_status = 'active'
+               )",
+        )
+        .bind(now)
+        .execute(&mut *connection)
+        .await?
+        .rows_affected() as i64;
+
         let retired_uploading_nodes = sqlx::query(
             "UPDATE dr_drive_node
              SET lifecycle_status = 'deleted',
@@ -53,24 +79,6 @@ pub async fn cleanup_expired_sessions(pool: &PgPool) -> Result<CleanupResult, sq
              WHERE content_state IN ('uploading', 'empty')
                AND lifecycle_status = 'active'
                AND id IN (
-                   SELECT node_id
-                   FROM dr_drive_upload_session
-                   WHERE state = 'expired'
-                     AND expires_at_epoch_ms < $1
-               )",
-        )
-        .bind(now)
-        .execute(&mut *connection)
-        .await?
-        .rows_affected() as i64;
-
-        let retired_storage_objects = sqlx::query(
-            "UPDATE dr_drive_storage_object
-             SET lifecycle_status = 'deleted',
-                 updated_by = 'install-worker',
-                 updated_at = CURRENT_TIMESTAMP
-             WHERE lifecycle_status = 'active'
-               AND node_id IN (
                    SELECT node_id
                    FROM dr_drive_upload_session
                    WHERE state = 'expired'

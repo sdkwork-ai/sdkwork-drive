@@ -114,11 +114,7 @@ pub async fn apply_file_node_head_snapshot_in_transaction(
            AND id=$2
            AND node_type='file'
            AND lifecycle_status != 'deleted'
-           AND (
-               content_state != 'ready'
-               OR head_content_type IS NULL
-               OR head_version_no IS NULL
-           )",
+           AND (head_version_no IS NULL OR head_version_no <= $7)",
     )
     .bind(tenant_id)
     .bind(node_id)

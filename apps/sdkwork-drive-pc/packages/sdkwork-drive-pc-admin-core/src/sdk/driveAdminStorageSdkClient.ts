@@ -39,6 +39,25 @@ export interface DriveAdminStorageSdkClientOptions {
   tokenManager: DriveSessionTokenManager;
 }
 
+/**
+ * Host-agnostic options for mounting the storage admin plane from another
+ * application (cloudrouter, webserver, …).
+ *
+ * The admin storage surface depends on exactly one drive runtime value — its
+ * API base URL — so a composing host should not have to fabricate a full
+ * `DriveRuntimeConfig` (appKey, auth storage mode, deployment profile…) just to
+ * reuse the shared storage-center module.
+ */
+export interface DriveAdminStorageHostClientOptions {
+  /**
+   * Admin storage API base URL for the host origin. Accepts the canonical
+   * same-origin root `/` as well as an absolute URL; protocol alignment with
+   * the hosting page is applied by `normalizeGeneratedSdkBaseUrl`.
+   */
+  baseUrl: string;
+  tokenManager: DriveSessionTokenManager;
+}
+
 export class DriveAdminStorageSdkError extends Error {
   readonly operationId: DriveAdminStorageOperationId;
   readonly status: number;
@@ -93,20 +112,43 @@ export function createDriveAdminStorageSdkClient({
   sdkClient,
   tokenManager,
 }: DriveAdminStorageSdkClientOptions): DriveAdminStorageSdkClient {
-  const generatedClient = sdkClient ?? createGeneratedDriveAdminStorageClient({
+  if (sdkClient) {
+    sdkClient.setTokenManager(tokenManager);
+    return buildDriveAdminStorageSdkClient(sdkClient, config.adminStorageApiBaseUrl);
+  }
+  return createDriveAdminStorageHostClient({
+    baseUrl: config.adminStorageApiBaseUrl,
+    tokenManager,
+  });
+}
+
+/**
+ * Composes the admin-storage client for a composing host that only knows its
+ * own API base URL, without a drive-owned runtime config. The returned client
+ * is the exact same contract the drive PC app itself uses, so shared surfaces
+ * (storage providers / buckets / bindings / kinds) mount unchanged.
+ */
+export function createDriveAdminStorageHostClient({
+  baseUrl,
+  tokenManager,
+}: DriveAdminStorageHostClientOptions): DriveAdminStorageSdkClient {
+  const generatedClient = createGeneratedDriveAdminStorageClient({
     authMode: 'dual-token',
-    baseUrl: normalizeGeneratedSdkBaseUrl(
-      config.adminStorageApiBaseUrl,
-      sdkMetadata.apiPrefix,
-    ),
+    baseUrl: normalizeGeneratedSdkBaseUrl(baseUrl, sdkMetadata.apiPrefix),
     tokenManager,
   }) as TokenManagerAwareGeneratedSdkClient;
   generatedClient.setTokenManager(tokenManager);
+  return buildDriveAdminStorageSdkClient(generatedClient, baseUrl);
+}
 
+function buildDriveAdminStorageSdkClient(
+  generatedClient: TokenManagerAwareGeneratedSdkClient,
+  baseUrl: string,
+): DriveAdminStorageSdkClient {
   return {
     metadata: {
       ...sdkMetadata,
-      baseUrl: config.adminStorageApiBaseUrl,
+      baseUrl,
     },
     operations,
     async request<T>({

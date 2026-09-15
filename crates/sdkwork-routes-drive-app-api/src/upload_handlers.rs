@@ -217,6 +217,7 @@ pub(crate) async fn presign_upload_part(
     }
     let upload_session = find_upload_session(&state.pool, &tenant_id, &upload_session_id).await?;
     validate_mutable_upload_session(&upload_session)?;
+    ensure_upload_session_not_expired(&upload_session, current_epoch_ms())?;
     if let Some(upload_id) = payload.upload_id.as_deref() {
         let upload_id = upload_id.trim();
         if upload_id.is_empty() {
@@ -267,12 +268,12 @@ pub(crate) async fn presign_upload_part(
         .await
         .map_err(map_service_error)?;
 
-    update_upload_session_state(
+    mark_upload_session_uploading(
         &state.pool,
         &tenant_id,
         &upload_session_id,
-        "uploading",
         &operator_id,
+        current_epoch_ms(),
     )
     .await?;
 
@@ -312,6 +313,7 @@ pub(crate) async fn complete_upload_session(
     let operator_id = ctx.resolve_operator_id()?;
     let upload_session = find_upload_session(&state.pool, &tenant_id, &upload_session_id).await?;
     validate_mutable_upload_session(&upload_session)?;
+    ensure_upload_session_not_expired(&upload_session, current_epoch_ms())?;
     if let Some(upload_id) = payload.upload_id.as_deref() {
         let upload_id = upload_id.trim();
         if upload_id.is_empty() {
@@ -350,14 +352,22 @@ pub(crate) async fn complete_upload_session(
     if let Err(error) =
         complete_storage_multipart_upload(&state, &upload_session, &payload.parts).await
     {
-        let _ = update_upload_session_state(
+        if let Err(reset_error) = release_upload_session_completion_claim(
             &state.pool,
             &tenant_id,
             &upload_session_id,
-            "uploading",
             &operator_id,
         )
-        .await;
+        .await
+        {
+            tracing::error!(
+                event = "drive.upload.multipart_completion_session_reset_failed",
+                tenant_id = %tenant_id,
+                upload_session_id = %upload_session_id,
+                error = ?reset_error,
+                "failed to release upload session completion claim after storage failure"
+            );
+        }
         return Err(error);
     }
 

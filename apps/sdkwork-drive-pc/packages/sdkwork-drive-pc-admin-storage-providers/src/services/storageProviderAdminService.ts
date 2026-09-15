@@ -118,11 +118,6 @@ export interface CreateStorageProviderAdminServiceOptions {
   getSession: () => SessionSnapshot;
 }
 
-interface AdminIdentity {
-  tenantId: string;
-  operatorId: string;
-}
-
 export function createStorageProviderAdminService({
   adminStorageSdkClient,
   getSession,
@@ -177,8 +172,8 @@ export function createStorageProviderAdminService({
       };
     },
     async createProvider(input, options) {
-      const identity = resolveAdminIdentity(getSession);
-      const body = providerCreateBody(input, identity);
+      assertAdminWriteSession(getSession);
+      const body = providerCreateBody(input);
       const response = await adminStorageSdkClient.request<unknown>({
         operationId: 'storageProviders.create',
         signal: options?.signal,
@@ -187,14 +182,17 @@ export function createStorageProviderAdminService({
       return responseToStorageProvider(response);
     },
     async updateProvider(providerId, input, options) {
-      const identity = resolveAdminIdentity(getSession);
-      const body: JsonRecord = {
-      };
+      assertAdminWriteSession(getSession);
+      const body: JsonRecord = {};
       assignDefined(body, 'name', input.name);
       assignDefined(body, 'endpointUrl', input.endpointUrl);
       assignDefined(body, 'region', input.region);
       assignDefined(body, 'bucket', input.bucket);
       assignDefined(body, 'pathStyle', input.pathStyle);
+      // strictTls must be forwarded: the create path already sends it, and the
+      // edit form exposes a "强制 TLS" toggle. Omitting it here silently
+      // reverted the operator's change to the server-side default.
+      assignDefined(body, 'strictTls', input.strictTls);
       assignDefined(body, 'credentialRef', input.credentialRef);
       assignDefined(body, 'serverSideEncryptionMode', input.serverSideEncryptionMode);
       assignDefined(body, 'defaultStorageClass', input.defaultStorageClass);
@@ -208,53 +206,48 @@ export function createStorageProviderAdminService({
       return responseToStorageProvider(response);
     },
     async deleteProvider(providerId, options) {
-      const identity = resolveAdminIdentity(getSession);
+      assertAdminWriteSession(getSession);
       const response = await adminStorageSdkClient.request<unknown>({
         operationId: 'storageProviders.delete',
         signal: options?.signal,
         pathParams: { providerId },
-        query: {
-        },
       });
       // 契约返回 204 无内容：请求成功即视为已删除。
       return response === undefined || response === null
         || booleanField(recordOf(response), 'deleted') === true;
     },
     async testProvider(providerId, options) {
-      const identity = resolveAdminIdentity(getSession);
+      assertAdminWriteSession(getSession);
       const response = await adminStorageSdkClient.request<unknown>({
         operationId: 'storageProviders.test',
         signal: options?.signal,
         pathParams: { providerId },
-        body: {
-        },
+        body: {},
       });
       return booleanField(recordOf(response), 'reachable') ?? false;
     },
     async activateProvider(providerId, options) {
-      const identity = resolveAdminIdentity(getSession);
+      assertAdminWriteSession(getSession);
       const response = await adminStorageSdkClient.request<unknown>({
         operationId: 'storageProviders.activate',
         signal: options?.signal,
         pathParams: { providerId },
-        body: {
-        },
+        body: {},
       });
       return responseToStorageProvider(response);
     },
     async deactivateProvider(providerId, options) {
-      const identity = resolveAdminIdentity(getSession);
+      assertAdminWriteSession(getSession);
       const response = await adminStorageSdkClient.request<unknown>({
         operationId: 'storageProviders.deactivate',
         signal: options?.signal,
         pathParams: { providerId },
-        body: {
-        },
+        body: {},
       });
       return responseToStorageProvider(response);
     },
     async rotateCredential(providerId, credentialRef, options) {
-      const identity = resolveAdminIdentity(getSession);
+      assertAdminWriteSession(getSession);
       const response = await adminStorageSdkClient.request<unknown>({
         operationId: 'storageProviders.credentials.rotate',
         signal: options?.signal,
@@ -308,7 +301,7 @@ export function createStorageProviderAdminService({
       }
     },
     async setDefaultBinding(input) {
-      const identity = resolveAdminIdentity(getSession);
+      assertAdminWriteSession(getSession);
       const response = await adminStorageSdkClient.request<unknown>({
         operationId: 'storageProviderBindings.default.update',
         signal: input.signal,
@@ -322,7 +315,7 @@ export function createStorageProviderAdminService({
       return responseToBinding(response);
     },
     async deleteDefaultBinding(spaceIdOrSpaceType, options) {
-      const identity = resolveAdminIdentity(getSession);
+      assertAdminWriteSession(getSession);
       const response = await adminStorageSdkClient.request<unknown>({
         operationId: 'storageProviderBindings.default.delete',
         signal: options?.signal,
@@ -493,20 +486,26 @@ export function createStorageProviderAdminService({
   return service;
 }
 
-function resolveAdminIdentity(getSession: () => SessionSnapshot): AdminIdentity {
-  const snapshot = getSession();
-  const tenantId = snapshot.context?.tenantId;
-  const operatorId = snapshot.context?.actorId;
-  if (!tenantId || !operatorId) {
+/**
+ * Write operations require an identified operator.
+ *
+ * The storage backend authorises from the dual-token session rather than from
+ * body fields, so this is a client-side precondition and not a request
+ * projection: it fails fast when a host mounted the surface with a session that
+ * was never fully hydrated, instead of sending a write the server will reject.
+ *
+ * It deliberately returns nothing — a projected `{ tenantId, operatorId }` used
+ * to be threaded into request bodies and was removed when identity projection
+ * moved into the SDK transport.
+ */
+function assertAdminWriteSession(getSession: () => SessionSnapshot): void {
+  const context = getSession().context;
+  if (!context?.tenantId || !context.actorId) {
     throw new Error('Drive admin session context is missing tenantId or operatorId.');
   }
-  return { tenantId, operatorId };
 }
 
-function providerCreateBody(
-  input: CreateStorageProviderInput,
-  identity: AdminIdentity,
-): JsonRecord {
+function providerCreateBody(input: CreateStorageProviderInput): JsonRecord {
   const body: JsonRecord = {
     id: input.id,
     providerKind: input.providerKind,

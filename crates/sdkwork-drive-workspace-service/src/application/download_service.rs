@@ -429,26 +429,39 @@ fn encode_hex(value: &str) -> String {
         .collect()
 }
 
+fn invalid_download_token_payload() -> DriveServiceError {
+    DriveServiceError::Validation("download token payload is invalid".to_string())
+}
+
+fn hex_nibble(byte: u8) -> Option<u8> {
+    match byte {
+        b'0'..=b'9' => Some(byte - b'0'),
+        b'a'..=b'f' => Some(byte - b'a' + 10),
+        b'A'..=b'F' => Some(byte - b'A' + 10),
+        _ => None,
+    }
+}
+
+/// Decode a lowercase/uppercase hex payload into a UTF-8 string.
+///
+/// Decoding is byte-oriented and validates the hex alphabet before any byte is
+/// emitted, so malformed or non-ASCII input is rejected with a validation error
+/// instead of panicking on a non-char-boundary string slice. This runs before
+/// signature verification, so it must never panic on attacker-controlled input.
 fn decode_hex(encoded: &str) -> Result<String, DriveServiceError> {
-    if encoded.is_empty() || !encoded.len().is_multiple_of(2) {
-        return Err(DriveServiceError::Validation(
-            "download token payload is invalid".to_string(),
-        ));
+    let raw = encoded.as_bytes();
+    if raw.is_empty() || !raw.len().is_multiple_of(2) {
+        return Err(invalid_download_token_payload());
     }
 
-    let mut bytes = Vec::with_capacity(encoded.len() / 2);
-    let mut index = 0;
-    while index < encoded.len() {
-        let pair = &encoded[index..index + 2];
-        let byte = u8::from_str_radix(pair, 16).map_err(|_| {
-            DriveServiceError::Validation("download token payload is invalid".to_string())
-        })?;
-        bytes.push(byte);
-        index += 2;
+    let mut bytes = Vec::with_capacity(raw.len() / 2);
+    for pair in raw.chunks_exact(2) {
+        let high = hex_nibble(pair[0]).ok_or_else(invalid_download_token_payload)?;
+        let low = hex_nibble(pair[1]).ok_or_else(invalid_download_token_payload)?;
+        bytes.push((high << 4) | low);
     }
 
-    String::from_utf8(bytes)
-        .map_err(|_| DriveServiceError::Validation("download token payload is invalid".to_string()))
+    String::from_utf8(bytes).map_err(|_| invalid_download_token_payload())
 }
 
 fn now_epoch_ms() -> i64 {
@@ -490,6 +503,26 @@ mod tests {
             build_download_token("tenant-001", "node-001", 1_700_000_000_000).expect("token");
         let error = parse_download_token_for_tenant(&token, "tenant-002").expect_err("tenant");
         assert!(matches!(error, DriveServiceError::NotFound(_)));
+    }
+
+    #[test]
+    fn malformed_download_token_payload_is_rejected_without_panicking() {
+        // Every case below is attacker-controlled and is decoded before the
+        // signature is verified, so it must fail closed rather than panic.
+        let malformed_payloads = [
+            "a\u{e9}a",         // multi-byte UTF-8 with an even byte length
+            "\u{4e2d}\u{6587}", // multi-byte UTF-8, even byte length
+            "zz",               // even length, not a hex alphabet
+        ];
+        for payload in malformed_payloads {
+            let token = format!("{DOWNLOAD_TOKEN_PREFIX}{payload}_1_2_deadbeef");
+            let error = parse_download_token_for_tenant(&token, "tenant-001")
+                .expect_err("malformed token payload must be rejected");
+            assert!(
+                matches!(error, DriveServiceError::Validation(_)),
+                "unexpected error for payload {payload:?}: {error:?}"
+            );
+        }
     }
 
     #[test]

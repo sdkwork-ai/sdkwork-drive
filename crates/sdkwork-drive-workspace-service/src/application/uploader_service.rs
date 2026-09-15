@@ -175,6 +175,9 @@ where
                 "now_epoch_ms must be greater than 0".to_string(),
             ));
         }
+        // Validate the part plan before any node/session row is created, so an invalid
+        // plan cannot leave an orphaned uploading node behind.
+        let total_parts = total_parts(command.content_length, command.chunk_size_bytes)?;
         let operator_id = require_identifier(command.operator_id, "operator_id")?;
         let (actor_type, actor_id, user_id, owner_subject_type, owner_subject_id) =
             resolve_actor(command.actor, &app_id)?;
@@ -270,7 +273,7 @@ where
         }
         let (storage_provider_id, bucket) = self
             .store
-            .find_default_storage_provider(&tenant_id)
+            .find_default_storage_provider(&tenant_id, &space_id)
             .await?
             .ok_or_else(|| {
                 DriveServiceError::NotFound("active storage provider not found".to_string())
@@ -300,11 +303,14 @@ where
                 bucket: bucket.clone(),
                 object_key: object_key.clone(),
                 operator_id: operator_id.clone(),
-                expires_at_epoch_ms: command.now_epoch_ms + 86_400_000,
+                expires_at_epoch_ms: add_seconds_to_epoch_ms(
+                    command.now_epoch_ms,
+                    UPLOADER_SESSION_TTL_SECONDS,
+                    "now_epoch_ms",
+                )?,
             })
             .await?;
 
-        let total_parts = total_parts(command.content_length, command.chunk_size_bytes);
         self.store
             .insert_upload_item(&NewDriveUploadItem {
                 id,
@@ -764,23 +770,42 @@ fn resolve_retention(
             let cleanup_action = require_cleanup_action(cleanup_action)?;
             let hard_delete_after_epoch_ms = hard_delete_after_seconds
                 .map(|seconds| {
-                    if seconds <= 0 {
-                        Err(DriveServiceError::Validation(
-                            "hard_delete_after_seconds must be greater than 0".to_string(),
-                        ))
-                    } else {
-                        Ok(now_epoch_ms + seconds * 1000)
-                    }
+                    add_seconds_to_epoch_ms(now_epoch_ms, seconds, "hard_delete_after_seconds")
                 })
                 .transpose()?;
             Ok(ResolvedRetention {
                 mode: "temporary".to_string(),
-                expires_at_epoch_ms: Some(now_epoch_ms + ttl_seconds * 1000),
+                expires_at_epoch_ms: Some(add_seconds_to_epoch_ms(
+                    now_epoch_ms,
+                    ttl_seconds,
+                    "ttl_seconds",
+                )?),
                 cleanup_action: Some(cleanup_action),
                 hard_delete_after_epoch_ms,
             })
         }
     }
+}
+
+/// Lifetime of an uploader upload session (24 hours), in seconds.
+const UPLOADER_SESSION_TTL_SECONDS: i64 = 86_400;
+
+fn add_seconds_to_epoch_ms(
+    now_epoch_ms: i64,
+    seconds: i64,
+    field_name: &str,
+) -> Result<i64, DriveServiceError> {
+    if seconds <= 0 {
+        return Err(DriveServiceError::Validation(format!(
+            "{field_name} must be greater than 0"
+        )));
+    }
+    seconds
+        .checked_mul(1000)
+        .and_then(|delta| now_epoch_ms.checked_add(delta))
+        .ok_or_else(|| {
+            DriveServiceError::Validation(format!("{field_name} is out of the supported range"))
+        })
 }
 
 fn normalize_profile(value: String) -> Result<String, DriveServiceError> {
@@ -936,9 +961,30 @@ fn validate_sha256_checksum(value: &str) -> Result<(), DriveServiceError> {
     Ok(())
 }
 
-fn total_parts(content_length: i64, chunk_size_bytes: i64) -> i64 {
+fn total_parts(content_length: i64, chunk_size_bytes: i64) -> Result<i64, DriveServiceError> {
+    if chunk_size_bytes <= 0 {
+        return Err(DriveServiceError::Validation(
+            "chunk_size_bytes must be greater than 0".to_string(),
+        ));
+    }
     let normalized_length = content_length.max(1);
-    (normalized_length + chunk_size_bytes - 1) / chunk_size_bytes
+    // Round up without overflowing on adversarial content_length/chunk_size pairs, and
+    // fail with a validation error instead of a database error: `total_parts` is stored
+    // in an INTEGER column.
+    let parts = normalized_length
+        .checked_add(chunk_size_bytes - 1)
+        .ok_or_else(|| {
+            DriveServiceError::Validation(
+                "content_length is too large to partition into upload parts".to_string(),
+            )
+        })?
+        / chunk_size_bytes;
+    if parts > i64::from(i32::MAX) {
+        return Err(DriveServiceError::Validation(
+            "content_length and chunk_size_bytes produce too many upload parts".to_string(),
+        ));
+    }
+    Ok(parts)
 }
 
 fn file_extension(file_name: &str) -> Option<String> {

@@ -461,6 +461,11 @@ const REGION_ENDPOINT_BUILDERS: Record<string, (region: string) => string> = {
   tencent_cos: (region) => `https://cos.${region}.myqcloud.com`,
   huawei_obs: (region) => `https://obs.${region}.myhuaweicloud.com`,
   volcengine_tos: (region) => `https://tos-${region}.volces.com`,
+  // Google Cloud Storage exposes one global S3-interoperable endpoint for every
+  // region, so the region never participates in the host name. Without this
+  // entry the region-driven auto-fill produced an empty endpoint for a kind the
+  // editor offers in its picker.
+  google_cloud_storage: () => 'https://storage.googleapis.com',
 };
 
 export function buildProviderEndpointUrl(kind: string, region: string): string | undefined {

@@ -306,11 +306,11 @@ describe('downloadTransfer', () => {
     ).rejects.toThrow(/too large for in-memory handling/);
   });
 
-  it('requests a byte range when resuming an interrupted download', async () => {
+  it('ignores recorded progress instead of requesting a partial body', async () => {
     const payload = new Uint8Array([1, 2, 3, 4]);
-    const fetchImpl = vi.fn(async (_url: string, init?: RequestInit) =>
+    const fetchImpl = vi.fn(async () =>
       new Response(payload, {
-        status: 206,
+        status: 200,
         headers: {
           'content-type': 'application/octet-stream',
           'content-length': String(payload.byteLength),
@@ -324,7 +324,7 @@ describe('downloadTransfer', () => {
     job.totalSize = 10;
     job.downloadedSize = 6;
 
-    await executeDownloadTransfer(
+    const result = await executeDownloadTransfer(
       job,
       {
         signedSourceUrl: 'https://storage.example.test/file-001',
@@ -333,13 +333,41 @@ describe('downloadTransfer', () => {
       { fetchImpl },
     );
 
-    expect(fetchImpl).toHaveBeenCalledWith(
-      'https://storage.example.test/file-001',
-      expect.objectContaining({
+    // No save destination can be reopened for append, so a Range request would keep
+    // only the tail of the file while still reporting completion.
+    const init = fetchImpl.mock.calls[0]?.[1] as RequestInit | undefined;
+    expect(init?.headers).toBeUndefined();
+    expect(new Uint8Array(await result.blob.arrayBuffer())).toEqual(payload);
+  });
+
+  it('rejects a partial response instead of saving a truncated file', async () => {
+    const payload = new Uint8Array([1, 2, 3, 4]);
+    const fetchImpl = vi.fn(async () =>
+      new Response(payload, {
+        status: 206,
         headers: {
-          Range: 'bytes=6-',
+          'content-type': 'application/octet-stream',
+          'content-range': 'bytes 6-9/10',
+          'content-length': String(payload.byteLength),
         },
       }),
     );
+
+    const job = createDownloadJobForFiles([sourceFile], {
+      id: 'job-resume-partial',
+    });
+    job.totalSize = 10;
+    job.downloadedSize = 6;
+
+    await expect(
+      executeDownloadTransfer(
+        job,
+        {
+          signedSourceUrl: 'https://storage.example.test/file-001',
+          totalBytes: 10,
+        },
+        { fetchImpl },
+      ),
+    ).rejects.toThrow(/resume is not supported/);
   });
 });

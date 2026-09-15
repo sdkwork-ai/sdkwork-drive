@@ -131,17 +131,18 @@ function buildDownloadRequestInit(
   grant: DownloadGrantLike,
   signal?: AbortSignal,
 ): RequestInit {
-  const init: RequestInit = {
+  // NOTE: never attach a `Range` header here. Every save destination is opened as a
+  // fresh, empty target: the browser path uses `showSaveFilePicker().createWritable()`,
+  // the desktop host `begin_download_save` opens the file with `truncate(true)`, and the
+  // fallback keeps the whole payload in memory. Neither `writeChunk` nor the blob path
+  // can prepend the already-downloaded prefix, so requesting a partial body would
+  // persist only the tail while still reporting the transfer as completed - a silently
+  // truncated file. Resume must stay disabled until a destination can be reopened and
+  // appended at its recorded offset.
+  return {
     method: grant.method || job.downloadMethod || 'GET',
     signal,
   };
-  const resumeFromBytes = Math.max(0, Math.floor(job.downloadedSize || 0));
-  if (resumeFromBytes > 0) {
-    init.headers = {
-      Range: `bytes=${resumeFromBytes}-`,
-    };
-  }
-  return init;
 }
 
 function resolveExpectedDownloadTotal(
@@ -211,13 +212,15 @@ export async function executeDownloadTransfer(
   }
 
   const fetchImpl = options.fetchImpl ?? fetch;
-  const resumeFromBytes = Math.max(0, Math.floor(job.downloadedSize || 0));
+  // Restart from byte 0: the in-memory blob is always built from scratch, so partial
+  // content can never be stitched onto bytes from a previous attempt.
+  const resumeFromBytes = 0;
   const response = await fetchImpl(url, buildDownloadRequestInit(job, grant, options.signal));
   if (!response.ok) {
     throw new Error(`Download failed with status ${response.status}.`);
   }
-  if (resumeFromBytes > 0 && response.status === 200) {
-    throw new Error('Download resume is not supported by the storage source.');
+  if (response.status === 206) {
+    throw new Error('Download resume is not supported for this transfer.');
   }
 
   const expectedTotal = resolveExpectedDownloadTotal(response, grant, job, resumeFromBytes);
@@ -307,13 +310,15 @@ async function executeDownloadToStream(
 
   try {
     const fetchImpl = options.fetchImpl ?? fetch;
-    const resumeFromBytes = Math.max(0, Math.floor(job.downloadedSize || 0));
+    // Restart from byte 0: the stream adapter always opens a fresh target file, so
+    // partial content can never be appended after previously downloaded bytes.
+    const resumeFromBytes = 0;
     const response = await fetchImpl(url, buildDownloadRequestInit(job, grant, options.signal));
     if (!response.ok) {
       throw new Error(`Download failed with status ${response.status}.`);
     }
-    if (resumeFromBytes > 0 && response.status === 200) {
-      throw new Error('Download resume is not supported by the storage source.');
+    if (response.status === 206) {
+      throw new Error('Download resume is not supported for this transfer.');
     }
 
     const expectedTotal = resolveExpectedDownloadTotal(response, grant, job, resumeFromBytes);
