@@ -3200,6 +3200,343 @@
         "x-sdkwork-api-surface": "backend-api",
         "x-sdkwork-permission": "drive.storage.admin"
       }
+    },
+    "/backend/v3/api/drive/storage/provider-accounts": {
+      "get": {
+        "tags": [
+          "storageAdmin"
+        ],
+        "operationId": "storageProviderAccounts.list",
+        "parameters": [
+          {
+            "name": "vendorCode",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "scopeType",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "platform",
+                "tenant",
+                "user"
+              ]
+            },
+            "description": "Narrow the list to one scope level. Omit to list every visible level."
+          },
+          {
+            "name": "ownerUserId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Narrow the list to one owner. Only accepted when it is the calling user."
+          },
+          {
+            "name": "mine",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false
+            },
+            "description": "Pin the list to the calling user's own accounts, without needing to know the caller's user id."
+          },
+          {
+            "name": "includePlatform",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": true
+            },
+            "description": "Whether platform-wide accounts are included. Defaults to true, because the global defaults are exactly what a tenant reuses."
+          },
+          {
+            "name": "capabilityCode",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Only return accounts declaring this capability (for example object_storage for storage providers)."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SdkWorkApiResponse"
+                    },
+                    {
+                      "type": "object",
+                      "required": [
+                        "data"
+                      ],
+                      "properties": {
+                        "data": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "required": [
+                            "items",
+                            "pageInfo"
+                          ],
+                          "properties": {
+                            "items": {
+                              "type": "array",
+                              "items": {
+                                "$ref": "#/components/schemas/StorageProviderAccount"
+                              }
+                            },
+                            "pageInfo": {
+                              "$ref": "#/components/schemas/PageInfo"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "AuthToken": [],
+            "AccessToken": []
+          }
+        ],
+        "x-sdkwork-owner": "sdkwork-drive",
+        "x-sdkwork-api-authority": "sdkwork-drive.admin.storage",
+        "x-sdkwork-request-context": "WebRequestContext",
+        "x-sdkwork-api-surface": "backend-api",
+        "x-sdkwork-permission": "drive.storage.admin"
+      },
+      "post": {
+        "tags": [
+          "storageAdmin"
+        ],
+        "operationId": "storageProviderAccounts.create",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateStorageProviderAccountRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SdkWorkApiResponse"
+                    },
+                    {
+                      "type": "object",
+                      "required": [
+                        "data"
+                      ],
+                      "properties": {
+                        "data": {
+                          "type": "object",
+                          "required": [
+                            "item"
+                          ],
+                          "properties": {
+                            "item": {
+                              "$ref": "#/components/schemas/StorageProviderAccount"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "AuthToken": [],
+            "AccessToken": []
+          }
+        ],
+        "x-sdkwork-owner": "sdkwork-drive",
+        "x-sdkwork-api-authority": "sdkwork-drive.admin.storage",
+        "x-sdkwork-request-context": "WebRequestContext",
+        "x-sdkwork-api-surface": "backend-api",
+        "x-sdkwork-permission": "drive.storage.admin"
+      }
     }
   },
   "components": {
@@ -3415,6 +3752,13 @@
           "strictTls": {
             "type": "boolean",
             "description": "Provider-level TLS policy. HTTPS endpoints default to true, private HTTP endpoints default to false, and true requires an HTTPS endpoint."
+          },
+          "providerAccountId": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 128,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{1,127}$",
+            "description": "Reference to a reusable service-provider account held by the platform account center (iam_provider_account). Mutually exclusive with credentialRef; the credential material is resolved from the account center at runtime, so an account rotation applies to every consumer at once."
           }
         }
       },
@@ -3491,6 +3835,13 @@
           "strictTls": {
             "type": "boolean",
             "description": "Provider-level TLS policy. HTTPS endpoints default to true, private HTTP endpoints default to false, and true requires an HTTPS endpoint."
+          },
+          "providerAccountId": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 128,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{1,127}$",
+            "description": "Reference to a reusable service-provider account held by the platform account center (iam_provider_account). Mutually exclusive with credentialRef; the credential material is resolved from the account center at runtime, so an account rotation applies to every consumer at once."
           }
         }
       },
@@ -3515,10 +3866,10 @@
           },
           "credentialRef": {
             "type": "string",
-            "minLength": 1,
+            "minLength": 0,
             "maxLength": 255,
-            "pattern": "^(plain|env|secret|kms|vault):.+$",
-            "description": "Drive storage credential reference. Supported forms: plain:<accessKeyId>:<secretAccessKey>[:<sessionToken>], env:<accessKeyEnv>:<secretKeyEnv>[:<sessionTokenEnv>], secret:<ref>, kms:<ref>, or vault:<ref>. secret/kms/vault refs are materialized at runtime from SDKWORK_DRIVE_STORAGE_CREDENTIAL__<sanitized_ref>__ACCESS_KEY_ID, __SECRET_ACCESS_KEY, and optional __SESSION_TOKEN environment variables."
+            "pattern": "^(|(plain|env|secret|kms|vault):.+)$",
+            "description": "Drive storage credential reference. Supported forms: plain:<accessKeyId>:<secretAccessKey>[:<sessionToken>], env:<accessKeyEnv>:<secretKeyEnv>[:<sessionTokenEnv>], secret:<ref>, kms:<ref>, or vault:<ref>. secret/kms/vault refs are materialized at runtime from SDKWORK_DRIVE_STORAGE_CREDENTIAL__<sanitized_ref>__ACCESS_KEY_ID, __SECRET_ACCESS_KEY, and optional __SESSION_TOKEN environment variables. On update, an empty string explicitly clears the stored credential reference (switching to providerAccountId also clears it)."
           },
           "serverSideEncryptionMode": {
             "type": "string"
@@ -3532,6 +3883,13 @@
           "strictTls": {
             "type": "boolean",
             "description": "Provider-level TLS policy. HTTPS endpoints default to true, private HTTP endpoints default to false, and true requires an HTTPS endpoint."
+          },
+          "providerAccountId": {
+            "type": "string",
+            "minLength": 0,
+            "maxLength": 128,
+            "pattern": "^(|[A-Za-z0-9][A-Za-z0-9_.:-]{1,127})$",
+            "description": "Reference to a reusable service-provider account held by the platform account center (iam_provider_account). Mutually exclusive with credentialRef; the credential material is resolved from the account center at runtime, so an account rotation applies to every consumer at once. On update, an empty string explicitly clears the account reference (switching to credentialRef also clears it)."
           }
         }
       },
@@ -4033,6 +4391,202 @@
           "contentType": {
             "type": "string",
             "description": "Optional object content type."
+          }
+        }
+      },
+      "StorageProviderAccount": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "scopeType",
+          "vendorCode",
+          "accountCode",
+          "displayName",
+          "accountType",
+          "environment",
+          "status",
+          "credentialConfigured",
+          "credentialCount",
+          "version",
+          "isDefault"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "scopeType": {
+            "type": "string",
+            "enum": [
+              "platform",
+              "tenant",
+              "user"
+            ],
+            "description": "Account scope. platform = a global default published by platform operators and readable from every tenant; tenant = the application tenant's own default; user = a personal account owned by one end user."
+          },
+          "ownerUserId": {
+            "type": "string",
+            "description": "Set only for user-scoped accounts: the owning user id."
+          },
+          "vendorCode": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]{1,31}$",
+            "description": "Service provider vendor code, for example aliyun, tencent, aws, minio."
+          },
+          "accountCode": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9_.-]{1,63}$",
+            "description": "Business-agnostic account code, unique per tenant/organization."
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "accountType": {
+            "type": "string",
+            "enum": [
+              "long_term_key",
+              "temporary_credential",
+              "service_account",
+              "service_linked_role",
+              "federated_identity",
+              "managed_identity",
+              "api_key"
+            ],
+            "description": "The identity shape of the credential, not the account's relationship to the tenant. The storage console stores an access-key pair and therefore always records `long_term_key`; a create request naming any other shape is rejected rather than silently overwritten. `temporary_credential` and the federated / managed families are reserved for accounts that authenticate through a broker or an identity provider."
+          },
+          "environment": {
+            "type": "string",
+            "enum": [
+              "development",
+              "sandbox",
+              "production"
+            ]
+          },
+          "externalAccountId": {
+            "type": "string",
+            "description": "Upstream account identifier, for example the Aliyun UID."
+          },
+          "capabilityCodes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "What the account can serve; object_storage marks storage consumers."
+          },
+          "regionCode": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "disabled",
+              "deleted"
+            ]
+          },
+          "credentialConfigured": {
+            "type": "boolean",
+            "description": "Whether an active credential row exists for this account."
+          },
+          "credentialCount": {
+            "type": "integer",
+            "description": "How many non-deleted credential rows the account owns."
+          },
+          "version": {
+            "type": "integer"
+          },
+          "isDefault": {
+            "type": "boolean",
+            "description": "Whether this account is its scope's default for the vendor + environment, i.e. what a consumer gets when it does not name an account."
+          }
+        }
+      },
+      "CreateStorageProviderAccountRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "displayName",
+          "vendorCode",
+          "accountCode",
+          "accessKeyId",
+          "secretAccessKey"
+        ],
+        "properties": {
+          "displayName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "vendorCode": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]{1,31}$",
+            "description": "Service provider vendor code; the storage console derives it from the selected provider kind."
+          },
+          "accountCode": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9_.-]{1,63}$",
+            "description": "Business-agnostic account code, unique per tenant/organization."
+          },
+          "accountType": {
+            "type": "string",
+            "enum": [
+              "long_term_key",
+              "temporary_credential",
+              "service_account",
+              "service_linked_role",
+              "federated_identity",
+              "managed_identity",
+              "api_key"
+            ],
+            "description": "The identity shape of the credential, not the account's relationship to the tenant. The storage console stores an access-key pair and therefore always records `long_term_key`; a create request naming any other shape is rejected rather than silently overwritten. `temporary_credential` and the federated / managed families are reserved for accounts that authenticate through a broker or an identity provider."
+          },
+          "environment": {
+            "type": "string",
+            "enum": [
+              "development",
+              "sandbox",
+              "production"
+            ]
+          },
+          "externalAccountId": {
+            "type": "string"
+          },
+          "regionCode": {
+            "type": "string"
+          },
+          "scopeType": {
+            "type": "string",
+            "enum": [
+              "platform",
+              "tenant",
+              "user"
+            ],
+            "default": "tenant",
+            "description": "Account scope. platform = a global default published by platform operators and readable from every tenant; tenant = the application tenant's own default; user = a personal account owned by one end user. platform requires a platform operator; user defaults its owner to the caller."
+          },
+          "ownerUserId": {
+            "type": "string",
+            "description": "Set only for user-scoped accounts: the owning user id. Naming somebody else is rejected."
+          },
+          "isDefault": {
+            "type": "boolean",
+            "default": false,
+            "description": "Whether this account is its scope's default for the vendor + environment, i.e. what a consumer gets when it does not name an account. Promoting a new default demotes the previous one for the same vendor + environment."
+          },
+          "accessKeyId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "secretAccessKey": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "description": "Sealed into the write-only credential row; never echoed back."
+          },
+          "sessionToken": {
+            "type": "string",
+            "maxLength": 1024
           }
         }
       },

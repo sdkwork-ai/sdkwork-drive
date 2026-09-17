@@ -291,6 +291,34 @@ func (a *DriveApi) StorageProvidersObjectsContentUpdate(providerId string, objec
     return decodeResult[sdktypes.StorageProvidersObjectsContentUpdateResponse](raw)
 }
 
+func (a *DriveApi) StorageProviderAccountsList(vendorCode *string, status *string, search *string, scopeType *string, ownerUserId *string, mine *bool, includePlatform *bool, capabilityCode *string) (sdktypes.StorageProviderAccountsListResponse, error) {
+    query := BuildQueryString([]QueryParameterSpec{
+        {Name: "vendorCode", Value: func() interface{} { if vendorCode == nil { return nil }; return *vendorCode }(), Style: "form", Explode: true, AllowReserved: false},
+        {Name: "status", Value: func() interface{} { if status == nil { return nil }; return *status }(), Style: "form", Explode: true, AllowReserved: false},
+        {Name: "search", Value: func() interface{} { if search == nil { return nil }; return *search }(), Style: "form", Explode: true, AllowReserved: false},
+        {Name: "scopeType", Value: func() interface{} { if scopeType == nil { return nil }; return *scopeType }(), Style: "form", Explode: true, AllowReserved: false},
+        {Name: "ownerUserId", Value: func() interface{} { if ownerUserId == nil { return nil }; return *ownerUserId }(), Style: "form", Explode: true, AllowReserved: false},
+        {Name: "mine", Value: func() interface{} { if mine == nil { return nil }; return *mine }(), Style: "form", Explode: true, AllowReserved: false},
+        {Name: "includePlatform", Value: func() interface{} { if includePlatform == nil { return nil }; return *includePlatform }(), Style: "form", Explode: true, AllowReserved: false},
+        {Name: "capabilityCode", Value: func() interface{} { if capabilityCode == nil { return nil }; return *capabilityCode }(), Style: "form", Explode: true, AllowReserved: false},
+    })
+    raw, err := a.client.Get(AppendQueryString(CustomApiPath("/drive/storage/provider-accounts"), query), nil, nil)
+    if err != nil {
+        var zero sdktypes.StorageProviderAccountsListResponse
+        return zero, err
+    }
+    return decodeResult[sdktypes.StorageProviderAccountsListResponse](raw)
+}
+
+func (a *DriveApi) StorageProviderAccountsCreate(body sdktypes.CreateStorageProviderAccountRequest) (sdktypes.StorageProviderAccountsCreateResponse201, error) {
+    raw, err := a.client.Post(CustomApiPath("/drive/storage/provider-accounts"), body, nil, nil, "application/json")
+    if err != nil {
+        var zero sdktypes.StorageProviderAccountsCreateResponse201
+        return zero, err
+    }
+    return decodeResult[sdktypes.StorageProviderAccountsCreateResponse201](raw)
+}
+
 type PathParameterSpec struct {
     Name    string
     Style   string

@@ -156,6 +156,11 @@ pub struct OpendalS3ProviderParts<'a> {
     pub default_bucket: &'a str,
     pub force_path_style: Option<bool>,
     pub credential_ref: Option<&'a str>,
+    /// Explicit in-memory credential snapshot, taking precedence over
+    /// `credential_ref`. Set by consumers that resolve credentials from the
+    /// platform provider account center (reusable service-provider accounts),
+    /// whose material must not round-trip through a `plain:` ref.
+    pub credentials: Option<&'a DriveStorageCredentialSnapshot>,
     pub root: Option<&'a str>,
     pub server_side_encryption: Option<&'a str>,
     pub default_storage_class: Option<&'a str>,
@@ -170,7 +175,10 @@ impl OpendalS3StoreConfig {
         let endpoint = normalize_http_endpoint(parts.endpoint_url)?;
         let provider_profile =
             OpendalS3ProviderProfile::from_provider_kind(provider_kind.as_str(), Some(&endpoint));
-        let credentials = resolve_credentials(parts.credential_ref)?;
+        let credentials = match parts.credentials {
+            Some(credentials) => credentials.clone(),
+            None => resolve_credentials(parts.credential_ref)?,
+        };
         let strict_tls = parts
             .strict_tls_override
             .unwrap_or_else(|| !endpoint.to_ascii_lowercase().starts_with("http://"));

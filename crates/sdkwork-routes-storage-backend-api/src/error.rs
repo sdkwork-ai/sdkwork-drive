@@ -106,6 +106,43 @@ pub(crate) fn map_auth_error(error: DriveAuthError) -> (StatusCode, Json<Problem
     shared_map_auth_error(error)
 }
 
+/// Map a platform provider-account-center error onto the admin storage API
+/// problem shape. The wire codes stay the account center's own so operators
+/// see one consistent failure vocabulary for account operations.
+pub(crate) fn map_provider_account_error(
+    error: sdkwork_iam_provider_account_service::ProviderAccountError,
+) -> (StatusCode, Json<ProblemDetail>) {
+    let status = match error {
+        sdkwork_iam_provider_account_service::ProviderAccountError::Validation(_) => {
+            StatusCode::BAD_REQUEST
+        }
+        sdkwork_iam_provider_account_service::ProviderAccountError::NotFound(_) => {
+            StatusCode::NOT_FOUND
+        }
+        sdkwork_iam_provider_account_service::ProviderAccountError::Conflict(_) => {
+            StatusCode::CONFLICT
+        }
+        sdkwork_iam_provider_account_service::ProviderAccountError::Unavailable(_) => {
+            StatusCode::SERVICE_UNAVAILABLE
+        }
+        sdkwork_iam_provider_account_service::ProviderAccountError::Cipher(_) => {
+            StatusCode::INTERNAL_SERVER_ERROR
+        }
+    };
+    problem(
+        status,
+        "provider account operation failed",
+        error.message(),
+        match status {
+            StatusCode::BAD_REQUEST => SdkWorkResultCode::ValidationError,
+            StatusCode::NOT_FOUND => SdkWorkResultCode::NotFound,
+            StatusCode::CONFLICT => SdkWorkResultCode::Conflict,
+            StatusCode::SERVICE_UNAVAILABLE => SdkWorkResultCode::ServiceUnavailable,
+            _ => SdkWorkResultCode::InternalError,
+        },
+    )
+}
+
 pub(crate) fn problem(
     status: StatusCode,
     title: &str,

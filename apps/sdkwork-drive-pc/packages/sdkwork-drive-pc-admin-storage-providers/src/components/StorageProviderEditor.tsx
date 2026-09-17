@@ -1,17 +1,27 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Eye, EyeOff } from 'lucide-react';
 import { OperationDrawer } from '@sdkwork/ui-pc-react';
-import type { CreateStorageProviderInput, StorageProviderKind, StorageProviderView, UpdateStorageProviderInput } from '../types/storageProviderAdminTypes';
+import type {
+  CreateStorageProviderAccountInput,
+  CreateStorageProviderInput,
+  ListStorageProviderAccountsInput,
+  StorageProviderAccountView,
+  StorageProviderKind,
+  StorageProviderView,
+  UpdateStorageProviderInput,
+} from '../types/storageProviderAdminTypes';
 import {
   buildProviderEndpointUrl,
   getAllProviderKindMeta,
   getProviderKindMeta,
+  providerVendorCodeForKind,
   resolveProviderKindMeta,
 } from '../utils/providerKindConfig';
 import { isCredentialRefMasked } from '../utils/credentialRefUtils';
 import { buildProviderIdWithUuid, createProviderUuidSuffix, resolveProviderKindSlug } from '../utils/providerIdUtils';
 import { CHECKBOX_CLASS, INPUT_CLASS, PRIMARY_BUTTON_CLASS, SECONDARY_BUTTON_CLASS, SELECT_CLASS } from '../utils/uiPrimitives';
 import { StorageProviderCredentialFields } from './StorageProviderCredentialFields';
+import type { AccountScopeFilter } from './StorageProviderCredentialFields';
 import { FormNoticeBanner } from './FormNoticeBanner';
 import { formatMutationError } from '../utils/mutationError';
 import { useTranslation } from '../hooks/useTranslation';
@@ -20,12 +30,21 @@ type ModalNotice = { type: 'success' | 'error'; message: string };
 
 interface StorageProviderEditorProps {
   provider?: StorageProviderView;
-  existingProviderIds?: string[];
+  /** Already-taken provider ids; the editor only reads them to avoid a clash. */
+  existingProviderIds?: readonly string[];
   onClose: () => void;
   onCreateProvider: (input: CreateStorageProviderInput) => Promise<StorageProviderView>;
   onUpdateProvider: (providerId: string, input: UpdateStorageProviderInput) => Promise<StorageProviderView>;
   onRotateCredential: (providerId: string, credentialRef: string) => Promise<StorageProviderView>;
   onProviderSaved?: (provider: StorageProviderView) => void;
+  /** Lists reusable platform service-provider accounts for the credential picker. */
+  onListProviderAccounts?: (
+    input?: ListStorageProviderAccountsInput,
+  ) => Promise<StorageProviderAccountView[]>;
+  /** Registers a new reusable account + access key pair in the account center. */
+  onCreateProviderAccount?: (
+    input: CreateStorageProviderAccountInput,
+  ) => Promise<StorageProviderAccountView>;
 }
 
 function applyKindDefaults(
@@ -54,6 +73,8 @@ export function StorageProviderEditor({
   onUpdateProvider,
   onRotateCredential,
   onProviderSaved,
+  onListProviderAccounts,
+  onCreateProviderAccount,
 }: StorageProviderEditorProps) {
   const { t } = useTranslation();
   const isEditing = Boolean(provider);
@@ -67,6 +88,13 @@ export function StorageProviderEditor({
   const [endpointLocked, setEndpointLocked] = useState(true);
   const [pathStyle, setPathStyle] = useState(false);
   const [credentialRef, setCredentialRef] = useState('');
+  const [providerAccountId, setProviderAccountId] = useState('');
+  const [providerAccounts, setProviderAccounts] = useState<StorageProviderAccountView[]>();
+  // Which slice of the account centre the picker lists. `all` is the default so
+  // a tenant sees the platform-wide account it is meant to reuse.
+  const [accountScopeFilter, setAccountScopeFilter] = useState<AccountScopeFilter>('all');
+  const [accountsLoading, setAccountsLoading] = useState(false);
+  const [accountsError, setAccountsError] = useState<string | undefined>();
   const [showCredential, setShowCredential] = useState(false);
   const [status] = useState('active');
   const [sseMode, setSseMode] = useState('');
@@ -79,6 +107,46 @@ export function StorageProviderEditor({
 
   const meta = useMemo(() => resolveProviderKindMeta(providerKind), [providerKind]);
   const usesStructuredCredentials = meta.features.structuredCredentials && Boolean(meta.credentialFields);
+  // The credential section is account-aware only when the host injected the
+  // account-center callbacks; otherwise the panel falls back to manual refs.
+  const accountSourceAvailable = Boolean(onListProviderAccounts && onCreateProviderAccount);
+  const defaultVendorCode = useMemo(
+    () => providerVendorCodeForKind(providerKind === 'custom' ? `custom:${customKind}` : providerKind),
+    [providerKind, customKind],
+  );
+
+  const reloadProviderAccounts = useCallback(() => {
+    if (!onListProviderAccounts) {
+      return;
+    }
+    // `all` keeps the server's own defaults (includePlatform on, every visible
+    // scope), so the wide query stays a plain call with no extra parameters.
+    const scopeQuery: ListStorageProviderAccountsInput =
+      accountScopeFilter === 'all'
+        ? {}
+        : accountScopeFilter === 'mine'
+          ? { mine: true }
+          : { scopeType: accountScopeFilter };
+    setAccountsLoading(true);
+    setAccountsError(undefined);
+    onListProviderAccounts({ status: 'active', ...scopeQuery })
+      .then((items) => setProviderAccounts(items))
+      .catch(() => setAccountsError(t('accountLoadFailed')))
+      .finally(() => setAccountsLoading(false));
+  }, [onListProviderAccounts, t, accountScopeFilter]);
+
+  const accountsLoadStartedRef = useRef<AccountScopeFilter | undefined>(undefined);
+  useEffect(() => {
+    if (!accountSourceAvailable) {
+      return;
+    }
+    // Re-query whenever the operator switches scope slice; the guard only
+    // suppresses the duplicate initial fetch under React strict mode.
+    if (accountsLoadStartedRef.current !== accountScopeFilter) {
+      accountsLoadStartedRef.current = accountScopeFilter;
+      reloadProviderAccounts();
+    }
+  }, [accountSourceAvailable, accountScopeFilter, reloadProviderAccounts]);
 
   const existingIdSet = useMemo(() => new Set(existingProviderIds), [existingProviderIds]);
 
@@ -114,6 +182,7 @@ export function StorageProviderEditor({
       setEndpointLocked(false);
       setPathStyle(provider.pathStyle ?? false);
       setCredentialRef(provider.credentialRef ?? '');
+      setProviderAccountId(provider.providerAccountId ?? '');
       setSseMode(provider.serverSideEncryptionMode ?? '');
       setStorageClass(provider.defaultStorageClass ?? '');
       setStrictTls(provider.strictTls ?? true);
@@ -159,6 +228,15 @@ export function StorageProviderEditor({
     setCredentialRef(value);
   }, []);
 
+  // Selecting a reusable account clears the local credential ref so the
+  // provider never carries both sources (the server rejects that too).
+  const handleProviderAccountIdChange = useCallback((value: string) => {
+    setProviderAccountId(value);
+    if (value.trim() !== '') {
+      setCredentialRef('');
+    }
+  }, []);
+
   const validate = (): boolean => {
     const e: Record<string, string> = {};
     if (!name.trim()) e.name = t('required');
@@ -170,7 +248,13 @@ export function StorageProviderEditor({
     }
 
     const needsCredential = !isEditing || !provider?.credentialConfigured || !isCredentialRefMasked(credentialRef);
-    if (!meta.features.isLocal && needsCredential && !credentialRef.trim()) {
+    if (!meta.features.isLocal && needsCredential && usesStructuredCredentials) {
+      // Either a reusable account reference or a manual credential ref is
+      // required; the two sources are mutually exclusive.
+      if (providerAccountId.trim() === '' && !credentialRef.trim()) {
+        e.credentialRef = t('credentialRequired');
+      }
+    } else if (!meta.features.isLocal && needsCredential && !credentialRef.trim()) {
       e.credentialRef = t('credentialRequired');
     }
 
@@ -226,7 +310,27 @@ export function StorageProviderEditor({
   const doSubmit = () => {
     if (!validate()) return;
     const effectiveKind: StorageProviderKind = providerKind === 'custom' ? `custom:${customKind}` as StorageProviderKind : providerKind;
-    const credentialPayload = credentialRef.trim() ? credentialRef : undefined;
+    // A masked ref (env:*** etc.) is the server's redacted projection of the
+    // stored credential; round-tripping it as input would overwrite the real
+    // credential reference, so it is omitted (server keeps the current one).
+    const credentialPayload =
+      credentialRef.trim() && !isCredentialRefMasked(credentialRef) ? credentialRef : undefined;
+    // Credential-source projection for account-aware providers: whichever
+    // source is active wins, and the other one is explicitly cleared so the
+    // server-side switch semantics apply in a single request. Create keeps
+    // the strict schema (empty strings omitted); update sends an empty
+    // string as the explicit "clear this source" signal.
+    const credentialSourceFields = usesStructuredCredentials
+      ? {
+          credentialRef:
+            providerAccountId.trim() !== ''
+              ? isEditing ? '' : undefined
+              : credentialPayload,
+          providerAccountId: providerAccountId.trim() || (isEditing ? '' : undefined),
+        }
+      : {
+          credentialRef: credentialPayload,
+        };
 
     if (provider) {
       void runFormAction(
@@ -236,11 +340,11 @@ export function StorageProviderEditor({
           region: region || undefined,
           bucket,
           pathStyle,
-          credentialRef: credentialPayload,
           status,
           serverSideEncryptionMode: sseMode || undefined,
           defaultStorageClass: storageClass || undefined,
           strictTls,
+          ...credentialSourceFields,
         }),
         t('noticeUpdated'),
         true,
@@ -257,11 +361,11 @@ export function StorageProviderEditor({
         region: region || undefined,
         bucket,
         pathStyle,
-        credentialRef: credentialPayload,
         status,
         serverSideEncryptionMode: sseMode || undefined,
         defaultStorageClass: storageClass || undefined,
         strictTls,
+        ...credentialSourceFields,
       }),
       t('noticeCreated'),
       true,
@@ -444,6 +548,22 @@ export function StorageProviderEditor({
                       credentialConfigured={provider?.credentialConfigured}
                       error={errors.credentialRef}
                       onCredentialRefChange={handleCredentialRefChange}
+                      accountSourceEnabled={accountSourceAvailable}
+                      providerAccountId={providerAccountId}
+                      onProviderAccountIdChange={handleProviderAccountIdChange}
+                      providerAccounts={providerAccounts}
+                      accountsLoading={accountsLoading}
+                      accountsError={accountsError}
+                      onReloadProviderAccounts={reloadProviderAccounts}
+                      accountScopeFilter={accountScopeFilter}
+                      onAccountScopeFilterChange={setAccountScopeFilter}
+                      onCreateProviderAccount={(input) => {
+                        if (!onCreateProviderAccount) {
+                          return Promise.reject(new Error(t('accountLoadFailed')));
+                        }
+                        return onCreateProviderAccount(input);
+                      }}
+                      defaultVendorCode={defaultVendorCode}
                     />
                   </div>
                 )}

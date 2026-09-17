@@ -194,7 +194,15 @@ export function StorageProviderDetailDrawer({ provider, providers, service, pend
                 <InfoCard label={t('kind')} value={meta.label} />
                 <InfoCard label={t('pathStyleLabel')} value={provider.pathStyle ? t('yes') : t('no')} />
                 <InfoCard label={t('strictTlsLabel')} value={provider.strictTls ? t('yes') : t('no')} />
-                <InfoCard label={t('credentialRef')} value={provider.credentialConfigured ? t('configured') : t('credentialMissing')} />
+                <InfoCard
+                  label={t('credentialRef')}
+                  value={
+                    provider.providerAccountId
+                      ? `${t('accountBoundSource')} · ${provider.providerAccountId}`
+                      : provider.credentialConfigured ? t('configured') : t('credentialMissing')
+                  }
+                  mono={Boolean(provider.providerAccountId)}
+                />
                 {provider.serverSideEncryptionMode && <InfoCard label={t('sse')} value={provider.serverSideEncryptionMode} />}
                 {provider.defaultStorageClass && <InfoCard label={t('storageClass')} value={provider.defaultStorageClass} />}
               </div>

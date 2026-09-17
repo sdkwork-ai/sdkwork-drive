@@ -30,16 +30,16 @@ export function StorageProviderBindingPanel({
   return (
     <div className={CARD_CLASS}>
       <div className="border-b border-neutral-100 px-5 py-3 dark:border-neutral-800">
-        <h3 className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">{t('storageProviders.defaultBinding')}</h3>
+        <h3 className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">{t('defaultBinding')}</h3>
         <p className="mt-0.5 text-[11px] text-neutral-500 dark:text-neutral-400">
-          {t('storageProviders.bindingDesc')}
+          {t('bindingDesc')}
         </p>
       </div>
 
       <div className="px-5 py-4">
         {/* Current binding visualization */}
         <div className="mb-4 rounded-md border border-neutral-100 bg-neutral-50 p-3 dark:border-neutral-800 dark:bg-neutral-900/50">
-          <div className="text-[10px] font-semibold uppercase tracking-wider text-neutral-400 dark:text-neutral-500">{t('storageProviders.currentBinding')}</div>
+          <div className="text-[10px] font-semibold uppercase tracking-wider text-neutral-400 dark:text-neutral-500">{t('currentBinding')}</div>
           {binding && boundProvider ? (
             <div className="mt-2 flex items-center gap-3">
               <div className="flex items-center gap-2">
@@ -84,7 +84,7 @@ export function StorageProviderBindingPanel({
             </div>
           ) : (
             <div className="mt-2 text-xs text-neutral-500 dark:text-neutral-400">
-              {t('storageProviders.notConfigured')}
+              {t('notConfigured')}
             </div>
           )}
         </div>
@@ -96,7 +96,7 @@ export function StorageProviderBindingPanel({
             onChange={(e) => setProviderId(e.target.value)}
             className={SELECT_CLASS}
           >
-            <option value="">{t('storageProviders.selectProvider')}</option>
+            <option value="">{t('selectProvider')}</option>
             {providers.filter((p) => p.status === 'active').map((provider) => (
               <option key={provider.id} value={provider.id}>
                 {provider.displayName || provider.id}
@@ -108,7 +108,7 @@ export function StorageProviderBindingPanel({
               value={spaceId}
               onChange={(e) => setSpaceId(e.target.value)}
               className={`${INPUT_CLASS} flex-1`}
-              placeholder={t('storageProviders.spaceIdOptional')}
+              placeholder={t('spaceIdOptional')}
             />
             <button
               type="button"
@@ -116,7 +116,7 @@ export function StorageProviderBindingPanel({
               disabled={pending || !providerId}
               onClick={() => onSetDefaultBinding(providerId, spaceId || undefined)}
             >
-              {t('storageProviders.set')}
+              {t('set')}
             </button>
           </div>
         </div>
@@ -128,7 +128,7 @@ export function StorageProviderBindingPanel({
               className="text-xs text-red-600 hover:text-red-700 dark:text-red-400"
               onClick={() => setShowClearConfirm(true)}
             >
-              {t('storageProviders.clear')}
+              {t('clear')}
             </button>
           </div>
         )}
@@ -136,9 +136,9 @@ export function StorageProviderBindingPanel({
 
       <ConfirmDialog
         open={showClearConfirm}
-        title={t('storageProviders.clearConfirmTitle')}
-        message={t('storageProviders.clearConfirmMessage')}
-        confirmLabel={t('storageProviders.clearConfirmLabel')}
+        title={t('clearConfirmTitle')}
+        message={t('clearConfirmMessage')}
+        confirmLabel={t('clearConfirmLabel')}
         variant="danger"
         onConfirm={() => { onDeleteDefaultBinding(spaceId || undefined); setShowClearConfirm(false); }}
         onCancel={() => setShowClearConfirm(false)}

@@ -9,6 +9,17 @@ import { defineConfig, loadEnv } from 'vite';
 const DEFAULT_APP_API_PROXY_TARGET = 'http://127.0.0.1:3900';
 const DEFAULT_ADMIN_API_PROXY_TARGET = 'http://127.0.0.1:18083';
 
+/**
+ * The shared helper is a .mjs module whose parameter type is inferred from
+ * its default value, so `processEnv` is narrowed to `undefined` and a direct
+ * `process.env` argument fails tsc even though the runtime accepts it. This
+ * wrapper documents the one intentional bypass and keeps the runtime
+ * behavior — mode first, SDKWORK_ENVIRONMENT fallback second.
+ */
+const resolveLifecycleEnvironment = (mode: string): string =>
+  // @ts-expect-error -- untyped shared .mjs helper narrows processEnv to undefined
+  resolveViteEnvironment(mode, process.env);
+
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, __dirname, '');
   const repoRoot = path.resolve(__dirname, '../..');
@@ -33,7 +44,7 @@ export default defineConfig(({ mode }) => {
 
   return {
     build: {
-      outDir: resolveBrowserDistOutDir(resolveViteEnvironment(mode, process.env)),
+      outDir: resolveBrowserDistOutDir(resolveLifecycleEnvironment(mode)),
       emptyOutDir: true,
     },
     define: {

@@ -882,6 +882,7 @@ CREATE INDEX IF NOT EXISTS ix_dr_drive_upload_session_expires
 
 CREATE TABLE IF NOT EXISTS dr_drive_storage_provider (
     id VARCHAR(64) PRIMARY KEY,
+    tenant_id VARCHAR(64) NOT NULL DEFAULT '0',
     provider_kind VARCHAR(64) NOT NULL,
     name VARCHAR(128) NOT NULL,
     endpoint_url TEXT NOT NULL,
@@ -890,6 +891,7 @@ CREATE TABLE IF NOT EXISTS dr_drive_storage_provider (
     path_style BOOLEAN NOT NULL DEFAULT TRUE,
     strict_tls BOOLEAN NOT NULL DEFAULT TRUE,
     credential_ref VARCHAR(255),
+    provider_account_id VARCHAR(128),
     server_side_encryption_mode VARCHAR(64),
     default_storage_class VARCHAR(64),
     status VARCHAR(32) NOT NULL DEFAULT 'active',
@@ -953,11 +955,30 @@ CREATE TABLE IF NOT EXISTS dr_drive_storage_provider (
     CONSTRAINT ck_dr_drive_storage_provider_status
         CHECK (status IN ('active', 'disabled', 'deleted')),
     CONSTRAINT ck_dr_drive_storage_provider_version
-        CHECK (version >= 1)
+        CHECK (version >= 1),
+    CONSTRAINT ck_dr_drive_storage_provider_credential_source
+        CHECK (NOT (provider_account_id IS NOT NULL AND credential_ref IS NOT NULL)),
+    CONSTRAINT ck_dr_drive_storage_provider_credential_ref
+        CHECK (
+            credential_ref IS NULL
+            OR credential_ref ~ '^(plain|env|secret|kms|vault):[^[:space:]]+$'
+        ),
+    CONSTRAINT ck_dr_drive_storage_provider_provider_account_id
+        CHECK (provider_account_id IS NULL OR provider_account_id ~ '^[A-Za-z0-9][A-Za-z0-9_.:-]{1,127}$')
 );
 
 CREATE INDEX IF NOT EXISTS ix_dr_drive_storage_provider_status
     ON dr_drive_storage_provider (status, updated_at DESC);
+
+CREATE INDEX IF NOT EXISTS ix_dr_drive_storage_provider_tenant_name
+    ON dr_drive_storage_provider (tenant_id, name);
+
+CREATE INDEX IF NOT EXISTS ix_dr_drive_storage_provider_tenant_status
+    ON dr_drive_storage_provider (tenant_id, status, updated_at DESC);
+
+CREATE INDEX IF NOT EXISTS ix_dr_drive_storage_provider_account
+    ON dr_drive_storage_provider (provider_account_id)
+    WHERE provider_account_id IS NOT NULL;
 
 DO $$
 BEGIN

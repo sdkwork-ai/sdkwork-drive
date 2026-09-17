@@ -25,6 +25,14 @@ export declare const sdkMetadata: {
     }[];
 };
 export declare const operations: {
+    readonly "storageProviderAccounts.create": {
+        readonly method: "POST";
+        readonly path: "/backend/v3/api/drive/storage/provider-accounts";
+    };
+    readonly "storageProviderAccounts.list": {
+        readonly method: "GET";
+        readonly path: "/backend/v3/api/drive/storage/provider-accounts";
+    };
     readonly "storageProviderBindings.default.delete": {
         readonly method: "DELETE";
         readonly path: "/backend/v3/api/drive/storage/bindings/default";

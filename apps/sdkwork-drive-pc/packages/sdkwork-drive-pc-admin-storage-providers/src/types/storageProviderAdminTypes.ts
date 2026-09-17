@@ -30,6 +30,8 @@ export interface StorageProviderView {
   bucket: string;
   pathStyle: boolean;
   credentialRef?: string;
+  /** Reference to a reusable platform service-provider account. */
+  providerAccountId?: string;
   credentialConfigured: boolean;
   serverSideEncryptionMode?: string;
   defaultStorageClass?: string;
@@ -83,6 +85,7 @@ export interface CreateStorageProviderInput {
   bucket: string;
   pathStyle?: boolean;
   credentialRef?: string;
+  providerAccountId?: string;
   serverSideEncryptionMode?: string;
   defaultStorageClass?: string;
   status?: string;
@@ -96,6 +99,7 @@ export interface UpdateStorageProviderInput {
   bucket?: string;
   pathStyle?: boolean;
   credentialRef?: string;
+  providerAccountId?: string;
   serverSideEncryptionMode?: string;
   defaultStorageClass?: string;
   status?: string;
@@ -183,4 +187,78 @@ export interface StorageProviderObjectMutationResult {
 
 export interface StorageProviderMutationOptions {
   signal?: AbortSignal;
+}
+
+/**
+ * Reusable service-provider account projected from the platform account
+ * center (`iam_provider_account`). One account (for example one Aliyun
+ * account) can back storage providers across every business; the projection
+ * never carries credential material.
+ */
+export interface StorageProviderAccountView {
+  id: string;
+  /**
+   * `platform` = a global default published by platform operators and readable
+   * from every tenant; `tenant` = this application tenant's default; `user` =
+   * a personal account owned by one end user.
+   */
+  scopeType: StorageProviderAccountScope;
+  /** Set only for `user`-scoped accounts. */
+  ownerUserId?: string;
+  /**
+   * Whether this account is its scope's default for the vendor + environment,
+   * i.e. what a consumer picks when it does not name an account.
+   */
+  isDefault: boolean;
+  vendorCode: string;
+  accountCode: string;
+  displayName: string;
+  accountType: string;
+  environment: string;
+  externalAccountId?: string;
+  capabilityCodes: string[];
+  regionCode?: string;
+  status: string;
+  credentialConfigured: boolean;
+  credentialCount: number;
+  version: number;
+}
+
+/** How widely a reusable account is shared. Ordered narrowest first. */
+export type StorageProviderAccountScope = 'user' | 'tenant' | 'platform';
+
+export interface ListStorageProviderAccountsInput {
+  vendorCode?: string;
+  status?: string;
+  search?: string;
+  capabilityCode?: string;
+  /** Restrict the list to one scope level; omit to list every visible level. */
+  scopeType?: StorageProviderAccountScope;
+  /** Restrict the list to one owner; only accepted when it is the calling user. */
+  ownerUserId?: string;
+  /** Pin the list to the calling user's own accounts. */
+  mine?: boolean;
+  /** Whether platform-wide accounts are included. Defaults to true. */
+  includePlatform?: boolean;
+  signal?: AbortSignal;
+}
+
+/** Registers a reusable account together with its access key pair. */
+export interface CreateStorageProviderAccountInput {
+  displayName: string;
+  vendorCode: string;
+  accountCode: string;
+  accountType?: string;
+  environment?: string;
+  externalAccountId?: string;
+  regionCode?: string;
+  /** Defaults to `tenant` on the server. */
+  scopeType?: StorageProviderAccountScope;
+  /** Only meaningful with `scopeType: 'user'`; defaults to the caller. */
+  ownerUserId?: string;
+  /** Make this account its scope's default for the vendor + environment. */
+  isDefault?: boolean;
+  accessKeyId: string;
+  secretAccessKey: string;
+  sessionToken?: string;
 }

@@ -19,7 +19,7 @@ pub struct UpdateStorageProviderRequest {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub path_style: Option<bool>,
 
-    /// Drive storage credential reference. Supported forms: plain:<accessKeyId>:<secretAccessKey>[:<sessionToken>], env:<accessKeyEnv>:<secretKeyEnv>[:<sessionTokenEnv>], secret:<ref>, kms:<ref>, or vault:<ref>. secret/kms/vault refs are materialized at runtime from SDKWORK_DRIVE_STORAGE_CREDENTIAL__<sanitized_ref>__ACCESS_KEY_ID, __SECRET_ACCESS_KEY, and optional __SESSION_TOKEN environment variables.
+    /// Drive storage credential reference. Supported forms: plain:<accessKeyId>:<secretAccessKey>[:<sessionToken>], env:<accessKeyEnv>:<secretKeyEnv>[:<sessionTokenEnv>], secret:<ref>, kms:<ref>, or vault:<ref>. secret/kms/vault refs are materialized at runtime from SDKWORK_DRIVE_STORAGE_CREDENTIAL__<sanitized_ref>__ACCESS_KEY_ID, __SECRET_ACCESS_KEY, and optional __SESSION_TOKEN environment variables. On update, an empty string explicitly clears the stored credential reference (switching to providerAccountId also clears it).
     #[serde(rename = "credentialRef")]
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub credential_ref: Option<String>,
@@ -39,4 +39,9 @@ pub struct UpdateStorageProviderRequest {
     #[serde(rename = "strictTls")]
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub strict_tls: Option<bool>,
+
+    /// Reference to a reusable service-provider account held by the platform account center (iam_provider_account). Mutually exclusive with credentialRef; the credential material is resolved from the account center at runtime, so an account rotation applies to every consumer at once. On update, an empty string explicitly clears the account reference (switching to credentialRef also clears it).
+    #[serde(rename = "providerAccountId")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub provider_account_id: Option<String>,
 }

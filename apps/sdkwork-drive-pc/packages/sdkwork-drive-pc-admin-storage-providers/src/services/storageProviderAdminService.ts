@@ -5,12 +5,16 @@ import {
 import type { SessionSnapshot } from 'sdkwork-drive-pc-core';
 import type {
   CopyStorageProviderObjectInput,
+  CreateStorageProviderAccountInput,
   CreateStorageProviderInput,
+  ListStorageProviderAccountsInput,
   ListStorageProvidersInput,
   ListStorageProvidersPageResult,
   ListStorageProviderObjectsInput,
   ListStorageProviderObjectsResult,
   SetDefaultStorageProviderBindingInput,
+  StorageProviderAccountScope,
+  StorageProviderAccountView,
   StorageProviderBindingView,
   StorageProviderBucketListItemView,
   StorageProviderBucketView,
@@ -111,6 +115,13 @@ export interface StorageProviderAdminService {
     destinationObjectKey: string,
     options?: StorageProviderMutationOptions,
   ): Promise<boolean>;
+  listProviderAccounts(
+    input?: ListStorageProviderAccountsInput,
+  ): Promise<StorageProviderAccountView[]>;
+  createProviderAccount(
+    input: CreateStorageProviderAccountInput,
+    options?: StorageProviderMutationOptions,
+  ): Promise<StorageProviderAccountView>;
 }
 
 export interface CreateStorageProviderAdminServiceOptions {
@@ -194,6 +205,7 @@ export function createStorageProviderAdminService({
       // reverted the operator's change to the server-side default.
       assignDefined(body, 'strictTls', input.strictTls);
       assignDefined(body, 'credentialRef', input.credentialRef);
+      assignDefined(body, 'providerAccountId', input.providerAccountId);
       assignDefined(body, 'serverSideEncryptionMode', input.serverSideEncryptionMode);
       assignDefined(body, 'defaultStorageClass', input.defaultStorageClass);
       assignDefined(body, 'status', input.status);
@@ -481,6 +493,48 @@ export function createStorageProviderAdminService({
       await service.copyObject(providerId, { sourceObjectKey, destinationObjectKey }, options);
       return service.deleteObject(providerId, sourceObjectKey, options);
     },
+    async listProviderAccounts(input = {}) {
+      const response = await adminStorageSdkClient.request<unknown>({
+        operationId: 'storageProviderAccounts.list',
+        signal: input.signal,
+        query: {
+          vendorCode: input.vendorCode,
+          status: input.status,
+          search: input.search,
+          scopeType: input.scopeType,
+          ownerUserId: input.ownerUserId,
+          mine: input.mine,
+          includePlatform: input.includePlatform,
+          capabilityCode: input.capabilityCode,
+        },
+      });
+      return extractItems(response).map(responseToStorageProviderAccount);
+    },
+    async createProviderAccount(input, options) {
+      assertAdminWriteSession(getSession);
+      const response = await adminStorageSdkClient.request<unknown>({
+        operationId: 'storageProviderAccounts.create',
+        signal: options?.signal,
+        body: {
+          displayName: input.displayName,
+          vendorCode: input.vendorCode,
+          accountCode: input.accountCode,
+          ...(input.accountType !== undefined ? { accountType: input.accountType } : {}),
+          ...(input.environment !== undefined ? { environment: input.environment } : {}),
+          ...(input.externalAccountId !== undefined
+            ? { externalAccountId: input.externalAccountId }
+            : {}),
+          ...(input.regionCode !== undefined ? { regionCode: input.regionCode } : {}),
+          ...(input.scopeType !== undefined ? { scopeType: input.scopeType } : {}),
+          ...(input.ownerUserId !== undefined ? { ownerUserId: input.ownerUserId } : {}),
+          ...(input.isDefault !== undefined ? { isDefault: input.isDefault } : {}),
+          accessKeyId: input.accessKeyId,
+          secretAccessKey: input.secretAccessKey,
+          ...(input.sessionToken !== undefined ? { sessionToken: input.sessionToken } : {}),
+        },
+      });
+      return responseToStorageProviderAccount(response);
+    },
   };
 
   return service;
@@ -516,6 +570,7 @@ function providerCreateBody(input: CreateStorageProviderInput): JsonRecord {
   assignDefined(body, 'region', input.region);
   assignDefined(body, 'pathStyle', input.pathStyle);
   assignDefined(body, 'credentialRef', input.credentialRef);
+  assignDefined(body, 'providerAccountId', input.providerAccountId);
   assignDefined(body, 'serverSideEncryptionMode', input.serverSideEncryptionMode);
   assignDefined(body, 'defaultStorageClass', input.defaultStorageClass);
   assignDefined(body, 'status', input.status);
@@ -535,6 +590,7 @@ function responseToStorageProvider(response: unknown): StorageProviderView {
     bucket: stringField(record, 'bucket') ?? '',
     pathStyle: booleanField(record, 'pathStyle') ?? false,
     credentialRef: stringField(record, 'credentialRef'),
+    providerAccountId: stringField(record, 'providerAccountId'),
     credentialConfigured: booleanField(record, 'credentialConfigured') ?? false,
     serverSideEncryptionMode: stringField(record, 'serverSideEncryptionMode'),
     defaultStorageClass: stringField(record, 'defaultStorageClass'),
@@ -542,6 +598,45 @@ function responseToStorageProvider(response: unknown): StorageProviderView {
     version: numberField(record, 'version') ?? 0,
     strictTls: booleanField(record, 'strictTls') ?? true,
   };
+}
+
+/** 账号中心账号投影：列表响应为 items 数组，创建响应为 { item }。 */
+function responseToStorageProviderAccount(response: unknown): StorageProviderAccountView {
+  const record = isRecord(response) && isRecord(response.item) ? response.item : recordOf(response);
+  return {
+    id: stringField(record, 'id') ?? '',
+    scopeType: accountScopeField(record),
+    ownerUserId: stringField(record, 'ownerUserId', 'owner_user_id'),
+    isDefault: booleanField(record, 'isDefault', 'is_default') ?? false,
+    vendorCode: stringField(record, 'vendorCode', 'vendor_code') ?? '',
+    accountCode: stringField(record, 'accountCode', 'account_code') ?? '',
+    displayName: stringField(record, 'displayName', 'display_name') ?? '',
+    // Identity shape, not a relationship label: the account centre's vocabulary is
+    // long_term_key | temporary_credential | service_account | service_linked_role |
+    // federated_identity | managed_identity | api_key. The storage console only ever
+    // stores an access-key pair, so `long_term_key` is the shape a missing value
+    // stands for.
+    accountType: stringField(record, 'accountType', 'account_type') ?? 'long_term_key',
+    environment: stringField(record, 'environment') ?? 'production',
+    externalAccountId: stringField(record, 'externalAccountId', 'external_account_id'),
+    capabilityCodes: stringArrayField(record, 'capabilityCodes', 'capability_codes'),
+    regionCode: stringField(record, 'regionCode', 'region_code'),
+    status: stringField(record, 'status') ?? 'unknown',
+    credentialConfigured: booleanField(record, 'credentialConfigured') ?? false,
+    credentialCount: numberField(record, 'credentialCount', 'credential_count') ?? 0,
+    version: numberField(record, 'version') ?? 0,
+  };
+}
+
+/**
+ * 作用域投影带上兜底。
+ *
+ * 服务端默认 `tenant`（`DEFAULT_ACCOUNT_SCOPE`），历史行也是 `tenant`；读到未知值时
+ * 收敛到 `tenant`，避免视图层对一个无法解释的字符串做 switch 而走到 undefined 分支。
+ */
+function accountScopeField(record: Record<string, unknown>): StorageProviderAccountScope {
+  const raw = stringField(record, 'scopeType', 'scope_type')?.toLowerCase();
+  return raw === 'platform' || raw === 'user' ? raw : 'tenant';
 }
 
 function responseToProviderKind(response: unknown): StorageProviderKindView {

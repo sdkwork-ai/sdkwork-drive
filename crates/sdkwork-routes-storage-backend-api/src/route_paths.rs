@@ -19,6 +19,10 @@ pub(crate) fn storage_drive_routes(prefix: &str) -> Router<AdminStorageState> {
             patch(set_storage_provider_kind_enabled),
         )
         .route(
+            &format!("{prefix}/drive/storage/provider-accounts"),
+            get(list_storage_provider_accounts).post(create_storage_provider_account),
+        )
+        .route(
             &format!("{prefix}/drive/storage/providers/{{provider_id}}"),
             get(get_storage_provider)
                 .patch(update_storage_provider)

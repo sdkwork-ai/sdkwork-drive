@@ -29,6 +29,18 @@ const HTTP_ROUTES: &[HttpRoute] = &[
     ),
     HttpRoute::dual_token(
         HttpMethod::Get,
+        "/backend/v3/api/drive/storage/provider-accounts",
+        "drive-admin-storage-api",
+        "storageProviderAccounts.list",
+    ),
+    HttpRoute::dual_token(
+        HttpMethod::Post,
+        "/backend/v3/api/drive/storage/provider-accounts",
+        "drive-admin-storage-api",
+        "storageProviderAccounts.create",
+    ),
+    HttpRoute::dual_token(
+        HttpMethod::Get,
         "/backend/v3/api/drive/storage/provider-kinds",
         "drive-admin-storage-api",
         "storageProviderKinds.list",

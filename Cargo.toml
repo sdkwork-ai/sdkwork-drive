@@ -62,7 +62,7 @@ jsonwebtoken = { version = "9", default-features = false, features = ["use_pem"]
 sqlx = { version = "0.9", default-features = false, features = ["runtime-tokio", "tls-rustls", "postgres", "chrono"] }
 tempfile = "3.12"
 tokio = { version = "1.48", features = ["macros", "rt-multi-thread"] }
-toml = "0.8"
+toml = "1"
 tower = { version = "0.5", features = ["util"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["fmt", "env-filter", "registry"] }
@@ -72,9 +72,18 @@ uuid = { version = "1", features = ["v4"] }
 zip = { version = "8.6.0", default-features = false, features = ["deflate-flate2-zlib-rs"] }
 
 # AWS SDK dependencies
+# aws-sdk-s3's default feature set still carries the DEPRECATED `rustls` flag.
+# It maps to aws-smithy-runtime/tls-rustls -> aws-smithy-http-client/
+# legacy-rustls-ring, which drags in a second, obsolete TLS stack
+# (hyper 0.14 + rustls 0.21 + tokio-rustls 0.24 + rustls-webpki 0.101) alongside
+# the modern one. Modern TLS is supplied by `default-https-client`
+# (hyper 1.x + rustls 0.23). Mirror aws-sdk-s3's default set minus `rustls` so
+# the build resolves exactly one rustls stack. aws-config and the sso/ssooidc/sts
+# crates already declare `default-features = false` upstream, so aws-sdk-s3 is
+# the only entry point for the legacy connector.
 aws-config = "1.8"
 aws-credential-types = "1.2"
-aws-sdk-s3 = "1.79"
+aws-sdk-s3 = { version = "1.79", default-features = false, features = ["sigv4a", "http-1x", "default-https-client", "rt-tokio"] }
 aws-types = "1.3"
 
 # SDKWork workspace members - declared once at workspace root
@@ -117,3 +126,4 @@ sdkwork-web-core = { path = "../sdkwork-web-framework/crates/sdkwork-web-core" }
 sdkwork-web-axum = { path = "../sdkwork-web-framework/crates/sdkwork-web-axum" }
 sdkwork-web-contract = { path = "../sdkwork-web-framework/crates/sdkwork-web-contract" }
 sdkwork-iam-web-adapter = { path = "../sdkwork-iam/crates/sdkwork-iam-web-adapter" }
+sdkwork-iam-provider-account-service = { path = "../sdkwork-iam/crates/sdkwork-iam-provider-account-service" }

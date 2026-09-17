@@ -61,6 +61,7 @@
       "sdkwork_api_drive_assembly::assemble_api_router",
       "sdkwork_api_drive_assembly::assemble_api_router_from_env",
       "sdkwork_api_drive_assembly::assemble_app_api_contribution",
+      "sdkwork_api_drive_assembly::assemble_same_origin_contribution_with_pool",
       "sdkwork_api_drive_assembly::ApiAssembly",
       "sdkwork_api_drive_assembly::ApiAssemblyContribution"
     ],
@@ -72,6 +73,10 @@
       {
         "name": "driveAppApiContribution",
         "export": "sdkwork_api_drive_assembly::assemble_app_api_contribution"
+      },
+      {
+        "name": "driveSameOriginContribution",
+        "export": "sdkwork_api_drive_assembly::assemble_same_origin_contribution_with_pool"
       }
     ],
     "runtimeEntrypoints": [

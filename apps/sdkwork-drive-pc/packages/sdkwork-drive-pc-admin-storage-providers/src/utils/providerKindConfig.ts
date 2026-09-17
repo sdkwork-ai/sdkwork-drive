@@ -492,6 +492,30 @@ export function resolveProviderKindMeta(kind: StorageProviderKind): ProviderKind
   return getProviderKindMeta(kind);
 }
 
+/**
+ * Default platform account-center vendor for a storage provider kind. The
+ * account center accepts any `^[a-z][a-z0-9_]{1,31}$` vendor code, so this is
+ * only the pre-selection for the "new account" form, not a restriction.
+ */
+export function providerVendorCodeForKind(kind: string): string {
+  switch (kind) {
+    case 'aliyun_oss':
+      return 'aliyun';
+    case 'tencent_cos':
+      return 'tencent';
+    case 'huawei_obs':
+      return 'huawei';
+    case 'volcengine_tos':
+      return 'volcengine';
+    case 'google_cloud_storage':
+      return 'google';
+    case 's3_compatible':
+      return 'aws';
+    default:
+      return 'custom';
+  }
+}
+
 export const HEALTH_STATUS_CONFIG: Record<StorageProviderHealthStatus, {
   label: string;
   icon: string;

@@ -308,7 +308,9 @@ describe('downloadTransfer', () => {
 
   it('ignores recorded progress instead of requesting a partial body', async () => {
     const payload = new Uint8Array([1, 2, 3, 4]);
-    const fetchImpl = vi.fn(async () =>
+    // The transfer reads the RequestInit off the recorded call, so the mock
+    // must declare the fetch parameters it captures.
+    const fetchImpl = vi.fn(async (_input: RequestInfo | URL, _init?: RequestInit) =>
       new Response(payload, {
         status: 200,
         headers: {

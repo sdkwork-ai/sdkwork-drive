@@ -195,6 +195,71 @@ pub async fn assemble_backend_admin_storage_contribution_with_pool(
     )
 }
 
+/// Same-origin embedding surface for a composing host gateway
+/// (API_ASSEMBLY_SPEC §4.1.1).
+///
+/// An embedding host serves the surfaces drive declares as same-origin — the
+/// App API (`/app/v3/api/drive/*`) and the Admin Storage backend surface
+/// (`/backend/v3/api/drive/storage/*`) — and must install them as **one**
+/// contribution. `ComposedApiAssembly::try_compose` rejects an owner selected
+/// more than once, so a host that fetched the two surfaces from two entrypoints
+/// cannot compose them at all, while a host that installed them as two modules
+/// has the second silently dropped by `ApiModuleRegistry` and serves a partial
+/// route surface (an opaque 404 on a surface its component contract declares as
+/// served).
+///
+/// The contribution is built on the caller's process-shared PostgreSQL pool:
+/// the drive database module is bootstrapped on that pool, and the storage
+/// router derives its request context from the host Web Framework layer
+/// (API_ASSEMBLY_SPEC §3/§6.1) instead of a drive-owned storage injector. The
+/// App surfaces keep their own context injector, which only enriches the
+/// request extensions and never rejects a request.
+pub async fn assemble_same_origin_contribution_with_pool(
+    pool: &sdkwork_database_sqlx::DatabasePool,
+) -> Result<ApiAssemblyContribution, String> {
+    sdkwork_drive_security::ensure_drive_auth_policy_refresh_task();
+    ensure_production_download_token_signing_configured()
+        .map_err(|error| format!("download token signing config invalid: {error}"))?;
+    bootstrap_drive_database(pool.clone()).await?;
+    let pg_pool = postgres_pool_from_database_pool(pool)?;
+    ensure_domain_outbox_dispatcher(pg_pool.clone());
+
+    if let Some(config) = sdkwork_routes_drive_app_api::deploy_sandbox_config_from_env() {
+        sdkwork_routes_drive_app_api::ensure_deploy_sandbox_volume(&pg_pool, &config)
+            .await
+            .map_err(|error| format!("ensure deploy sandbox volume failed: {error}"))?;
+    }
+
+    let admin_storage_config =
+        sdkwork_routes_storage_backend_api::AdminStorageConfig::from_env()
+            .map_err(|error| format!("resolve admin storage config failed: {error}"))?;
+    let router = sdkwork_routes_drive_app_api::build_app_business_router(pg_pool.clone()).merge(
+        sdkwork_routes_storage_backend_api::build_admin_storage_business_router_for_host_framework(
+            pg_pool.clone(),
+            admin_storage_config,
+        ),
+    );
+    let routes = sdkwork_routes_drive_app_api::app_route_manifest()
+        .routes()
+        .iter()
+        .chain(
+            sdkwork_routes_storage_backend_api::storage_route_manifest()
+                .routes()
+                .iter(),
+        )
+        .cloned()
+        .collect();
+
+    ApiAssemblyContribution::from_manifest(
+        "sdkwork-drive",
+        "SDKWork Drive Same-Origin API",
+        router,
+        HttpRouteManifest::from_owned_routes(routes),
+        vec![sdkwork_routes_drive_app_api::drive_app_context_injector()],
+        Arc::new(PostgresReadinessCheck::new(pg_pool)),
+    )
+}
+
 pub async fn assemble_api_router(pool: sqlx::PgPool) -> Result<ApiAssembly, String> {
     sdkwork_drive_security::ensure_drive_auth_policy_refresh_task();
     ensure_production_download_token_signing_configured()

@@ -2,7 +2,8 @@ use crate::app_context::DriveRequestContext;
 use crate::audit::record_storage_provider_audit;
 use crate::dto::*;
 use crate::error::{
-    invalid_json_problem, map_object_store_route_error, map_service_error, ProblemDetail,
+    invalid_json_problem, map_object_store_route_error, map_provider_account_error,
+    map_service_error, problem, ProblemDetail, SdkWorkResultCode,
 };
 use crate::object_store::{
     build_full_s3_object_store_for_provider, provider_supports_s3_object_store,
@@ -30,6 +31,7 @@ use sdkwork_drive_workspace_service::application::storage_provider_service::{
 use sdkwork_drive_workspace_service::infrastructure::sql::storage_provider_kind_store::SqlStorageProviderKindStore;
 use sdkwork_drive_workspace_service::infrastructure::sql::storage_provider_store::SqlStorageProviderStore;
 use sdkwork_drive_workspace_service::DriveServiceError;
+use sdkwork_iam_provider_account_service::{ACCOUNT_SCOPE_USER, ACCOUNT_STATUS_ACTIVE};
 
 async fn ensure_provider_kind_available(
     state: &AdminStorageState,
@@ -63,6 +65,65 @@ pub(crate) async fn list_storage_providers(
     Ok(success_list_page_simple(items, page, next_page_token))
 }
 
+/// Check that a storage provider may be bound to this account-center account.
+///
+/// Two things are verified, neither of which the column CHECK constraints can
+/// see:
+///
+/// 1. **The account exists and the caller may use it.** Previously only the
+///    *shape* of `provider_account_id` was validated, so a typo or another
+///    tenant's account id was accepted at write time and only surfaced later as
+///    an opaque failure on the first object operation.
+/// 2. **The account is not `user`-scoped.** `dr_drive_storage_provider` is a
+///    tenant-level resource (it has a `tenant_id` and no owner column), while a
+///    `user`-scoped account belongs to one person. Binding the two together
+///    would make a tenant-wide provider depend on a personal credential, and
+///    the implicit "whose account is this" answer would change whenever the
+///    owner was removed.
+pub(crate) async fn ensure_bindable_provider_account(
+    state: &AdminStorageState,
+    tenant_id: &str,
+    operator_id: &str,
+    provider_account_id: Option<&str>,
+) -> Result<(), (StatusCode, Json<ProblemDetail>)> {
+    let Some(account_id) = provider_account_id
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+    else {
+        return Ok(());
+    };
+
+    let account = sdkwork_iam_provider_account_service::load_bound_account(
+        &state.pool,
+        tenant_id,
+        Some(operator_id),
+        account_id,
+    )
+    .await
+    .map_err(map_provider_account_error)?;
+
+    if account.scope_type == ACCOUNT_SCOPE_USER {
+        return Err(problem(
+            StatusCode::CONFLICT,
+            "provider account scope not bindable",
+            "a storage provider is a tenant-level resource and cannot be bound to a user-scoped account; publish a tenant or platform account instead",
+            SdkWorkResultCode::Conflict,
+        ));
+    }
+    if account.status != ACCOUNT_STATUS_ACTIVE {
+        return Err(problem(
+            StatusCode::CONFLICT,
+            "provider account not active",
+            format!(
+                "provider account {} is {}; an active account is required to bind a storage provider",
+                account.id, account.status
+            ),
+            SdkWorkResultCode::Conflict,
+        ));
+    }
+    Ok(())
+}
+
 pub(crate) async fn create_storage_provider(
     State(state): State<AdminStorageState>,
     Extension(ctx): Extension<DriveRequestContext>,
@@ -70,14 +131,23 @@ pub(crate) async fn create_storage_provider(
 ) -> Result<(StatusCode, Json<StorageProviderResponse>), (StatusCode, Json<ProblemDetail>)> {
     let Json(payload) = payload.map_err(invalid_json_problem)?;
     let operator_id = ctx.resolve_operator_id()?;
+    let tenant_id = ctx.resolve_tenant_id()?;
     let service =
         DriveStorageProviderService::new(SqlStorageProviderStore::new(state.pool.clone()));
     let provider_kind =
         parse_storage_provider_kind(&payload.provider_kind).map_err(map_service_error)?;
     ensure_provider_kind_available(&state, &provider_kind).await?;
+    ensure_bindable_provider_account(
+        &state,
+        &tenant_id,
+        &operator_id,
+        payload.provider_account_id.as_deref(),
+    )
+    .await?;
     let created = service
         .create_storage_provider(CreateStorageProviderCommand {
             id: payload.id,
+            tenant_id,
             provider_kind,
             name: payload.name,
             endpoint_url: payload.endpoint_url,
@@ -86,6 +156,7 @@ pub(crate) async fn create_storage_provider(
             path_style: payload.path_style,
             strict_tls: payload.strict_tls,
             credential_ref: payload.credential_ref,
+            provider_account_id: payload.provider_account_id,
             server_side_encryption_mode: payload.server_side_encryption_mode,
             default_storage_class: payload.default_storage_class,
             status: payload.status,
@@ -119,6 +190,7 @@ pub(crate) async fn update_storage_provider(
 ) -> Result<Json<StorageProviderResponse>, (StatusCode, Json<ProblemDetail>)> {
     let Json(payload) = payload.map_err(invalid_json_problem)?;
     let operator_id = ctx.resolve_operator_id()?;
+    let tenant_id = ctx.resolve_tenant_id()?;
     if payload
         .status
         .as_deref()
@@ -127,6 +199,13 @@ pub(crate) async fn update_storage_provider(
         let current = get_provider(&state, &provider_id).await?;
         ensure_provider_kind_available(&state, &current.provider_kind).await?;
     }
+    ensure_bindable_provider_account(
+        &state,
+        &tenant_id,
+        &operator_id,
+        payload.provider_account_id.as_deref(),
+    )
+    .await?;
     let service =
         DriveStorageProviderService::new(SqlStorageProviderStore::new(state.pool.clone()));
     let updated = service
@@ -139,6 +218,7 @@ pub(crate) async fn update_storage_provider(
             path_style: payload.path_style,
             strict_tls: payload.strict_tls,
             credential_ref: payload.credential_ref,
+            provider_account_id: payload.provider_account_id,
             server_side_encryption_mode: payload.server_side_encryption_mode,
             default_storage_class: payload.default_storage_class,
             status: payload.status,
@@ -208,7 +288,7 @@ pub(crate) async fn test_storage_provider(
         )));
     }
     let reachable = if provider_supports_s3_object_store(&provider.provider_kind) {
-        let object_store = build_full_s3_object_store_for_provider(&provider).await?;
+        let object_store = build_full_s3_object_store_for_provider(&state, &provider).await?;
         object_store
             .head_bucket(HeadBucketRequest {
                 bucket: provider.bucket.clone(),

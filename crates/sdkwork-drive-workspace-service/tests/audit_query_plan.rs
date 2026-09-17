@@ -77,7 +77,9 @@ async fn audit_event_query_plan_uses_filter_indexes_for_list_and_count_patterns(
 
 async fn assert_query_plan_uses_index(
     pool: &sqlx::PgPool,
-    sql: &str,
+    // sqlx 0.9 requires the SQL text to be `&'static str`; every call site
+    // passes a literal EXPLAIN statement.
+    sql: &'static str,
     binds: &[&str],
     expected_index_name: &str,
 ) {

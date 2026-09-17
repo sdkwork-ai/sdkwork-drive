@@ -6,6 +6,7 @@ use crate::DriveServiceError;
 #[derive(Debug, Clone)]
 pub struct NewDriveStorageProvider {
     pub id: String,
+    pub tenant_id: String,
     pub provider_kind: String,
     pub name: String,
     pub endpoint_url: String,
@@ -14,6 +15,7 @@ pub struct NewDriveStorageProvider {
     pub path_style: bool,
     pub strict_tls: bool,
     pub credential_ref: Option<String>,
+    pub provider_account_id: Option<String>,
     pub server_side_encryption_mode: Option<String>,
     pub default_storage_class: Option<String>,
     pub status: String,
@@ -30,6 +32,7 @@ pub struct UpdateDriveStorageProvider {
     pub path_style: bool,
     pub strict_tls: bool,
     pub credential_ref: Option<String>,
+    pub provider_account_id: Option<String>,
     pub server_side_encryption_mode: Option<String>,
     pub default_storage_class: Option<String>,
     pub status: String,

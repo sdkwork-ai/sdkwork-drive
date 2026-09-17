@@ -1,15 +1,15 @@
-use crate::dto::{StorageProviderCapabilitiesResponse, StorageProviderResponse};
+use crate::dto::{
+    StorageProviderAccountResponse, StorageProviderCapabilitiesResponse, StorageProviderResponse,
+};
 use sdkwork_drive_workspace_service::application::storage_provider_service::StorageProviderCapabilities;
 use sdkwork_drive_workspace_service::domain::storage_provider::{
     DriveStorageProvider, DriveStorageProviderKind,
 };
 use sdkwork_drive_workspace_service::DriveServiceError;
+use sdkwork_iam_provider_account_service::ProviderAccount;
 
 pub(crate) fn map_storage_provider(provider: DriveStorageProvider) -> StorageProviderResponse {
-    let credential_configured = provider
-        .credential_ref
-        .as_deref()
-        .is_some_and(|value| !value.trim().is_empty());
+    let credential_configured = provider.credential_ref.is_some() || provider.provider_account_id.is_some();
     StorageProviderResponse {
         id: provider.id,
         provider_kind: provider.provider_kind.as_str().to_string(),
@@ -20,11 +20,42 @@ pub(crate) fn map_storage_provider(provider: DriveStorageProvider) -> StoragePro
         path_style: provider.path_style,
         strict_tls: provider.strict_tls,
         credential_ref: provider.credential_ref.as_deref().map(mask_credential_ref),
+        provider_account_id: provider.provider_account_id,
         server_side_encryption_mode: provider.server_side_encryption_mode,
         default_storage_class: provider.default_storage_class,
         status: provider.status,
         version: provider.version,
         credential_configured,
+    }
+}
+
+/// Project an account-center row for the storage console. The projection is
+/// intentionally narrow: scope, identity, lifecycle, and whether an active
+/// credential exists — never credential material.
+///
+/// `scope_type` / `owner_user_id` / `is_default` travel to the client because
+/// the console has to show *whose* account this is and which one a consumer
+/// would pick by default; without them every row looks equally global.
+pub(crate) fn map_storage_provider_account(
+    account: ProviderAccount,
+) -> StorageProviderAccountResponse {
+    StorageProviderAccountResponse {
+        id: account.id,
+        scope_type: account.scope_type,
+        owner_user_id: account.owner_user_id,
+        is_default: account.is_default,
+        vendor_code: account.vendor_code,
+        account_code: account.account_code,
+        display_name: account.display_name,
+        account_type: account.account_type,
+        environment: account.environment,
+        external_account_id: account.external_account_id,
+        capability_codes: account.capability_codes,
+        region_code: account.region_code,
+        status: account.status,
+        credential_configured: account.credential_configured,
+        credential_count: account.credential_count,
+        version: account.version,
     }
 }
 

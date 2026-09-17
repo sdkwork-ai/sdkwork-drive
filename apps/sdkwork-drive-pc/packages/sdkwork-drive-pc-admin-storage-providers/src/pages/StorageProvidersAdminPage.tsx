@@ -311,6 +311,8 @@ export function StorageProvidersAdminPage({
           onProviderSaved={(saved) => {
             setEditingProvider((current) => (current?.id === saved.id ? saved : current));
           }}
+          onListProviderAccounts={(input) => service.listProviderAccounts(input)}
+          onCreateProviderAccount={(input) => service.createProviderAccount(input)}
         />
       )}
 

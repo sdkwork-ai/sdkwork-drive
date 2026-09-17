@@ -90,6 +90,80 @@ function responseFor(request: DriveAdminStorageSdkRequest): unknown {
     };
   }
 
+  if (request.operationId === 'storageProviderAccounts.list') {
+    return {
+      items: [
+        {
+          id: 'iampacct-018f-list',
+          vendorCode: 'aliyun',
+          accountCode: 'aliyun-main-a1b2c3d4',
+          displayName: 'Aliyun main account',
+          accountType: 'standard',
+          environment: 'production',
+          capabilityCodes: ['object_storage'],
+          status: 'active',
+          credentialConfigured: true,
+          credentialCount: 1,
+          version: 1,
+        },
+        {
+          // A platform-wide default: the row a tenant is meant to reuse without
+          // having created it. It carries `tenant_id` = 100001 on the server, so
+          // the client must surface the scope rather than infer it from the tenant.
+          id: 'iampacct-018f-platform',
+          scopeType: 'platform',
+          isDefault: true,
+          vendorCode: 'aliyun',
+          accountCode: 'aliyun-platform-main',
+          displayName: 'Aliyun platform account',
+          accountType: 'standard',
+          environment: 'production',
+          capabilityCodes: ['object_storage'],
+          status: 'active',
+          credentialConfigured: true,
+          credentialCount: 1,
+          version: 3,
+        },
+        {
+          // A personal account: listed so the operator can see it, but never
+          // bindable to a tenant-level provider.
+          id: 'iampacct-018f-mine',
+          scopeType: 'user',
+          ownerUserId: 'user-100',
+          isDefault: false,
+          vendorCode: 'aliyun',
+          accountCode: 'aliyun-personal',
+          displayName: 'My own Aliyun account',
+          accountType: 'standard',
+          environment: 'production',
+          capabilityCodes: ['object_storage'],
+          status: 'active',
+          credentialConfigured: true,
+          credentialCount: 1,
+          version: 1,
+        },
+      ],
+    };
+  }
+
+  if (request.operationId === 'storageProviderAccounts.create') {
+    return {
+      item: {
+        id: 'iampacct-018f-created',
+        vendorCode: (request.body as { vendorCode?: string } | undefined)?.vendorCode ?? 'aliyun',
+        accountCode: 'aliyun-main-a1b2c3d4',
+        displayName: 'Aliyun main account',
+        accountType: 'standard',
+        environment: 'production',
+        capabilityCodes: ['object_storage'],
+        status: 'active',
+        credentialConfigured: true,
+        credentialCount: 1,
+        version: 1,
+      },
+    };
+  }
+
   if (request.operationId === 'storageProviders.create' || request.operationId === 'storageProviders.update') {
     return {
       id: request.pathParams?.providerId ?? 'provider-s3',
@@ -270,6 +344,165 @@ describe('storage provider admin service', () => {
       },
     });
     expect(JSON.stringify(lastCall(calls).body)).not.toMatch(/secretAccessKey|accessKeySecret|privateKey/i);
+  });
+
+  it('lists reusable provider accounts through the account center operation', async () => {
+    const { calls, service } = createFakeService();
+
+    const accounts = await service.listProviderAccounts({
+      vendorCode: 'aliyun',
+      status: 'active',
+      capabilityCode: 'object_storage',
+    });
+
+    expect(accounts[0]).toMatchObject({
+      id: 'iampacct-018f-list',
+      vendorCode: 'aliyun',
+      accountCode: 'aliyun-main-a1b2c3d4',
+      credentialConfigured: true,
+    });
+    expect(lastCall(calls)).toMatchObject({
+      operationId: 'storageProviderAccounts.list',
+      query: {
+        vendorCode: 'aliyun',
+        status: 'active',
+        capabilityCode: 'object_storage',
+      },
+    });
+  });
+
+  it('projects the account scope and the default flag onto every listed account', async () => {
+    const { service } = createFakeService();
+
+    const accounts = await service.listProviderAccounts();
+
+    // A row that predates scopes (or a non-scope-aware server) must not surface
+    // as `undefined`: the column default is `tenant` and the view type is a
+    // closed union, so the projection has to converge on a member.
+    expect(accounts[0]).toMatchObject({ id: 'iampacct-018f-list', scopeType: 'tenant', isDefault: false });
+    expect(accounts[0].ownerUserId).toBeUndefined();
+    expect(accounts[1]).toMatchObject({
+      id: 'iampacct-018f-platform',
+      scopeType: 'platform',
+      isDefault: true,
+    });
+    expect(accounts[2]).toMatchObject({
+      id: 'iampacct-018f-mine',
+      scopeType: 'user',
+      ownerUserId: 'user-100',
+      isDefault: false,
+    });
+  });
+
+  it('forwards the scope slice of the account list as query parameters', async () => {
+    const { calls, service } = createFakeService();
+
+    await service.listProviderAccounts({ mine: true });
+    expect(lastCall(calls).query).toMatchObject({ mine: true });
+    // `mine` and `scopeType` are mutually exclusive views: sending both would
+    // make the server resolve an owner filter against a pinned scope. The key may
+    // be present-but-undefined here — the SDK transport's `compactQuery()`
+    // drops `undefined` values, so no empty parameter ever reaches the wire.
+    expect(lastCall(calls).query?.scopeType).toBeUndefined();
+
+    await service.listProviderAccounts({ scopeType: 'platform', includePlatform: true });
+    expect(lastCall(calls).query).toMatchObject({ scopeType: 'platform', includePlatform: true });
+    expect(lastCall(calls).query?.mine).toBeUndefined();
+
+    // An unfiltered call must not pin any scope, so the server applies its own
+    // defaults (every visible level, platform included).
+    await service.listProviderAccounts();
+    expect(lastCall(calls).query?.scopeType).toBeUndefined();
+    expect(lastCall(calls).query?.mine).toBeUndefined();
+    expect(lastCall(calls).query?.includePlatform).toBeUndefined();
+  });
+
+  it('registers a reusable account with its access key pair through the account center', async () => {    const { calls, service } = createFakeService();
+
+    const account = await service.createProviderAccount({
+      displayName: 'Aliyun main account',
+      vendorCode: 'aliyun',
+      accountCode: 'aliyun-main-a1b2c3d4',
+      accessKeyId: 'AKID-example',
+      secretAccessKey: 'secret-material',
+    });
+
+    expect(account).toMatchObject({
+      id: 'iampacct-018f-created',
+      vendorCode: 'aliyun',
+      credentialConfigured: true,
+    });
+    expect(lastCall(calls)).toMatchObject({
+      operationId: 'storageProviderAccounts.create',
+      body: {
+        displayName: 'Aliyun main account',
+        vendorCode: 'aliyun',
+        accountCode: 'aliyun-main-a1b2c3d4',
+        accessKeyId: 'AKID-example',
+        secretAccessKey: 'secret-material',
+      },
+    });
+    // The sealed credential is write-only: the registration response never
+    // echoes secret material back.
+    expect(JSON.stringify(account)).not.toMatch(/secret-material/);
+  });
+
+  it('carries the requested account scope and default flag into the create body', async () => {
+    const { calls, service } = createFakeService();
+
+    await service.createProviderAccount({
+      displayName: 'Aliyun platform account',
+      vendorCode: 'aliyun',
+      accountCode: 'aliyun-platform-main',
+      scopeType: 'platform',
+      isDefault: true,
+      accessKeyId: 'AKID-example',
+      secretAccessKey: 'secret-material',
+    });
+
+    expect(lastCall(calls)).toMatchObject({
+      operationId: 'storageProviderAccounts.create',
+      body: { scopeType: 'platform', isDefault: true },
+    });
+
+    // Omitting the scope must leave the field absent so the server applies its
+    // own default (`tenant`) instead of receiving an explicit `undefined`.
+    await service.createProviderAccount({
+      displayName: 'Tenant account',
+      vendorCode: 'aliyun',
+      accountCode: 'aliyun-tenant-main',
+      accessKeyId: 'AKID-example',
+      secretAccessKey: 'secret-material',
+    });
+    expect(lastCall(calls).body).toBeDefined();
+    expect((lastCall(calls).body as Record<string, unknown>).scopeType).toBeUndefined();
+    expect((lastCall(calls).body as Record<string, unknown>).isDefault).toBeUndefined();
+  });
+
+  it('passes providerAccountId through provider create and update bodies', async () => {
+    const { calls, service } = createFakeService();
+
+    await service.createProvider({
+      id: 'provider-s3',
+      providerKind: 's3_compatible',
+      name: 'Amazon S3',
+      endpointUrl: 'https://s3.us-east-1.amazonaws.com',
+      bucket: 'drive-prod',
+      providerAccountId: 'iampacct-018f-created',
+    });
+    await service.updateProvider('provider-s3', {
+      providerAccountId: 'iampacct-018f-created',
+      credentialRef: '',
+    });
+
+    expect(calls[0]).toMatchObject({
+      operationId: 'storageProviders.create',
+      body: { providerAccountId: 'iampacct-018f-created' },
+    });
+    expect(calls[1]).toMatchObject({
+      operationId: 'storageProviders.update',
+      body: { providerAccountId: 'iampacct-018f-created', credentialRef: '' },
+    });
   });
 
   it('sets and clears space type bindings through the admin storage SDK', async () => {

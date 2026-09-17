@@ -12,6 +12,7 @@ sdkwork-drive-storage-contract.workspace = true
 sdkwork-drive-storage-local.workspace = true
 sdkwork-drive-storage-s3.workspace = true
 sdkwork-drive-workspace-service.workspace = true
+sdkwork-iam-provider-account-service.workspace = true
 sqlx.workspace = true
 tokio.workspace = true
 url.workspace = true

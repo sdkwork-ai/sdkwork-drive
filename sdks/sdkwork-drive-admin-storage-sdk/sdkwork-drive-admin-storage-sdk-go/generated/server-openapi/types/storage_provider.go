@@ -16,4 +16,5 @@ type StorageProvider struct {
 	Version string `json:"version"`
 	CredentialConfigured bool `json:"credentialConfigured"`
 	StrictTls bool `json:"strictTls"`
+	ProviderAccountId string `json:"providerAccountId"`
 }

@@ -29,12 +29,13 @@ impl DriveStorageProviderStore for SqlStorageProviderStore {
     ) -> Result<DriveStorageProvider, DriveServiceError> {
         let result = sqlx::query(
             "INSERT INTO dr_drive_storage_provider (
-                id, provider_kind, name, endpoint_url, region, bucket, path_style,
-                strict_tls, credential_ref, server_side_encryption_mode, default_storage_class,
-                status, version, created_by, updated_by
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, 1, $13, $14)",
+                id, tenant_id, provider_kind, name, endpoint_url, region, bucket, path_style,
+                strict_tls, credential_ref, provider_account_id, server_side_encryption_mode,
+                default_storage_class, status, version, created_by, updated_by
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, 1, $15, $16)",
         )
         .bind(&new_provider.id)
+        .bind(&new_provider.tenant_id)
         .bind(&new_provider.provider_kind)
         .bind(&new_provider.name)
         .bind(&new_provider.endpoint_url)
@@ -43,6 +44,7 @@ impl DriveStorageProviderStore for SqlStorageProviderStore {
         .bind(new_provider.path_style)
         .bind(new_provider.strict_tls)
         .bind(&new_provider.credential_ref)
+        .bind(&new_provider.provider_account_id)
         .bind(&new_provider.server_side_encryption_mode)
         .bind(&new_provider.default_storage_class)
         .bind(&new_provider.status)
@@ -64,9 +66,9 @@ impl DriveStorageProviderStore for SqlStorageProviderStore {
         }
 
         let row = sqlx::query(
-            "SELECT id, provider_kind, name, endpoint_url, region, bucket, path_style,
-                    strict_tls, credential_ref, server_side_encryption_mode, default_storage_class,
-                    status, version
+            "SELECT id, tenant_id, provider_kind, name, endpoint_url, region, bucket, path_style,
+                    strict_tls, credential_ref, provider_account_id, server_side_encryption_mode,
+                    default_storage_class, status, version
              FROM dr_drive_storage_provider
              WHERE id=$1",
         )
@@ -90,9 +92,9 @@ impl DriveStorageProviderStore for SqlStorageProviderStore {
     ) -> Result<Vec<DriveStorageProvider>, DriveServiceError> {
         let rows = match status {
             Some(status_value) if !status_value.trim().is_empty() => sqlx::query(
-                "SELECT id, provider_kind, name, endpoint_url, region, bucket, path_style,
-                        strict_tls, credential_ref, server_side_encryption_mode, default_storage_class,
-                        status, version
+                "SELECT id, tenant_id, provider_kind, name, endpoint_url, region, bucket, path_style,
+                        strict_tls, credential_ref, provider_account_id, server_side_encryption_mode,
+                        default_storage_class, status, version
                      FROM dr_drive_storage_provider
                      WHERE status=$1
                      ORDER BY id ASC
@@ -109,9 +111,9 @@ impl DriveStorageProviderStore for SqlStorageProviderStore {
                 ))
             })?,
             _ => sqlx::query(
-                "SELECT id, provider_kind, name, endpoint_url, region, bucket, path_style,
-                        strict_tls, credential_ref, server_side_encryption_mode, default_storage_class,
-                        status, version
+                "SELECT id, tenant_id, provider_kind, name, endpoint_url, region, bucket, path_style,
+                        strict_tls, credential_ref, provider_account_id, server_side_encryption_mode,
+                        default_storage_class, status, version
                      FROM dr_drive_storage_provider
                      ORDER BY id ASC
                      LIMIT $1 OFFSET $2",
@@ -135,9 +137,9 @@ impl DriveStorageProviderStore for SqlStorageProviderStore {
         provider_id: &str,
     ) -> Result<Option<DriveStorageProvider>, DriveServiceError> {
         let row = sqlx::query(
-            "SELECT id, provider_kind, name, endpoint_url, region, bucket, path_style,
-                    strict_tls, credential_ref, server_side_encryption_mode, default_storage_class,
-                    status, version
+            "SELECT id, tenant_id, provider_kind, name, endpoint_url, region, bucket, path_style,
+                    strict_tls, credential_ref, provider_account_id, server_side_encryption_mode,
+                    default_storage_class, status, version
              FROM dr_drive_storage_provider
              WHERE id=$1",
         )
@@ -168,11 +170,12 @@ impl DriveStorageProviderStore for SqlStorageProviderStore {
                  path_style=$6,
                  strict_tls=$7,
                  credential_ref=$8,
-                 server_side_encryption_mode=$9,
-                 default_storage_class=$10,
-                 status=$11,
+                 provider_account_id=$9,
+                 server_side_encryption_mode=$10,
+                 default_storage_class=$11,
+                 status=$12,
                  version=version + 1,
-                 updated_by=$12,
+                 updated_by=$13,
                  updated_at=CURRENT_TIMESTAMP
              WHERE id=$1",
         )
@@ -184,6 +187,7 @@ impl DriveStorageProviderStore for SqlStorageProviderStore {
         .bind(patch.path_style)
         .bind(patch.strict_tls)
         .bind(&patch.credential_ref)
+        .bind(&patch.provider_account_id)
         .bind(&patch.server_side_encryption_mode)
         .bind(&patch.default_storage_class)
         .bind(&patch.status)
@@ -201,9 +205,9 @@ impl DriveStorageProviderStore for SqlStorageProviderStore {
         }
 
         let row = sqlx::query(
-            "SELECT id, provider_kind, name, endpoint_url, region, bucket, path_style,
-                    strict_tls, credential_ref, server_side_encryption_mode, default_storage_class,
-                    status, version
+            "SELECT id, tenant_id, provider_kind, name, endpoint_url, region, bucket, path_style,
+                    strict_tls, credential_ref, provider_account_id, server_side_encryption_mode,
+                    default_storage_class, status, version
              FROM dr_drive_storage_provider
              WHERE id=$1",
         )
@@ -275,6 +279,7 @@ fn map_row_to_storage_provider(row: &PgRow) -> Result<DriveStorageProvider, Driv
 
     Ok(DriveStorageProvider {
         id: row.get("id"),
+        tenant_id: row.get("tenant_id"),
         provider_kind,
         name: row.get("name"),
         endpoint_url: row.get("endpoint_url"),
@@ -283,6 +288,7 @@ fn map_row_to_storage_provider(row: &PgRow) -> Result<DriveStorageProvider, Driv
         path_style: get_bool(row, "path_style")?,
         strict_tls: get_bool(row, "strict_tls")?,
         credential_ref: row.get("credential_ref"),
+        provider_account_id: row.get("provider_account_id"),
         server_side_encryption_mode: row.get("server_side_encryption_mode"),
         default_storage_class: row.get("default_storage_class"),
         status,

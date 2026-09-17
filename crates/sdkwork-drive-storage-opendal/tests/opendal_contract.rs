@@ -307,6 +307,7 @@ fn default_opendal_provider_parts<'a>(
         default_bucket: "drive-bucket",
         force_path_style: Some(true),
         credential_ref: Some("plain:access-key:secret-key"),
+        credentials: None,
         root: None,
         server_side_encryption: None,
         default_storage_class: None,

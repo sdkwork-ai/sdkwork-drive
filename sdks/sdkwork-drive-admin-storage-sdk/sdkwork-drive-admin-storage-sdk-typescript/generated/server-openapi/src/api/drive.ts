@@ -1,8 +1,46 @@
 import { customApiPath } from './paths';
 import type { ApiRequestOptions, HttpClient } from '../http/client';
 
-import type { CopyProviderObjectRequest, CreateStorageProviderRequest, RotateStorageProviderCredentialRequest, SetDefaultStorageProviderBindingRequest, SetStorageProviderKindEnabledRequest, StorageProviderBindingsDefaultRetrieveResponse, StorageProviderBindingsDefaultUpdateResponse, StorageProviderBindingsListResponse, StorageProviderKindsCreateResponse201, StorageProviderKindsListResponse, StorageProviderKindsUpdateResponse, StorageProvidersActivateResponse, StorageProvidersBucketRetrieveResponse, StorageProvidersBucketsListResponse, StorageProvidersBucketUpdateResponse, StorageProvidersCapabilitiesListResponse, StorageProvidersCreateResponse201, StorageProvidersCredentialsRotateResponse, StorageProvidersDeactivateResponse, StorageProvidersListResponse, StorageProvidersObjectsContentRetrieveResponse, StorageProvidersObjectsContentUpdateResponse, StorageProvidersObjectsCopyResponse, StorageProvidersObjectsListResponse, StorageProvidersObjectsRetrieveResponse, StorageProvidersRetrieveResponse, StorageProvidersTestResponse, StorageProvidersUpdateResponse, UpdateProviderObjectContent, UpdateStorageProviderRequest } from '../types';
+import type { CopyProviderObjectRequest, CreateStorageProviderAccountRequest, CreateStorageProviderRequest, RotateStorageProviderCredentialRequest, SetDefaultStorageProviderBindingRequest, SetStorageProviderKindEnabledRequest, StorageProviderAccountsCreateResponse201, StorageProviderAccountsListResponse, StorageProviderBindingsDefaultRetrieveResponse, StorageProviderBindingsDefaultUpdateResponse, StorageProviderBindingsListResponse, StorageProviderKindsCreateResponse201, StorageProviderKindsListResponse, StorageProviderKindsUpdateResponse, StorageProvidersActivateResponse, StorageProvidersBucketRetrieveResponse, StorageProvidersBucketsListResponse, StorageProvidersBucketUpdateResponse, StorageProvidersCapabilitiesListResponse, StorageProvidersCreateResponse201, StorageProvidersCredentialsRotateResponse, StorageProvidersDeactivateResponse, StorageProvidersListResponse, StorageProvidersObjectsContentRetrieveResponse, StorageProvidersObjectsContentUpdateResponse, StorageProvidersObjectsCopyResponse, StorageProvidersObjectsListResponse, StorageProvidersObjectsRetrieveResponse, StorageProvidersRetrieveResponse, StorageProvidersTestResponse, StorageProvidersUpdateResponse, UpdateProviderObjectContent, UpdateStorageProviderRequest } from '../types';
 
+
+export interface DriveStorageProviderAccountsListParams {
+  vendorCode?: string;
+  status?: string;
+  search?: string;
+  scopeType?: 'platform' | 'tenant' | 'user';
+  ownerUserId?: string;
+  mine?: boolean;
+  includePlatform?: boolean;
+  capabilityCode?: string;
+}
+
+export class DriveStorageProviderAccountsApi {
+  private client: HttpClient;
+
+  constructor(client: HttpClient) {
+    this.client = client;
+  }
+
+
+async list(params?: DriveStorageProviderAccountsListParams, requestOptions?: ApiRequestOptions): Promise<StorageProviderAccountsListResponse> {
+    const query = buildQueryString([
+      { name: 'vendorCode', value: params?.vendorCode, style: 'form', explode: true, allowReserved: false },
+      { name: 'status', value: params?.status, style: 'form', explode: true, allowReserved: false },
+      { name: 'search', value: params?.search, style: 'form', explode: true, allowReserved: false },
+      { name: 'scopeType', value: params?.scopeType, style: 'form', explode: true, allowReserved: false },
+      { name: 'ownerUserId', value: params?.ownerUserId, style: 'form', explode: true, allowReserved: false },
+      { name: 'mine', value: params?.mine, style: 'form', explode: true, allowReserved: false },
+      { name: 'includePlatform', value: params?.includePlatform, style: 'form', explode: true, allowReserved: false },
+      { name: 'capabilityCode', value: params?.capabilityCode, style: 'form', explode: true, allowReserved: false },
+    ]);
+    return this.client.request<StorageProviderAccountsListResponse>(appendQueryString(customApiPath(`/drive/storage/provider-accounts`), query), { ...(requestOptions?.signal !== undefined ? { signal: requestOptions.signal } : {}), ...(requestOptions?.timeout !== undefined ? { timeout: requestOptions.timeout } : {}), method: 'GET' as any });
+  }
+
+async create(body: CreateStorageProviderAccountRequest, requestOptions?: ApiRequestOptions): Promise<StorageProviderAccountsCreateResponse201> {
+    return this.client.request<StorageProviderAccountsCreateResponse201>(customApiPath(`/drive/storage/provider-accounts`), { ...(requestOptions?.signal !== undefined ? { signal: requestOptions.signal } : {}), ...(requestOptions?.timeout !== undefined ? { timeout: requestOptions.timeout } : {}), method: 'POST' as any, body, contentType: 'application/json' });
+  }
+}
 
 export class DriveStorageProviderKindsApi {
   private client: HttpClient;
@@ -272,11 +310,13 @@ export class DriveApi {
   public readonly storageProviderBindings: DriveStorageProviderBindingsApi;
   public readonly storageProviders: DriveStorageProvidersApi;
   public readonly storageProviderKinds: DriveStorageProviderKindsApi;
+  public readonly storageProviderAccounts: DriveStorageProviderAccountsApi;
 
   constructor(client: HttpClient) {
     this.storageProviderBindings = new DriveStorageProviderBindingsApi(client);
     this.storageProviders = new DriveStorageProvidersApi(client);
     this.storageProviderKinds = new DriveStorageProviderKindsApi(client);
+    this.storageProviderAccounts = new DriveStorageProviderAccountsApi(client);
   }
 
 }

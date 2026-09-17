@@ -12,6 +12,7 @@ pub(crate) struct CreateStorageProviderRequest {
     pub(crate) path_style: Option<bool>,
     pub(crate) strict_tls: Option<bool>,
     pub(crate) credential_ref: Option<String>,
+    pub(crate) provider_account_id: Option<String>,
     pub(crate) server_side_encryption_mode: Option<String>,
     pub(crate) default_storage_class: Option<String>,
     pub(crate) status: Option<String>,
@@ -27,6 +28,7 @@ pub(crate) struct UpdateStorageProviderRequest {
     pub(crate) path_style: Option<bool>,
     pub(crate) strict_tls: Option<bool>,
     pub(crate) credential_ref: Option<String>,
+    pub(crate) provider_account_id: Option<String>,
     pub(crate) server_side_encryption_mode: Option<String>,
     pub(crate) default_storage_class: Option<String>,
     pub(crate) status: Option<String>,
@@ -130,11 +132,88 @@ pub(crate) struct StorageProviderResponse {
     pub(crate) path_style: bool,
     pub(crate) strict_tls: bool,
     pub(crate) credential_ref: Option<String>,
+    pub(crate) provider_account_id: Option<String>,
     pub(crate) server_side_encryption_mode: Option<String>,
     pub(crate) default_storage_class: Option<String>,
     pub(crate) status: String,
     pub(crate) version: i64,
     pub(crate) credential_configured: bool,
+}
+
+/// Reusable service-provider account projected for the storage admin console.
+///
+/// This is a read-only reference view of the platform account center row
+/// (`iam_provider_account`); the storage plane never exposes credential
+/// material, only whether an active credential exists.
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct StorageProviderAccountResponse {
+    pub(crate) id: String,
+    /// `platform` | `tenant` | `user`.
+    pub(crate) scope_type: String,
+    /// Present only for `user`-scoped accounts.
+    pub(crate) owner_user_id: Option<String>,
+    /// Whether this account is its scope's default for the vendor +
+    /// environment, i.e. what a consumer gets without naming an account.
+    pub(crate) is_default: bool,
+    pub(crate) vendor_code: String,
+    pub(crate) account_code: String,
+    pub(crate) display_name: String,
+    pub(crate) account_type: String,
+    pub(crate) environment: String,
+    pub(crate) external_account_id: Option<String>,
+    pub(crate) capability_codes: Vec<String>,
+    pub(crate) region_code: Option<String>,
+    pub(crate) status: String,
+    pub(crate) credential_configured: bool,
+    pub(crate) credential_count: i64,
+    pub(crate) version: i64,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct ListStorageProviderAccountsQuery {
+    pub(crate) vendor_code: Option<String>,
+    pub(crate) status: Option<String>,
+    pub(crate) search: Option<String>,
+    pub(crate) capability_code: Option<String>,
+    /// Narrow the list to one scope: `platform` | `tenant` | `user`.
+    pub(crate) scope_type: Option<String>,
+    /// Narrow the list to one owner. Only honoured together with
+    /// `scopeType=user`, and only when the caller owns it.
+    pub(crate) owner_user_id: Option<String>,
+    /// Convenience switch for "my own accounts": pins the list to the caller's
+    /// personal `user` scope without having to know its own user id.
+    pub(crate) mine: Option<bool>,
+    /// Whether platform-wide accounts are included. Defaults to `true` so the
+    /// console shows the global defaults a tenant can reuse.
+    pub(crate) include_platform: Option<bool>,
+    #[serde(rename = "page_size")]
+    pub(crate) page_size: Option<i64>,
+    #[serde(rename = "cursor")]
+    pub(crate) page_token: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub(crate) struct CreateStorageProviderAccountRequest {
+    pub(crate) display_name: String,
+    pub(crate) vendor_code: String,
+    pub(crate) account_code: String,
+    pub(crate) account_type: Option<String>,
+    pub(crate) environment: Option<String>,
+    pub(crate) external_account_id: Option<String>,
+    pub(crate) region_code: Option<String>,
+    /// `platform` (platform operators only) | `tenant` (default) | `user`.
+    pub(crate) scope_type: Option<String>,
+    /// Only meaningful with `scopeType=user`; defaults to the caller. Naming
+    /// somebody else's user id is rejected.
+    pub(crate) owner_user_id: Option<String>,
+    /// Make this account its scope's default for the vendor + environment.
+    pub(crate) is_default: Option<bool>,
+    pub(crate) access_key_id: String,
+    pub(crate) secret_access_key: String,
+    pub(crate) session_token: Option<String>,
 }
 
 #[derive(Debug, Serialize)]

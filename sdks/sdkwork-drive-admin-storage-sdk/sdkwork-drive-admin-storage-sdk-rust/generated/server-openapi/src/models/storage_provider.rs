@@ -43,4 +43,9 @@ pub struct StorageProvider {
     /// Provider-level TLS policy. HTTPS endpoints default to true, private HTTP endpoints default to false, and true requires an HTTPS endpoint.
     #[serde(rename = "strictTls")]
     pub strict_tls: bool,
+
+    /// Reference to a reusable service-provider account held by the platform account center (iam_provider_account). Mutually exclusive with credentialRef; the credential material is resolved from the account center at runtime, so an account rotation applies to every consumer at once.
+    #[serde(rename = "providerAccountId")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub provider_account_id: Option<String>,
 }

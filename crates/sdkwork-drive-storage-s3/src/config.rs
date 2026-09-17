@@ -175,6 +175,34 @@ impl S3StoreConfig {
         credential_ref: Option<&str>,
         strict_tls_override: Option<bool>,
     ) -> Result<Self, DriveObjectStoreError> {
+        let credentials = Self::resolve_credentials(credential_ref)?;
+        Self::from_provider_parts_with_credentials(
+            provider_kind,
+            endpoint_url,
+            region,
+            default_bucket,
+            force_path_style,
+            credentials,
+            strict_tls_override,
+        )
+    }
+
+    /// Build a store config from an explicit in-memory credential snapshot.
+    ///
+    /// Consuming domains that resolve credentials from the platform provider
+    /// account center (reusable service-provider accounts) hold decrypted
+    /// material only in memory; routing it through a `plain:` ref would both
+    /// round-trip secrets through a string and stay gated by the production
+    /// plain-ref policy, so this constructor exists instead.
+    pub fn from_provider_parts_with_credentials(
+        provider_kind: &str,
+        endpoint_url: &str,
+        region: Option<&str>,
+        default_bucket: &str,
+        force_path_style: bool,
+        credentials: DriveStorageCredentialSnapshot,
+        strict_tls_override: Option<bool>,
+    ) -> Result<Self, DriveObjectStoreError> {
         let endpoint = endpoint_url.trim();
         if endpoint_url != endpoint {
             return Err(DriveObjectStoreError::new(
@@ -209,7 +237,6 @@ impl S3StoreConfig {
                     .filter(|value| !value.is_empty())
             })
             .unwrap_or_else(|| provider_profile.default_region().to_string());
-        let credentials = Self::resolve_credentials(credential_ref)?;
         let strict_tls = strict_tls_override.unwrap_or_else(|| {
             Self::read_bool_env(
                 "SDKWORK_DRIVE_S3_STRICT_TLS",

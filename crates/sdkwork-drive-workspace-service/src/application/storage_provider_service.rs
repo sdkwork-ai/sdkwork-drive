@@ -8,6 +8,7 @@ use sdkwork_drive_config::allows_plain_credential_refs;
 #[derive(Debug, Clone)]
 pub struct CreateStorageProviderCommand {
     pub id: String,
+    pub tenant_id: String,
     pub provider_kind: DriveStorageProviderKind,
     pub name: String,
     pub endpoint_url: String,
@@ -16,6 +17,7 @@ pub struct CreateStorageProviderCommand {
     pub path_style: Option<bool>,
     pub strict_tls: Option<bool>,
     pub credential_ref: Option<String>,
+    pub provider_account_id: Option<String>,
     pub server_side_encryption_mode: Option<String>,
     pub default_storage_class: Option<String>,
     pub status: Option<String>,
@@ -44,6 +46,7 @@ pub struct UpdateStorageProviderCommand {
     pub path_style: Option<bool>,
     pub strict_tls: Option<bool>,
     pub credential_ref: Option<String>,
+    pub provider_account_id: Option<String>,
     pub server_side_encryption_mode: Option<String>,
     pub default_storage_class: Option<String>,
     pub status: Option<String>,
@@ -282,6 +285,7 @@ where
             .unwrap_or("active")
             .to_string();
         let status = normalize_status(&status)?;
+        let tenant_id = normalize_tenant_id(&command.tenant_id)?;
         let region = command
             .region
             .as_deref()
@@ -305,13 +309,31 @@ where
             .unwrap_or_else(|| Self::default_strict_tls_for_endpoint(&endpoint_url));
         validate_strict_tls_endpoint(strict_tls, &endpoint_url)?;
 
-        if let Some(ref credential_ref) = command.credential_ref {
+        let credential_ref = command
+            .credential_ref
+            .as_deref()
+            .map(str::trim)
+            .filter(|value| !value.is_empty() && !is_masked_credential_ref(value))
+            .map(ToString::to_string);
+        if let Some(ref credential_ref) = credential_ref {
             validate_credential_ref(credential_ref)?;
+        }
+        let provider_account_id = normalize_provider_account_id(command.provider_account_id)?;
+        // A provider reads its credential from exactly one source: either the
+        // reusable account center (`provider_account_id`) or a local
+        // `credential_ref`. The database enforces the same rule through
+        // ck_dr_drive_storage_provider_credential_source.
+        if provider_account_id.is_some() && credential_ref.is_some() {
+            return Err(DriveServiceError::Validation(
+                "credential_ref and provider_account_id are mutually exclusive; choose one credential source"
+                    .to_string(),
+            ));
         }
 
         self.store
             .insert_storage_provider(&NewDriveStorageProvider {
                 id: command.id,
+                tenant_id,
                 provider_kind: command.provider_kind.as_str().to_string(),
                 name: command.name.trim().to_string(),
                 endpoint_url,
@@ -321,7 +343,8 @@ where
                     Self::default_path_style_for_provider(&command.provider_kind)
                 }),
                 strict_tls,
-                credential_ref: command.credential_ref,
+                credential_ref,
+                provider_account_id,
                 server_side_encryption_mode,
                 default_storage_class,
                 status,
@@ -443,13 +466,46 @@ where
             None => current.default_storage_class,
         };
 
-        let credential_ref = match command.credential_ref {
-            Some(ref value) if value.trim().is_empty() => None,
-            Some(value) => {
-                validate_credential_ref(&value)?;
-                Some(value.clone())
-            }
-            None => current.credential_ref,
+        // Credential source switching: whichever source the request carries
+        // wins over the other, so an operator can move a provider from a
+        // local credential_ref to the account center (or back) in a single
+        // request without the database mutual-exclusion check rejecting the
+        // patch. An empty string explicitly clears that source.
+        let incoming_credential_ref = command.credential_ref.as_deref().map(str::trim);
+        // A masked reference (`env:***`) is the API's redacted projection of
+        // the stored credential. Clients that echo it back unchanged mean
+        // "keep the current credential", never "store this literal"; storing
+        // it would silently break runtime credential resolution.
+        let credential_ref_is_masked =
+            incoming_credential_ref.is_some_and(is_masked_credential_ref);
+        let raw_credential_ref = incoming_credential_ref
+            .filter(|value| !value.is_empty() && !credential_ref_is_masked)
+            .map(ToString::to_string);
+        if let Some(ref value) = raw_credential_ref {
+            validate_credential_ref(value)?;
+        }
+        let carries_credential_ref = incoming_credential_ref.is_some() && !credential_ref_is_masked;
+        let carries_provider_account = command.provider_account_id.is_some();
+        let raw_provider_account_id = normalize_provider_account_id(command.provider_account_id)?;
+
+        let (credential_ref, provider_account_id) = if raw_provider_account_id.is_some() {
+            // Switching to the account center clears the local ref.
+            (None, raw_provider_account_id)
+        } else if raw_credential_ref.is_some() {
+            // Switching to a local ref clears the account reference.
+            (raw_credential_ref, None)
+        } else if carries_provider_account {
+            // Explicit clear of the account source; the local ref is kept
+            // (it is NULL anyway while an account is set).
+            (current.credential_ref.clone(), None)
+        } else if carries_credential_ref {
+            // Explicit clear of the local ref.
+            (None, current.provider_account_id.clone())
+        } else {
+            (
+                current.credential_ref.clone(),
+                current.provider_account_id.clone(),
+            )
         };
 
         self.store
@@ -463,6 +519,7 @@ where
                     path_style,
                     strict_tls,
                     credential_ref,
+                    provider_account_id,
                     server_side_encryption_mode,
                     default_storage_class,
                     status,
@@ -522,6 +579,7 @@ where
                     path_style: current.path_style,
                     strict_tls: current.strict_tls,
                     credential_ref: current.credential_ref,
+                    provider_account_id: current.provider_account_id,
                     server_side_encryption_mode: current.server_side_encryption_mode,
                     default_storage_class: current.default_storage_class,
                     status,
@@ -536,7 +594,7 @@ where
         command: RotateStorageProviderCredentialCommand,
     ) -> Result<DriveStorageProvider, DriveServiceError> {
         let provider_id = command.provider_id.trim();
-        if provider_id.is_empty() {
+        if provider_id.trim().is_empty() {
             return Err(DriveServiceError::Validation(
                 "provider_id is required".to_string(),
             ));
@@ -552,6 +610,12 @@ where
                 "credential_ref is required".to_string(),
             ));
         }
+        if is_masked_credential_ref(credential_ref) {
+            return Err(DriveServiceError::Validation(
+                "credential_ref is masked; submit the new credential reference to rotate"
+                    .to_string(),
+            ));
+        }
         if !is_supported_credential_ref(credential_ref) {
             return Err(DriveServiceError::Validation(
                 "credential_ref must start with env:, secret:, kms:, vault:, or plain:".to_string(),
@@ -564,6 +628,12 @@ where
             .await?
             .ok_or_else(|| DriveServiceError::NotFound("storage provider not found".to_string()))?;
         Self::ensure_deleted_provider_is_not_modified(&current.status)?;
+        if current.provider_account_id.is_some() {
+            return Err(DriveServiceError::Conflict(
+                "provider reads its credential from a reusable provider account; rotate the credential in the provider account center instead"
+                    .to_string(),
+            ));
+        }
         self.store
             .update_storage_provider(
                 provider_id,
@@ -575,6 +645,7 @@ where
                     path_style: current.path_style,
                     strict_tls: current.strict_tls,
                     credential_ref: Some(credential_ref.to_string()),
+                    provider_account_id: current.provider_account_id,
                     server_side_encryption_mode: current.server_side_encryption_mode,
                     default_storage_class: current.default_storage_class,
                     status: current.status,
@@ -652,6 +723,51 @@ fn normalize_status(raw: &str) -> Result<String, DriveServiceError> {
             "status is invalid; allowed: active, disabled, deleted".to_string(),
         )),
     }
+}
+
+/// Sentinel tenant used by pre-account rows; a create without a tenant falls
+/// back to it so legacy callers keep working.
+const PLATFORM_SENTINEL_TENANT_ID: &str = "0";
+
+fn normalize_tenant_id(raw: &str) -> Result<String, DriveServiceError> {
+    let tenant_id = raw.trim();
+    if tenant_id.is_empty() {
+        return Ok(PLATFORM_SENTINEL_TENANT_ID.to_string());
+    }
+    if tenant_id.chars().count() > 64 {
+        return Err(DriveServiceError::Validation(
+            "tenant_id must be at most 64 characters".to_string(),
+        ));
+    }
+    Ok(tenant_id.to_string())
+}
+
+/// Shape-check and normalize a provider account reference. The pattern mirrors
+/// ck_dr_drive_storage_provider_provider_account_id so an invalid reference is
+/// rejected at the service boundary with a readable message instead of by a
+/// database check constraint.
+fn normalize_provider_account_id(
+    raw: Option<String>,
+) -> Result<Option<String>, DriveServiceError> {
+    let Some(value) = raw else {
+        return Ok(None);
+    };
+    let account_id = value.trim();
+    if account_id.is_empty() {
+        return Ok(None);
+    }
+    let first = account_id.as_bytes()[0];
+    let shape_ok = first.is_ascii_alphanumeric()
+        && (2..=128).contains(&account_id.len())
+        && account_id
+            .bytes()
+            .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'_' | b'.' | b':' | b'-'));
+    if !shape_ok {
+        return Err(DriveServiceError::Validation(
+            "provider_account_id must match ^[A-Za-z0-9][A-Za-z0-9_.:-]{1,127}$".to_string(),
+        ));
+    }
+    Ok(Some(account_id.to_string()))
 }
 
 fn validate_endpoint_url(
@@ -839,6 +955,12 @@ fn is_supported_credential_ref(raw: &str) -> bool {
     ["env:", "secret:", "kms:", "vault:", "plain:"]
         .iter()
         .any(|prefix| raw.starts_with(prefix))
+}
+
+/// A masked credential reference (for example `env:***`) is the API's
+/// redacted projection of a stored credential and is never storable input.
+fn is_masked_credential_ref(raw: &str) -> bool {
+    raw == "***" || raw.ends_with(":***")
 }
 
 fn validate_credential_ref(raw: &str) -> Result<(), DriveServiceError> {

@@ -29,7 +29,7 @@ pub(crate) async fn head_storage_provider_bucket(
     Path(provider_id): Path<String>,
 ) -> Result<Json<ProviderBucketResponse>, (StatusCode, Json<ProblemDetail>)> {
     let provider = get_active_provider(&state, &provider_id).await?;
-    let object_store = build_full_s3_object_store_for_provider(&provider).await?;
+    let object_store = build_full_s3_object_store_for_provider(&state, &provider).await?;
     let result = object_store
         .head_bucket(HeadBucketRequest {
             bucket: provider.bucket.clone(),
@@ -54,7 +54,7 @@ pub(crate) async fn list_storage_provider_buckets(
     let page = parse_offset_page(query.page_size, query.page_token)?;
     let provider = get_active_provider(&state, &provider_id).await?;
     let configured_bucket = provider.bucket.clone();
-    let object_store = build_full_s3_object_store_for_provider(&provider).await?;
+    let object_store = build_full_s3_object_store_for_provider(&state, &provider).await?;
     let result = object_store
         .list_buckets(ListBucketsRequest)
         .await
@@ -98,7 +98,7 @@ pub(crate) async fn create_storage_provider_bucket(
 ) -> Result<Json<ProviderBucketMutationResponse>, (StatusCode, Json<ProblemDetail>)> {
     let operator_id = ctx.resolve_operator_id()?;
     let provider = get_active_provider(&state, &provider_id).await?;
-    let object_store = build_full_s3_object_store_for_provider(&provider).await?;
+    let object_store = build_full_s3_object_store_for_provider(&state, &provider).await?;
     let result = object_store
         .create_bucket(CreateBucketRequest {
             bucket: provider.bucket.clone(),
@@ -126,7 +126,7 @@ pub(crate) async fn delete_storage_provider_bucket(
 ) -> Result<StatusCode, (StatusCode, Json<ProblemDetail>)> {
     let operator_id = ctx.resolve_operator_id()?;
     let provider = get_active_provider(&state, &provider_id).await?;
-    let object_store = build_full_s3_object_store_for_provider(&provider).await?;
+    let object_store = build_full_s3_object_store_for_provider(&state, &provider).await?;
     let result = object_store
         .delete_bucket(DeleteBucketRequest {
             bucket: provider.bucket.clone(),

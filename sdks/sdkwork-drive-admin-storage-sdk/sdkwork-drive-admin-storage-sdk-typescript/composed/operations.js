@@ -12,6 +12,8 @@ export const sdkMetadata = {
     sdkDependencies: [{ "workspace": "sdkwork-iam-backend-sdk", "role": "appbase-backend-management-capability", "required": true, "dependencyMode": "consumer-sdk", "apiPrefix": "/backend/v3/api", "apiAuthority": "sdkwork-iam-backend-api", "generatedTransportImportPolicy": "forbidden", "packageByLanguage": { "typescript": "@sdkwork/iam-backend-sdk", "rust": "sdkwork-iam-backend-sdk", "java": "com.sdkwork:sdkwork-iam-backend-sdk", "python": "sdkwork-iam-backend-sdk", "go": "github.com/sdkwork/sdkwork-iam-backend-sdk" } }],
 };
 export const operations = {
+    "storageProviderAccounts.create": { method: "POST", path: "/backend/v3/api/drive/storage/provider-accounts" },
+    "storageProviderAccounts.list": { method: "GET", path: "/backend/v3/api/drive/storage/provider-accounts" },
     "storageProviderBindings.default.delete": { method: "DELETE", path: "/backend/v3/api/drive/storage/bindings/default" },
     "storageProviderBindings.default.retrieve": { method: "GET", path: "/backend/v3/api/drive/storage/bindings/default" },
     "storageProviderBindings.default.update": { method: "PUT", path: "/backend/v3/api/drive/storage/bindings/default" },

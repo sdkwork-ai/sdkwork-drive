@@ -13,4 +13,6 @@ export interface CreateStorageProviderRequest {
   status?: string;
   /** Provider-level TLS policy. HTTPS endpoints default to true, private HTTP endpoints default to false, and true requires an HTTPS endpoint. */
   strictTls?: boolean;
+  /** Reference to a reusable service-provider account held by the platform account center (iam_provider_account). Mutually exclusive with credentialRef; the credential material is resolved from the account center at runtime, so an account rotation applies to every consumer at once. */
+  providerAccountId?: string;
 }

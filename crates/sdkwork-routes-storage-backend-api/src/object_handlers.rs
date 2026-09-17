@@ -43,7 +43,7 @@ pub(crate) async fn list_storage_provider_objects(
     let prefix = validate_object_prefix(query.prefix, "prefix")?;
     let delimiter = validate_object_delimiter(query.delimiter, "delimiter")?;
     let provider = get_active_provider(&state, &provider_id).await?;
-    let object_store = build_object_store_for_provider(&state.config, &provider).await?;
+    let object_store = build_object_store_for_provider(&state, &provider).await?;
     let result = object_store
         .list_objects(ListObjectsRequest {
             bucket: provider.bucket.clone(),
@@ -95,7 +95,7 @@ pub(crate) async fn head_storage_provider_object(
     Path((provider_id, object_key)): Path<(String, String)>,
 ) -> Result<Json<ProviderObjectResponse>, (StatusCode, Json<ProblemDetail>)> {
     let provider = get_active_provider(&state, &provider_id).await?;
-    let object_store = build_object_store_for_provider(&state.config, &provider).await?;
+    let object_store = build_object_store_for_provider(&state, &provider).await?;
     let object_key = decode_path_object_key(&object_key)?;
     let result = object_store
         .head_object(HeadObjectRequest {
@@ -127,7 +127,7 @@ pub(crate) async fn delete_storage_provider_object(
 ) -> Result<StatusCode, (StatusCode, Json<ProblemDetail>)> {
     let operator_id = ctx.resolve_operator_id()?;
     let provider = get_active_provider(&state, &provider_id).await?;
-    let object_store = build_object_store_for_provider(&state.config, &provider).await?;
+    let object_store = build_object_store_for_provider(&state, &provider).await?;
     let object_key = decode_path_object_key(&object_key)?;
     let result = object_store
         .delete_object(DeleteObjectRequest {
@@ -161,7 +161,7 @@ pub(crate) async fn copy_storage_provider_object(
         validate_object_key(payload.destination_object_key, "destinationObjectKey")?;
     let operator_id = ctx.resolve_operator_id()?;
     let provider = get_active_provider(&state, &provider_id).await?;
-    let object_store = build_object_store_for_provider(&state.config, &provider).await?;
+    let object_store = build_object_store_for_provider(&state, &provider).await?;
     let destination_bucket = match payload.destination_bucket.as_deref() {
         Some(value) if !value.trim().is_empty() => {
             validate_s3_bucket_name(value, "destinationBucket")
@@ -209,7 +209,7 @@ pub(crate) async fn read_storage_provider_object_content(
     Path((provider_id, object_key)): Path<(String, String)>,
 ) -> Result<Json<ProviderObjectContentResponse>, (StatusCode, Json<ProblemDetail>)> {
     let provider = get_active_provider(&state, &provider_id).await?;
-    let object_store = build_object_store_for_provider(&state.config, &provider).await?;
+    let object_store = build_object_store_for_provider(&state, &provider).await?;
     let object_key = decode_path_object_key(&object_key)?;
     let head = object_store
         .head_object(HeadObjectRequest {
@@ -301,7 +301,7 @@ pub(crate) async fn write_storage_provider_object_content(
         .map(|value| value.trim().to_string())
         .filter(|value| !value.is_empty());
     let provider = get_active_provider(&state, &provider_id).await?;
-    let object_store = build_object_store_for_provider(&state.config, &provider).await?;
+    let object_store = build_object_store_for_provider(&state, &provider).await?;
     let checksum = sdkwork_utils_rust::sha256_hash(&bytes);
     object_store
         .put_object(PutObjectRequest {

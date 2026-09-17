@@ -12,4 +12,5 @@ type UpdateStorageProviderRequest struct {
 	DefaultStorageClass string `json:"defaultStorageClass"`
 	Status string `json:"status"`
 	StrictTls bool `json:"strictTls"`
+	ProviderAccountId string `json:"providerAccountId"`
 }

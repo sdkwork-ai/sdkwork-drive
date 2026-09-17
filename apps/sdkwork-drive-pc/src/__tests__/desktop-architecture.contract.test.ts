@@ -856,7 +856,13 @@ describe('desktop architecture contract', () => {
     expect(adminSource).not.toMatch(/\bfetch\s*\(|axios\.|Authorization\s*:|Access-Token\s*:/);
     expect(adminSource).not.toContain('generated/server-openapi');
     expect(adminSource).not.toContain('sdkwork-drive-admin-storage-sdk-typescript');
-    expect(adminSource).not.toContain('secretAccessKey');
+    // Plaintext secret material is accepted by exactly one operation in this
+    // package: the account-center registration (storageProviderAccounts.create),
+    // where the server seals it into the write-only credential row. Provider
+    // configuration operations carry credential references / account ids and
+    // never secret bytes — enforced behaviorally in
+    // storageProviderAdminService.test.ts.
+    expect(adminSource).toContain("operationId: 'storageProviderAccounts.create'");
     expect(adminSource).not.toContain('accessKeySecret');
   });
 

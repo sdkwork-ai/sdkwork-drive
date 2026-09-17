@@ -3,7 +3,7 @@ use std::sync::Arc;
 use crate::api::paths::custom_path;
 use crate::api::paths::append_query_string;
 use crate::http::{SdkworkError, SdkworkHttpClient};
-use crate::models::{CopyProviderObjectRequest, CreateStorageProviderRequest, RotateStorageProviderCredentialRequest, SetDefaultStorageProviderBindingRequest, SetStorageProviderKindEnabledRequest, StorageProviderBindingsDefaultRetrieveResponse, StorageProviderBindingsDefaultUpdateResponse, StorageProviderBindingsListResponse, StorageProviderKindsCreateResponse201, StorageProviderKindsListResponse, StorageProviderKindsUpdateResponse, StorageProvidersActivateResponse, StorageProvidersBucketRetrieveResponse, StorageProvidersBucketUpdateResponse, StorageProvidersBucketsListResponse, StorageProvidersCapabilitiesListResponse, StorageProvidersCreateResponse201, StorageProvidersCredentialsRotateResponse, StorageProvidersDeactivateResponse, StorageProvidersListResponse, StorageProvidersObjectsContentRetrieveResponse, StorageProvidersObjectsContentUpdateResponse, StorageProvidersObjectsCopyResponse, StorageProvidersObjectsListResponse, StorageProvidersObjectsRetrieveResponse, StorageProvidersRetrieveResponse, StorageProvidersTestResponse, StorageProvidersUpdateResponse, UpdateProviderObjectContent, UpdateStorageProviderRequest};
+use crate::models::{CopyProviderObjectRequest, CreateStorageProviderAccountRequest, CreateStorageProviderRequest, RotateStorageProviderCredentialRequest, SetDefaultStorageProviderBindingRequest, SetStorageProviderKindEnabledRequest, StorageProviderAccountsCreateResponse201, StorageProviderAccountsListResponse, StorageProviderBindingsDefaultRetrieveResponse, StorageProviderBindingsDefaultUpdateResponse, StorageProviderBindingsListResponse, StorageProviderKindsCreateResponse201, StorageProviderKindsListResponse, StorageProviderKindsUpdateResponse, StorageProvidersActivateResponse, StorageProvidersBucketRetrieveResponse, StorageProvidersBucketUpdateResponse, StorageProvidersBucketsListResponse, StorageProvidersCapabilitiesListResponse, StorageProvidersCreateResponse201, StorageProvidersCredentialsRotateResponse, StorageProvidersDeactivateResponse, StorageProvidersListResponse, StorageProvidersObjectsContentRetrieveResponse, StorageProvidersObjectsContentUpdateResponse, StorageProvidersObjectsCopyResponse, StorageProvidersObjectsListResponse, StorageProvidersObjectsRetrieveResponse, StorageProvidersRetrieveResponse, StorageProvidersTestResponse, StorageProvidersUpdateResponse, UpdateProviderObjectContent, UpdateStorageProviderRequest};
 
 #[derive(Clone)]
 pub struct DriveApi {
@@ -179,6 +179,26 @@ impl DriveApi {
     pub async fn storage_providers_objects_content_update(&self, provider_id: &str, object_key: &str, body: &UpdateProviderObjectContent) -> Result<StorageProvidersObjectsContentUpdateResponse, SdkworkError> {
         let path = custom_path(&format!("/drive/storage/providers/{}/object-contents/{}", serialize_path_parameter(provider_id, PathParameterSpec::new("providerId", "simple", false)), serialize_path_parameter(object_key, PathParameterSpec::new("objectKey", "simple", false))));
         self.client.put(&path, Some(body), None, None, Some("application/json")).await
+    }
+
+    pub async fn storage_provider_accounts_list(&self, vendor_code: Option<&str>, status: Option<&str>, search: Option<&str>, scope_type: Option<&str>, owner_user_id: Option<&str>, mine: Option<bool>, include_platform: Option<bool>, capability_code: Option<&str>) -> Result<StorageProviderAccountsListResponse, SdkworkError> {
+        let query = build_query_string(&[
+            QueryParameterSpec::new("vendorCode", vendor_code, "form", true, false, None),
+            QueryParameterSpec::new("status", status, "form", true, false, None),
+            QueryParameterSpec::new("search", search, "form", true, false, None),
+            QueryParameterSpec::new("scopeType", scope_type, "form", true, false, None),
+            QueryParameterSpec::new("ownerUserId", owner_user_id, "form", true, false, None),
+            QueryParameterSpec::new("mine", mine, "form", true, false, None),
+            QueryParameterSpec::new("includePlatform", include_platform, "form", true, false, None),
+            QueryParameterSpec::new("capabilityCode", capability_code, "form", true, false, None),
+        ]);
+        let path = append_query_string(custom_path(&"/drive/storage/provider-accounts".to_string()), &query);
+        self.client.get(&path, None, None).await
+    }
+
+    pub async fn storage_provider_accounts_create(&self, body: &CreateStorageProviderAccountRequest) -> Result<StorageProviderAccountsCreateResponse201, SdkworkError> {
+        let path = custom_path(&"/drive/storage/provider-accounts".to_string());
+        self.client.post(&path, Some(body), None, None, Some("application/json")).await
     }
 
 }

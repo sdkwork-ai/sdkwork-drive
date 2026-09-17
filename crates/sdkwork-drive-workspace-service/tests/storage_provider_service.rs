@@ -20,6 +20,8 @@ async fn create_and_list_storage_providers_with_status_filter() {
     service
         .create_storage_provider(CreateStorageProviderCommand {
             id: "provider-001".to_string(),
+            tenant_id: "tenant-storage".to_string(),
+            provider_account_id: None,
             provider_kind: DriveStorageProviderKind::S3Compatible,
             name: "Provider 001".to_string(),
             endpoint_url: "https://s3.example.com".to_string(),
@@ -38,6 +40,8 @@ async fn create_and_list_storage_providers_with_status_filter() {
     service
         .create_storage_provider(CreateStorageProviderCommand {
             id: "provider-002".to_string(),
+            tenant_id: "tenant-storage".to_string(),
+            provider_account_id: None,
             provider_kind: DriveStorageProviderKind::S3Compatible,
             name: "Provider 002".to_string(),
             endpoint_url: "https://s3-alt.example.com".to_string(),
@@ -86,6 +90,8 @@ async fn create_storage_provider_rejects_duplicate_id() {
     let service = DriveStorageProviderService::new(SqlStorageProviderStore::new(pool));
     let command = CreateStorageProviderCommand {
         id: "provider-duplicate".to_string(),
+        tenant_id: "tenant-storage".to_string(),
+        provider_account_id: None,
         provider_kind: DriveStorageProviderKind::S3Compatible,
         name: "Provider Duplicate".to_string(),
         endpoint_url: "https://s3.example.com".to_string(),
@@ -127,6 +133,8 @@ async fn update_test_and_delete_storage_provider_flow() {
     service
         .create_storage_provider(CreateStorageProviderCommand {
             id: "provider-001".to_string(),
+            tenant_id: "tenant-storage".to_string(),
+            provider_account_id: None,
             provider_kind: DriveStorageProviderKind::S3Compatible,
             name: "Provider 001".to_string(),
             endpoint_url: "https://s3.example.com".to_string(),
@@ -146,6 +154,7 @@ async fn update_test_and_delete_storage_provider_flow() {
     let updated = service
         .update_storage_provider(UpdateStorageProviderCommand {
             provider_id: "provider-001".to_string(),
+            provider_account_id: None,
             name: Some("Provider 001 Updated".to_string()),
             endpoint_url: Some("https://s3-updated.example.com".to_string()),
             region: Some("us-west-2".to_string()),
@@ -225,6 +234,8 @@ async fn delete_storage_provider_rejects_active_provider_bindings() {
     service
         .create_storage_provider(CreateStorageProviderCommand {
             id: "provider-bound-active".to_string(),
+            tenant_id: "tenant-storage".to_string(),
+            provider_account_id: None,
             provider_kind: DriveStorageProviderKind::S3Compatible,
             name: "Provider Bound Active".to_string(),
             endpoint_url: "https://s3.example.com".to_string(),
@@ -292,6 +303,8 @@ async fn storage_provider_service_rejects_deleted_status_when_active_bindings_ex
     service
         .create_storage_provider(CreateStorageProviderCommand {
             id: "provider-status-bound".to_string(),
+            tenant_id: "tenant-storage".to_string(),
+            provider_account_id: None,
             provider_kind: DriveStorageProviderKind::S3Compatible,
             name: "Provider Status Bound".to_string(),
             endpoint_url: "https://s3.example.com".to_string(),
@@ -327,6 +340,7 @@ async fn storage_provider_service_rejects_deleted_status_when_active_bindings_ex
     let update_error = service
         .update_storage_provider(UpdateStorageProviderCommand {
             provider_id: "provider-status-bound".to_string(),
+            provider_account_id: None,
             name: None,
             endpoint_url: None,
             region: None,
@@ -385,6 +399,8 @@ async fn storage_provider_service_rejects_reactivating_deleted_provider() {
     service
         .create_storage_provider(CreateStorageProviderCommand {
             id: "provider-deleted-terminal".to_string(),
+            tenant_id: "tenant-storage".to_string(),
+            provider_account_id: None,
             provider_kind: DriveStorageProviderKind::S3Compatible,
             name: "Provider Deleted Terminal".to_string(),
             endpoint_url: "https://s3.example.com".to_string(),
@@ -411,6 +427,7 @@ async fn storage_provider_service_rejects_reactivating_deleted_provider() {
     let update_error = service
         .update_storage_provider(UpdateStorageProviderCommand {
             provider_id: "provider-deleted-terminal".to_string(),
+            provider_account_id: None,
             name: None,
             endpoint_url: None,
             region: None,
@@ -467,6 +484,8 @@ async fn storage_provider_service_rejects_rotating_credentials_for_deleted_provi
     service
         .create_storage_provider(CreateStorageProviderCommand {
             id: "provider-deleted-credential".to_string(),
+            tenant_id: "tenant-storage".to_string(),
+            provider_account_id: None,
             provider_kind: DriveStorageProviderKind::S3Compatible,
             name: "Provider Deleted Credential".to_string(),
             endpoint_url: "https://s3.example.com".to_string(),
@@ -529,6 +548,8 @@ async fn storage_provider_service_rejects_location_changes_when_active_bindings_
     service
         .create_storage_provider(CreateStorageProviderCommand {
             id: "provider-location-bound".to_string(),
+            tenant_id: "tenant-storage".to_string(),
+            provider_account_id: None,
             provider_kind: DriveStorageProviderKind::S3Compatible,
             name: "Provider Location Bound".to_string(),
             endpoint_url: "http://127.0.0.1:9000".to_string(),
@@ -566,6 +587,7 @@ async fn storage_provider_service_rejects_location_changes_when_active_bindings_
             "endpoint_url",
             UpdateStorageProviderCommand {
                 provider_id: "provider-location-bound".to_string(),
+                provider_account_id: None,
                 name: None,
                 endpoint_url: Some("http://127.0.0.1:9001".to_string()),
                 region: None,
@@ -583,6 +605,7 @@ async fn storage_provider_service_rejects_location_changes_when_active_bindings_
             "bucket",
             UpdateStorageProviderCommand {
                 provider_id: "provider-location-bound".to_string(),
+                provider_account_id: None,
                 name: None,
                 endpoint_url: None,
                 region: None,
@@ -600,6 +623,7 @@ async fn storage_provider_service_rejects_location_changes_when_active_bindings_
             "path_style",
             UpdateStorageProviderCommand {
                 provider_id: "provider-location-bound".to_string(),
+                provider_account_id: None,
                 name: None,
                 endpoint_url: None,
                 region: None,
@@ -617,6 +641,7 @@ async fn storage_provider_service_rejects_location_changes_when_active_bindings_
             "strict_tls",
             UpdateStorageProviderCommand {
                 provider_id: "provider-location-bound".to_string(),
+                provider_account_id: None,
                 name: None,
                 endpoint_url: None,
                 region: None,
@@ -646,6 +671,7 @@ async fn storage_provider_service_rejects_location_changes_when_active_bindings_
     let updated = service
         .update_storage_provider(UpdateStorageProviderCommand {
             provider_id: "provider-location-bound".to_string(),
+            provider_account_id: None,
             name: Some("Provider Location Bound Renamed".to_string()),
             endpoint_url: None,
             region: None,
@@ -682,6 +708,8 @@ async fn create_storage_provider_supports_custom_provider_kind_prefix() {
     let created = service
         .create_storage_provider(CreateStorageProviderCommand {
             id: "provider-custom-001".to_string(),
+            tenant_id: "tenant-storage".to_string(),
+            provider_account_id: None,
             provider_kind: DriveStorageProviderKind::Custom("custom:vendor_x".to_string()),
             name: "Vendor X".to_string(),
             endpoint_url: "https://custom.example.com".to_string(),
@@ -715,6 +743,8 @@ async fn create_storage_provider_applies_provider_default_path_style_when_not_pr
     let created_oss = service
         .create_storage_provider(CreateStorageProviderCommand {
             id: "provider-oss-001".to_string(),
+            tenant_id: "tenant-storage".to_string(),
+            provider_account_id: None,
             provider_kind: DriveStorageProviderKind::AliyunOss,
             name: "Aliyun OSS".to_string(),
             endpoint_url: "https://oss-cn-hangzhou.aliyuncs.com".to_string(),
@@ -735,6 +765,8 @@ async fn create_storage_provider_applies_provider_default_path_style_when_not_pr
     let created_minio = service
         .create_storage_provider(CreateStorageProviderCommand {
             id: "provider-minio-001".to_string(),
+            tenant_id: "tenant-storage".to_string(),
+            provider_account_id: None,
             provider_kind: DriveStorageProviderKind::S3Compatible,
             name: "MinIO".to_string(),
             endpoint_url: "http://127.0.0.1:9000".to_string(),
@@ -764,6 +796,8 @@ async fn storage_provider_service_persists_strict_tls_and_defaults_by_endpoint_s
     let https_provider = service
         .create_storage_provider(CreateStorageProviderCommand {
             id: "provider-https-strict-default".to_string(),
+            tenant_id: "tenant-storage".to_string(),
+            provider_account_id: None,
             provider_kind: DriveStorageProviderKind::S3Compatible,
             name: "HTTPS Strict Default".to_string(),
             endpoint_url: "https://s3.example.com".to_string(),
@@ -784,6 +818,8 @@ async fn storage_provider_service_persists_strict_tls_and_defaults_by_endpoint_s
     let http_provider = service
         .create_storage_provider(CreateStorageProviderCommand {
             id: "provider-http-strict-default".to_string(),
+            tenant_id: "tenant-storage".to_string(),
+            provider_account_id: None,
             provider_kind: DriveStorageProviderKind::S3Compatible,
             name: "HTTP Strict Default".to_string(),
             endpoint_url: "http://127.0.0.1:9000".to_string(),
@@ -804,6 +840,7 @@ async fn storage_provider_service_persists_strict_tls_and_defaults_by_endpoint_s
     let updated = service
         .update_storage_provider(UpdateStorageProviderCommand {
             provider_id: "provider-http-strict-default".to_string(),
+            provider_account_id: None,
             name: None,
             endpoint_url: Some("https://minio.example.com".to_string()),
             region: None,
@@ -833,6 +870,8 @@ async fn storage_provider_service_rejects_strict_tls_true_for_http_endpoint() {
     let create_error = service
         .create_storage_provider(CreateStorageProviderCommand {
             id: "provider-http-strict-invalid".to_string(),
+            tenant_id: "tenant-storage".to_string(),
+            provider_account_id: None,
             provider_kind: DriveStorageProviderKind::S3Compatible,
             name: "HTTP Strict Invalid".to_string(),
             endpoint_url: "http://127.0.0.1:9000".to_string(),
@@ -856,6 +895,8 @@ async fn storage_provider_service_rejects_strict_tls_true_for_http_endpoint() {
     service
         .create_storage_provider(CreateStorageProviderCommand {
             id: "provider-http-strict-update".to_string(),
+            tenant_id: "tenant-storage".to_string(),
+            provider_account_id: None,
             provider_kind: DriveStorageProviderKind::S3Compatible,
             name: "HTTP Strict Update".to_string(),
             endpoint_url: "https://s3.example.com".to_string(),
@@ -875,6 +916,7 @@ async fn storage_provider_service_rejects_strict_tls_true_for_http_endpoint() {
     let update_error = service
         .update_storage_provider(UpdateStorageProviderCommand {
             provider_id: "provider-http-strict-update".to_string(),
+            provider_account_id: None,
             name: None,
             endpoint_url: Some("http://127.0.0.1:9000".to_string()),
             region: None,
@@ -926,6 +968,8 @@ async fn create_storage_provider_supports_explicit_s3_cloud_provider_kinds() {
         let created = service
             .create_storage_provider(CreateStorageProviderCommand {
                 id: id.to_string(),
+                tenant_id: "tenant-storage".to_string(),
+                provider_account_id: None,
                 provider_kind: provider_kind.clone(),
                 name: format!("Provider {id}"),
                 endpoint_url: endpoint_url.to_string(),
@@ -973,6 +1017,8 @@ async fn storage_provider_service_rejects_invalid_endpoint_and_bucket_before_dat
     let invalid_endpoint = service
         .create_storage_provider(CreateStorageProviderCommand {
             id: "provider-invalid-endpoint".to_string(),
+            tenant_id: "tenant-storage".to_string(),
+            provider_account_id: None,
             provider_kind: DriveStorageProviderKind::S3Compatible,
             name: "Invalid Endpoint".to_string(),
             endpoint_url: "ftp://storage.example.com".to_string(),
@@ -999,6 +1045,8 @@ async fn storage_provider_service_rejects_invalid_endpoint_and_bucket_before_dat
     let invalid_bucket = service
         .create_storage_provider(CreateStorageProviderCommand {
             id: "provider-invalid-bucket".to_string(),
+            tenant_id: "tenant-storage".to_string(),
+            provider_account_id: None,
             provider_kind: DriveStorageProviderKind::S3Compatible,
             name: "Invalid Bucket".to_string(),
             endpoint_url: "https://s3.example.com".to_string(),
@@ -1053,6 +1101,8 @@ async fn storage_provider_service_rejects_non_dns_object_store_bucket_names() {
         let err = service
             .create_storage_provider(CreateStorageProviderCommand {
                 id: format!("provider-invalid-dns-bucket-{index}"),
+                tenant_id: "tenant-storage".to_string(),
+                provider_account_id: None,
                 provider_kind: DriveStorageProviderKind::S3Compatible,
                 name: format!("Invalid DNS Bucket {index}"),
                 endpoint_url: "https://s3.example.com".to_string(),
@@ -1080,6 +1130,8 @@ async fn storage_provider_service_rejects_non_dns_object_store_bucket_names() {
     service
         .create_storage_provider(CreateStorageProviderCommand {
             id: "provider-local-path-bucket".to_string(),
+            tenant_id: "tenant-storage".to_string(),
+            provider_account_id: None,
             provider_kind: DriveStorageProviderKind::LocalFilesystem,
             name: "Local Path Bucket".to_string(),
             endpoint_url: "file:///tmp/sdkwork-drive".to_string(),
@@ -1114,6 +1166,8 @@ async fn storage_provider_service_returns_detail_capabilities_status_and_rotates
     service
         .create_storage_provider(CreateStorageProviderCommand {
             id: "provider-s3-ops".to_string(),
+            tenant_id: "tenant-storage".to_string(),
+            provider_account_id: None,
             provider_kind: DriveStorageProviderKind::S3Compatible,
             name: "Provider S3 Ops".to_string(),
             endpoint_url: "https://s3.example.com".to_string(),
@@ -1200,6 +1254,8 @@ async fn storage_provider_service_rejects_invalid_status_before_database_constra
     let create_error = service
         .create_storage_provider(CreateStorageProviderCommand {
             id: "provider-invalid-status".to_string(),
+            tenant_id: "tenant-storage".to_string(),
+            provider_account_id: None,
             provider_kind: DriveStorageProviderKind::S3Compatible,
             name: "Invalid Status".to_string(),
             endpoint_url: "https://s3.example.com".to_string(),
@@ -1225,6 +1281,8 @@ async fn storage_provider_service_rejects_invalid_status_before_database_constra
     service
         .create_storage_provider(CreateStorageProviderCommand {
             id: "provider-valid-status".to_string(),
+            tenant_id: "tenant-storage".to_string(),
+            provider_account_id: None,
             provider_kind: DriveStorageProviderKind::S3Compatible,
             name: "Valid Status".to_string(),
             endpoint_url: "https://s3.example.com".to_string(),
@@ -1244,6 +1302,7 @@ async fn storage_provider_service_rejects_invalid_status_before_database_constra
     let update_error = service
         .update_storage_provider(UpdateStorageProviderCommand {
             provider_id: "provider-valid-status".to_string(),
+            provider_account_id: None,
             name: None,
             endpoint_url: None,
             region: None,
@@ -1263,5 +1322,164 @@ async fn storage_provider_service_rejects_invalid_status_before_database_constra
         DriveServiceError::Validation(
             "status is invalid; allowed: active, disabled, deleted".to_string()
         )
+    );
+}
+
+#[tokio::test]
+async fn storage_provider_rejects_conflicting_credential_sources_on_create() {
+    let Some((pool, _database_guard)) = sdkwork_drive_test_support::postgres_test_database().await
+    else {
+        return;
+    };
+
+    let service = DriveStorageProviderService::new(SqlStorageProviderStore::new(pool));
+    let error = service
+        .create_storage_provider(CreateStorageProviderCommand {
+            id: "provider-account-conflict".to_string(),
+            tenant_id: "tenant-storage".to_string(),
+            provider_account_id: Some("iampacct-018f-example".to_string()),
+            provider_kind: DriveStorageProviderKind::S3Compatible,
+            name: "Conflicting Credential Sources".to_string(),
+            endpoint_url: "https://s3.example.com".to_string(),
+            region: None,
+            bucket: "drive-bucket".to_string(),
+            path_style: None,
+            strict_tls: None,
+            credential_ref: Some("env:DRIVE_ACCESS_KEY:DRIVE_SECRET_KEY".to_string()),
+            server_side_encryption_mode: None,
+            default_storage_class: None,
+            status: None,
+            operator_id: "admin-001".to_string(),
+        })
+        .await
+        .expect_err("a provider must not carry two credential sources");
+    assert!(
+        matches!(error, DriveServiceError::Validation(message)
+            if message.contains("mutually exclusive"))
+    );
+}
+
+#[tokio::test]
+async fn storage_provider_update_switches_credential_source_in_one_request() {
+    let Some((pool, _database_guard)) = sdkwork_drive_test_support::postgres_test_database().await
+    else {
+        return;
+    };
+
+    let service = DriveStorageProviderService::new(SqlStorageProviderStore::new(pool));
+    service
+        .create_storage_provider(CreateStorageProviderCommand {
+            id: "provider-account-switch".to_string(),
+            tenant_id: "tenant-storage".to_string(),
+            provider_account_id: None,
+            provider_kind: DriveStorageProviderKind::AliyunOss,
+            name: "Account Switch".to_string(),
+            endpoint_url: "https://oss-cn-hangzhou.aliyuncs.com".to_string(),
+            region: Some("cn-hangzhou".to_string()),
+            bucket: "drive-bucket".to_string(),
+            path_style: None,
+            strict_tls: None,
+            credential_ref: Some("env:DRIVE_ACCESS_KEY:DRIVE_SECRET_KEY".to_string()),
+            server_side_encryption_mode: None,
+            default_storage_class: None,
+            status: None,
+            operator_id: "admin-001".to_string(),
+        })
+        .await
+        .expect("provider should be created");
+
+    // Switch to the reusable account center: the local ref is cleared in the
+    // same request even though the caller did not repeat credential_ref.
+    let account_backed = service
+        .update_storage_provider(UpdateStorageProviderCommand {
+            provider_id: "provider-account-switch".to_string(),
+            name: None,
+            endpoint_url: None,
+            region: None,
+            bucket: None,
+            path_style: None,
+            strict_tls: None,
+            credential_ref: None,
+            provider_account_id: Some("iampacct-018f-switch".to_string()),
+            server_side_encryption_mode: None,
+            default_storage_class: None,
+            status: None,
+            operator_id: "admin-002".to_string(),
+        })
+        .await
+        .expect("switch to provider account should succeed");
+    assert_eq!(
+        account_backed.provider_account_id.as_deref(),
+        Some("iampacct-018f-switch")
+    );
+    assert_eq!(account_backed.credential_ref, None);
+
+    // Switch back to a local ref: the account reference is cleared in the
+    // same request.
+    let local_ref = service
+        .update_storage_provider(UpdateStorageProviderCommand {
+            provider_id: "provider-account-switch".to_string(),
+            name: None,
+            endpoint_url: None,
+            region: None,
+            bucket: None,
+            path_style: None,
+            strict_tls: None,
+            credential_ref: Some("secret:prod/oss-main".to_string()),
+            provider_account_id: None,
+            server_side_encryption_mode: None,
+            default_storage_class: None,
+            status: None,
+            operator_id: "admin-002".to_string(),
+        })
+        .await
+        .expect("switch to local credential ref should succeed");
+    assert_eq!(local_ref.provider_account_id, None);
+    assert_eq!(
+        local_ref.credential_ref.as_deref(),
+        Some("secret:prod/oss-main")
+    );
+}
+
+#[tokio::test]
+async fn storage_provider_rotation_is_rejected_for_account_backed_providers() {
+    let Some((pool, _database_guard)) = sdkwork_drive_test_support::postgres_test_database().await
+    else {
+        return;
+    };
+
+    let service = DriveStorageProviderService::new(SqlStorageProviderStore::new(pool));
+    service
+        .create_storage_provider(CreateStorageProviderCommand {
+            id: "provider-account-rotation".to_string(),
+            tenant_id: "tenant-storage".to_string(),
+            provider_account_id: Some("iampacct-018f-rotate".to_string()),
+            provider_kind: DriveStorageProviderKind::AliyunOss,
+            name: "Account Rotation".to_string(),
+            endpoint_url: "https://oss-cn-hangzhou.aliyuncs.com".to_string(),
+            region: Some("cn-hangzhou".to_string()),
+            bucket: "drive-bucket".to_string(),
+            path_style: None,
+            strict_tls: None,
+            credential_ref: None,
+            server_side_encryption_mode: None,
+            default_storage_class: None,
+            status: None,
+            operator_id: "admin-001".to_string(),
+        })
+        .await
+        .expect("account-backed provider should be created");
+
+    let error = service
+        .rotate_storage_provider_credential(RotateStorageProviderCredentialCommand {
+            provider_id: "provider-account-rotation".to_string(),
+            credential_ref: "env:NEW_ACCESS_KEY:NEW_SECRET_KEY".to_string(),
+            operator_id: "admin-002".to_string(),
+        })
+        .await
+        .expect_err("rotation belongs to the account center for account-backed providers");
+    assert!(
+        matches!(error, DriveServiceError::Conflict(message)
+            if message.contains("provider account center"))
     );
 }
