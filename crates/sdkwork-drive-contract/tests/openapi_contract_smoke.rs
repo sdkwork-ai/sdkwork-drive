@@ -53,6 +53,7 @@ fn openapi_paths_follow_sdkwork_v3_prefixes() {
     assert!(app.contains("/app/v3/api/drive/nodes/{nodeId}/copy"));
     assert!(app.contains("/app/v3/api/drive/nodes/{nodeId}/trash"));
     assert!(app.contains("/app/v3/api/drive/nodes/{nodeId}/download_url"));
+    assert!(app.contains("/app/v3/api/drive/nodes/{nodeId}/content"));
     assert!(app.contains("/app/v3/api/drive/nodes/{nodeId}/download_grants"));
     assert!(app.contains("\"operationId\": \"downloadGrants.create\""));
     assert!(app.contains("/app/v3/api/drive/trash/{nodeId}/restore"));
@@ -110,6 +111,9 @@ fn openapi_paths_follow_sdkwork_v3_prefixes() {
     assert!(app.contains("\"operationId\": \"nodes.copy\""));
     assert!(app.contains("\"operationId\": \"nodes.delete\""));
     assert!(app.contains("\"operationId\": \"nodes.downloadUrls.retrieve\""));
+    assert!(app.contains("\"operationId\": \"nodes.content.retrieve\""));
+    assert!(app.contains("\"DriveNodeContentHttpResponse\""));
+    assert!(app.contains("\"DriveNodeContent\""));
     assert!(app.contains("\"incompletePage\""));
     assert!(app.contains("\"uri\""));
     assert!(app.contains("\"operationId\": \"trash.create\""));

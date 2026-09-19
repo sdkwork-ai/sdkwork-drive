@@ -4,7 +4,7 @@ use crate::api::base::{RequestHeaders};
 use crate::api::paths::app_path;
 use crate::api::paths::append_query_string;
 use crate::http::{SdkworkError, SdkworkHttpClient};
-use crate::models::{ActivateWebsiteGenerationRequest, ApplyNodeLabelRequest, ChangeListData, CheckFavoriteNodesRequest, ClaimShareLinkResponse, CompleteUploadSessionRequest, CopyNodeRequest, CreateCommentReplyRequest, CreateCommentRequest, CreateDownloadGrantRequest, CreateDownloadPackageRequest, CreateDownloadUrlRequest, CreateDownloadUrlResponse, CreateDriveSandboxDirectoryRequest, CreateDriveSandboxFileRequest, CreateFileRequest, CreateFileResponse, CreateFolderRequest, CreatePermissionRequest, CreateShareLinkRequest, CreateShareLinkResponse, CreateShortcutRequest, CreateSpaceRequest, CreateUploadSessionRequest, CreateWatchChannelRequest, CreateWebsiteRootRequest, CreateWebsiteSyncRequest, DownloadPackageResponse, DriveComment, DriveCommentReply, DriveNode, DriveNodeListData, DriveNodeProperty, DrivePermission, DriveSandboxEntry, DriveSandboxEntryListData, DriveSandboxFileContent, DriveSandboxMutationCommandData, DriveSandboxVolumeListData, DriveShareLink, DriveSpace, DriveUploadSession, DriveWatchChannel, DriveWatchChannelListData, EmptyTrashRequest, EmptyTrashResponse, ExtractArchiveEntriesRequest, ExtractArchiveEntriesResponse, FavoriteNodeRequest, FavoriteNodeResponse, FileVersion, FileVersionListData, MarkUploaderPartUploadedRequest, MoveNodeRequest, NodeCapabilitiesResponse, NodeCommandRequest, NodeLabel, NodePathResponse, PrepareUploaderUploadRequest, PrepareUploaderUploadResponse, PresignUploadPartRequest, PresignedUploadPart, PurgeDriveSandboxEntryRequest, QuotaSummary, SetNodePropertyRequest, StartPageTokenResponse, StopWatchChannelRequest, StopWatchChannelResponse, UpdateCommentReplyRequest, UpdateCommentRequest, UpdateDriveSandboxEntryRequest, UpdateDriveSandboxFileContentRequest, UpdateNodeRequest, UpdatePermissionRequest, UpdateShareLinkRequest, UpdateSpaceRequest, UploaderUploadPart, WebsiteGenerationActivation, WebsiteRoot, WebsiteRootPageData, WebsiteSync, WebsiteSyncActivation, WebsiteSyncVersionRequest};
+use crate::models::{ActivateWebsiteGenerationRequest, ApplyNodeLabelRequest, ChangeListData, CheckFavoriteNodesRequest, ClaimShareLinkResponse, CompleteUploadSessionRequest, CopyNodeRequest, CreateCommentReplyRequest, CreateCommentRequest, CreateDownloadGrantRequest, CreateDownloadPackageRequest, CreateDownloadUrlRequest, CreateDownloadUrlResponse, CreateDriveSandboxDirectoryRequest, CreateDriveSandboxFileRequest, CreateFileRequest, CreateFileResponse, CreateFolderRequest, CreatePermissionRequest, CreateShareLinkRequest, CreateShareLinkResponse, CreateShortcutRequest, CreateSpaceRequest, CreateUploadSessionRequest, CreateWatchChannelRequest, CreateWebsiteRootRequest, CreateWebsiteSyncRequest, DownloadPackageResponse, DriveComment, DriveCommentReply, DriveNode, DriveNodeContent, DriveNodeListData, DriveNodeProperty, DrivePermission, DriveSandboxEntry, DriveSandboxEntryListData, DriveSandboxFileContent, DriveSandboxMutationCommandData, DriveSandboxVolumeListData, DriveShareLink, DriveSpace, DriveUploadSession, DriveWatchChannel, DriveWatchChannelListData, EmptyTrashRequest, EmptyTrashResponse, ExtractArchiveEntriesRequest, ExtractArchiveEntriesResponse, FavoriteNodeRequest, FavoriteNodeResponse, FileVersion, FileVersionListData, MarkUploaderPartUploadedRequest, MoveNodeRequest, NodeCapabilitiesResponse, NodeCommandRequest, NodeLabel, NodePathResponse, PrepareUploaderUploadRequest, PrepareUploaderUploadResponse, PresignUploadPartRequest, PresignedUploadPart, PurgeDriveSandboxEntryRequest, QuotaSummary, SetNodePropertyRequest, StartPageTokenResponse, StopWatchChannelRequest, StopWatchChannelResponse, UpdateCommentReplyRequest, UpdateCommentRequest, UpdateDriveSandboxEntryRequest, UpdateDriveSandboxFileContentRequest, UpdateNodeRequest, UpdatePermissionRequest, UpdateShareLinkRequest, UpdateSpaceRequest, UploaderUploadPart, WebsiteGenerationActivation, WebsiteRoot, WebsiteRootPageData, WebsiteSync, WebsiteSyncActivation, WebsiteSyncVersionRequest};
 
 #[derive(Clone)]
 pub struct DriveApi {
@@ -154,6 +154,18 @@ impl DriveApi {
             QueryParameterSpec::new("requestedTtlSeconds", requested_ttl_seconds, "form", true, false, None),
         ]);
         let path = append_query_string(app_path(&format!("/drive/nodes/{}/download_url", serialize_path_parameter(node_id, PathParameterSpec::new("nodeId", "simple", false)))), &query);
+        self.client.get(&path, None, None).await
+    }
+
+    /// Read active Drive node content on the same origin
+    pub async fn nodes_content_retrieve(&self, node_id: &str, max_bytes: Option<i64>, byte_range_start: Option<i64>, byte_range_length: Option<i64>, encoding: Option<&str>) -> Result<DriveNodeContent, SdkworkError> {
+        let query = build_query_string(&[
+            QueryParameterSpec::new("maxBytes", max_bytes, "form", true, false, None),
+            QueryParameterSpec::new("byteRangeStart", byte_range_start, "form", true, false, None),
+            QueryParameterSpec::new("byteRangeLength", byte_range_length, "form", true, false, None),
+            QueryParameterSpec::new("encoding", encoding, "form", true, false, None),
+        ]);
+        let path = append_query_string(app_path(&format!("/drive/nodes/{}/content", serialize_path_parameter(node_id, PathParameterSpec::new("nodeId", "simple", false)))), &query);
         self.client.get(&path, None, None).await
     }
 

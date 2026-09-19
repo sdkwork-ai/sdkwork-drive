@@ -154,6 +154,18 @@ public class DriveApi {
         return client.convertValue(raw, new TypeReference<CreateDownloadUrlHttpResponse>() {});
     }
 
+    /** Read active Drive node content on the same origin */
+    public DriveNodeContentHttpResponse nodesContentRetrieve(String nodeId, Integer maxBytes, Integer byteRangeStart, Integer byteRangeLength, String encoding) throws Exception {
+        String query = buildQueryString(List.of(
+            new QueryParameterSpec("maxBytes", maxBytes, "form", true, false, null),
+            new QueryParameterSpec("byteRangeStart", byteRangeStart, "form", true, false, null),
+            new QueryParameterSpec("byteRangeLength", byteRangeLength, "form", true, false, null),
+            new QueryParameterSpec("encoding", encoding, "form", true, false, null)
+        ));
+        Object raw = client.get(ApiPaths.appendQueryString(ApiPaths.appPath("/drive/nodes/" + serializePathParameter(nodeId, new PathParameterSpec("nodeId", "simple", false)) + "/content"), query));
+        return client.convertValue(raw, new TypeReference<DriveNodeContentHttpResponse>() {});
+    }
+
     public CreateDownloadUrlHttpResponse downloadGrantsCreate(String nodeId, CreateDownloadGrantRequest body) throws Exception {
         Object raw = client.post(ApiPaths.appPath("/drive/nodes/" + serializePathParameter(nodeId, new PathParameterSpec("nodeId", "simple", false)) + "/download_grants"), body, null, null, "application/json");
         return client.convertValue(raw, new TypeReference<CreateDownloadUrlHttpResponse>() {});

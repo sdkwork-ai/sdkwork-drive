@@ -3,6 +3,10 @@ import {
   createDriveUploaderClient,
   type DriveUploaderTransport,
 } from '@sdkwork/drive-app-sdk';
+import {
+  DRIVE_PC_EDITOR_DOCUMENT_UPLOAD,
+  DRIVE_PC_FILE_BROWSER_ENTRY_UPLOAD,
+} from 'sdkwork-drive-pc-core';
 
 const AMBIENT_CALLER_IDENTITY_FIELDS = [
   'tenantId',
@@ -234,7 +238,7 @@ describe('Drive uploader composed client contract', () => {
     });
     await expect(client.upload({
       file: new File([new Uint8Array(10)], 'split.txt', { type: 'text/plain' }),
-      appResourceType: 'desktop-file-browser',
+      appResourceType: DRIVE_PC_FILE_BROWSER_ENTRY_UPLOAD.appResourceType,
       appResourceId: 'my-storage',
       spaceId: 'my-storage',
       nowEpochMs: '1700000000000',
@@ -249,7 +253,7 @@ describe('Drive uploader composed client contract', () => {
     });
     await client.upload({
       file: new File([new Uint8Array(10)], 'split.txt', { type: 'text/plain' }),
-      appResourceType: 'desktop-file-browser',
+      appResourceType: DRIVE_PC_FILE_BROWSER_ENTRY_UPLOAD.appResourceType,
       appResourceId: 'my-storage',
       spaceId: 'my-storage',
       nowEpochMs: '1700000000001',
@@ -276,10 +280,10 @@ describe('Drive uploader composed client contract', () => {
       file: new File(['# Updated\n'], 'Roadmap.md', { type: 'text/markdown' }),
       spaceId: 'my-storage',
       nodeId: 'file-001',
-      appResourceType: 'desktop-file-editor',
+      appResourceType: DRIVE_PC_EDITOR_DOCUMENT_UPLOAD.appResourceType,
       appResourceId: 'file-001',
-      scene: 'drive_pc_text_save',
-      source: 'pc_text_editor',
+      scene: DRIVE_PC_EDITOR_DOCUMENT_UPLOAD.scene,
+      source: DRIVE_PC_EDITOR_DOCUMENT_UPLOAD.source,
       uploadProfileCode: 'text',
       originalFileName: 'Roadmap.md',
       contentType: 'text/markdown',
@@ -343,7 +347,7 @@ describe('Drive uploader composed client contract', () => {
       file: new File(['# Updated\n'], 'Roadmap.md', { type: 'text/markdown' }),
       spaceId: 'my-storage',
       nodeId: 'file-001',
-      appResourceType: 'desktop-file-editor',
+      appResourceType: DRIVE_PC_EDITOR_DOCUMENT_UPLOAD.appResourceType,
       appResourceId: 'file-001',
       originalFileName: 'Roadmap.md',
       contentType: 'text/markdown',
@@ -432,10 +436,10 @@ describe('Drive uploader composed client contract', () => {
 
     await expect(client.upload({
       file: new File(['hello'], 'Roadmap.pdf', { type: 'application/pdf' }),
-      appResourceType: 'desktop-file-browser',
+      appResourceType: DRIVE_PC_FILE_BROWSER_ENTRY_UPLOAD.appResourceType,
       appResourceId: 'my-storage',
-      scene: 'drive_pc_file_upload',
-      source: 'pc_local_file',
+      scene: DRIVE_PC_FILE_BROWSER_ENTRY_UPLOAD.scene,
+      source: DRIVE_PC_FILE_BROWSER_ENTRY_UPLOAD.source,
       originalFileName: 'Roadmap.pdf',
       contentType: 'application/pdf',
       spaceId: 'my-storage',
@@ -471,7 +475,7 @@ describe('Drive uploader composed client contract', () => {
       file: new File(['0123456789'], 'split.txt', { type: 'text/plain' }),
       spaceId: 'my-storage',
       nodeId: 'file-001',
-      appResourceType: 'desktop-file-editor',
+      appResourceType: DRIVE_PC_EDITOR_DOCUMENT_UPLOAD.appResourceType,
       appResourceId: 'file-001',
       originalFileName: 'split.txt',
       contentType: 'text/plain',

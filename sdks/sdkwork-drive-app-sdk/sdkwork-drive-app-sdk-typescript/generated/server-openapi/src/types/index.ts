@@ -160,3 +160,6 @@ export type { DriveNodeListData } from './drive-node-list-data';
 export type { ChangeListData } from './change-list-data';
 export type { FileVersionListData } from './file-version-list-data';
 export type { DriveWatchChannelListData } from './drive-watch-channel-list-data';
+export type { DriveNodeContentHttpResponse } from './drive-node-content-http-response';
+export type { DriveNodeContentData } from './drive-node-content-data';
+export type { DriveNodeContent } from './drive-node-content';

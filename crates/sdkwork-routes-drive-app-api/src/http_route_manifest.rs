@@ -172,6 +172,12 @@ const HTTP_ROUTES: &[HttpRoute] = &[
         "commentReplies.update",
     ),
     HttpRoute::dual_token(
+        HttpMethod::Get,
+        "/app/v3/api/drive/nodes/{nodeId}/content",
+        "drive-app-api",
+        "nodes.content.retrieve",
+    ),
+    HttpRoute::dual_token(
         HttpMethod::Post,
         "/app/v3/api/drive/nodes/{nodeId}/copy",
         "drive-app-api",

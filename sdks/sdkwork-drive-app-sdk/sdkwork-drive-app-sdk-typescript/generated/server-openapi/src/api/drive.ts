@@ -1,7 +1,7 @@
 import { appApiPath } from './paths';
 import type { ApiRequestOptions, HttpClient } from '../http/client';
 
-import type { ActivateWebsiteGenerationRequest, ApplyNodeLabelRequest, ArchiveEntry, ChangeListData, CheckFavoriteNodesRequest, ClaimShareLinkResponse, CompleteUploadSessionRequest, CopyNodeRequest, CreateCommentReplyRequest, CreateCommentRequest, CreateDownloadGrantRequest, CreateDownloadPackageRequest, CreateDownloadUrlRequest, CreateDownloadUrlResponse, CreateDriveSandboxDirectoryRequest, CreateDriveSandboxFileRequest, CreateFileRequest, CreateFileResponse, CreateFolderRequest, CreatePermissionRequest, CreateShareLinkRequest, CreateShareLinkResponse, CreateShortcutRequest, CreateSpaceRequest, CreateUploadSessionRequest, CreateWatchChannelRequest, CreateWebsiteRootRequest, CreateWebsiteSyncRequest, DownloadPackageResponse, DriveComment, DriveCommentReply, DriveNode, DriveNodeListData, DriveNodeProperty, DrivePermission, DriveSandboxEntry, DriveSandboxEntryListData, DriveSandboxFileContent, DriveSandboxMutationCommandData, DriveSandboxVolumeListData, DriveShareLink, DriveSpace, DriveUploadSession, DriveWatchChannel, DriveWatchChannelListData, EffectivePermission, EmptyTrashRequest, EmptyTrashResponse, ExtractArchiveEntriesRequest, ExtractArchiveEntriesResponse, FavoriteNodeRequest, FavoriteNodeResponse, FileVersion, FileVersionListData, MarkUploaderPartUploadedRequest, MoveNodeRequest, NodeCapabilitiesResponse, NodeCommandRequest, NodeLabel, NodePathResponse, PageInfo, PositiveInt64String, PrepareUploaderUploadRequest, PrepareUploaderUploadResponse, PresignedUploadPart, PresignUploadPartRequest, PurgeDriveSandboxEntryRequest, QuotaSummary, SetNodePropertyRequest, StartPageTokenResponse, StopWatchChannelRequest, StopWatchChannelResponse, UpdateCommentReplyRequest, UpdateCommentRequest, UpdateDriveSandboxEntryRequest, UpdateDriveSandboxFileContentRequest, UpdateNodeRequest, UpdatePermissionRequest, UpdateShareLinkRequest, UpdateSpaceRequest, UploaderUploadPart, WebsiteGenerationActivation, WebsiteRoot, WebsiteRootPageData, WebsiteSync, WebsiteSyncActivation, WebsiteSyncVersionRequest } from '../types';
+import type { ActivateWebsiteGenerationRequest, ApplyNodeLabelRequest, ArchiveEntry, ChangeListData, CheckFavoriteNodesRequest, ClaimShareLinkResponse, CompleteUploadSessionRequest, CopyNodeRequest, CreateCommentReplyRequest, CreateCommentRequest, CreateDownloadGrantRequest, CreateDownloadPackageRequest, CreateDownloadUrlRequest, CreateDownloadUrlResponse, CreateDriveSandboxDirectoryRequest, CreateDriveSandboxFileRequest, CreateFileRequest, CreateFileResponse, CreateFolderRequest, CreatePermissionRequest, CreateShareLinkRequest, CreateShareLinkResponse, CreateShortcutRequest, CreateSpaceRequest, CreateUploadSessionRequest, CreateWatchChannelRequest, CreateWebsiteRootRequest, CreateWebsiteSyncRequest, DownloadPackageResponse, DriveComment, DriveCommentReply, DriveNode, DriveNodeContent, DriveNodeListData, DriveNodeProperty, DrivePermission, DriveSandboxEntry, DriveSandboxEntryListData, DriveSandboxFileContent, DriveSandboxMutationCommandData, DriveSandboxVolumeListData, DriveShareLink, DriveSpace, DriveUploadSession, DriveWatchChannel, DriveWatchChannelListData, EffectivePermission, EmptyTrashRequest, EmptyTrashResponse, ExtractArchiveEntriesRequest, ExtractArchiveEntriesResponse, FavoriteNodeRequest, FavoriteNodeResponse, FileVersion, FileVersionListData, MarkUploaderPartUploadedRequest, MoveNodeRequest, NodeCapabilitiesResponse, NodeCommandRequest, NodeLabel, NodePathResponse, PageInfo, PositiveInt64String, PrepareUploaderUploadRequest, PrepareUploaderUploadResponse, PresignedUploadPart, PresignUploadPartRequest, PurgeDriveSandboxEntryRequest, QuotaSummary, SetNodePropertyRequest, StartPageTokenResponse, StopWatchChannelRequest, StopWatchChannelResponse, UpdateCommentReplyRequest, UpdateCommentRequest, UpdateDriveSandboxEntryRequest, UpdateDriveSandboxFileContentRequest, UpdateNodeRequest, UpdatePermissionRequest, UpdateShareLinkRequest, UpdateSpaceRequest, UploaderUploadPart, WebsiteGenerationActivation, WebsiteRoot, WebsiteRootPageData, WebsiteSync, WebsiteSyncActivation, WebsiteSyncVersionRequest } from '../types';
 
 
 export class DriveUploaderUploadsPartsApi {
@@ -1010,6 +1010,33 @@ async retrieve(nodeId: string, requestOptions?: ApiRequestOptions): Promise<Node
   }
 }
 
+export interface DriveNodesContentRetrieveParams {
+  maxBytes?: number;
+  byteRangeStart?: string;
+  byteRangeLength?: number;
+  encoding?: 'utf8' | 'base64';
+}
+
+export class DriveNodesContentApi {
+  private client: HttpClient;
+
+  constructor(client: HttpClient) {
+    this.client = client;
+  }
+
+
+/** Read active Drive node content on the same origin */
+  async retrieve(nodeId: string, params?: DriveNodesContentRetrieveParams, requestOptions?: ApiRequestOptions): Promise<DriveNodeContent> {
+    const query = buildQueryString([
+      { name: 'maxBytes', value: params?.maxBytes, style: 'form', explode: true, allowReserved: false },
+      { name: 'byteRangeStart', value: params?.byteRangeStart, style: 'form', explode: true, allowReserved: false },
+      { name: 'byteRangeLength', value: params?.byteRangeLength, style: 'form', explode: true, allowReserved: false },
+      { name: 'encoding', value: params?.encoding, style: 'form', explode: true, allowReserved: false },
+    ]);
+    return this.client.request<DriveNodeContent>(appendQueryString(appApiPath(`/drive/nodes/${serializePathParameter(nodeId, { name: 'nodeId', style: 'simple', explode: false })}/content`), query), { ...(requestOptions?.signal !== undefined ? { signal: requestOptions.signal } : {}), ...(requestOptions?.timeout !== undefined ? { timeout: requestOptions.timeout } : {}), method: 'GET' as any, sdkworkUnwrapKind: 'item' });
+  }
+}
+
 export interface DriveNodesDownloadUrlsRetrieveParams {
   requestedTtlSeconds?: number;
 }
@@ -1055,6 +1082,7 @@ export class DriveNodesApi {
   private client: HttpClient;
   public readonly capabilities: DriveNodesCapabilitiesApi;
   public readonly downloadUrls: DriveNodesDownloadUrlsApi;
+  public readonly content: DriveNodesContentApi;
   public readonly path: DriveNodesPathApi;
   public readonly files: DriveNodesFilesApi;
   public readonly folders: DriveNodesFoldersApi;
@@ -1064,6 +1092,7 @@ export class DriveNodesApi {
     this.client = client;
     this.capabilities = new DriveNodesCapabilitiesApi(client);
     this.downloadUrls = new DriveNodesDownloadUrlsApi(client);
+    this.content = new DriveNodesContentApi(client);
     this.path = new DriveNodesPathApi(client);
     this.files = new DriveNodesFilesApi(client);
     this.folders = new DriveNodesFoldersApi(client);

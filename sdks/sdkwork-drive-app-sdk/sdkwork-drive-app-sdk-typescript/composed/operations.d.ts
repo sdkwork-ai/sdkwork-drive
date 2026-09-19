@@ -153,6 +153,10 @@ export declare const operations: {
         readonly method: "GET";
         readonly path: "/app/v3/api/drive/nodes/{nodeId}/capabilities";
     };
+    readonly "nodes.content.retrieve": {
+        readonly method: "GET";
+        readonly path: "/app/v3/api/drive/nodes/{nodeId}/content";
+    };
     readonly "nodes.copy": {
         readonly method: "POST";
         readonly path: "/app/v3/api/drive/nodes/{nodeId}/copy";

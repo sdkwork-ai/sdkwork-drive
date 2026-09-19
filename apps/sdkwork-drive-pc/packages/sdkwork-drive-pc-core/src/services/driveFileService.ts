@@ -14,6 +14,10 @@ import {
   mapLocalFilesystemEntryToDriveFile,
 } from '../host/localFilesystemService';
 import { omitAuthProjectionBody, omitAuthProjectionQuery } from '../sdk/authProjection';
+import {
+  DRIVE_PC_EDITOR_DOCUMENT_UPLOAD,
+  DRIVE_PC_FILE_BROWSER_ENTRY_UPLOAD,
+} from '../sdk/uploadDeclaration';
 import type { DriveAppSdkClient, DriveAppSdkRequest } from '../sdk/driveAppSdkClient';
 import type { SessionSnapshot } from '../session/sessionStore';
 import { isDriveAbortError } from '../transfer/downloadTransfer';
@@ -1419,11 +1423,11 @@ function createSdkBackedDriveFileService(
       file: blob,
       spaceId,
       nodeId: node.id,
-      appResourceType: 'desktop-file-editor',
+      appResourceType: DRIVE_PC_EDITOR_DOCUMENT_UPLOAD.appResourceType,
       appResourceId: node.id,
-      scene: 'drive_pc_text_save',
-      source: 'pc_text_editor',
-      uploadProfileCode: 'text',
+      scene: DRIVE_PC_EDITOR_DOCUMENT_UPLOAD.scene,
+      source: DRIVE_PC_EDITOR_DOCUMENT_UPLOAD.source,
+      uploadProfileCode: DRIVE_PC_EDITOR_DOCUMENT_UPLOAD.uploadProfileCode,
       fileFingerprint: driveUploaderFingerprint(node.name, contentType, blob.size),
       originalFileName: node.name,
       contentType,
@@ -1464,10 +1468,10 @@ function createSdkBackedDriveFileService(
       const uploadResult = await appSdkClient.uploader.upload({
         file,
         taskId: options?.taskId,
-        appResourceType: 'desktop-file-browser',
+        appResourceType: DRIVE_PC_FILE_BROWSER_ENTRY_UPLOAD.appResourceType,
         appResourceId: section,
-        scene: 'drive_pc_file_upload',
-        source: isNativeLocalUploadFile(file) ? 'pc_native_file' : 'pc_local_file',
+        scene: DRIVE_PC_FILE_BROWSER_ENTRY_UPLOAD.scene,
+        source: DRIVE_PC_FILE_BROWSER_ENTRY_UPLOAD.source,
         fileFingerprint: driveUploaderFingerprint(originalFileName, contentType, file.size),
         originalFileName,
         contentType,

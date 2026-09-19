@@ -46,6 +46,7 @@ export const operations = {
   "nodeProperties.list": { method: "GET", path: "/app/v3/api/drive/nodes/{nodeId}/properties" },
   "nodeProperties.update": { method: "PUT", path: "/app/v3/api/drive/nodes/{nodeId}/properties/{propertyKey}" },
   "nodes.capabilities.list": { method: "GET", path: "/app/v3/api/drive/nodes/{nodeId}/capabilities" },
+  "nodes.content.retrieve": { method: "GET", path: "/app/v3/api/drive/nodes/{nodeId}/content" },
   "nodes.copy": { method: "POST", path: "/app/v3/api/drive/nodes/{nodeId}/copy" },
   "nodes.delete": { method: "DELETE", path: "/app/v3/api/drive/nodes/{nodeId}" },
   "nodes.downloadUrls.retrieve": { method: "GET", path: "/app/v3/api/drive/nodes/{nodeId}/download_url" },

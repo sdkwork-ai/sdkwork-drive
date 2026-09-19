@@ -9,6 +9,7 @@ mod change_handlers;
 mod collaboration_repository;
 mod comment_handlers;
 pub mod constants;
+mod content_handlers;
 mod deploy_sandbox;
 mod download_handlers;
 mod download_packages;

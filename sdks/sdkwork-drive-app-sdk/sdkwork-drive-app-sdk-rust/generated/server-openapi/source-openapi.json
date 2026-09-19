@@ -2381,6 +2381,187 @@
         "x-sdkwork-api-surface": "app-api"
       }
     },
+    "/app/v3/api/drive/nodes/{nodeId}/content": {
+      "get": {
+        "tags": [
+          "drive"
+        ],
+        "summary": "Read active Drive node content on the same origin",
+        "description": "Reads the bytes of one active Drive file node through the Drive App API so an authenticated same-origin client can inspect content without following a cross-origin presigned provider URL. Requires the same reader role as the download URL operation and never exposes the storage provider, bucket, object key, credentials, or a signed provider URL across this boundary. The success body is the standard SdkWorkApiResponse envelope carrying a bounded content payload with an explicit encoding, matching sandboxFileContents.retrieve. Because the payload is bounded, large artifacts must be delivered through the download URL, download grant, or download package operations instead, or read in ranges with byteRangeStart and byteRangeLength.",
+        "operationId": "nodes.content.retrieve",
+        "parameters": [
+          {
+            "name": "nodeId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "maxBytes",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "minimum": 1,
+              "maximum": 5592405
+            },
+            "description": "Refuse the read when the active content exceeds this many bytes, so a caller can bound work. Defaults to the platform content ceiling."
+          },
+          {
+            "name": "byteRangeStart",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 0
+            },
+            "description": "Zero-based offset of the first byte to return. Use with byteRangeLength to page large content."
+          },
+          {
+            "name": "byteRangeLength",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "minimum": 1,
+              "maximum": 5592405
+            },
+            "description": "Number of bytes to return starting at byteRangeStart."
+          },
+          {
+            "name": "encoding",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "utf8",
+                "base64"
+              ],
+              "default": "base64"
+            },
+            "description": "Wire encoding of the returned content. Defaults to base64 because Drive content is arbitrary binary."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DriveNodeContentHttpResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Content exceeds the bounded read ceiling.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "AuthToken": [],
+            "AccessToken": []
+          }
+        ],
+        "x-sdkwork-owner": "sdkwork-drive",
+        "x-sdkwork-api-authority": "sdkwork-drive-app-api",
+        "x-sdkwork-request-context": "WebRequestContext",
+        "x-sdkwork-api-surface": "app-api"
+      }
+    },
     "/app/v3/api/drive/nodes/{nodeId}/download_grants": {
       "post": {
         "tags": [
@@ -16191,6 +16372,90 @@
           },
           "pageInfo": {
             "$ref": "#/components/schemas/PageInfo"
+          }
+        }
+      },
+      "DriveNodeContentHttpResponse": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/SdkWorkApiResponse"
+          },
+          {
+            "type": "object",
+            "required": [
+              "data"
+            ],
+            "properties": {
+              "data": {
+                "$ref": "#/components/schemas/DriveNodeContentData"
+              }
+            }
+          }
+        ]
+      },
+      "DriveNodeContentData": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "item"
+        ],
+        "properties": {
+          "item": {
+            "$ref": "#/components/schemas/DriveNodeContent"
+          }
+        }
+      },
+      "DriveNodeContent": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "nodeId",
+          "encoding",
+          "content",
+          "sizeBytes",
+          "returnedRangeStart",
+          "returnedRangeLength",
+          "hasMore"
+        ],
+        "properties": {
+          "nodeId": {
+            "type": "string"
+          },
+          "fileName": {
+            "type": "string"
+          },
+          "contentType": {
+            "type": "string"
+          },
+          "encoding": {
+            "type": "string",
+            "enum": [
+              "utf8",
+              "base64"
+            ]
+          },
+          "content": {
+            "type": "string",
+            "maxLength": 5592408
+          },
+          "sizeBytes": {
+            "type": "string",
+            "pattern": "^(0|[1-9][0-9]*)$"
+          },
+          "checksumSha256": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "returnedRangeStart": {
+            "type": "string",
+            "pattern": "^(0|[1-9][0-9]*)$"
+          },
+          "returnedRangeLength": {
+            "type": "string",
+            "pattern": "^(0|[1-9][0-9]*)$"
+          },
+          "hasMore": {
+            "type": "boolean"
           }
         }
       }

@@ -963,6 +963,20 @@ pub struct NodeDownloadUrlQuery {
     pub requested_ttl_seconds: Option<u32>,
 }
 
+/// Query for `nodes.content.retrieve`.
+///
+/// `byteRangeStart` is a string on the wire because Drive reports content
+/// length as a JSON string (values may exceed the safe integer range), so the
+/// generated SDK and this DTO keep the same representation.
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DriveNodeContentQuery {
+    pub max_bytes: Option<u32>,
+    pub byte_range_start: Option<i64>,
+    pub byte_range_length: Option<u32>,
+    pub encoding: Option<String>,
+}
+
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct FileVersionResponse {

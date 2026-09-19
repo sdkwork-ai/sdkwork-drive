@@ -250,6 +250,22 @@ func (a *DriveApi) NodesDownloadUrlsRetrieve(nodeId string, requestedTtlSeconds 
     return decodeResult[sdktypes.CreateDownloadUrlHttpResponse](raw)
 }
 
+// Read active Drive node content on the same origin
+func (a *DriveApi) NodesContentRetrieve(nodeId string, maxBytes *int, byteRangeStart *int, byteRangeLength *int, encoding *string) (sdktypes.DriveNodeContentHttpResponse, error) {
+    query := BuildQueryString([]QueryParameterSpec{
+        {Name: "maxBytes", Value: func() interface{} { if maxBytes == nil { return nil }; return *maxBytes }(), Style: "form", Explode: true, AllowReserved: false},
+        {Name: "byteRangeStart", Value: func() interface{} { if byteRangeStart == nil { return nil }; return *byteRangeStart }(), Style: "form", Explode: true, AllowReserved: false},
+        {Name: "byteRangeLength", Value: func() interface{} { if byteRangeLength == nil { return nil }; return *byteRangeLength }(), Style: "form", Explode: true, AllowReserved: false},
+        {Name: "encoding", Value: func() interface{} { if encoding == nil { return nil }; return *encoding }(), Style: "form", Explode: true, AllowReserved: false},
+    })
+    raw, err := a.client.Get(AppendQueryString(AppApiPath(fmt.Sprintf("/drive/nodes/%s/content", SerializePathParameter(nodeId, PathParameterSpec{Name: "nodeId", Style: "simple", Explode: false}))), query), nil, nil)
+    if err != nil {
+        var zero sdktypes.DriveNodeContentHttpResponse
+        return zero, err
+    }
+    return decodeResult[sdktypes.DriveNodeContentHttpResponse](raw)
+}
+
 func (a *DriveApi) DownloadGrantsCreate(nodeId string, body *sdktypes.CreateDownloadGrantRequest) (sdktypes.CreateDownloadUrlHttpResponse, error) {
     raw, err := a.client.Post(AppApiPath(fmt.Sprintf("/drive/nodes/%s/download_grants", SerializePathParameter(nodeId, PathParameterSpec{Name: "nodeId", Style: "simple", Explode: false}))), body, nil, nil, "application/json")
     if err != nil {

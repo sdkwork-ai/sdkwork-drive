@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "appId": "sdkwork-drive-pc",
+  "declarations": [
+    {
+      "appResourceType": "drive.mobile_file_browser_entry",
+      "appResourceIdKind": "application",
+      "scene": "file-upload",
+      "source": "sdkwork-drive-common",
+      "uploadProfileCode": "generic",
+      "retention": "long_term",
+      "purpose": "File uploaded into a Drive space from the shared mobile Drive browser surface."
+    }
+  ]
+}

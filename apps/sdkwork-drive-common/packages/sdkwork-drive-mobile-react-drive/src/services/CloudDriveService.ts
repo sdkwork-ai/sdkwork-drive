@@ -5,6 +5,7 @@ import type {
   SdkworkDriveAppClient,
 } from "@sdkwork/drive-app-sdk";
 import { uuid } from "@sdkwork/utils/id";
+import { DRIVE_COMMON_MOBILE_FILE_BROWSER_ENTRY_UPLOAD } from "./uploadDeclaration";
 
 export type CloudDriveView = "files" | "recent";
 
@@ -159,10 +160,10 @@ export class CloudDriveService {
     const spaceId = await resolvePersonalSpaceId(client);
     const upload = await client.uploader.upload({
       file: file as DriveUploaderBlobLike,
-      appResourceType: "mobile-file-browser",
+      appResourceType: DRIVE_COMMON_MOBILE_FILE_BROWSER_ENTRY_UPLOAD.appResourceType,
       appResourceId: spaceId,
-      scene: "drive_h5_file_upload",
-      source: "h5_local_file",
+      scene: DRIVE_COMMON_MOBILE_FILE_BROWSER_ENTRY_UPLOAD.scene,
+      source: DRIVE_COMMON_MOBILE_FILE_BROWSER_ENTRY_UPLOAD.source,
       originalFileName: file.name,
       contentType: file.type || "application/octet-stream",
       spaceId,

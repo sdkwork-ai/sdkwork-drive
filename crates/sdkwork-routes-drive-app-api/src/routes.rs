@@ -156,6 +156,10 @@ fn build_business_router_layers(state: AppState) -> Router {
             get(create_node_download_url),
         )
         .route(
+            "/app/v3/api/drive/nodes/{node_id}/content",
+            get(crate::content_handlers::retrieve_node_content),
+        )
+        .route(
             "/app/v3/api/drive/nodes/{node_id}/download_grants",
             post(create_node_download_grant),
         )

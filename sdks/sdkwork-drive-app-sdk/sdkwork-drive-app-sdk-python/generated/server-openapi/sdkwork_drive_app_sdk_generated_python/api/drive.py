@@ -1,6 +1,6 @@
 from typing import Any, Dict, List, Optional
 from ..http_client import HttpClient
-from ..models import ActivateWebsiteGenerationRequest, ApplyNodeLabelRequest, ArchiveEntryListHttpResponse, ChangeListHttpResponse, CheckFavoriteNodesRequest, ClaimShareLinkHttpResponse, CompleteUploadSessionRequest, CopyNodeRequest, CreateCommentReplyRequest, CreateCommentRequest, CreateDownloadGrantRequest, CreateDownloadPackageRequest, CreateDownloadUrlHttpResponse, CreateDownloadUrlRequest, CreateDriveSandboxDirectoryRequest, CreateDriveSandboxFileRequest, CreateFileHttpResponse, CreateFileRequest, CreateFolderRequest, CreatePermissionRequest, CreateShareLinkHttpResponse, CreateShareLinkRequest, CreateShortcutRequest, CreateSpaceRequest, CreateUploadSessionRequest, CreateWatchChannelRequest, CreateWebsiteRootRequest, CreateWebsiteSyncRequest, DownloadPackageHttpResponse, DriveCommentHttpResponse, DriveCommentListHttpResponse, DriveCommentReplyHttpResponse, DriveCommentReplyListHttpResponse, DriveNodeHttpResponse, DriveNodeListHttpResponse, DriveNodePropertyHttpResponse, DriveNodePropertyListHttpResponse, DrivePermissionHttpResponse, DrivePermissionListHttpResponse, DriveSandboxEntryHttpResponse, DriveSandboxEntryListHttpResponse, DriveSandboxFileContentHttpResponse, DriveSandboxMutationCommandHttpResponse, DriveSandboxVolumeListHttpResponse, DriveSpaceHttpResponse, DriveSpaceListHttpResponse, DriveUploadSessionHttpResponse, DriveWatchChannelHttpResponse, DriveWatchChannelListHttpResponse, EffectivePermissionListHttpResponse, EmptyTrashHttpResponse, EmptyTrashRequest, ExtractArchiveEntriesHttpResponse, ExtractArchiveEntriesRequest, FavoriteNodeHttpResponse, FavoriteNodeRequest, FileVersionHttpResponse, FileVersionListHttpResponse, MarkUploaderPartUploadedRequest, MoveNodeRequest, NodeCapabilitiesHttpResponse, NodeCommandRequest, NodeLabelHttpResponse, NodeLabelListHttpResponse, NodePathHttpResponse, PrepareUploaderUploadHttpResponse, PrepareUploaderUploadRequest, PresignedUploadPartHttpResponse, PresignUploadPartRequest, PurgeDriveSandboxEntryRequest, QuotaSummaryHttpResponse, SdkWorkApiResponse, SetNodePropertyRequest, ShareLinkHttpResponse, ShareLinkListHttpResponse, StartPageTokenHttpResponse, StopWatchChannelHttpResponse, StopWatchChannelRequest, UpdateCommentReplyRequest, UpdateCommentRequest, UpdateDriveSandboxEntryRequest, UpdateDriveSandboxFileContentRequest, UpdateNodeRequest, UpdatePermissionRequest, UpdateShareLinkRequest, UpdateSpaceRequest, UploaderUploadPartHttpResponse, WebsiteGenerationActivationHttpResponse, WebsiteRootHttpResponse, WebsiteRootListHttpResponse, WebsiteSyncActivationHttpResponse, WebsiteSyncHttpResponse, WebsiteSyncVersionRequest
+from ..models import ActivateWebsiteGenerationRequest, ApplyNodeLabelRequest, ArchiveEntryListHttpResponse, ChangeListHttpResponse, CheckFavoriteNodesRequest, ClaimShareLinkHttpResponse, CompleteUploadSessionRequest, CopyNodeRequest, CreateCommentReplyRequest, CreateCommentRequest, CreateDownloadGrantRequest, CreateDownloadPackageRequest, CreateDownloadUrlHttpResponse, CreateDownloadUrlRequest, CreateDriveSandboxDirectoryRequest, CreateDriveSandboxFileRequest, CreateFileHttpResponse, CreateFileRequest, CreateFolderRequest, CreatePermissionRequest, CreateShareLinkHttpResponse, CreateShareLinkRequest, CreateShortcutRequest, CreateSpaceRequest, CreateUploadSessionRequest, CreateWatchChannelRequest, CreateWebsiteRootRequest, CreateWebsiteSyncRequest, DownloadPackageHttpResponse, DriveCommentHttpResponse, DriveCommentListHttpResponse, DriveCommentReplyHttpResponse, DriveCommentReplyListHttpResponse, DriveNodeContentHttpResponse, DriveNodeHttpResponse, DriveNodeListHttpResponse, DriveNodePropertyHttpResponse, DriveNodePropertyListHttpResponse, DrivePermissionHttpResponse, DrivePermissionListHttpResponse, DriveSandboxEntryHttpResponse, DriveSandboxEntryListHttpResponse, DriveSandboxFileContentHttpResponse, DriveSandboxMutationCommandHttpResponse, DriveSandboxVolumeListHttpResponse, DriveSpaceHttpResponse, DriveSpaceListHttpResponse, DriveUploadSessionHttpResponse, DriveWatchChannelHttpResponse, DriveWatchChannelListHttpResponse, EffectivePermissionListHttpResponse, EmptyTrashHttpResponse, EmptyTrashRequest, ExtractArchiveEntriesHttpResponse, ExtractArchiveEntriesRequest, FavoriteNodeHttpResponse, FavoriteNodeRequest, FileVersionHttpResponse, FileVersionListHttpResponse, MarkUploaderPartUploadedRequest, MoveNodeRequest, NodeCapabilitiesHttpResponse, NodeCommandRequest, NodeLabelHttpResponse, NodeLabelListHttpResponse, NodePathHttpResponse, PrepareUploaderUploadHttpResponse, PrepareUploaderUploadRequest, PresignedUploadPartHttpResponse, PresignUploadPartRequest, PurgeDriveSandboxEntryRequest, QuotaSummaryHttpResponse, SdkWorkApiResponse, SetNodePropertyRequest, ShareLinkHttpResponse, ShareLinkListHttpResponse, StartPageTokenHttpResponse, StopWatchChannelHttpResponse, StopWatchChannelRequest, UpdateCommentReplyRequest, UpdateCommentRequest, UpdateDriveSandboxEntryRequest, UpdateDriveSandboxFileContentRequest, UpdateNodeRequest, UpdatePermissionRequest, UpdateShareLinkRequest, UpdateSpaceRequest, UploaderUploadPartHttpResponse, WebsiteGenerationActivationHttpResponse, WebsiteRootHttpResponse, WebsiteRootListHttpResponse, WebsiteSyncActivationHttpResponse, WebsiteSyncHttpResponse, WebsiteSyncVersionRequest
 
 def _append_query_string(path: str, raw_query_string: str) -> str:
     query = raw_query_string.lstrip('?')
@@ -372,6 +372,7 @@ class DriveNodesApi:
         self._client = client
         self.capabilities = DriveNodesCapabilitiesApi(client)
         self.download_urls = DriveNodesDownloadUrlsApi(client)
+        self.content = DriveNodesContentApi(client)
         self.path = DriveNodesPathApi(client)
         self.files = DriveNodesFilesApi(client)
         self.folders = DriveNodesFoldersApi(client)
@@ -429,6 +430,23 @@ class DriveNodesDownloadUrlsApi:
             {'name': 'requestedTtlSeconds', 'value': requested_ttl_seconds, 'style': 'form', 'explode': True, 'allow_reserved': False},
         ])
         return self._client.get(_append_query_string(f"/app/v3/api/drive/nodes/{serialize_path_parameter(node_id, {'name': 'nodeId', 'style': 'simple', 'explode': False})}/download_url", query))
+
+class DriveNodesContentApi:
+    """drive drive.nodes.content API client."""
+
+    def __init__(self, client: HttpClient):
+        self._client = client
+
+
+    def retrieve(self, node_id: str, max_bytes: Optional[int] = None, byte_range_start: Optional[int] = None, byte_range_length: Optional[int] = None, encoding: Optional[str] = None) -> DriveNodeContentHttpResponse:
+        """Read active Drive node content on the same origin"""
+        query = build_query_string([
+            {'name': 'maxBytes', 'value': max_bytes, 'style': 'form', 'explode': True, 'allow_reserved': False},
+            {'name': 'byteRangeStart', 'value': byte_range_start, 'style': 'form', 'explode': True, 'allow_reserved': False},
+            {'name': 'byteRangeLength', 'value': byte_range_length, 'style': 'form', 'explode': True, 'allow_reserved': False},
+            {'name': 'encoding', 'value': encoding, 'style': 'form', 'explode': True, 'allow_reserved': False},
+        ])
+        return self._client.get(_append_query_string(f"/app/v3/api/drive/nodes/{serialize_path_parameter(node_id, {'name': 'nodeId', 'style': 'simple', 'explode': False})}/content", query))
 
 class DriveNodesPathApi:
     """drive drive.nodes.path API client."""

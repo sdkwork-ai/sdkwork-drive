@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "appId": "sdkwork-drive-pc",
+  "declarations": [
+    {
+      "appResourceType": "drive.file_browser_entry",
+      "appResourceIdKind": "application",
+      "scene": "drive-file-upload",
+      "source": "sdkwork-drive-pc",
+      "uploadProfileCode": "generic",
+      "retention": "long_term",
+      "purpose": "File uploaded into a Drive space from the desktop Drive file browser."
+    },
+    {
+      "appResourceType": "drive.editor_document",
+      "appResourceIdKind": "application",
+      "scene": "drive-text-save",
+      "source": "sdkwork-drive-pc",
+      "uploadProfileCode": "text",
+      "retention": "long_term",
+      "purpose": "Text document saved from the desktop Drive editor back into the Drive space."
+    }
+  ]
+}

@@ -6,6 +6,7 @@ export * from './runtime/DriveRuntimeProvider';
 export * from './sdk/authProjection';
 export * from './sdk/generatedSdkTransport';
 export * from './sdk/driveAppSdkClient';
+export * from './sdk/uploadDeclaration';
 export * from './services/driveFileService';
 export * from './session/sessionStore';
 export * from './session/osSecureSessionStorage';
