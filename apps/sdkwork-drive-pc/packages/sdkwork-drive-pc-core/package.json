@@ -51,6 +51,7 @@
   "dependencies": {
     "@sdkwork/drive-app-sdk": "workspace:*",
     "@sdkwork/sdk-common": "workspace:*",
+    "@sdkwork/iam-credential-entry": "workspace:*",
     "@sdkwork/utils": "workspace:*"
   },
   "peerDependencies": {

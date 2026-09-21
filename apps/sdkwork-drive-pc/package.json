@@ -40,6 +40,7 @@
     "@sdkwork/i18n-pc-react": "workspace:*",
     "@sdkwork/iam-app-sdk": "workspace:*",
     "@sdkwork/iam-contracts": "workspace:*",
+    "@sdkwork/iam-credential-entry": "workspace:*",
     "@sdkwork/ui-pc-react": "workspace:*",
     "@sdkwork/utils": "workspace:*",
     "@tailwindcss/vite": "^4.1.14",

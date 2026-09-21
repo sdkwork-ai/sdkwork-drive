@@ -1,6 +1,7 @@
 packages:
   - "apps/sdkwork-drive-pc"
   - "apps/sdkwork-drive-pc/packages/*"
+  - "apps/sdkwork-drive-common/packages/*"
   - "sdks/sdkwork-drive-app-sdk/sdkwork-drive-app-sdk-typescript"
   - "sdks/sdkwork-drive-admin-storage-sdk/sdkwork-drive-admin-storage-sdk-typescript"
   - "sdks/sdkwork-drive-backend-sdk/sdkwork-drive-backend-sdk-typescript"
@@ -24,6 +25,7 @@ packages:
   - "../sdkwork-appbase/sdks/sdkwork-base-data-backend-sdk/sdkwork-base-data-backend-sdk-typescript"
   - "../sdkwork-core/sdkwork-core-pc-react"
   - "../sdkwork-ui/sdkwork-ui-pc-react"
+  - "../sdkwork-ui/sdkwork-ui-mobile-react"
   - "../sdkwork-sdk-commons/sdkwork-sdk-common-typescript"
   - "../sdkwork-utils/packages/sdkwork-utils-typescript"
   - "../sdkwork-app-topology"
