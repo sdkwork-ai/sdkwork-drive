@@ -1,5 +1,7 @@
 use crate::config::{AdminStorageConfig, DriveAdminStorageObjectStoreAdapter};
-use crate::error::{map_object_store_route_error, map_provider_account_error, map_service_error, ProblemDetail};
+use crate::error::{
+    map_object_store_route_error, map_provider_account_error, map_service_error, ProblemDetail,
+};
 use crate::state::AdminStorageState;
 use axum::http::StatusCode;
 use axum::Json;

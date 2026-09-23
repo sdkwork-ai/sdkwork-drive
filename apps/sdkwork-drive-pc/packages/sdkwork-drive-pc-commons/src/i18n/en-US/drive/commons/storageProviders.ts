@@ -4,6 +4,9 @@ export default {
   pageDescription: 'Configure and manage object storage backends for Drive file storage.',
   newProvider: 'New provider',
   refresh: 'Refresh',
+  initializeAccounts: 'Initialize accounts',
+  initializeAccountsHint:
+    'Create the built-in provider accounts, provider configurations and tenant default binding in one pass. Idempotent: existing entries — including credentials you already filled in — are never overwritten.',
   dismiss: 'Dismiss',
 
   // Table
@@ -270,6 +273,9 @@ export default {
   noticeOperationFailed: 'Storage provider operation failed.',
   noticeCapabilitiesFailed: 'Failed to load capabilities.',
   noticeBucketFailed: 'Failed to inspect bucket.',
+  noticeAccountsInitialized:
+    'Accounts initialized: {total} providers checked, {providers} provider configs created, {accounts} accounts created, {credentials} placeholder credentials seeded. Existing entries were left untouched.',
+  noticeAccountsInitializeFailed: 'Failed to initialize provider accounts.',
   errorLoadObjects: 'Failed to load objects.',
   errorDeleteObject: 'Failed to delete object.',
   errorLoadBuckets: 'Failed to load buckets.',

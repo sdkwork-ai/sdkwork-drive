@@ -11,8 +11,8 @@ pub use bootstrap::{
     assemble_backend_business_router_from_env, assemble_business_routes,
     assemble_business_routes_from_env, assemble_business_routes_with_config,
     assemble_business_routes_with_process_pool, assemble_same_origin_contribution_with_pool,
-    backend_admin_storage_route_manifest, web_module, web_module_with_postgres_pool, ApiAssembly,
-    ApiAssemblyContribution, BusinessRouterAssembly,
+    backend_admin_storage_route_manifest, ensure_database_lifecycle_with_pool, web_module,
+    web_module_with_postgres_pool, ApiAssembly, ApiAssemblyContribution, BusinessRouterAssembly,
 };
 
 pub fn assembly_route_count() -> usize {

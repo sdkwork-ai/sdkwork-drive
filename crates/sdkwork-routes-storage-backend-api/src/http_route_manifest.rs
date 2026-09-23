@@ -28,6 +28,12 @@ const HTTP_ROUTES: &[HttpRoute] = &[
         "storageProviderBindings.default.update",
     ),
     HttpRoute::dual_token(
+        HttpMethod::Post,
+        "/backend/v3/api/drive/storage/provider-account-defaults",
+        "drive-admin-storage-api",
+        "storageProviderAccountDefaults.create",
+    ),
+    HttpRoute::dual_token(
         HttpMethod::Get,
         "/backend/v3/api/drive/storage/provider-accounts",
         "drive-admin-storage-api",

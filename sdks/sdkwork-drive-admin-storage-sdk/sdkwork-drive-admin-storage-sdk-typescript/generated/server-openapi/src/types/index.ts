@@ -24,6 +24,7 @@ export type { ProviderObjectContent } from './provider-object-content';
 export type { UpdateProviderObjectContent } from './update-provider-object-content';
 export type { StorageProviderAccount } from './storage-provider-account';
 export type { CreateStorageProviderAccountRequest } from './create-storage-provider-account-request';
+export type { StorageProviderAccountDefault } from './storage-provider-account-default';
 export type { SdkWorkResourceData } from './sdk-work-resource-data';
 export type { SdkWorkPageData } from './sdk-work-page-data';
 export type { SdkWorkCommandData } from './sdk-work-command-data';
@@ -54,3 +55,4 @@ export type { StorageProvidersObjectsContentRetrieveResponse } from './storage-p
 export type { StorageProvidersObjectsContentUpdateResponse } from './storage-providers-objects-content-update-response';
 export type { StorageProviderAccountsListResponse } from './storage-provider-accounts-list-response';
 export type { StorageProviderAccountsCreateResponse201 } from './storage-provider-accounts-create-response201';
+export type { StorageProviderAccountDefaultsCreateResponse201 } from './storage-provider-account-defaults-create-response201';

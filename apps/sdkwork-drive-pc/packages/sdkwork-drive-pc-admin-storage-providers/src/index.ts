@@ -36,6 +36,8 @@ export {
   parseCredentialRef,
 } from './utils/credentialRefUtils';
 export type { CredentialInputMode } from './utils/credentialRefUtils';
+export { summarizeProviderAccountDefaults } from './utils/providerAccountDefaultsSummary';
+export type { ProviderAccountDefaultsSummary } from './utils/providerAccountDefaultsSummary';
 export type {
   CreateStorageProviderInput,
   UpdateStorageProviderInput,
@@ -58,6 +60,7 @@ export type {
   StorageProviderMutationOptions,
   CreateStorageProviderAccountInput,
   ListStorageProviderAccountsInput,
+  StorageProviderAccountDefaultView,
   StorageProviderAccountScope,
   StorageProviderAccountView,
   StorageProviderKind,

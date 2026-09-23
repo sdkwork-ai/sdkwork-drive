@@ -164,6 +164,29 @@ function responseFor(request: DriveAdminStorageSdkRequest): unknown {
     };
   }
 
+  if (request.operationId === 'storageProviderAccountDefaults.create') {
+    return {
+      items: [
+        {
+          // 无凭证的服务商：只铺配置，不铸造账号，也就没有占位密钥。
+          providerKind: 'local_filesystem',
+          providerId: 'builtin-storage-provider-local-filesystem',
+          providerCreated: true,
+        },
+        {
+          providerKind: 'aliyun_oss',
+          providerId: 'builtin-storage-provider-aliyun-oss',
+          providerCreated: true,
+          vendorCode: 'aliyun',
+          providerAccountId: 'iampacct-018f-seeded',
+          accountCode: 'builtin-aliyun-storage',
+          accountCreated: true,
+          credentialSeeded: true,
+        },
+      ],
+    };
+  }
+
   if (request.operationId === 'storageProviders.create' || request.operationId === 'storageProviders.update') {
     return {
       id: request.pathParams?.providerId ?? 'provider-s3',
@@ -717,6 +740,61 @@ describe('storage provider admin service', () => {
 
     expect(calls[0].operationId).toBe('storageProviderKinds.create');
     expect(kinds).toHaveLength(2);
+  });
+
+  it('bootstraps built-in provider accounts and projects every per-row flag', async () => {
+    const { calls, service } = createFakeService();
+
+    const rows = await service.initializeProviderAccountDefaults();
+
+    expect(calls[0].operationId).toBe('storageProviderAccountDefaults.create');
+    // 纯副作用端点：请求体里没有身份，也没有任何凭证材料 —— 账号铸造与密钥密封全在
+    // 服务端完成，客户端只提交"做这件事"这个意图。
+    expect(calls[0].body).toBeUndefined();
+    expect(calls[0].query).toBeUndefined();
+    expect(calls[0].pathParams).toBeUndefined();
+
+    expect(rows).toEqual([
+      expect.objectContaining({
+        providerKind: 'local_filesystem',
+        providerId: 'builtin-storage-provider-local-filesystem',
+        providerCreated: true,
+        accountCreated: false,
+        credentialSeeded: false,
+      }),
+      expect.objectContaining({
+        providerKind: 'aliyun_oss',
+        providerId: 'builtin-storage-provider-aliyun-oss',
+        providerCreated: true,
+        vendorCode: 'aliyun',
+        providerAccountId: 'iampacct-018f-seeded',
+        accountCode: 'builtin-aliyun-storage',
+        accountCreated: true,
+        credentialSeeded: true,
+      }),
+    ]);
+    // 缺少账号字段的行不能被填成空串：`undefined` 表示"这个服务商没有账号"，
+    // 空串会被凭证面板当成"有个 id 是空"的账号而拼出坏引用。
+    expect(rows[0].providerAccountId).toBeUndefined();
+    expect(rows[0].accountCode).toBeUndefined();
+    expect(rows[0].vendorCode).toBeUndefined();
+  });
+
+  it('requires an identified operator before bootstrapping provider accounts', async () => {
+    const client = {
+      metadata: {},
+      operations: {},
+      setTokenManager: () => undefined,
+      request: async () => ({}),
+    } as unknown as DriveAdminStorageSdkClient;
+    const service = createStorageProviderAdminService({
+      adminStorageSdkClient: client,
+      getSession: () => ({ context: { tenantId: 'tenant-100', userId: 'user-100' } }),
+    });
+
+    await expect(service.initializeProviderAccountDefaults()).rejects.toThrow(
+      'Drive admin session context is missing tenantId or operatorId.',
+    );
   });
 
   it('reads object content through the content retrieve operation', async () => {

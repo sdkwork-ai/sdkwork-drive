@@ -156,6 +156,15 @@ pub mod admin_audit {
         pub const DISABLED: &str = "drive.storage_provider_kind.disabled";
     }
 
+    /// Built-in storage provider account bootstrap runs (backend-api).
+    ///
+    /// Distinct from `storage_provider::created`: one bootstrap run may create
+    /// several provider rows *and* the account-center accounts behind them, so
+    /// attributing it to a single provider row would lose the account writes.
+    pub mod storage_provider_account {
+        pub const INITIALIZED: &str = "drive.storage_provider_account.initialized";
+    }
+
     /// Default storage provider binding mutations (backend-api).
     pub mod storage_provider_binding {
         pub const DEFAULT_SET: &str = "drive.storage_provider_binding.default_set";
@@ -276,6 +285,7 @@ mod tests {
         admin_audit::storage_provider_kind::INITIALIZED,
         admin_audit::storage_provider_kind::ENABLED,
         admin_audit::storage_provider_kind::DISABLED,
+        admin_audit::storage_provider_account::INITIALIZED,
         admin_audit::storage_provider_binding::DEFAULT_SET,
         admin_audit::storage_provider_binding::DEFAULT_DELETED,
         admin_audit::maintenance::OBJECT_SWEEP_EXECUTED,

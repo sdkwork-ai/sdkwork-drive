@@ -9,7 +9,8 @@ use sdkwork_drive_workspace_service::DriveServiceError;
 use sdkwork_iam_provider_account_service::ProviderAccount;
 
 pub(crate) fn map_storage_provider(provider: DriveStorageProvider) -> StorageProviderResponse {
-    let credential_configured = provider.credential_ref.is_some() || provider.provider_account_id.is_some();
+    let credential_configured =
+        provider.credential_ref.is_some() || provider.provider_account_id.is_some();
     StorageProviderResponse {
         id: provider.id,
         provider_kind: provider.provider_kind.as_str().to_string(),

@@ -46,7 +46,8 @@ use crate::error::{
 };
 use crate::node_repository::find_active_node;
 use crate::object_store::{
-    build_s3_object_store_for_provider, find_storage_provider_by_id, require_active_storage_provider,
+    build_s3_object_store_for_provider, find_storage_provider_by_id,
+    require_active_storage_provider,
 };
 use crate::response::success_resource;
 use crate::state::AppState;

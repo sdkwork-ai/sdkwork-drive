@@ -227,6 +227,26 @@ export interface StorageProviderAccountView {
 /** How widely a reusable account is shared. Ordered narrowest first. */
 export type StorageProviderAccountScope = 'user' | 'tenant' | 'platform';
 
+/**
+ * One built-in provider kind a bootstrap run settled.
+ *
+ * `accountCreated` / `credentialSeeded` are what let the page report honestly:
+ * a rerun that finds everything already in place returns `false` for both, which
+ * is the visible proof that the run did **not** replace keys an operator had
+ * already entered.
+ */
+export interface StorageProviderAccountDefaultView {
+  providerKind: string;
+  providerId: string;
+  providerCreated: boolean;
+  /** Absent for a credential-free kind (`local_filesystem`). */
+  vendorCode?: string;
+  providerAccountId?: string;
+  accountCode?: string;
+  accountCreated: boolean;
+  credentialSeeded: boolean;
+}
+
 export interface ListStorageProviderAccountsInput {
   vendorCode?: string;
   status?: string;

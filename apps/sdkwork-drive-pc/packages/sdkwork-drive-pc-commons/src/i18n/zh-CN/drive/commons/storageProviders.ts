@@ -4,6 +4,9 @@ export default {
   pageDescription: '配置和管理 Drive 文件存储的对象存储后端。',
   newProvider: '新建提供商',
   refresh: '刷新',
+  initializeAccounts: '初始化账号',
+  initializeAccountsHint:
+    '一次铺齐内置服务商的账号中心账号、服务商配置与租户默认绑定。幂等操作：已存在的条目（包括你已经填过的真实密钥）不会被覆盖。',
   dismiss: '关闭',
 
   // 表格
@@ -274,6 +277,9 @@ export default {
   noticeOperationFailed: '存储提供商操作失败。',
   noticeCapabilitiesFailed: '加载能力信息失败。',
   noticeBucketFailed: '检查存储桶失败。',
+  noticeAccountsInitialized:
+    '账号初始化完成：检查 {total} 个服务商，新建服务商配置 {providers} 个、账号 {accounts} 个，写入占位密钥 {credentials} 条。已存在的条目未被改动。',
+  noticeAccountsInitializeFailed: '初始化服务商账号失败。',
   errorLoadObjects: '加载对象列表失败。',
   errorDeleteObject: '删除对象失败。',
   errorLoadBuckets: '加载存储桶列表失败。',

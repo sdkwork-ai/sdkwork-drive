@@ -3,8 +3,8 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use sdkwork_drive_storage_contract::{
-    DriveObjectStore, DriveObjectStoreError, DriveObjectStoreErrorKind, DriveStorageCredentialSnapshot,
-    DriveStorageProviderKind,
+    DriveObjectStore, DriveObjectStoreError, DriveObjectStoreErrorKind,
+    DriveStorageCredentialSnapshot, DriveStorageProviderKind,
 };
 use sdkwork_drive_storage_local::LocalDriveObjectStore;
 use sdkwork_drive_storage_s3::{S3DriveObjectStore, S3StoreConfig};
@@ -184,7 +184,9 @@ fn map_provider_account_error(error: ProviderAccountError) -> DriveObjectStoreEr
         }
         ProviderAccountError::NotFound(message) => (DriveObjectStoreErrorKind::NotFound, message),
         ProviderAccountError::Conflict(message) => (DriveObjectStoreErrorKind::Conflict, message),
-        ProviderAccountError::Unavailable(message) => (DriveObjectStoreErrorKind::Internal, message),
+        ProviderAccountError::Unavailable(message) => {
+            (DriveObjectStoreErrorKind::Internal, message)
+        }
         ProviderAccountError::Cipher(message) => (DriveObjectStoreErrorKind::Internal, message),
     };
     DriveObjectStoreError::new(kind, message)

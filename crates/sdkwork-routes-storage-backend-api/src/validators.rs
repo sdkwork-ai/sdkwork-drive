@@ -292,7 +292,10 @@ pub(crate) fn storage_provider_binding_purpose(target: &StorageProviderBindingTa
     }
 }
 
-fn default_storage_root_prefix(tenant_id: &str, target: &StorageProviderBindingTarget) -> String {
+pub(crate) fn default_storage_root_prefix(
+    tenant_id: &str,
+    target: &StorageProviderBindingTarget,
+) -> String {
     match target {
         StorageProviderBindingTarget::Tenant => {
             format!("sdkwork-drive/v1/tenants/{tenant_id}")

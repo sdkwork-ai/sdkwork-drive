@@ -14,6 +14,7 @@ export const sdkMetadata = {
 };
 
 export const operations = {
+  "storageProviderAccountDefaults.create": { method: "POST", path: "/backend/v3/api/drive/storage/provider-account-defaults" },
   "storageProviderAccounts.create": { method: "POST", path: "/backend/v3/api/drive/storage/provider-accounts" },
   "storageProviderAccounts.list": { method: "GET", path: "/backend/v3/api/drive/storage/provider-accounts" },
   "storageProviderBindings.default.delete": { method: "DELETE", path: "/backend/v3/api/drive/storage/bindings/default" },

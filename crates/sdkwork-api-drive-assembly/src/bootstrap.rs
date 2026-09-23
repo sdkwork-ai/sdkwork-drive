@@ -260,6 +260,30 @@ pub async fn assemble_same_origin_contribution_with_pool(
     )
 }
 
+/// Runs the Drive database lifecycle on the caller's process-shared pool
+/// **without** mounting routes or resolving the admin-storage configuration.
+///
+/// This is the Drive half of the **explicit migration** path
+/// (DATABASE_FRAMEWORK_SPEC §4.4.1). The serve path converges Drive inside
+/// [`assemble_same_origin_contribution_with_pool`], which also builds routers and
+/// reads `AdminStorageConfig` — a standalone gateway's `db-migrate` subcommand
+/// must not pay for either, so it needs this route-free entrypoint.
+///
+/// Closing this entrypoint is what makes the drift repair instruction honest:
+/// every module the serve path converges must also be converged by the explicit
+/// migration command, otherwise a drifted Drive schema fails boot while naming a
+/// command that cannot repair it — a permanent outage with a wrong fix
+/// (DATABASE_FRAMEWORK_SPEC §4.4.1).
+///
+/// Whether forward migrations are applied stays governed by
+/// `SDKWORK_DATABASE_AUTO_MIGRATE`, falling back to the Drive module manifest;
+/// the migration command is what turns it on for its own process.
+pub async fn ensure_database_lifecycle_with_pool(
+    pool: sdkwork_database_sqlx::DatabasePool,
+) -> Result<(), String> {
+    bootstrap_drive_database(pool).await.map(|_| ())
+}
+
 pub async fn assemble_api_router(pool: sqlx::PgPool) -> Result<ApiAssembly, String> {
     sdkwork_drive_security::ensure_drive_auth_policy_refresh_task();
     ensure_production_download_token_signing_configured()

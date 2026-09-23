@@ -140,6 +140,29 @@ pub(crate) struct StorageProviderResponse {
     pub(crate) credential_configured: bool,
 }
 
+/// One built-in provider kind a bootstrap run settled.
+///
+/// The two booleans are the point of the row: `account_created` and
+/// `credential_seeded` distinguish "this run filled the gap" from "something was
+/// already here and was deliberately left alone", which is what an operator
+/// needs in order to trust that re-running the bootstrap cannot have replaced
+/// keys they had already entered.
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct StorageProviderAccountDefaultResponse {
+    pub(crate) provider_kind: String,
+    pub(crate) provider_id: String,
+    pub(crate) provider_created: bool,
+    /// Absent for a credential-free kind (`local_filesystem`).
+    pub(crate) vendor_code: Option<String>,
+    /// The account-center account the provider is bound to; absent for a
+    /// credential-free kind.
+    pub(crate) provider_account_id: Option<String>,
+    pub(crate) account_code: Option<String>,
+    pub(crate) account_created: bool,
+    pub(crate) credential_seeded: bool,
+}
+
 /// Reusable service-provider account projected for the storage admin console.
 ///
 /// This is a read-only reference view of the platform account center row

@@ -746,9 +746,7 @@ fn normalize_tenant_id(raw: &str) -> Result<String, DriveServiceError> {
 /// ck_dr_drive_storage_provider_provider_account_id so an invalid reference is
 /// rejected at the service boundary with a readable message instead of by a
 /// database check constraint.
-fn normalize_provider_account_id(
-    raw: Option<String>,
-) -> Result<Option<String>, DriveServiceError> {
+fn normalize_provider_account_id(raw: Option<String>) -> Result<Option<String>, DriveServiceError> {
     let Some(value) = raw else {
         return Ok(None);
     };

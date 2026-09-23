@@ -37,8 +37,8 @@ use axum::http::StatusCode;
 use axum::Json;
 use sdkwork_iam_provider_account_service::{
     create_account, list_accounts, resolve_account_scope, upsert_active_credential,
-    AccountVisibility, NewProviderAccount, NewProviderCredential, ProviderAccountError, ScopeCaller,
-    ACCOUNT_SCOPE_USER, ACCOUNT_TYPE_LONG_TERM_KEY, CAPABILITY_OBJECT_STORAGE,
+    AccountVisibility, NewProviderAccount, NewProviderCredential, ProviderAccountError,
+    ScopeCaller, ACCOUNT_SCOPE_USER, ACCOUNT_TYPE_LONG_TERM_KEY, CAPABILITY_OBJECT_STORAGE,
     CREDENTIAL_KIND_ACCESS_KEY_PAIR, DEFAULT_CREDENTIAL_NAME, DEFAULT_ORGANIZATION_ID,
     PLATFORM_TENANT_ID,
 };
@@ -47,8 +47,10 @@ pub(crate) async fn list_storage_provider_accounts(
     State(state): State<AdminStorageState>,
     Extension(ctx): Extension<DriveRequestContext>,
     Query(query): Query<ListStorageProviderAccountsQuery>,
-) -> Result<StorageListHttpResponse<StorageProviderAccountResponse>, (StatusCode, Json<ProblemDetail>)>
-{
+) -> Result<
+    StorageListHttpResponse<StorageProviderAccountResponse>,
+    (StatusCode, Json<ProblemDetail>),
+> {
     let tenant_id = ctx.resolve_tenant_id()?;
     let operator_id = ctx.resolve_operator_id()?;
     let page = parse_offset_page(query.page_size, query.page_token)?;
@@ -65,13 +67,16 @@ pub(crate) async fn list_storage_provider_accounts(
         .filter(|value| !value.is_empty());
     if let Some(owner) = requested_owner {
         if owner != operator_id {
-            return Err(map_provider_account_error(ProviderAccountError::Validation(
-                "ownerUserId must be the calling user".to_owned(),
-            )));
+            return Err(map_provider_account_error(
+                ProviderAccountError::Validation("ownerUserId must be the calling user".to_owned()),
+            ));
         }
     }
     let (scope_type, owner_user_id) = if mine {
-        (Some(ACCOUNT_SCOPE_USER.to_owned()), Some(operator_id.clone()))
+        (
+            Some(ACCOUNT_SCOPE_USER.to_owned()),
+            Some(operator_id.clone()),
+        )
     } else {
         (
             query
@@ -136,21 +141,20 @@ pub(crate) async fn create_storage_provider_account(
     State(state): State<AdminStorageState>,
     Extension(ctx): Extension<DriveRequestContext>,
     payload: Result<Json<CreateStorageProviderAccountRequest>, JsonRejection>,
-) -> Result<(StatusCode, Json<StorageProviderAccountResponse>), (StatusCode, Json<ProblemDetail>)>
-{
+) -> Result<(StatusCode, Json<StorageProviderAccountResponse>), (StatusCode, Json<ProblemDetail>)> {
     let Json(payload) = payload.map_err(invalid_json_problem)?;
     let operator_id = ctx.resolve_operator_id()?;
     let tenant_id = ctx.resolve_tenant_id()?;
 
     if payload.access_key_id.trim().is_empty() {
-        return Err(map_provider_account_error(ProviderAccountError::Validation(
-            "accessKeyId is required".to_owned(),
-        )));
+        return Err(map_provider_account_error(
+            ProviderAccountError::Validation("accessKeyId is required".to_owned()),
+        ));
     }
     if payload.secret_access_key.trim().is_empty() {
-        return Err(map_provider_account_error(ProviderAccountError::Validation(
-            "secretAccessKey is required".to_owned(),
-        )));
+        return Err(map_provider_account_error(
+            ProviderAccountError::Validation("secretAccessKey is required".to_owned()),
+        ));
     }
 
     // A platform-scope account is resolvable from every tenant, so minting one
@@ -211,17 +215,19 @@ pub(crate) async fn create_storage_provider_account(
                 if let Some(requested) = payload.account_type.as_deref() {
                     let requested = requested.trim();
                     if !requested.is_empty() && requested != ACCOUNT_TYPE_LONG_TERM_KEY {
-                        return Err(map_provider_account_error(ProviderAccountError::Validation(
-                            format!(
+                        return Err(map_provider_account_error(
+                            ProviderAccountError::Validation(format!(
                                 "accountType `{requested}` does not match the access-key pair this \
                                  console stores; a long-term key is `{ACCOUNT_TYPE_LONG_TERM_KEY}`"
-                            ),
-                        )));
+                            )),
+                        ));
                     }
                 }
                 ACCOUNT_TYPE_LONG_TERM_KEY.to_owned()
             },
-            environment: payload.environment.unwrap_or_else(|| "production".to_owned()),
+            environment: payload
+                .environment
+                .unwrap_or_else(|| "production".to_owned()),
             external_account_id: payload.external_account_id,
             // Accounts minted from the storage console are created for the
             // storage capability; the column stays free-form so a later
@@ -270,5 +276,8 @@ pub(crate) async fn create_storage_provider_account(
         ))
     })?;
 
-    Ok((StatusCode::CREATED, Json(map_storage_provider_account(account))))
+    Ok((
+        StatusCode::CREATED,
+        Json(map_storage_provider_account(account)),
+    ))
 }

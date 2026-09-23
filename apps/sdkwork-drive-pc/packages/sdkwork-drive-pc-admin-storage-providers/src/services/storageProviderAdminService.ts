@@ -13,6 +13,7 @@ import type {
   ListStorageProviderObjectsInput,
   ListStorageProviderObjectsResult,
   SetDefaultStorageProviderBindingInput,
+  StorageProviderAccountDefaultView,
   StorageProviderAccountScope,
   StorageProviderAccountView,
   StorageProviderBindingView,
@@ -41,6 +42,14 @@ export interface StorageProviderAdminService {
     options?: StorageProviderMutationOptions,
   ): Promise<StorageProviderKindView>;
   initializeKinds(options?: StorageProviderMutationOptions): Promise<StorageProviderKindView[]>;
+  /**
+   * 把内置服务商的账号中心账号、服务商配置与租户默认绑定一次铺齐。
+   *
+   * 幂等：已有的东西一概不动（尤其不会覆盖运维已填的真实密钥），所以可以重复点。
+   */
+  initializeProviderAccountDefaults(
+    options?: StorageProviderMutationOptions,
+  ): Promise<StorageProviderAccountDefaultView[]>;
   createProvider(
     input: CreateStorageProviderInput,
     options?: StorageProviderMutationOptions,
@@ -161,6 +170,15 @@ export function createStorageProviderAdminService({
         body: {},
       });
       return extractItems(response).map(responseToProviderKind);
+    },
+    async initializeProviderAccountDefaults(options) {
+      // 写操作要有可归属的操作者，与 createProviderAccount 同一前置条件。
+      assertAdminWriteSession(getSession);
+      const response = await adminStorageSdkClient.request<unknown>({
+        operationId: 'storageProviderAccountDefaults.create',
+        signal: options?.signal,
+      });
+      return extractItems(response).map(responseToStorageProviderAccountDefault);
     },
     async listProvidersPage(input = {}) {
       const response = await adminStorageSdkClient.request<unknown>({
@@ -637,6 +655,28 @@ function responseToStorageProviderAccount(response: unknown): StorageProviderAcc
 function accountScopeField(record: Record<string, unknown>): StorageProviderAccountScope {
   const raw = stringField(record, 'scopeType', 'scope_type')?.toLowerCase();
   return raw === 'platform' || raw === 'user' ? raw : 'tenant';
+}
+
+/**
+ * 内置服务商初始化结果投影。
+ *
+ * 两个布尔字段是这一行存在的理由：`accountCreated` 与 `credentialSeeded` 同时为
+ * `false` 表示「本来就在，本run 没有再动它」——即运维已经填过的真实密钥不会被覆盖。
+ */
+function responseToStorageProviderAccountDefault(
+  response: unknown,
+): StorageProviderAccountDefaultView {
+  const record = recordOf(response);
+  return {
+    providerKind: stringField(record, 'providerKind', 'provider_kind') ?? '',
+    providerId: stringField(record, 'providerId', 'provider_id') ?? '',
+    providerCreated: booleanField(record, 'providerCreated', 'provider_created') ?? false,
+    vendorCode: stringField(record, 'vendorCode', 'vendor_code'),
+    providerAccountId: stringField(record, 'providerAccountId', 'provider_account_id'),
+    accountCode: stringField(record, 'accountCode', 'account_code'),
+    accountCreated: booleanField(record, 'accountCreated', 'account_created') ?? false,
+    credentialSeeded: booleanField(record, 'credentialSeeded', 'credential_seeded') ?? false,
+  };
 }
 
 function responseToProviderKind(response: unknown): StorageProviderKindView {

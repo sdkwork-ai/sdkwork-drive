@@ -1353,10 +1353,8 @@ async fn storage_provider_rejects_conflicting_credential_sources_on_create() {
         })
         .await
         .expect_err("a provider must not carry two credential sources");
-    assert!(
-        matches!(error, DriveServiceError::Validation(message)
-            if message.contains("mutually exclusive"))
-    );
+    assert!(matches!(error, DriveServiceError::Validation(message)
+            if message.contains("mutually exclusive")));
 }
 
 #[tokio::test]
@@ -1478,8 +1476,6 @@ async fn storage_provider_rotation_is_rejected_for_account_backed_providers() {
         })
         .await
         .expect_err("rotation belongs to the account center for account-backed providers");
-    assert!(
-        matches!(error, DriveServiceError::Conflict(message)
-            if message.contains("provider account center"))
-    );
+    assert!(matches!(error, DriveServiceError::Conflict(message)
+            if message.contains("provider account center")));
 }

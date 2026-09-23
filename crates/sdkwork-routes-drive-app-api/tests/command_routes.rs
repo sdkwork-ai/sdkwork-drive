@@ -484,7 +484,12 @@ async fn create_team_space_route_derives_organization_owner_from_context() {
                 )
                 .header(
                     "access-token",
-                    common::access_token_for_organization("tenant-001", "user-001", "org-001", "appbase"),
+                    common::access_token_for_organization(
+                        "tenant-001",
+                        "user-001",
+                        "org-001",
+                        "appbase",
+                    ),
                 )
                 .method(Method::POST)
                 .uri("/app/v3/api/drive/spaces")

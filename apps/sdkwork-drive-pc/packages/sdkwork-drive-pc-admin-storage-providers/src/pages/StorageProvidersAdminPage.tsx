@@ -5,6 +5,7 @@ import {
   ChevronRight,
   CircleAlert,
   HardDrive,
+  KeyRound,
   LoaderCircle,
   Plus,
   RefreshCw,
@@ -25,6 +26,7 @@ import type {
   UpdateStorageProviderInput,
 } from '../types/storageProviderAdminTypes';
 import { PRIMARY_BUTTON_CLASS, BADGE_BASE_CLASS, ICON_BUTTON_CLASS, SECONDARY_BUTTON_CLASS, SELECT_CLASS } from '../utils/uiPrimitives';
+import { summarizeProviderAccountDefaults } from '../utils/providerAccountDefaultsSummary';
 import { useTranslation } from '../hooks/useTranslation';
 
 interface StorageProvidersAdminPageProps {
@@ -186,6 +188,41 @@ export function StorageProvidersAdminPage({
   const deleteDefaultBinding = (spaceId?: string) =>
     runTableMutation(() => service.deleteDefaultBinding(spaceId), 'noticeBindingCleared');
 
+  /**
+   * 一键铺齐内置服务商的账号中心账号、服务商配置与租户默认绑定。
+   *
+   * 提示语里的计数来自服务端逐行的 `providerCreated` / `accountCreated` /
+   * `credentialSeeded`。重复点击时它们全部归零，这正是「没有覆盖运维已填真实密钥」的
+   * 可见证据——比一句"操作成功"更能让运维放心继续填密钥。
+   */
+  const initializeProviderAccounts = () => {
+    setPending(true);
+    setNotice(undefined);
+    service
+      .initializeProviderAccountDefaults()
+      .then(async (rows) => {
+        const items = await refreshProviders();
+        const summary = summarizeProviderAccountDefaults(rows);
+        setProviders(items);
+        setNotice({
+          type: 'success',
+          messageKey: 'noticeAccountsInitialized',
+          params: {
+            total: String(summary.total),
+            providers: String(summary.providers),
+            accounts: String(summary.accounts),
+            credentials: String(summary.credentials),
+          },
+        });
+      })
+      .catch((err) => {
+        if (!isDriveRequestCancellationError(err)) {
+          setNotice({ type: 'error', messageKey: 'noticeAccountsInitializeFailed' });
+        }
+      })
+      .finally(() => setPending(false));
+  };
+
   const issueCount = providers.filter(
     (p) => p.status === 'active' && (!p.credentialConfigured || p.healthStatus === 'unreachable' || p.healthStatus === 'degraded'),
   ).length;
@@ -230,6 +267,16 @@ export function StorageProvidersAdminPage({
             <button type="button" className={SECONDARY_BUTTON_CLASS} disabled={loading} onClick={() => reload()}>
               <RefreshCw aria-hidden="true" className={loading ? 'animate-spin' : undefined} size={15} />
               {t('refresh')}
+            </button>
+            <button
+              type="button"
+              className={SECONDARY_BUTTON_CLASS}
+              disabled={pending || loading}
+              title={t('initializeAccountsHint')}
+              onClick={initializeProviderAccounts}
+            >
+              <KeyRound aria-hidden="true" size={15} />
+              {t('initializeAccounts')}
             </button>
             <button type="button" className={PRIMARY_BUTTON_CLASS} onClick={() => { setEditingProvider(undefined); setEditorOpen(true); }}>
               <Plus aria-hidden="true" size={16} />

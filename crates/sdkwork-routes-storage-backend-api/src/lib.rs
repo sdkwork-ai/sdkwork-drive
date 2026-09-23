@@ -12,6 +12,7 @@ mod handlers;
 pub mod http_route_manifest;
 mod object_handlers;
 mod object_store;
+mod provider_account_defaults;
 mod provider_account_handlers;
 mod provider_handlers;
 mod provider_kind_handlers;
