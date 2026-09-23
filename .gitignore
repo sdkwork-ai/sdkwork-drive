@@ -126,3 +126,10 @@ Thumbs.db
 **/*-typescript/src/**/*.js.map
 **/*-typescript/src/**/*.d.ts
 **/*-typescript/src/**/*.d.ts.map
+
+# Local scratch and build residue (do not commit)
+tmp/
+.tmp/
+
+# Python bytecode (do not commit)
+__pycache__/

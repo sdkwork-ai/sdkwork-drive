@@ -26,6 +26,8 @@ fn admin_auth_token(tenant: &str, user: &str) -> String {
         "organization_id": "100002",
         "auth_level": "password",
         "login_scope": "ORGANIZATION",
+        // token-claims-gate: legacy-fixture — constructs a pre-slimming credential so this
+        // test can assert the claim is no longer an authorization source.
         "permission_scope": "drive.storage.admin",
     }))
 }
@@ -41,6 +43,8 @@ fn admin_access_token(tenant: &str, user: &str) -> String {
         "environment": "prod",
         "deployment_mode": "saas",
         "login_scope": "ORGANIZATION",
+        // token-claims-gate: legacy-fixture — constructs a pre-slimming credential so this
+        // test can assert the claim is no longer an authorization source.
         "permission_scope": "drive.storage.admin",
     }))
 }
@@ -56,6 +60,8 @@ fn admin_access_token_with_scope(tenant: &str, user: &str, permission_scope: &st
         "environment": "prod",
         "deployment_mode": "saas",
         "login_scope": "ORGANIZATION",
+        // token-claims-gate: legacy-fixture — constructs a pre-slimming credential so this
+        // test can assert the claim is no longer an authorization source.
         "permission_scope": permission_scope,
     }))
 }
@@ -70,6 +76,8 @@ fn admin_auth_token_with_scope(tenant: &str, user: &str, permission_scope: &str)
         "organization_id": "100002",
         "auth_level": "password",
         "login_scope": "ORGANIZATION",
+        // token-claims-gate: legacy-fixture — constructs a pre-slimming credential so this
+        // test can assert the claim is no longer an authorization source.
         "permission_scope": permission_scope,
     }))
 }
@@ -83,6 +91,8 @@ fn personal_admin_auth_token(tenant: &str, user: &str) -> String {
         "app_id": TEST_APP,
         "auth_level": "password",
         "login_scope": "TENANT",
+        // token-claims-gate: legacy-fixture — constructs a pre-slimming credential so this
+        // test can assert the claim is no longer an authorization source.
         "permission_scope": "drive.storage.admin",
     }))
 }
@@ -97,6 +107,8 @@ fn personal_admin_access_token(tenant: &str, user: &str) -> String {
         "environment": "prod",
         "deployment_mode": "saas",
         "login_scope": "TENANT",
+        // token-claims-gate: legacy-fixture — constructs a pre-slimming credential so this
+        // test can assert the claim is no longer an authorization source.
         "permission_scope": "drive.storage.admin",
     }))
 }

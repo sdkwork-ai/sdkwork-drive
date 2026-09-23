@@ -158,6 +158,11 @@ fn parse_auth_token_claims(
         session_id: optional_claim(&claims, "session_id"),
         app_id: optional_claim(&claims, "app_id"),
         auth_level: optional_claim(&claims, "auth_level").unwrap_or_else(|| "password".to_string()),
+        // IAM_SPEC §5.2/§5.6: parsing is not an authorization decision. Drive
+        // authorizes from `DriveAppContext.permission_scope`, which production
+        // MUST feed from the server-resolved scope port; these fields only carry
+        // what the credential happens to hold, for the explicit migration
+        // fallback. Compliant issuers sign no scope (§5.2), so they stay empty.
         data_scope: split_claim(claims.get("data_scope")),
         permission_scope: split_claim(claims.get("permission_scope")),
         subject_type: optional_claim(&claims, "subject_type"),
@@ -185,6 +190,7 @@ fn parse_access_token_claims(
         environment: optional_claim(&claims, "environment").unwrap_or_else(|| "prod".to_string()),
         deployment_mode: optional_claim(&claims, "deployment_mode")
             .unwrap_or_else(|| "saas".to_string()),
+        // IAM_SPEC §5.2/§5.6: see the auth-token parser above.
         data_scope: split_claim(claims.get("data_scope")),
         permission_scope: split_claim(claims.get("permission_scope")),
         subject_type: optional_claim(&claims, "subject_type"),
