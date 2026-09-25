@@ -16,6 +16,7 @@ export default {
   computers: '计算机',
   trash: '回收站',
   transferCenter: '传输中心',
+  adminStorageOverview: '存储概览',
   adminStorageProviders: '存储提供商',
   adminStorageKinds: '服务商目录',
   adminStorageBuckets: '存储桶',

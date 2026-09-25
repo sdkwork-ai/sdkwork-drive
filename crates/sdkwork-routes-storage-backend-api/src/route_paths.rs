@@ -87,6 +87,10 @@ pub(crate) fn storage_drive_routes(prefix: &str) -> Router<AdminStorageState> {
                 .delete(delete_default_storage_provider_binding),
         )
         .route(
+            &format!("{prefix}/drive/storage/overview"),
+            get(get_storage_overview),
+        )
+        .route(
             &format!("{prefix}/drive/storage/bindings"),
             get(list_storage_provider_bindings),
         )

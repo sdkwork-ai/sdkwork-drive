@@ -16,6 +16,14 @@ const uiRoot = process.env.SDKWORK_UI_PC_REACT_ROOT
 export default defineConfig({
   resolve: {
     dedupe: ['react', 'react-dom'],
+    // Vite's server target defaults to `mainFields: ['main']`, which picks the
+    // CJS bundle of packages that publish `main` + `module` without an
+    // `exports` map. Those CJS bundles `require('react')` through native Node,
+    // which resolves from the dependency's own store — a second React instance
+    // that no Vite-level alias or dedupe can reach, and every hook call in a
+    // rendered component then reads `null`. preferring `module` turns those
+    // imports into ES imports that the resolver does own.
+    mainFields: ['module', 'main'],
     alias: {
       react: path.resolve(__dirname, 'node_modules/react'),
       '@': path.resolve(__dirname, '.'),
@@ -27,6 +35,10 @@ export default defineConfig({
         inline: [
           /@radix-ui\/.*/,
           /@sdkwork\/ui-pc-react/,
+          // lucide-react has no `exports` map, so it must both resolve to ESM
+          // (mainFields above) and be inlined; externalized modules are handed
+          // to native Node and bypass the resolver entirely.
+          /lucide-react/,
           /react-remove-scroll.*/,
           /react-style-singleton/,
           /use-callback-ref/,

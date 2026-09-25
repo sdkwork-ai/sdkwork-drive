@@ -13,6 +13,7 @@ export const DRIVE_SPACES_ADMIN_PERMISSION = 'drive.spaces.admin';
 export const DRIVE_DOWNLOAD_PACKAGES_ADMIN_PERMISSION = 'drive.download_packages.admin';
 
 export interface DriveAdminSectionAccess {
+  storageOverview: boolean;
   storageProviders: boolean;
   storageBindings: boolean;
   storageKinds: boolean;
@@ -79,6 +80,7 @@ export function canAccessAnyDriveAdminSurface(session: SessionSnapshot): boolean
 
 export function resolveDriveAdminSectionAccess(session: SessionSnapshot): DriveAdminSectionAccess {
   return {
+    storageOverview: canAccessDriveStorageAdmin(session),
     storageProviders: canAccessDriveStorageAdmin(session),
     storageBindings: canAccessDriveStorageAdmin(session),
     storageKinds: canAccessDriveStorageAdmin(session),

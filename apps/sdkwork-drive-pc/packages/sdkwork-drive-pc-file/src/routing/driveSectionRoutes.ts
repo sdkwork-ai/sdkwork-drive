@@ -9,6 +9,7 @@ const BUILTIN_SECTION_PATHS: Record<string, string> = {
   transfer: '/transfer',
   trash: '/trash',
   apps: '/apps',
+  'admin-storage-overview': '/admin/storage-overview',
   'admin-storage-providers': '/admin/storage-providers',
   'admin-storage-bindings': '/admin/storage-bindings',
   'admin-storage-kinds': '/admin/storage-kinds',

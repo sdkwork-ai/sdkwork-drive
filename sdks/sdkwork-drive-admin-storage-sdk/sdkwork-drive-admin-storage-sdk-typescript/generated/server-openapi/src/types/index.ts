@@ -25,6 +25,14 @@ export type { UpdateProviderObjectContent } from './update-provider-object-conte
 export type { StorageProviderAccount } from './storage-provider-account';
 export type { CreateStorageProviderAccountRequest } from './create-storage-provider-account-request';
 export type { StorageProviderAccountDefault } from './storage-provider-account-default';
+export type { StorageOverview } from './storage-overview';
+export type { StorageOverviewCapacity } from './storage-overview-capacity';
+export type { StorageOverviewProviders } from './storage-overview-providers';
+export type { StorageOverviewProviderUsage } from './storage-overview-provider-usage';
+export type { StorageOverviewBindings } from './storage-overview-bindings';
+export type { StorageOverviewBindingScopeCounts } from './storage-overview-binding-scope-counts';
+export type { StorageOverviewCatalog } from './storage-overview-catalog';
+export type { StorageOverviewTrendPoint } from './storage-overview-trend-point';
 export type { SdkWorkResourceData } from './sdk-work-resource-data';
 export type { SdkWorkPageData } from './sdk-work-page-data';
 export type { SdkWorkCommandData } from './sdk-work-command-data';
@@ -56,3 +64,4 @@ export type { StorageProvidersObjectsContentUpdateResponse } from './storage-pro
 export type { StorageProviderAccountsListResponse } from './storage-provider-accounts-list-response';
 export type { StorageProviderAccountsCreateResponse201 } from './storage-provider-accounts-create-response201';
 export type { StorageProviderAccountDefaultsCreateResponse201 } from './storage-provider-account-defaults-create-response201';
+export type { StorageOverviewRetrieveResponse } from './storage-overview-retrieve-response';

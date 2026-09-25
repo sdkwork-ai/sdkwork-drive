@@ -319,6 +319,28 @@ func (a *DriveApi) StorageProviderAccountsCreate(body sdktypes.CreateStorageProv
     return decodeResult[sdktypes.StorageProviderAccountsCreateResponse201](raw)
 }
 
+func (a *DriveApi) StorageProviderAccountDefaultsCreate() (sdktypes.StorageProviderAccountDefaultsCreateResponse201, error) {
+    raw, err := a.client.Post(CustomApiPath("/drive/storage/provider-account-defaults"), nil, nil, nil, "")
+    if err != nil {
+        var zero sdktypes.StorageProviderAccountDefaultsCreateResponse201
+        return zero, err
+    }
+    return decodeResult[sdktypes.StorageProviderAccountDefaultsCreateResponse201](raw)
+}
+
+// Retrieve the Drive storage overview
+func (a *DriveApi) StorageOverviewRetrieve(trendMonths *string) (sdktypes.StorageOverviewRetrieveResponse, error) {
+    query := BuildQueryString([]QueryParameterSpec{
+        {Name: "trendMonths", Value: func() interface{} { if trendMonths == nil { return nil }; return *trendMonths }(), Style: "form", Explode: true, AllowReserved: false},
+    })
+    raw, err := a.client.Get(AppendQueryString(CustomApiPath("/drive/storage/overview"), query), nil, nil)
+    if err != nil {
+        var zero sdktypes.StorageOverviewRetrieveResponse
+        return zero, err
+    }
+    return decodeResult[sdktypes.StorageOverviewRetrieveResponse](raw)
+}
+
 type PathParameterSpec struct {
     Name    string
     Style   string

@@ -2,6 +2,7 @@ export { STORAGE_PROVIDER_ADMIN_CAPABILITY } from './capability';
 export type { StorageProviderAdminService } from './services/storageProviderAdminService';
 export { createStorageProviderAdminService } from './services/storageProviderAdminService';
 export { StorageObjectBrowser } from './components/StorageObjectBrowser';
+export { StorageOverviewAdminPage } from './pages/StorageOverviewAdminPage';
 export { StorageProvidersAdminPage } from './pages/StorageProvidersAdminPage';
 export { StorageBindingsAdminPage } from './pages/StorageBindingsAdminPage';
 export { StorageProviderKindsAdminPage } from './pages/StorageProviderKindsAdminPage';
@@ -39,6 +40,7 @@ export type { CredentialInputMode } from './utils/credentialRefUtils';
 export { summarizeProviderAccountDefaults } from './utils/providerAccountDefaultsSummary';
 export type { ProviderAccountDefaultsSummary } from './utils/providerAccountDefaultsSummary';
 export type {
+  GetStorageOverviewInput,
   CreateStorageProviderInput,
   UpdateStorageProviderInput,
   StorageProviderView,
@@ -57,6 +59,14 @@ export type {
   ListStorageProviderObjectsInput,
   ListStorageProviderObjectsResult,
   SetDefaultStorageProviderBindingInput,
+  StorageOverviewView,
+  StorageOverviewCapacityView,
+  StorageOverviewBindingScopeCountsView,
+  StorageOverviewBindingsView,
+  StorageOverviewCatalogView,
+  StorageOverviewProviderUsageView,
+  StorageOverviewTrendPointView,
+  StorageOverviewProvidersView,
   StorageProviderMutationOptions,
   CreateStorageProviderAccountInput,
   ListStorageProviderAccountsInput,

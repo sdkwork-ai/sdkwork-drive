@@ -41,6 +41,7 @@ import {
 import type { SdkworkIamAuthRoutesProps } from './bootstrap/sdkworkAuthPcReactShim';
 
 const ADMIN_SECTION_ACCESS_KEYS: Record<string, keyof DriveAdminSectionAccess> = {
+  'admin-storage-overview': 'storageOverview',
   'admin-storage-providers': 'storageProviders',
   'admin-storage-bindings': 'storageBindings',
   'admin-storage-kinds': 'storageKinds',
@@ -55,6 +56,11 @@ const ADMIN_SECTION_ACCESS_KEYS: Record<string, keyof DriveAdminSectionAccess> =
 
 const DrivePage = React.lazy(() =>
   import('sdkwork-drive-pc-file').then((module) => ({ default: module.DrivePage })),
+);
+const StorageOverviewAdminPage = React.lazy(() =>
+  import('sdkwork-drive-pc-admin-storage-providers').then((module) => ({
+    default: module.StorageOverviewAdminPage,
+  })),
 );
 const StorageProvidersAdminPage = React.lazy(() =>
   import('sdkwork-drive-pc-admin-storage-providers').then((module) => ({
@@ -255,7 +261,12 @@ export default function App({ runtime }: { runtime: DriveRuntime }) {
                 adminSectionAccess={adminSectionAccess}
               />
               <React.Suspense fallback={<DriveWorkspaceFallback />}>
-                {adminSectionAccess.storageProviders && activeSection === 'admin-storage-providers' ? (
+                {adminSectionAccess.storageOverview && activeSection === 'admin-storage-overview' ? (
+                  <StorageOverviewAdminPage
+                    adminStorageSdkClient={runtime.admin.adminStorage}
+                    getSession={runtime.session.getSnapshot}
+                  />
+                ) : adminSectionAccess.storageProviders && activeSection === 'admin-storage-providers' ? (
                   <StorageProvidersAdminPage
                     adminStorageSdkClient={runtime.admin.adminStorage}
                     getSession={runtime.session.getSnapshot}

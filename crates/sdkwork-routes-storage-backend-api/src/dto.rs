@@ -364,3 +364,128 @@ pub(crate) struct OffsetPage {
     pub(crate) limit: i64,
     pub(crate) offset: i64,
 }
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct StorageOverviewQuery {
+    /// Number of monthly trend buckets. Clamped by the handler to 1..24.
+    pub(crate) trend_months: Option<i64>,
+}
+
+/// Storage center dashboard aggregate.
+///
+/// Capacity, usage and binding figures are tenant-scoped; the catalog block is
+/// platform-wide because `dr_drive_storage_provider_kind` has no tenant column.
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct StorageOverviewResponse {
+    pub(crate) generated_at: String,
+    pub(crate) scope_tenant_id: String,
+    pub(crate) capacity: StorageOverviewCapacityResponse,
+    pub(crate) providers: StorageOverviewProvidersResponse,
+    pub(crate) bindings: StorageOverviewBindingsResponse,
+    pub(crate) catalog: StorageOverviewCatalogResponse,
+    pub(crate) trend: Vec<StorageOverviewTrendPointResponse>,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct StorageOverviewCapacityResponse {
+    #[serde(with = "sdkwork_utils_rust::serde_int64")]
+    pub(crate) total_object_count: i64,
+    #[serde(with = "sdkwork_utils_rust::serde_int64")]
+    pub(crate) active_object_count: i64,
+    #[serde(with = "sdkwork_utils_rust::serde_int64")]
+    pub(crate) deleted_object_count: i64,
+    #[serde(with = "sdkwork_utils_rust::serde_int64")]
+    pub(crate) used_bytes: i64,
+    #[serde(with = "sdkwork_utils_rust::serde_int64")]
+    pub(crate) average_object_bytes: i64,
+    #[serde(with = "sdkwork_utils_rust::serde_int64::option")]
+    pub(crate) largest_object_bytes: Option<i64>,
+    #[serde(with = "sdkwork_utils_rust::serde_int64")]
+    pub(crate) bucket_count: i64,
+    #[serde(with = "sdkwork_utils_rust::serde_int64::option")]
+    pub(crate) quota_bytes: Option<i64>,
+    pub(crate) quota_configured: bool,
+    pub(crate) quota_usage_ratio: Option<f64>,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct StorageOverviewProvidersResponse {
+    #[serde(with = "sdkwork_utils_rust::serde_int64")]
+    pub(crate) total_count: i64,
+    #[serde(with = "sdkwork_utils_rust::serde_int64")]
+    pub(crate) active_count: i64,
+    #[serde(with = "sdkwork_utils_rust::serde_int64")]
+    pub(crate) disabled_count: i64,
+    #[serde(with = "sdkwork_utils_rust::serde_int64")]
+    pub(crate) deleted_count: i64,
+    pub(crate) usage: Vec<StorageOverviewProviderUsageResponse>,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct StorageOverviewProviderUsageResponse {
+    pub(crate) provider_id: String,
+    pub(crate) name: String,
+    pub(crate) provider_kind: String,
+    pub(crate) status: String,
+    pub(crate) bucket: String,
+    #[serde(with = "sdkwork_utils_rust::serde_int64")]
+    pub(crate) object_count: i64,
+    #[serde(with = "sdkwork_utils_rust::serde_int64")]
+    pub(crate) used_bytes: i64,
+    #[serde(with = "sdkwork_utils_rust::serde_int64")]
+    pub(crate) binding_count: i64,
+    pub(crate) is_tenant_default: bool,
+    pub(crate) capacity_share: f64,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct StorageOverviewBindingsResponse {
+    #[serde(with = "sdkwork_utils_rust::serde_int64")]
+    pub(crate) total_count: i64,
+    #[serde(with = "sdkwork_utils_rust::serde_int64")]
+    pub(crate) active_count: i64,
+    #[serde(with = "sdkwork_utils_rust::serde_int64")]
+    pub(crate) inactive_count: i64,
+    pub(crate) by_scope: StorageOverviewBindingScopeCountsResponse,
+    pub(crate) has_tenant_default: bool,
+    pub(crate) tenant_default_binding_id: Option<String>,
+    pub(crate) tenant_default_provider_id: Option<String>,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct StorageOverviewBindingScopeCountsResponse {
+    #[serde(with = "sdkwork_utils_rust::serde_int64")]
+    pub(crate) tenant_count: i64,
+    #[serde(with = "sdkwork_utils_rust::serde_int64")]
+    pub(crate) space_count: i64,
+    #[serde(with = "sdkwork_utils_rust::serde_int64")]
+    pub(crate) space_type_count: i64,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct StorageOverviewCatalogResponse {
+    #[serde(with = "sdkwork_utils_rust::serde_int64")]
+    pub(crate) total_count: i64,
+    #[serde(with = "sdkwork_utils_rust::serde_int64")]
+    pub(crate) enabled_count: i64,
+    #[serde(with = "sdkwork_utils_rust::serde_int64")]
+    pub(crate) disabled_count: i64,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct StorageOverviewTrendPointResponse {
+    pub(crate) period_label: String,
+    #[serde(with = "sdkwork_utils_rust::serde_int64")]
+    pub(crate) object_count: i64,
+    #[serde(with = "sdkwork_utils_rust::serde_int64")]
+    pub(crate) bytes: i64,
+}

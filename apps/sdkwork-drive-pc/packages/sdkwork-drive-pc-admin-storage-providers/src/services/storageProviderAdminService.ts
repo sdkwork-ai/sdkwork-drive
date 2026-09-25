@@ -7,12 +7,14 @@ import type {
   CopyStorageProviderObjectInput,
   CreateStorageProviderAccountInput,
   CreateStorageProviderInput,
+  GetStorageOverviewInput,
   ListStorageProviderAccountsInput,
   ListStorageProvidersInput,
   ListStorageProvidersPageResult,
   ListStorageProviderObjectsInput,
   ListStorageProviderObjectsResult,
   SetDefaultStorageProviderBindingInput,
+  StorageOverviewView,
   StorageProviderAccountDefaultView,
   StorageProviderAccountScope,
   StorageProviderAccountView,
@@ -33,6 +35,14 @@ import type {
 type JsonRecord = Record<string, unknown>;
 
 export interface StorageProviderAdminService {
+  /**
+   * 存储中心仪表盘聚合。
+   *
+   * 一次请求拿全：容量、provider 用量分布、绑定健康度、目录覆盖、月度趋势。
+   * 分项统计接口无法拼出同样的口径（尤其「本租户用到的 provider」这个集合），
+   * 所以读 aggregate 而不是组合 list。
+   */
+  getStorageOverview(input?: GetStorageOverviewInput): Promise<StorageOverviewView>;
   listProviders(input?: ListStorageProvidersInput): Promise<StorageProviderView[]>;
   listProvidersPage(input?: ListStorageProvidersInput): Promise<ListStorageProvidersPageResult>;
   listKinds(input?: { signal?: AbortSignal }): Promise<StorageProviderKindView[]>;
@@ -143,6 +153,16 @@ export function createStorageProviderAdminService({
   getSession,
 }: CreateStorageProviderAdminServiceOptions): StorageProviderAdminService {
   const service: StorageProviderAdminService = {
+    async getStorageOverview(input = {}) {
+      const response = await adminStorageSdkClient.request<unknown>({
+        operationId: 'storageOverview.retrieve',
+        signal: input.signal,
+        query: {
+          trendMonths: input.trendMonths,
+        },
+      });
+      return responseToStorageOverview(response);
+    },
     async listProviders(input = {}) {
       const page = await service.listProvidersPage(input);
       return page.items;
@@ -688,6 +708,86 @@ function responseToProviderKind(response: unknown): StorageProviderKindView {
     sortOrder: numberField(record, 'sortOrder', 'sort_order') ?? 0,
     version: numberField(record, 'version') ?? 0,
     configCount: numberField(record, 'configCount', 'config_count') ?? 0,
+  };
+}
+
+/**
+ * 概览响应 → 视图模型。
+ *
+ * 所有计数与字节数在契约里是 int64 字符串（`numberField` 会做字符串→数字
+ * 兜底），所以这里的投影对两种形态都成立，不会因为后端序列化差异而变成 NaN。
+ */
+function responseToStorageOverview(response: unknown): StorageOverviewView {
+  const record = isRecord(response) && isRecord(response.item) ? response.item : recordOf(response);
+  const capacity = recordOf(record.capacity);
+  const providers = recordOf(record.providers);
+  const bindings = recordOf(record.bindings);
+  const byScope = recordOf(bindings.byScope);
+  const catalog = recordOf(record.catalog);
+  const trend = Array.isArray(record.trend) ? record.trend : [];
+
+  return {
+    generatedAt: stringField(record, 'generatedAt') ?? '',
+    scopeTenantId: stringField(record, 'scopeTenantId') ?? '',
+    capacity: {
+      totalObjectCount: numberField(capacity, 'totalObjectCount') ?? 0,
+      activeObjectCount: numberField(capacity, 'activeObjectCount') ?? 0,
+      deletedObjectCount: numberField(capacity, 'deletedObjectCount') ?? 0,
+      usedBytes: numberField(capacity, 'usedBytes') ?? 0,
+      averageObjectBytes: numberField(capacity, 'averageObjectBytes') ?? 0,
+      largestObjectBytes: numberField(capacity, 'largestObjectBytes'),
+      bucketCount: numberField(capacity, 'bucketCount') ?? 0,
+      quotaBytes: numberField(capacity, 'quotaBytes'),
+      quotaConfigured: booleanField(capacity, 'quotaConfigured') ?? false,
+      quotaUsageRatio: numberField(capacity, 'quotaUsageRatio'),
+    },
+    providers: {
+      totalCount: numberField(providers, 'totalCount') ?? 0,
+      activeCount: numberField(providers, 'activeCount') ?? 0,
+      disabledCount: numberField(providers, 'disabledCount') ?? 0,
+      deletedCount: numberField(providers, 'deletedCount') ?? 0,
+      usage: (Array.isArray(providers.usage) ? providers.usage : []).map((row) => {
+        const usage = recordOf(row);
+        return {
+          providerId: stringField(usage, 'providerId') ?? '',
+          name: stringField(usage, 'name') ?? '',
+          providerKind: stringField(usage, 'providerKind') ?? '',
+          status: stringField(usage, 'status') ?? 'unknown',
+          bucket: stringField(usage, 'bucket') ?? '',
+          objectCount: numberField(usage, 'objectCount') ?? 0,
+          usedBytes: numberField(usage, 'usedBytes') ?? 0,
+          bindingCount: numberField(usage, 'bindingCount') ?? 0,
+          isTenantDefault: booleanField(usage, 'isTenantDefault') ?? false,
+          capacityShare: numberField(usage, 'capacityShare') ?? 0,
+        };
+      }),
+    },
+    bindings: {
+      totalCount: numberField(bindings, 'totalCount') ?? 0,
+      activeCount: numberField(bindings, 'activeCount') ?? 0,
+      inactiveCount: numberField(bindings, 'inactiveCount') ?? 0,
+      byScope: {
+        tenantCount: numberField(byScope, 'tenantCount') ?? 0,
+        spaceCount: numberField(byScope, 'spaceCount') ?? 0,
+        spaceTypeCount: numberField(byScope, 'spaceTypeCount') ?? 0,
+      },
+      hasTenantDefault: booleanField(bindings, 'hasTenantDefault') ?? false,
+      tenantDefaultBindingId: stringField(bindings, 'tenantDefaultBindingId'),
+      tenantDefaultProviderId: stringField(bindings, 'tenantDefaultProviderId'),
+    },
+    catalog: {
+      totalCount: numberField(catalog, 'totalCount') ?? 0,
+      enabledCount: numberField(catalog, 'enabledCount') ?? 0,
+      disabledCount: numberField(catalog, 'disabledCount') ?? 0,
+    },
+    trend: trend.map((point) => {
+      const item = recordOf(point);
+      return {
+        periodLabel: stringField(item, 'periodLabel') ?? '',
+        objectCount: numberField(item, 'objectCount') ?? 0,
+        bytes: numberField(item, 'bytes') ?? 0,
+      };
+    }),
   };
 }
 

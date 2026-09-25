@@ -9,6 +9,7 @@ import {
 import { useTranslation } from './LanguageProvider';
 
 export interface DriveAdminNavigationAccess {
+  storageOverview: boolean;
   storageProviders: boolean;
   storageBindings: boolean;
   storageKinds: boolean;
@@ -53,6 +54,7 @@ export function SystemSidebar({
   };
 
   const adminSections = new Set([
+    'admin-storage-overview',
     'admin-storage-providers',
     'admin-storage-bindings',
     'admin-storage-kinds',
@@ -66,6 +68,7 @@ export function SystemSidebar({
   ]);
   const isStorageActive = activeSection !== 'transfer' && !adminSections.has(activeSection);
   const isTransferActive = activeSection === 'transfer';
+  const isAdminStorageOverviewActive = activeSection === 'admin-storage-overview';
   const isAdminStorageProvidersActive = activeSection === 'admin-storage-providers';
   const isAdminStorageBindingsActive = activeSection === 'admin-storage-bindings';
   const isAdminStorageKindsActive = activeSection === 'admin-storage-kinds';
@@ -106,6 +109,14 @@ export function SystemSidebar({
         />
         {showAdminNavigation ? (
           <>
+            {adminSectionAccess?.storageOverview ? (
+            <SidebarIcon
+              icon={<PieChart size={22} />}
+              title={t('sidebar.adminStorageOverview')}
+              active={isAdminStorageOverviewActive}
+              onClick={() => onSectionChange?.('admin-storage-overview')}
+            />
+            ) : null}
             {adminSectionAccess?.storageProviders ? (
             <SidebarIcon
               icon={<ServerCog size={22} />}

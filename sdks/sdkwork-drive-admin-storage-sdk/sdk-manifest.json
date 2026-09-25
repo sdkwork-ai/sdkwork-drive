@@ -56,7 +56,7 @@
   "baseUrl": "http://127.0.0.1:18080",
   "standardProfile": "sdkwork-drive-admin-storage-v3",
   "fixedSdkVersion": "0.1.0",
-  "ownerOnlyOperationCount": 30,
+  "ownerOnlyOperationCount": 31,
   "managedBy": "tools/drive_sdk_generator_runner.mjs",
   "workspace": "sdkwork-drive-admin-storage-sdk",
   "authoritySpec": "../../apis/backend-api/drive/drive-admin-storage-api.openapi.json",

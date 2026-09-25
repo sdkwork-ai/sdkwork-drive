@@ -1,8 +1,29 @@
 import { customApiPath } from './paths';
 import type { ApiRequestOptions, HttpClient } from '../http/client';
 
-import type { CopyProviderObjectRequest, CreateStorageProviderAccountRequest, CreateStorageProviderRequest, RotateStorageProviderCredentialRequest, SetDefaultStorageProviderBindingRequest, SetStorageProviderKindEnabledRequest, StorageProviderAccountDefaultsCreateResponse201, StorageProviderAccountsCreateResponse201, StorageProviderAccountsListResponse, StorageProviderBindingsDefaultRetrieveResponse, StorageProviderBindingsDefaultUpdateResponse, StorageProviderBindingsListResponse, StorageProviderKindsCreateResponse201, StorageProviderKindsListResponse, StorageProviderKindsUpdateResponse, StorageProvidersActivateResponse, StorageProvidersBucketRetrieveResponse, StorageProvidersBucketsListResponse, StorageProvidersBucketUpdateResponse, StorageProvidersCapabilitiesListResponse, StorageProvidersCreateResponse201, StorageProvidersCredentialsRotateResponse, StorageProvidersDeactivateResponse, StorageProvidersListResponse, StorageProvidersObjectsContentRetrieveResponse, StorageProvidersObjectsContentUpdateResponse, StorageProvidersObjectsCopyResponse, StorageProvidersObjectsListResponse, StorageProvidersObjectsRetrieveResponse, StorageProvidersRetrieveResponse, StorageProvidersTestResponse, StorageProvidersUpdateResponse, UpdateProviderObjectContent, UpdateStorageProviderRequest } from '../types';
+import type { CopyProviderObjectRequest, CreateStorageProviderAccountRequest, CreateStorageProviderRequest, RotateStorageProviderCredentialRequest, SetDefaultStorageProviderBindingRequest, SetStorageProviderKindEnabledRequest, StorageOverviewRetrieveResponse, StorageProviderAccountDefaultsCreateResponse201, StorageProviderAccountsCreateResponse201, StorageProviderAccountsListResponse, StorageProviderBindingsDefaultRetrieveResponse, StorageProviderBindingsDefaultUpdateResponse, StorageProviderBindingsListResponse, StorageProviderKindsCreateResponse201, StorageProviderKindsListResponse, StorageProviderKindsUpdateResponse, StorageProvidersActivateResponse, StorageProvidersBucketRetrieveResponse, StorageProvidersBucketsListResponse, StorageProvidersBucketUpdateResponse, StorageProvidersCapabilitiesListResponse, StorageProvidersCreateResponse201, StorageProvidersCredentialsRotateResponse, StorageProvidersDeactivateResponse, StorageProvidersListResponse, StorageProvidersObjectsContentRetrieveResponse, StorageProvidersObjectsContentUpdateResponse, StorageProvidersObjectsCopyResponse, StorageProvidersObjectsListResponse, StorageProvidersObjectsRetrieveResponse, StorageProvidersRetrieveResponse, StorageProvidersTestResponse, StorageProvidersUpdateResponse, UpdateProviderObjectContent, UpdateStorageProviderRequest } from '../types';
 
+
+export interface DriveStorageOverviewRetrieveParams {
+  trendMonths?: string;
+}
+
+export class DriveStorageOverviewApi {
+  private client: HttpClient;
+
+  constructor(client: HttpClient) {
+    this.client = client;
+  }
+
+
+/** Retrieve the Drive storage overview */
+  async retrieve(params?: DriveStorageOverviewRetrieveParams, requestOptions?: ApiRequestOptions): Promise<StorageOverviewRetrieveResponse> {
+    const query = buildQueryString([
+      { name: 'trendMonths', value: params?.trendMonths, style: 'form', explode: true, allowReserved: false },
+    ]);
+    return this.client.request<StorageOverviewRetrieveResponse>(appendQueryString(customApiPath(`/drive/storage/overview`), query), { ...(requestOptions?.signal !== undefined ? { signal: requestOptions.signal } : {}), ...(requestOptions?.timeout !== undefined ? { timeout: requestOptions.timeout } : {}), method: 'GET' as any });
+  }
+}
 
 export class DriveStorageProviderAccountDefaultsApi {
   private client: HttpClient;
@@ -325,6 +346,7 @@ export class DriveApi {
   public readonly storageProviderKinds: DriveStorageProviderKindsApi;
   public readonly storageProviderAccounts: DriveStorageProviderAccountsApi;
   public readonly storageProviderAccountDefaults: DriveStorageProviderAccountDefaultsApi;
+  public readonly storageOverview: DriveStorageOverviewApi;
 
   constructor(client: HttpClient) {
     this.storageProviderBindings = new DriveStorageProviderBindingsApi(client);
@@ -332,6 +354,7 @@ export class DriveApi {
     this.storageProviderKinds = new DriveStorageProviderKindsApi(client);
     this.storageProviderAccounts = new DriveStorageProviderAccountsApi(client);
     this.storageProviderAccountDefaults = new DriveStorageProviderAccountDefaultsApi(client);
+    this.storageOverview = new DriveStorageOverviewApi(client);
   }
 
 }

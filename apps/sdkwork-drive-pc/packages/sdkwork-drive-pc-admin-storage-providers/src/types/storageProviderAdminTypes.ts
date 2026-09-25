@@ -282,3 +282,90 @@ export interface CreateStorageProviderAccountInput {
   secretAccessKey: string;
   sessionToken?: string;
 }
+
+/**
+ * 存储中心仪表盘聚合。
+ *
+ * capacity / providers / bindings 三块都是同一租户口径（后端不含未被引用的
+ * provider）；catalog（服务商目录）是平台级的，表里没有租户维度，故意不入租户口径。
+ */
+export interface StorageOverviewView {
+  generatedAt: string;
+  scopeTenantId: string;
+  capacity: StorageOverviewCapacityView;
+  providers: StorageOverviewProvidersView;
+  bindings: StorageOverviewBindingsView;
+  catalog: StorageOverviewCatalogView;
+  trend: StorageOverviewTrendPointView[];
+}
+
+export interface StorageOverviewCapacityView {
+  totalObjectCount: number;
+  activeObjectCount: number;
+  deletedObjectCount: number;
+  usedBytes: number;
+  averageObjectBytes: number;
+  largestObjectBytes?: number;
+  bucketCount: number;
+  /** 租户配额上限；未配置时为 undefined。 */
+  quotaBytes?: number;
+  quotaConfigured: boolean;
+  /** usedBytes/quotaBytes，可能大于 1（超配额）；未配置配额时缺省。 */
+  quotaUsageRatio?: number;
+}
+
+export interface StorageOverviewProvidersView {
+  totalCount: number;
+  activeCount: number;
+  disabledCount: number;
+  deletedCount: number;
+  usage: StorageOverviewProviderUsageView[];
+}
+
+export interface StorageOverviewProviderUsageView {
+  providerId: string;
+  name: string;
+  providerKind: string;
+  status: string;
+  bucket: string;
+  objectCount: number;
+  usedBytes: number;
+  bindingCount: number;
+  isTenantDefault: boolean;
+  capacityShare: number;
+}
+
+export interface StorageOverviewBindingsView {
+  totalCount: number;
+  activeCount: number;
+  inactiveCount: number;
+  byScope: StorageOverviewBindingScopeCountsView;
+  hasTenantDefault: boolean;
+  tenantDefaultBindingId?: string;
+  tenantDefaultProviderId?: string;
+}
+
+export interface StorageOverviewBindingScopeCountsView {
+  tenantCount: number;
+  spaceCount: number;
+  spaceTypeCount: number;
+}
+
+export interface StorageOverviewCatalogView {
+  totalCount: number;
+  enabledCount: number;
+  disabledCount: number;
+}
+
+export interface StorageOverviewTrendPointView {
+  /** 闭区间月份桶，形如 `2026-09`。 */
+  periodLabel: string;
+  objectCount: number;
+  bytes: number;
+}
+
+export interface GetStorageOverviewInput {
+  /** 趋势桶数量，服务端限定 1..24。 */
+  trendMonths?: number;
+  signal?: AbortSignal;
+}

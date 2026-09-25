@@ -16,6 +16,7 @@ export default {
   computers: 'Computers',
   trash: 'Trash',
   transferCenter: 'Transfer Center',
+  adminStorageOverview: 'Storage Overview',
   adminStorageProviders: 'Storage Providers',
   adminStorageKinds: 'Provider Catalog',
   adminStorageBuckets: 'Storage Buckets',

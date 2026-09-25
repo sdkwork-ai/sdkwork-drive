@@ -3675,6 +3675,105 @@
         "x-sdkwork-api-surface": "backend-api",
         "x-sdkwork-permission": "drive.storage.admin"
       }
+    },
+    "/backend/v3/api/drive/storage/overview": {
+      "get": {
+        "tags": [
+          "storageAdmin"
+        ],
+        "summary": "Retrieve the Drive storage overview",
+        "description": "Aggregated read-only statistics for the storage center dashboard: tenant capacity and growth, provider inventory and per-provider usage, binding health, and provider catalog coverage. Capacity, usage and binding figures are tenant-scoped; the provider catalog is platform-wide because dr_drive_storage_provider_kind carries no tenant dimension.",
+        "operationId": "storageOverview.retrieve",
+        "parameters": [
+          {
+            "name": "trendMonths",
+            "in": "query",
+            "required": false,
+            "description": "Number of monthly trend buckets to return. Clamped to 1..24 by the server.",
+            "schema": {
+              "type": "string",
+              "format": "int64",
+              "x-sdkwork-int64-string": true
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SdkWorkApiResponse"
+                    },
+                    {
+                      "type": "object",
+                      "required": [
+                        "data"
+                      ],
+                      "properties": {
+                        "data": {
+                          "type": "object",
+                          "required": [
+                            "item"
+                          ],
+                          "properties": {
+                            "item": {
+                              "$ref": "#/components/schemas/StorageOverview"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "AuthToken": [],
+            "AccessToken": []
+          }
+        ],
+        "x-sdkwork-owner": "sdkwork-drive",
+        "x-sdkwork-api-authority": "sdkwork-drive.admin.storage",
+        "x-sdkwork-request-context": "WebRequestContext",
+        "x-sdkwork-api-surface": "backend-api",
+        "x-sdkwork-permission": "drive.storage.admin"
+      }
     }
   },
   "components": {
@@ -4770,6 +4869,377 @@
           "credentialSeeded": {
             "type": "boolean",
             "description": "True when this call wrote the placeholder access-key pair. False means an account already existed, so its credential was deliberately not overwritten."
+          }
+        }
+      },
+      "StorageOverview": {
+        "type": "object",
+        "additionalProperties": false,
+        "description": "Storage center dashboard aggregate. Capacity, usage and binding figures are computed over the same tenant scope so they are mutually consistent; the catalog block is platform-wide and intentionally not tenant-scoped.",
+        "required": [
+          "generatedAt",
+          "scopeTenantId",
+          "capacity",
+          "providers",
+          "bindings",
+          "catalog",
+          "trend"
+        ],
+        "properties": {
+          "generatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Server timestamp the aggregate was computed at."
+          },
+          "scopeTenantId": {
+            "type": "string",
+            "description": "Tenant every capacity, usage and binding figure is scoped to. The catalog block is platform-wide and ignores this."
+          },
+          "capacity": {
+            "$ref": "#/components/schemas/StorageOverviewCapacity"
+          },
+          "providers": {
+            "$ref": "#/components/schemas/StorageOverviewProviders"
+          },
+          "bindings": {
+            "$ref": "#/components/schemas/StorageOverviewBindings"
+          },
+          "catalog": {
+            "$ref": "#/components/schemas/StorageOverviewCatalog"
+          },
+          "trend": {
+            "type": "array",
+            "description": "Monthly ingestion buckets, oldest first.",
+            "items": {
+              "$ref": "#/components/schemas/StorageOverviewTrendPoint"
+            }
+          }
+        }
+      },
+      "StorageOverviewCapacity": {
+        "type": "object",
+        "additionalProperties": false,
+        "description": "Tenant-level capacity figures derived from dr_drive_storage_object.",
+        "required": [
+          "totalObjectCount",
+          "activeObjectCount",
+          "deletedObjectCount",
+          "usedBytes",
+          "averageObjectBytes",
+          "largestObjectBytes",
+          "bucketCount",
+          "quotaBytes",
+          "quotaConfigured",
+          "quotaUsageRatio"
+        ],
+        "properties": {
+          "totalObjectCount": {
+            "type": "string",
+            "format": "int64",
+            "description": "Object rows regardless of lifecycle status.",
+            "x-sdkwork-int64-string": true
+          },
+          "activeObjectCount": {
+            "type": "string",
+            "format": "int64",
+            "description": "Objects currently in lifecycle status active.",
+            "x-sdkwork-int64-string": true
+          },
+          "deletedObjectCount": {
+            "type": "string",
+            "format": "int64",
+            "description": "Objects awaiting physical reclaim.",
+            "x-sdkwork-int64-string": true
+          },
+          "usedBytes": {
+            "type": "string",
+            "format": "int64",
+            "description": "Sum of content_length over active objects.",
+            "x-sdkwork-int64-string": true
+          },
+          "averageObjectBytes": {
+            "type": "string",
+            "format": "int64",
+            "description": "Mean content_length over active objects; 0 when there are none.",
+            "x-sdkwork-int64-string": true
+          },
+          "largestObjectBytes": {
+            "type": "string",
+            "format": "int64",
+            "description": "Largest active object content_length; null when there are none.",
+            "x-sdkwork-int64-string": true,
+            "nullable": true
+          },
+          "bucketCount": {
+            "type": "string",
+            "format": "int64",
+            "description": "Distinct buckets that hold object rows in this scope.",
+            "x-sdkwork-int64-string": true
+          },
+          "quotaBytes": {
+            "type": "string",
+            "format": "int64",
+            "description": "Tenant quota max_bytes; null when the tenant has no quota row.",
+            "x-sdkwork-int64-string": true,
+            "nullable": true
+          },
+          "quotaConfigured": {
+            "type": "boolean",
+            "description": "True when a quota row exists with a non-null max_bytes."
+          },
+          "quotaUsageRatio": {
+            "type": "number",
+            "nullable": true,
+            "description": "usedBytes / quotaBytes. May exceed 1 when the quota is overrun; null without a quota."
+          }
+        }
+      },
+      "StorageOverviewProviders": {
+        "type": "object",
+        "additionalProperties": false,
+        "description": "Tenant-scoped provider inventory: only providers this tenant actually depends on are counted, i.e. providers referenced by one of the tenant's bindings or holding one of its objects.",
+        "required": [
+          "totalCount",
+          "activeCount",
+          "disabledCount",
+          "deletedCount",
+          "usage"
+        ],
+        "properties": {
+          "totalCount": {
+            "type": "string",
+            "format": "int64",
+            "description": "Provider configurations regardless of status.",
+            "x-sdkwork-int64-string": true
+          },
+          "activeCount": {
+            "type": "string",
+            "format": "int64",
+            "description": "Providers in status active.",
+            "x-sdkwork-int64-string": true
+          },
+          "disabledCount": {
+            "type": "string",
+            "format": "int64",
+            "description": "Providers in status disabled.",
+            "x-sdkwork-int64-string": true
+          },
+          "deletedCount": {
+            "type": "string",
+            "format": "int64",
+            "description": "Providers in status deleted.",
+            "x-sdkwork-int64-string": true
+          },
+          "usage": {
+            "type": "array",
+            "description": "Per-provider usage ordered by descending usedBytes.",
+            "items": {
+              "$ref": "#/components/schemas/StorageOverviewProviderUsage"
+            }
+          }
+        }
+      },
+      "StorageOverviewProviderUsage": {
+        "type": "object",
+        "additionalProperties": false,
+        "description": "One provider row of the usage breakdown.",
+        "required": [
+          "providerId",
+          "name",
+          "providerKind",
+          "status",
+          "bucket",
+          "objectCount",
+          "usedBytes",
+          "bindingCount",
+          "isTenantDefault",
+          "capacityShare"
+        ],
+        "properties": {
+          "providerId": {
+            "type": "string",
+            "description": "Provider configuration id."
+          },
+          "name": {
+            "type": "string",
+            "description": "Operator-facing provider name."
+          },
+          "providerKind": {
+            "type": "string",
+            "description": "Provider kind key, e.g. aliyun_oss."
+          },
+          "status": {
+            "type": "string",
+            "description": "Provider status: active, disabled or deleted."
+          },
+          "bucket": {
+            "type": "string",
+            "description": "Bucket the provider writes to."
+          },
+          "objectCount": {
+            "type": "string",
+            "format": "int64",
+            "description": "Objects stored through this provider.",
+            "x-sdkwork-int64-string": true
+          },
+          "usedBytes": {
+            "type": "string",
+            "format": "int64",
+            "description": "Sum of content_length stored through this provider.",
+            "x-sdkwork-int64-string": true
+          },
+          "bindingCount": {
+            "type": "string",
+            "format": "int64",
+            "description": "Active bindings that resolve to this provider.",
+            "x-sdkwork-int64-string": true
+          },
+          "isTenantDefault": {
+            "type": "boolean",
+            "description": "True when this provider carries the tenant default binding."
+          },
+          "capacityShare": {
+            "type": "number",
+            "description": "Share of total used bytes held by this provider, 0..1."
+          }
+        }
+      },
+      "StorageOverviewBindings": {
+        "type": "object",
+        "additionalProperties": false,
+        "description": "Binding inventory and health signals.",
+        "required": [
+          "totalCount",
+          "activeCount",
+          "inactiveCount",
+          "byScope",
+          "hasTenantDefault",
+          "tenantDefaultBindingId",
+          "tenantDefaultProviderId"
+        ],
+        "properties": {
+          "totalCount": {
+            "type": "string",
+            "format": "int64",
+            "description": "Binding rows regardless of lifecycle status.",
+            "x-sdkwork-int64-string": true
+          },
+          "activeCount": {
+            "type": "string",
+            "format": "int64",
+            "description": "Bindings in lifecycle status active.",
+            "x-sdkwork-int64-string": true
+          },
+          "inactiveCount": {
+            "type": "string",
+            "format": "int64",
+            "description": "Bindings that are disabled or deleted.",
+            "x-sdkwork-int64-string": true
+          },
+          "byScope": {
+            "$ref": "#/components/schemas/StorageOverviewBindingScopeCounts"
+          },
+          "hasTenantDefault": {
+            "type": "boolean",
+            "description": "False means new writes in this tenant have no default provider."
+          },
+          "tenantDefaultBindingId": {
+            "type": "string",
+            "nullable": true,
+            "description": "Id of the tenant default binding; null when unset."
+          },
+          "tenantDefaultProviderId": {
+            "type": "string",
+            "nullable": true,
+            "description": "Provider resolved by the tenant default binding; null when unset."
+          }
+        }
+      },
+      "StorageOverviewBindingScopeCounts": {
+        "type": "object",
+        "additionalProperties": false,
+        "description": "Binding counts per binding scope.",
+        "required": [
+          "tenantCount",
+          "spaceCount",
+          "spaceTypeCount"
+        ],
+        "properties": {
+          "tenantCount": {
+            "type": "string",
+            "format": "int64",
+            "description": "Bindings scoped to the whole tenant.",
+            "x-sdkwork-int64-string": true
+          },
+          "spaceCount": {
+            "type": "string",
+            "format": "int64",
+            "description": "Bindings scoped to a single space.",
+            "x-sdkwork-int64-string": true
+          },
+          "spaceTypeCount": {
+            "type": "string",
+            "format": "int64",
+            "description": "Bindings scoped to a space type.",
+            "x-sdkwork-int64-string": true
+          }
+        }
+      },
+      "StorageOverviewCatalog": {
+        "type": "object",
+        "additionalProperties": false,
+        "description": "Platform-wide provider catalog (dr_drive_storage_provider_kind) coverage. The catalog has no tenant dimension, so these counts are shared by every tenant.",
+        "required": [
+          "totalCount",
+          "enabledCount",
+          "disabledCount"
+        ],
+        "properties": {
+          "totalCount": {
+            "type": "string",
+            "format": "int64",
+            "description": "Catalog entries.",
+            "x-sdkwork-int64-string": true
+          },
+          "enabledCount": {
+            "type": "string",
+            "format": "int64",
+            "description": "Catalog entries operators may configure.",
+            "x-sdkwork-int64-string": true
+          },
+          "disabledCount": {
+            "type": "string",
+            "format": "int64",
+            "description": "Catalog entries disabled for new configurations.",
+            "x-sdkwork-int64-string": true
+          }
+        }
+      },
+      "StorageOverviewTrendPoint": {
+        "type": "object",
+        "additionalProperties": false,
+        "description": "One monthly ingestion bucket.",
+        "required": [
+          "periodLabel",
+          "objectCount",
+          "bytes"
+        ],
+        "properties": {
+          "periodLabel": {
+            "type": "string",
+            "description": "Closed month bucket label in YYYY-MM."
+          },
+          "objectCount": {
+            "type": "string",
+            "format": "int64",
+            "description": "Objects created in that month.",
+            "x-sdkwork-int64-string": true
+          },
+          "bytes": {
+            "type": "string",
+            "format": "int64",
+            "description": "Sum of content_length created in that month.",
+            "x-sdkwork-int64-string": true
           }
         }
       },
