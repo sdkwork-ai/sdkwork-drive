@@ -68,7 +68,8 @@ impl OpendalS3DriveObjectStore {
             builder = builder.server_side_encryption(server_side_encryption);
         }
 
-        let operator = Operator::new(builder).map_err(map_opendal_error)?.finish();
+        // opendal 0.59: `Operator::new` returns the operator directly.
+        let operator = Operator::new(builder).map_err(map_opendal_error)?;
         Ok(Self { operator, config })
     }
 
@@ -428,8 +429,8 @@ fn map_metadata_to_head_response(
             .user_metadata()
             .map(|items| {
                 items
-                    .iter()
-                    .map(|(key, value)| (key.clone(), value.clone()))
+                    .into_iter()
+                    .map(|(key, value)| (key.to_owned(), value.to_owned()))
                     .collect::<BTreeMap<String, String>>()
             })
             .unwrap_or_default(),

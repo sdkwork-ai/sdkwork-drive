@@ -453,15 +453,6 @@ impl DriveObjectStore for LocalDriveObjectStore {
         request: PutObjectRequest,
     ) -> Result<PutObjectResponse, DriveObjectStoreError> {
         let object_path = self.object_path(&request.locator)?;
-        Self::ensure_parent_dir(&object_path)?;
-
-        fs::write(&object_path, &request.body).map_err(|error| {
-            DriveObjectStoreError::new(
-                DriveObjectStoreErrorKind::Internal,
-                format!("write object failed: {error}"),
-            )
-        })?;
-
         let checksum = request
             .checksum_sha256_hex
             .or_else(|| Some(Self::calculate_sha256_hex(&request.body)));
@@ -477,12 +468,40 @@ impl DriveObjectStore for LocalDriveObjectStore {
             )
         })?;
         let metadata_path = Self::metadata_path(&object_path);
-        fs::write(metadata_path, metadata_text).map_err(|error| {
+        // Object bodies reach tens of megabytes; the writes are blocking
+        // filesystem IO and must not stall a runtime worker, so both files are
+        // written on the blocking pool (metadata only after the object landed).
+        let write_result = tokio::task::spawn_blocking(move || {
+            let object = Self::ensure_parent_dir(&object_path).and_then(|()| {
+                fs::write(&object_path, &request.body).map_err(|error| {
+                    DriveObjectStoreError::new(
+                        DriveObjectStoreErrorKind::Internal,
+                        format!("write object failed: {error}"),
+                    )
+                })
+            });
+            let metadata = if object.is_err() {
+                Ok(())
+            } else {
+                fs::write(metadata_path, metadata_text).map_err(|error| {
+                    DriveObjectStoreError::new(
+                        DriveObjectStoreErrorKind::Internal,
+                        format!("write metadata failed: {error}"),
+                    )
+                })
+            };
+            (object, metadata)
+        })
+        .await
+        .map_err(|error| {
             DriveObjectStoreError::new(
                 DriveObjectStoreErrorKind::Internal,
-                format!("write metadata failed: {error}"),
+                format!("object write task failed: {error}"),
             )
         })?;
+        let (object_result, metadata_result) = write_result;
+        object_result?;
+        metadata_result?;
 
         Ok(PutObjectResponse {
             locator: request.locator,
