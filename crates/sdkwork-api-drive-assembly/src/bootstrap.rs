@@ -115,7 +115,11 @@ pub async fn assemble_app_api_contribution() -> Result<ApiAssemblyContribution, 
     }
 
     let route_manifest = sdkwork_routes_drive_app_api::app_route_manifest();
-    let router = sdkwork_routes_drive_app_api::build_app_business_router(pool.clone());
+    // The federated host merges the sdkwork-assets capability workspace, which
+    // owns the mounted /app/v3/api/assets surface; drive mounts only its own
+    // /app/v3/api/drive namespace here to keep axum route registration unique.
+    let router =
+        sdkwork_routes_drive_app_api::build_app_business_router_without_asset_surface(pool.clone());
     ApiAssemblyContribution::from_manifest(
         "sdkwork-drive",
         "SDKWork Drive App API",

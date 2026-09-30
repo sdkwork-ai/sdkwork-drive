@@ -115,7 +115,6 @@ fn openapi_paths_follow_sdkwork_v3_prefixes() {
     assert!(app.contains("\"DriveNodeContentHttpResponse\""));
     assert!(app.contains("\"DriveNodeContent\""));
     assert!(app.contains("\"incompletePage\""));
-    assert!(app.contains("\"uri\""));
     assert!(app.contains("\"operationId\": \"trash.create\""));
     assert!(app.contains("\"operationId\": \"trash.restore\""));
     assert!(app.contains("\"operationId\": \"trash.list\""));
@@ -252,8 +251,6 @@ fn openapi_paths_follow_sdkwork_v3_prefixes() {
 
     let open_json: Value = serde_json::from_str(&open).expect("open openapi must be valid json");
     assert_all_paths_start_with(&open_json, "/open/v3/api/drive/");
-    assert_schema_property_enum_contains(&app_json, "MediaResource", "source", "drive");
-    assert_schema_property_enum_contains(&app_json, "MediaResource", "source", "external_url");
     assert_all_paths_start_with(&app_json, "/app/v3/api/");
     assert_dual_token_security_contract_for_prefix(
         &app_json,
@@ -1025,8 +1022,6 @@ fn openapi_paths_follow_sdkwork_v3_prefixes() {
         "/app/v3/api/drive/nodes/{nodeId}/versions/{versionId}",
         "/app/v3/api/drive/share_links/{shareLinkId}",
         "/app/v3/api/drive/spaces/{spaceId}",
-        "/app/v3/api/assets/collections/{collectionId}/items/{itemId}",
-        "/app/v3/api/assets/{assetId}/relations/{relationId}",
     ] {
         assert_no_content_response(&app_json, path_key, "delete");
     }

@@ -699,15 +699,6 @@ pub(crate) async fn legacy_asset_upload_route_gone() -> (StatusCode, Json<Proble
     )
 }
 
-pub(crate) async fn asset_method_not_allowed() -> (StatusCode, Json<ProblemDetail>) {
-    problem(
-        StatusCode::METHOD_NOT_ALLOWED,
-        "method not allowed",
-        "Drive assets API method is not available on this route",
-        SdkWorkResultCode::MethodNotAllowed,
-    )
-}
-
 #[derive(Debug, Clone)]
 struct CatalogAnchor {
     node_id: String,

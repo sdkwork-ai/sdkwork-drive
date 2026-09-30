@@ -57,6 +57,18 @@ pub async fn build_router_with_database_config(
 }
 
 fn build_business_router_layers(state: AppState) -> Router {
+    build_business_router_layers_with_asset_surface(state, true)
+}
+
+/// Composes the app-api business router while optionally excluding the global
+/// assets surface. Federated hosts must exclude it: the `sdkwork-assets`
+/// capability workspace mounts the same `/app/v3/api/assets` routes with its
+/// own handlers, and registering both copies in one axum router fails the
+/// overlapping-method-route check.
+fn build_business_router_layers_with_asset_surface(
+    state: AppState,
+    mount_asset_surface: bool,
+) -> Router {
     let drive_routes = Router::new()
         .route("/app/v3/api/drive/sandboxes", get(list_sandboxes))
         .route(
@@ -355,24 +367,27 @@ fn build_business_router_layers(state: AppState) -> Router {
         .route(
             "/app/v3/api/assets/presign",
             get(legacy_asset_upload_route_gone).post(legacy_asset_upload_route_gone),
-        )
-        .fallback(asset_method_not_allowed);
+        );
 
-    Router::new()
-        .merge(
-            drive_routes
-                .route_layer(middleware::from_fn(
-                    crate::pagination_guard::reject_legacy_pagination_query,
-                ))
-                .route_layer(middleware::from_fn(crate::rate_limit::app_api_rate_limit)),
-        )
-        .merge(
+    let composed = Router::new().merge(
+        drive_routes
+            .route_layer(middleware::from_fn(
+                crate::pagination_guard::reject_legacy_pagination_query,
+            ))
+            .route_layer(middleware::from_fn(crate::rate_limit::app_api_rate_limit)),
+    );
+    let composed = if mount_asset_surface {
+        composed.merge(
             asset_routes
                 .route_layer(middleware::from_fn(
                     crate::pagination_guard::reject_legacy_pagination_query,
                 ))
                 .route_layer(middleware::from_fn(crate::rate_limit::app_api_rate_limit)),
         )
+    } else {
+        composed
+    };
+    composed
         .layer(middleware::from_fn(
             sdkwork_drive_http::problem_correlation::problem_correlation_middleware,
         ))
@@ -404,6 +419,20 @@ pub fn build_app_business_router(pool: PgPool) -> Router {
             .unwrap_or_else(|_| DEFAULT_DOWNLOAD_PUBLIC_BASE_URL.to_string()),
     );
     build_business_router_layers(state).layer(middleware::from_fn(
+        sdkwork_drive_http::metrics::record_request_metrics,
+    ))
+}
+
+/// Raw App API router for federated hosts where the `sdkwork-assets`
+/// capability workspace owns the mounted `/app/v3/api/assets` surface. Drive
+/// keeps only its own `/app/v3/api/drive` namespace here.
+pub fn build_app_business_router_without_asset_surface(pool: PgPool) -> Router {
+    let state = AppState::with_urls(
+        pool,
+        std::env::var("SDKWORK_DRIVE_PUBLIC_BASE_URL")
+            .unwrap_or_else(|_| DEFAULT_DOWNLOAD_PUBLIC_BASE_URL.to_string()),
+    );
+    build_business_router_layers_with_asset_surface(state, false).layer(middleware::from_fn(
         sdkwork_drive_http::metrics::record_request_metrics,
     ))
 }
