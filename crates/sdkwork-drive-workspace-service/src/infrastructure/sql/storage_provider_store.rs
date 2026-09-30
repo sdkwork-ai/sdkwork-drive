@@ -1,12 +1,14 @@
 use async_trait::async_trait;
 use sqlx::postgres::PgRow;
 use sqlx::PgPool;
+use sqlx::Postgres;
 use sqlx::Row;
 
 use crate::domain::storage_provider::{DriveStorageProvider, DriveStorageProviderKind};
 use crate::infrastructure::sql::sql_error::is_unique_constraint_violation;
 use crate::ports::storage_provider_store::{
-    DriveStorageProviderStore, NewDriveStorageProvider, UpdateDriveStorageProvider,
+    DriveStorageProviderLookup, DriveStorageProviderStore, NewDriveStorageProvider,
+    UpdateDriveStorageProvider,
 };
 use crate::DriveServiceError;
 
@@ -86,48 +88,69 @@ impl DriveStorageProviderStore for SqlStorageProviderStore {
 
     async fn list_storage_providers(
         &self,
+        tenant_id: &str,
+        provider_kind: Option<&str>,
         status: Option<&str>,
         offset: i64,
         limit: i64,
     ) -> Result<Vec<DriveStorageProvider>, DriveServiceError> {
-        let rows = match status {
-            Some(status_value) if !status_value.trim().is_empty() => sqlx::query(
-                "SELECT id, tenant_id, provider_kind, name, endpoint_url, region, bucket, path_style,
-                        strict_tls, credential_ref, provider_account_id, server_side_encryption_mode,
-                        default_storage_class, status, version
-                     FROM dr_drive_storage_provider
-                     WHERE status=$1
-                     ORDER BY id ASC
-                     LIMIT $2 OFFSET $3",
-            )
-            .bind(status_value.trim())
-            .bind(limit)
-            .bind(offset)
-            .fetch_all(&self.pool)
-            .await
-            .map_err(|error| {
-                DriveServiceError::Internal(format!(
-                    "list dr_drive_storage_provider by status failed: {error}"
-                ))
-            })?,
-            _ => sqlx::query(
-                "SELECT id, tenant_id, provider_kind, name, endpoint_url, region, bucket, path_style,
-                        strict_tls, credential_ref, provider_account_id, server_side_encryption_mode,
-                        default_storage_class, status, version
-                     FROM dr_drive_storage_provider
-                     ORDER BY id ASC
-                     LIMIT $1 OFFSET $2",
-            )
-            .bind(limit)
-            .bind(offset)
+        // Both filters are pushed into SQL rather than applied to a fetched page.
+        // Filtering the kind *after* the cursor window is what made the console's
+        // provider switch answer "no rows" for a kind whose row simply sat on the
+        // next page (`PAGINATION_SPEC.md` §2.2 rule 4).
+        //
+        // The statement is assembled with `QueryBuilder` so the optional
+        // predicates stay numbered bind parameters: no caller value is ever
+        // interpolated into the SQL text, only the literal fragments below.
+        let mut builder = sqlx::QueryBuilder::<Postgres>::new(
+            "SELECT id, tenant_id, provider_kind, name, endpoint_url, region, bucket, path_style,
+                    strict_tls, credential_ref, provider_account_id, server_side_encryption_mode,
+                    default_storage_class, status, version
+             FROM dr_drive_storage_provider",
+        );
+        builder.push(" WHERE ");
+        {
+            let mut predicates = builder.separated(" AND ");
+            // Tenant scope is unconditional: the optional kind/status filters
+            // only ever narrow the requesting tenant's own rows.
+            predicates
+                .push("tenant_id = ")
+                .push_bind_unseparated(tenant_id);
+            if let Some(kind) = provider_kind {
+                // `custom` is a family, not one stored value: the console offers
+                // a single "custom" option while the column persists
+                // `custom:<vendor>`. `starts_with` keeps this an exact prefix
+                // test — a `LIKE` pattern would read the `_` in every catalogued
+                // kind as a wildcard and match unrelated custom keys.
+                let custom_prefix = format!("{kind}:");
+                predicates
+                    .push("(provider_kind = ")
+                    .push_bind_unseparated(kind)
+                    .push_unseparated(" OR starts_with(provider_kind, ")
+                    .push_bind_unseparated(custom_prefix)
+                    .push_unseparated("))");
+            }
+            if let Some(status_value) = status {
+                predicates
+                    .push("status = ")
+                    .push_bind_unseparated(status_value);
+            }
+        }
+        builder
+            .push(" ORDER BY id ASC LIMIT ")
+            .push_bind(limit)
+            .push(" OFFSET ")
+            .push_bind(offset);
+
+        let rows = builder
+            .build()
             .fetch_all(&self.pool)
             .await
             .map_err(|error| {
                 DriveServiceError::Internal(format!(
                     "list dr_drive_storage_provider failed: {error}"
                 ))
-            })?,
-        };
+            })?;
 
         rows.iter().map(map_row_to_storage_provider).collect()
     }
@@ -227,21 +250,86 @@ impl DriveStorageProviderStore for SqlStorageProviderStore {
         &self,
         provider_id: &str,
     ) -> Result<bool, DriveServiceError> {
-        let found: Option<i64> = sqlx::query_scalar(
-            "SELECT 1
-             FROM dr_drive_storage_provider_binding
-             WHERE provider_id=$1 AND lifecycle_status='active'
-             LIMIT 1",
+        // `EXISTS` returns a real `boolean`, unlike `SELECT 1`, whose literal is
+        // `int4` and therefore cannot be decoded as `i64`.
+        let found: bool = sqlx::query_scalar(
+            "SELECT EXISTS(
+                 SELECT 1
+                 FROM dr_drive_storage_provider_binding
+                 WHERE provider_id=$1 AND lifecycle_status='active'
+             )",
         )
         .bind(provider_id)
-        .fetch_optional(&self.pool)
+        .fetch_one(&self.pool)
         .await
         .map_err(|error| {
             DriveServiceError::Internal(format!(
                 "check active dr_drive_storage_provider_binding failed: {error}"
             ))
         })?;
-        Ok(found.is_some())
+        Ok(found)
+    }
+
+    async fn count_active_storage_provider_objects(
+        &self,
+        provider_id: &str,
+    ) -> Result<i64, DriveServiceError> {
+        let count: i64 = sqlx::query_scalar(
+            "SELECT COUNT(*)
+             FROM dr_drive_storage_object
+             WHERE storage_provider_id=$1 AND lifecycle_status='active'",
+        )
+        .bind(provider_id)
+        .fetch_one(&self.pool)
+        .await
+        .map_err(|error| {
+            DriveServiceError::Internal(format!(
+                "count active dr_drive_storage_object rows failed: {error}"
+            ))
+        })?;
+        Ok(count)
+    }
+
+    async fn find_active_storage_provider_by_bucket(
+        &self,
+        tenant_id: &str,
+        bucket: &str,
+    ) -> Result<DriveStorageProviderLookup, DriveServiceError> {
+        // Fetch every candidate instead of `LIMIT 1`: the extra rows are what
+        // make ambiguity detectable. A tenant has a handful of providers, so
+        // the additional row cost is not worth trading for a silent wrong
+        // answer.
+        let rows = sqlx::query(
+            "SELECT id, tenant_id, provider_kind, name, endpoint_url, region, bucket, path_style,
+                    strict_tls, credential_ref, provider_account_id, server_side_encryption_mode,
+                    default_storage_class, status, version
+             FROM dr_drive_storage_provider
+             WHERE tenant_id=$1 AND status='active' AND bucket=$2
+             ORDER BY id ASC",
+        )
+        .bind(tenant_id)
+        .bind(bucket)
+        .fetch_all(&self.pool)
+        .await
+        .map_err(|error| {
+            DriveServiceError::Internal(format!(
+                "resolve active dr_drive_storage_provider by bucket failed: {error}"
+            ))
+        })?;
+
+        let mut providers = rows
+            .iter()
+            .map(map_row_to_storage_provider)
+            .collect::<Result<Vec<_>, _>>()?;
+        match providers.len() {
+            0 => Ok(DriveStorageProviderLookup::Missing),
+            1 => Ok(DriveStorageProviderLookup::Found(
+                providers.pop().expect("one provider"),
+            )),
+            _ => Ok(DriveStorageProviderLookup::Ambiguous(
+                providers.into_iter().map(|provider| provider.id).collect(),
+            )),
+        }
     }
 
     async fn delete_storage_provider(&self, provider_id: &str) -> Result<bool, DriveServiceError> {

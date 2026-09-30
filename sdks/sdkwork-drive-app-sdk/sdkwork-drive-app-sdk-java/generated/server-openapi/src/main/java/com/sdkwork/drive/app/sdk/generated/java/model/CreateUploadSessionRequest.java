@@ -5,6 +5,7 @@ public class CreateUploadSessionRequest {
     private String sessionId;
     private String spaceId;
     private String nodeId;
+    private String storageProviderId;
     private String bucket;
     private String objectKey;
     private String idempotencyKey;
@@ -32,6 +33,14 @@ public class CreateUploadSessionRequest {
 
     public void setNodeId(String nodeId) {
         this.nodeId = nodeId;
+    }
+
+    public String getStorageProviderId() {
+        return this.storageProviderId;
+    }
+
+    public void setStorageProviderId(String storageProviderId) {
+        this.storageProviderId = storageProviderId;
     }
 
     public String getBucket() {

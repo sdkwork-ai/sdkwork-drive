@@ -138,3 +138,6 @@ tables:
   - name: dr_drive_storage_provider_kind
     lifecycle_status: active
     owner: drive-platform
+  - name: dr_drive_storage_provider_kind_translation
+    lifecycle_status: active
+    owner: drive-platform

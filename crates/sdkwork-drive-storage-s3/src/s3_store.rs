@@ -11,13 +11,13 @@ use sdkwork_drive_storage_contract::{
     CopyObjectRequest, CopyObjectResponse, CreateBucketRequest, CreateBucketResponse,
     CreateMultipartUploadRequest, CreateMultipartUploadResponse, DeleteBucketRequest,
     DeleteBucketResponse, DeleteObjectRequest, DeleteObjectResponse, DriveObjectChunkStream,
-    DriveObjectHeaders, DriveObjectLocator, DriveObjectStore, DriveObjectStoreError,
-    DriveObjectStoreErrorKind, DriveStorageProviderCapabilities, DriveStorageProviderKind,
-    HeadBucketRequest, HeadBucketResponse, HeadObjectRequest, HeadObjectResponse,
-    ListBucketsRequest, ListBucketsResponse, ListObjectsRequest, ListObjectsResponse, ListedBucket,
-    ListedObject, PresignDownloadRequest, PresignUploadPartRequest, PresignedDownloadResponse,
-    PresignedUploadPartResponse, PutObjectRequest, PutObjectResponse, ReadObjectRangeRequest,
-    ReadObjectRangeResponse,
+    DriveObjectHeaders, DriveObjectStore, DriveObjectStoreError, DriveObjectStoreErrorKind,
+    DriveStorageProviderCapabilities, DriveStorageProviderKind, HeadBucketRequest,
+    HeadBucketResponse, HeadObjectRequest, HeadObjectResponse, ListBucketsRequest,
+    ListBucketsResponse, ListObjectsRequest, ListObjectsResponse, ListedBucket, ListedObject,
+    PresignDownloadRequest, PresignUploadPartRequest, PresignedDownloadResponse,
+    PresignedUploadPartResponse, PutObjectFromPathRequest, PutObjectRequest, PutObjectResponse,
+    ReadObjectRangeRequest, ReadObjectRangeResponse,
 };
 use std::collections::BTreeMap;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
@@ -296,33 +296,41 @@ impl S3DriveObjectStore {
         DriveObjectStoreError::new(kind, message)
     }
 
-    pub async fn put_object_from_path(
+    /// Stream a local file straight into S3 without buffering it.
+    ///
+    /// `ByteStream::from_path` hands the SDK the path, so the SDK reads and
+    /// chunks the file itself. That matters for download-package archives,
+    /// which are staged on disk precisely because they can be larger than the
+    /// process should ever hold in memory.
+    async fn put_object_from_path_inner(
         &self,
-        locator: DriveObjectLocator,
-        content_type: Option<String>,
-        metadata: BTreeMap<String, String>,
-        file_path: &std::path::Path,
+        request: PutObjectFromPathRequest,
     ) -> Result<PutObjectResponse, DriveObjectStoreError> {
         use aws_sdk_s3::primitives::ByteStream;
 
-        let bucket = self.resolve_bucket(&locator.bucket)?;
-        Self::validate_locator(&locator)?;
-        let body = ByteStream::from_path(file_path).await.map_err(|error| {
-            DriveObjectStoreError::new(
-                DriveObjectStoreErrorKind::Internal,
-                format!("read upload file failed: {error}"),
-            )
-        })?;
+        let bucket = self.resolve_bucket(&request.locator.bucket)?;
+        Self::validate_locator(&request.locator)?;
+        let body = ByteStream::from_path(&request.source_path)
+            .await
+            .map_err(|error| {
+                DriveObjectStoreError::new(
+                    DriveObjectStoreErrorKind::Internal,
+                    format!("read upload file failed: {error}"),
+                )
+            })?;
         let mut builder = self
             .client
             .put_object()
             .bucket(bucket)
-            .key(locator.object_key.clone())
+            .key(request.locator.object_key.clone())
             .body(body);
-        if let Some(content_type) = content_type {
+        if let Some(content_type) = request.content_type {
             builder = builder.content_type(content_type);
         }
-        for (key, value) in metadata {
+        if let Some(checksum) = request.checksum_sha256_hex {
+            builder = builder.checksum_sha256(checksum);
+        }
+        for (key, value) in request.metadata {
             builder = builder.metadata(key, value);
         }
         let output = builder
@@ -330,7 +338,7 @@ impl S3DriveObjectStore {
             .await
             .map_err(|error| Self::map_sdk_error(error, "put object from path failed"))?;
         Ok(PutObjectResponse {
-            locator,
+            locator: request.locator,
             etag: output.e_tag().map(str::to_string),
             version_id: output.version_id().map(str::to_string),
         })
@@ -345,6 +353,16 @@ impl DriveObjectStore for S3DriveObjectStore {
 
     fn capabilities(&self) -> DriveStorageProviderCapabilities {
         DriveStorageProviderCapabilities::default_s3_compatible()
+    }
+
+    /// Overrides the contract default with a true streaming upload: the SDK
+    /// reads and chunks `source_path` itself instead of the adapter buffering
+    /// the whole file into a `Vec<u8>` first.
+    async fn put_object_from_path(
+        &self,
+        request: PutObjectFromPathRequest,
+    ) -> Result<PutObjectResponse, DriveObjectStoreError> {
+        self.put_object_from_path_inner(request).await
     }
 
     async fn put_object(
@@ -438,16 +456,30 @@ impl DriveObjectStore for S3DriveObjectStore {
         request: HeadBucketRequest,
     ) -> Result<HeadBucketResponse, DriveObjectStoreError> {
         let bucket = self.resolve_bucket(&request.bucket)?;
-        self.client
-            .head_bucket()
-            .bucket(bucket.clone())
-            .send()
-            .await
-            .map_err(|error| Self::map_sdk_error(error, "head bucket failed"))?;
-        Ok(HeadBucketResponse {
-            bucket: request.bucket,
-            exists: true,
-        })
+        let outcome = self.client.head_bucket().bucket(bucket).send().await;
+        match outcome {
+            Ok(_) => Ok(HeadBucketResponse {
+                bucket: request.bucket,
+                exists: true,
+            }),
+            Err(error) => {
+                // HeadBucket responses carry no body, so the SDK cannot give
+                // us an error code; the raw 404 status is the canonical
+                // "bucket does not exist" signal and must surface as
+                // `exists: false` instead of an error.
+                let missing = error
+                    .raw_response()
+                    .is_some_and(|response| response.status().as_u16() == 404);
+                if missing {
+                    Ok(HeadBucketResponse {
+                        bucket: request.bucket,
+                        exists: false,
+                    })
+                } else {
+                    Err(Self::map_sdk_error(error, "head bucket failed"))
+                }
+            }
+        }
     }
 
     async fn list_buckets(
@@ -481,12 +513,35 @@ impl DriveObjectStore for S3DriveObjectStore {
         request: CreateBucketRequest,
     ) -> Result<CreateBucketResponse, DriveObjectStoreError> {
         let bucket = self.resolve_bucket(&request.bucket)?;
-        self.client
-            .create_bucket()
-            .bucket(bucket)
-            .send()
-            .await
-            .map_err(|error| Self::map_sdk_error(error, "create bucket failed"))?;
+        if self
+            .head_bucket(HeadBucketRequest {
+                bucket: request.bucket.clone(),
+            })
+            .await?
+            .exists
+        {
+            return Ok(CreateBucketResponse {
+                bucket: request.bucket,
+                created: false,
+            });
+        }
+        let created = self.client.create_bucket().bucket(bucket).send().await;
+        if let Err(error) = created {
+            // Race window: another actor may have created the bucket between
+            // HEAD and CREATE. S3-compatible vendors disagree on re-create
+            // (200 OK vs 409), so converge through a second HEAD instead of
+            // failing the initialization.
+            let converged = matches!(
+                self.head_bucket(HeadBucketRequest {
+                    bucket: request.bucket.clone(),
+                })
+                .await,
+                Ok(head) if head.exists
+            );
+            if !converged {
+                return Err(Self::map_sdk_error(error, "create bucket failed"));
+            }
+        }
         Ok(CreateBucketResponse {
             bucket: request.bucket,
             created: true,

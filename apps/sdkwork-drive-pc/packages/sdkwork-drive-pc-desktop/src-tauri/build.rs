@@ -17,6 +17,16 @@ fn main() {
             "remove_secure_session_value",
             "clear_secure_session_values",
             "read_secure_session_snapshot",
+            "tray_set_visible",
+            "tray_set_menu",
+            "tray_emit_menu",
+            "tray_restore_window",
+            "shortcut_register_all",
+            "shortcut_unregister",
+            "shortcut_unregister_all",
+            "clipboard_cut_paths",
+            "clipboard_read_paths",
+            "clipboard_write_text",
         ]));
 
     tauri_build::try_build(attributes).expect("failed to run SDKWork Drive desktop build script");

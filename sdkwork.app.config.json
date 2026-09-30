@@ -170,7 +170,7 @@
     "stores": [],
     "config": {
       "workspaceRoot": ".",
-      "framework": "tauri",
+      "framework": "electron",
       "managedBy": "apps/scripts/initialize-sdkwork-app-standard-v3.mjs",
       "pilotReadiness": {
         "codeAlignmentCompletedAt": "2026-07-07",
@@ -217,23 +217,24 @@
           "id": "windows-x64-standalone-desktop-zip",
           "name": "SDKWork Drive Windows Bundle",
           "sourceType": "BINARY_URL",
-          "packageFormat": "ZIP",
+          "packageFormat": "MSI",
           "platform": "DESKTOP_WINDOWS",
-          "url": "https://cdn.sdkwork.com/apps/sdkwork-drive/STABLE/0.1.0/windows/x64/app.zip",
+          "url": "https://cdn.sdkwork.com/apps/sdkwork-drive/STABLE/0.1.0/windows/x64/app.msi",
           "enabled": true,
           "metadata": {
-            "releaseArtifactPath": "dist/release/STABLE/0.1.0/windows/x64/app.zip",
-            "releaseEvidenceMaterializedAt": "2026-07-08T03:35:49.261Z",
-            "releaseBuildMaterializedAt": "2026-07-08T03:35:49.261Z"
+            "releaseArtifactPath": "dist/release/STABLE/0.1.0/windows/x64/app.msi",
+            "companionArtifacts": [
+              "dist/release/STABLE/0.1.0/windows/x64/app-setup.exe"
+            ],
+            "releaseBuildDeferred": true
           },
           "architecture": "x64",
           "profileBinding": "fixed",
           "checksumAlgorithm": "SHA-256",
-          "checksum": "6a05216f55569a73e1fcd1e8b04727b3781a75bf43656cff9ceee15d1167ad19",
           "deploymentProfile": "standalone",
           "runtimeTarget": "desktop",
           "targetPlatform": "windows",
-          "clientArchitecture": "tauri"
+          "clientArchitecture": "electron"
         },
         {
           "id": "macos-universal-standalone-desktop-dmg",
@@ -242,8 +243,9 @@
           "packageFormat": "DMG",
           "platform": "DESKTOP_MACOS",
           "url": "https://cdn.sdkwork.com/apps/sdkwork-drive/STABLE/0.1.0/macos/universal/app.dmg",
-          "enabled": false,
+          "enabled": true,
           "metadata": {
+            "releaseArtifactPath": "dist/release/STABLE/0.1.0/macos/universal/app.dmg",
             "releaseBuildDeferred": true
           },
           "architecture": "universal",
@@ -251,7 +253,8 @@
           "deploymentProfile": "standalone",
           "runtimeTarget": "desktop",
           "targetPlatform": "macos",
-          "clientArchitecture": "tauri"
+          "clientArchitecture": "electron",
+          "checksumAlgorithm": "SHA-256"
         },
         {
           "id": "linux-x64-standalone-desktop-appimage",
@@ -260,11 +263,12 @@
           "packageFormat": "APPIMAGE",
           "platform": "DESKTOP_LINUX",
           "url": "https://cdn.sdkwork.com/apps/sdkwork-drive/STABLE/0.1.0/linux/generic/x64/app.AppImage",
-          "enabled": false,
+          "enabled": true,
           "metadata": {
             "linux": {
               "distro": "generic"
             },
+            "releaseArtifactPath": "dist/release/STABLE/0.1.0/linux/generic/x64/app.AppImage",
             "releaseBuildDeferred": true
           },
           "architecture": "x64",
@@ -272,7 +276,8 @@
           "deploymentProfile": "standalone",
           "runtimeTarget": "desktop",
           "targetPlatform": "linux",
-          "clientArchitecture": "tauri"
+          "clientArchitecture": "electron",
+          "checksumAlgorithm": "SHA-256"
         }
       ],
       "metadata": {

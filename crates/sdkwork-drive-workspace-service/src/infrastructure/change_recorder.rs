@@ -437,7 +437,7 @@ async fn resolve_root_scope_effects(
 ) -> Result<Vec<DriveRootScopeEffect>, DriveServiceError> {
     let rows = sqlx::query(
         "WITH RECURSIVE ancestry(id, parent_node_id, node_name, relative_path, depth) AS (
-            SELECT id, parent_node_id, node_name, node_name, 0
+            SELECT id, parent_node_id, node_name, CAST(node_name AS TEXT), 0
             FROM dr_drive_node
             WHERE tenant_id=$1 AND space_id=$2 AND id=$3 AND lifecycle_status != 'deleted'
             UNION ALL

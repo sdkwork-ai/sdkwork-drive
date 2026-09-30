@@ -313,8 +313,7 @@ async fn seed_storage_provider(pool: &PgPool) {
             default_storage_class, status, version, created_by, updated_by
          ) VALUES (
             'provider-route-sync', 's3_compatible', 'Route Sync Provider',
-            'https://s3.example.com', 'us-east-1', 'bucket-route-sync', 1,
-            1, 'plain:test-access-key:test-secret-key', 'AES256',
+            'https://s3.example.com', 'us-east-1', 'bucket-route-sync', TRUE, TRUE, 'plain:test-access-key:test-secret-key', 'AES256',
             'STANDARD', 'active', 1, 'test', 'test'
          )",
     )

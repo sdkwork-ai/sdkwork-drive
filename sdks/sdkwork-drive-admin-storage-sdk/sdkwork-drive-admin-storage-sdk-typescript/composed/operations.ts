@@ -14,6 +14,12 @@ export const sdkMetadata = {
 };
 
 export const operations = {
+  "storageMigrations.cancel": { method: "POST", path: "/backend/v3/api/drive/storage/migrations/{migrationId}/cancel" },
+  "storageMigrations.create": { method: "POST", path: "/backend/v3/api/drive/storage/migrations" },
+  "storageMigrations.items.list": { method: "GET", path: "/backend/v3/api/drive/storage/migrations/{migrationId}/items" },
+  "storageMigrations.list": { method: "GET", path: "/backend/v3/api/drive/storage/migrations" },
+  "storageMigrations.retrieve": { method: "GET", path: "/backend/v3/api/drive/storage/migrations/{migrationId}" },
+  "storageMigrations.run": { method: "POST", path: "/backend/v3/api/drive/storage/migrations/{migrationId}/run" },
   "storageOverview.retrieve": { method: "GET", path: "/backend/v3/api/drive/storage/overview" },
   "storageProviderAccountDefaults.create": { method: "POST", path: "/backend/v3/api/drive/storage/provider-account-defaults" },
   "storageProviderAccounts.create": { method: "POST", path: "/backend/v3/api/drive/storage/provider-accounts" },

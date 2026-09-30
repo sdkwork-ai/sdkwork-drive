@@ -32,8 +32,8 @@ async fn upload_session_sweep_marks_expired_sessions() {
     sqlx::query(
         "INSERT INTO dr_drive_node (
             id, tenant_id, space_id, parent_node_id, node_type, node_name,
-            content_state, lifecycle_status, version, created_by, updated_by
-        ) VALUES ($1, $2, $3, NULL, 'file', $4, 'ready', 'active', 1, $5, $6)",
+            content_state, head_content_type, head_content_type_group, head_content_length, head_version_no, lifecycle_status, version, created_by, updated_by
+        ) VALUES ($1, $2, $3, NULL, 'file', $4, 'ready', 'application/octet-stream', 'binary', 0, 1, 'active', 1, $5, $6)",
     )
     .bind("node-001")
     .bind("tenant-001")
@@ -213,7 +213,7 @@ async fn abandoned_upload_task_sweep_marks_stuck_items_failed_when_session_expir
             post_process_status, created_by, updated_by
         ) VALUES (
             'upload-item-abandoned', 'task-abandoned', 'tenant-abandoned-sweep',
-            NULL, 'user-001', 'user', 'user-001',
+            '0', 'user-001', 'user', 'user-001',
             'drive-pc', 'desktop-file-browser', 'root', 'generic',
             'fp-abandoned', 'space-abandoned-sweep', 'node-abandoned-sweep',
             'session-abandoned-sweep',
@@ -281,8 +281,8 @@ async fn object_sweep_deletes_deleted_storage_objects() {
     sqlx::query(
         "INSERT INTO dr_drive_node (
             id, tenant_id, space_id, parent_node_id, node_type, node_name,
-            content_state, lifecycle_status, version, created_by, updated_by
-        ) VALUES ($1, $2, $3, NULL, 'file', $4, 'ready', 'active', 1, $5, $6)",
+            content_state, head_content_type, head_content_type_group, head_content_length, head_version_no, lifecycle_status, version, created_by, updated_by
+        ) VALUES ($1, $2, $3, NULL, 'file', $4, 'ready', 'application/octet-stream', 'binary', 0, 1, 'active', 1, $5, $6)",
     )
     .bind("node-001")
     .bind("tenant-001")
@@ -375,10 +375,10 @@ async fn expired_upload_content_sweep_soft_deletes_nodes_and_records_sensitive_o
     sqlx::query(
         "INSERT INTO dr_drive_node (
             id, tenant_id, space_id, parent_node_id, node_type, node_name,
-            content_state, lifecycle_status, version, created_by, updated_by
+            content_state, head_content_type, head_content_type_group, head_content_length, head_version_no, lifecycle_status, version, created_by, updated_by
         ) VALUES (
             'node-expired-upload', 'tenant-expired-upload', 'space-expired-upload',
-            NULL, 'file', 'expired.txt', 'ready', 'active', 1,
+            NULL, 'file', 'expired.txt', 'ready', 'application/octet-stream', 'binary', 0, 1, 'active', 1,
             'user-expired-upload', 'user-expired-upload'
         )",
     )
@@ -510,11 +510,11 @@ async fn expired_upload_content_sweep_hard_deletes_objects_and_records_sensitive
     sqlx::query(
         "INSERT INTO dr_drive_node (
             id, tenant_id, space_id, parent_node_id, node_type, node_name,
-            content_state, lifecycle_status, version, created_by, updated_by
+            content_state, head_content_type, head_content_type_group, head_content_length, head_version_no, lifecycle_status, version, created_by, updated_by
         ) VALUES (
             'node-expired-hard-upload', 'tenant-expired-hard-upload',
             'space-expired-hard-upload', NULL, 'file', 'expired-hard.txt',
-            'ready', 'active', 1, 'user-expired-hard-upload', 'user-expired-hard-upload'
+            'ready', 'application/octet-stream', 'binary', 0, 1, 'active', 1, 'user-expired-hard-upload', 'user-expired-hard-upload'
         )",
     )
     .execute(&pool)
@@ -659,8 +659,8 @@ async fn maintenance_service_records_jobs_and_lists_with_filters() {
     sqlx::query(
         "INSERT INTO dr_drive_node (
             id, tenant_id, space_id, parent_node_id, node_type, node_name,
-            content_state, lifecycle_status, version, created_by, updated_by
-        ) VALUES ($1, $2, $3, NULL, 'file', $4, 'ready', 'active', 1, $5, $6)",
+            content_state, head_content_type, head_content_type_group, head_content_length, head_version_no, lifecycle_status, version, created_by, updated_by
+        ) VALUES ($1, $2, $3, NULL, 'file', $4, 'ready', 'application/octet-stream', 'binary', 0, 1, 'active', 1, $5, $6)",
     )
     .bind("node-001")
     .bind("tenant-001")
@@ -783,10 +783,10 @@ async fn maintenance_service_records_failed_job_when_sweep_errors() {
         return;
     };
 
-    sqlx::query("DROP TABLE dr_drive_storage_object")
-        .execute(&pool)
-        .await
-        .expect("drop storage object table should succeed");
+    // Simulate a missing table without damaging the shared schema: the guard
+    // renames the table out of the way and restores it before the test returns.
+    let absent_storage_object =
+        sdkwork_drive_test_support::TableAbsenceGuard::hide(&pool, "dr_drive_storage_object").await;
 
     let service = DriveMaintenanceService::new(SqlMaintenanceStore::new(pool.clone()));
     let error = service
@@ -819,6 +819,8 @@ async fn maintenance_service_records_failed_job_when_sweep_errors() {
     .await
     .expect("failed maintenance jobs should be queryable");
     assert_eq!(failed_jobs, 1);
+
+    absent_storage_object.restore().await;
 }
 
 #[tokio::test]
@@ -828,10 +830,8 @@ async fn maintenance_service_records_failed_upload_sweep_job_when_table_missing(
         return;
     };
 
-    sqlx::query("DROP TABLE dr_drive_upload_session")
-        .execute(&pool)
-        .await
-        .expect("drop upload session table should succeed");
+    let absent_upload_session =
+        sdkwork_drive_test_support::TableAbsenceGuard::hide(&pool, "dr_drive_upload_session").await;
 
     let service = DriveMaintenanceService::new(SqlMaintenanceStore::new(pool.clone()));
     let error = service
@@ -865,6 +865,8 @@ async fn maintenance_service_records_failed_upload_sweep_job_when_table_missing(
     .await
     .expect("failed upload maintenance jobs should be queryable");
     assert_eq!(failed_jobs, 1);
+
+    absent_upload_session.restore().await;
 }
 
 #[tokio::test]
@@ -917,7 +919,7 @@ async fn seed_storage_provider(pool: &sqlx::PgPool, provider_id: &str, bucket: &
             status, version, created_by, updated_by
         ) VALUES (
             $1, 's3_compatible', $1, 'https://s3.example.com', 'us-east-1',
-            $2, 1, 'plain:test-access-key:test-secret-key',
+            $2, TRUE, 'plain:test-access-key:test-secret-key',
             'AES256', 'STANDARD', 'active', 1, 'admin-001', 'admin-001'
         )",
     )

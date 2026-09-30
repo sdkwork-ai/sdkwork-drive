@@ -108,9 +108,9 @@ pub async fn retrieve_drive_resource_content(
 
     let object_store = state
         .object_runtime
-        .resolve(
+        .resolve_locator(
             &resource.content_locator.storage_provider_id,
-            resource.content_locator.storage_provider_version,
+            &resource.content_locator.bucket,
         )
         .await
         .map_err(|error| map_object_store_error(error).into_response())?;

@@ -49,6 +49,17 @@ pub(crate) struct SetStorageProviderKindEnabledRequest {
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct ListStorageProvidersQuery {
+    /// Stored provider kind, or `custom` for the whole `custom:<vendor>` family.
+    ///
+    /// Declared on the list operation itself so the filter composes with the
+    /// cursor window: filtering a page after it was fetched cannot answer for a
+    /// kind whose row sits on a later page.
+    ///
+    /// Spelled `provider_kind` on the wire, like `page_size` and `cursor`:
+    /// multi-word query parameters are lower_snake_case (`API_SPEC.md` §13), and
+    /// a new filter must not add another camelCase alias.
+    #[serde(rename = "provider_kind")]
+    pub(crate) provider_kind: Option<String>,
     pub(crate) status: Option<String>,
     #[serde(rename = "page_size")]
     pub(crate) page_size: Option<i64>,
@@ -69,6 +80,17 @@ pub(crate) struct ListStorageProviderBindingsQuery {
     pub(crate) space_id: Option<String>,
     pub(crate) provider_id: Option<String>,
     pub(crate) lifecycle_status: Option<String>,
+    /// Restrict the list to one resolution step (`tenant`, `space`, `space_type`).
+    ///
+    /// A console that renders one section per step has to read that step's rows
+    /// as a set: the unfiltered list is ordered space → space type → tenant, so a
+    /// tenant with enough space-scoped bindings pushes the space-type rows past
+    /// the first page and the page then renders them as unbound.
+    ///
+    /// Spelled `binding_scope` on the wire, like `page_size` and `cursor`:
+    /// multi-word query parameters are lower_snake_case (`API_SPEC.md` §13).
+    #[serde(rename = "binding_scope")]
+    pub(crate) binding_scope: Option<String>,
     #[serde(rename = "page_size")]
     pub(crate) page_size: Option<i64>,
     #[serde(rename = "cursor")]
@@ -161,6 +183,54 @@ pub(crate) struct StorageProviderAccountDefaultResponse {
     pub(crate) account_code: Option<String>,
     pub(crate) account_created: bool,
     pub(crate) credential_seeded: bool,
+    /// The vendor's own credential-field vocabulary, so the console labels the
+    /// key pair the way that vendor does (`SecretId`/`SecretKey` for Tencent,
+    /// `AK`/`SK` for Huawei, …). Absent for a credential-free kind, which has no
+    /// key pair to label.
+    ///
+    /// The bootstrap knows this because it also writes the placeholder pair; a
+    /// second hand-maintained table in the console would drift from it.
+    pub(crate) credential_fields: Option<VendorCredentialFieldResponse>,
+    /// The encryption modes and storage classes this vendor accepts, in the
+    /// contract's preference order, so the console's dropdowns offer the same
+    /// values the server would accept instead of a second hand-maintained list.
+    ///
+    /// Absent for a credential-free kind (`local_filesystem`), which exposes
+    /// neither control. An empty vector means "this vendor offers no choice",
+    /// which the console renders as a hidden control rather than a fabricated
+    /// tier the store would reject.
+    pub(crate) vendor_capabilities: Option<VendorCapabilityDefaultsResponse>,
+}
+
+/// Per-vendor capability vocabulary carried by the bootstrap response.
+///
+/// This is the wire form of the contract's `supported_sse_modes()` /
+/// `supported_storage_classes()`; it exists so the console's editor dropdowns
+/// and the server's `capabilities` handler read one table instead of two.
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct VendorCapabilityDefaultsResponse {
+    /// Accepted `x-cos-server-side-encryption` (and S3 equivalents), `[0]` being
+    /// the default a fresh configuration should carry.
+    pub(crate) server_side_encryption_modes: Vec<String>,
+    /// Accepted storage classes, `[0]` being the vendor's standard tier.
+    pub(crate) storage_classes: Vec<String>,
+}
+
+/// Vendor credential-field labels carried by the bootstrap response.
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct VendorCredentialFieldResponse {
+    /// Label for the public half of the key pair.
+    pub(crate) access_key_label: String,
+    /// Label for the private half of the key pair.
+    pub(crate) secret_key_label: String,
+    /// Vendor-namespaced environment variables an operator may prefer over a
+    /// literal pair, mirrored from the console's own defaults.
+    pub(crate) default_env_access_key: String,
+    pub(crate) default_env_secret_key: String,
+    /// Console deep link where the operator mints the key pair.
+    pub(crate) console_url: String,
 }
 
 /// Reusable service-provider account projected for the storage admin console.
@@ -488,4 +558,121 @@ pub(crate) struct StorageOverviewTrendPointResponse {
     pub(crate) object_count: i64,
     #[serde(with = "sdkwork_utils_rust::serde_int64")]
     pub(crate) bytes: i64,
+}
+
+// ---------------------------------------------------------------------------
+// Cross-provider storage migration
+// ---------------------------------------------------------------------------
+
+/// Open a migration run.
+///
+/// `id` is caller-supplied, matching `CreateStorageProviderRequest`: the caller
+/// owns idempotency, so a retried plan cannot create a second run for the same
+/// intended migration.
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub(crate) struct CreateStorageMigrationRequest {
+    pub(crate) id: String,
+    pub(crate) name: String,
+    pub(crate) source_provider_id: String,
+    pub(crate) target_provider_id: String,
+    /// Optional target bucket; defaults to the target provider's own bucket.
+    pub(crate) target_bucket: Option<String>,
+    /// Re-point objects and bindings once every object has been copied.
+    #[serde(default)]
+    pub(crate) apply_binding_switch: bool,
+}
+
+/// Drive a run forward by one bounded batch.
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub(crate) struct RunStorageMigrationRequest {
+    /// Objects to copy in this call. Clamped into a supported range rather than
+    /// rejected: this is a throughput knob, not a contract.
+    pub(crate) batch_size: Option<i64>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub(crate) struct StorageMigrationQuery {
+    pub(crate) status: Option<String>,
+    pub(crate) page_size: Option<i64>,
+    pub(crate) page_token: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub(crate) struct StorageMigrationItemQuery {
+    pub(crate) status: Option<String>,
+    pub(crate) page_size: Option<i64>,
+    pub(crate) page_token: Option<String>,
+}
+
+/// Cancel takes no body.
+///
+/// The operator is *not* accepted from the client: it is a request-context
+/// field, resolved from the verified `WebRequestContext`. Accepting a client
+/// value would let a caller file an audit row under someone else's name, which
+/// is exactly what the schema gate forbids.
+#[derive(Debug, Default, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub(crate) struct CancelStorageMigrationRequest {}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct StorageMigrationResponse {
+    pub(crate) id: String,
+    pub(crate) name: String,
+    pub(crate) source_provider_id: String,
+    pub(crate) target_provider_id: String,
+    pub(crate) target_bucket: Option<String>,
+    pub(crate) status: String,
+    pub(crate) apply_binding_switch: bool,
+    #[serde(with = "sdkwork_utils_rust::serde_int64")]
+    pub(crate) objects_total: i64,
+    #[serde(with = "sdkwork_utils_rust::serde_int64")]
+    pub(crate) objects_copied: i64,
+    #[serde(with = "sdkwork_utils_rust::serde_int64")]
+    pub(crate) objects_failed: i64,
+    #[serde(with = "sdkwork_utils_rust::serde_int64")]
+    pub(crate) objects_outstanding: i64,
+    #[serde(with = "sdkwork_utils_rust::serde_int64")]
+    pub(crate) bytes_copied: i64,
+    pub(crate) progress_ratio: f64,
+    pub(crate) failure_message: Option<String>,
+    pub(crate) created_by: String,
+    pub(crate) updated_by: String,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct StorageMigrationItemResponse {
+    pub(crate) id: String,
+    pub(crate) storage_object_id: String,
+    pub(crate) source_provider_id: String,
+    pub(crate) source_bucket: String,
+    pub(crate) source_object_key: String,
+    pub(crate) target_provider_id: String,
+    pub(crate) target_bucket: String,
+    pub(crate) target_object_key: String,
+    pub(crate) content_type: String,
+    #[serde(with = "sdkwork_utils_rust::serde_int64")]
+    pub(crate) content_length: i64,
+    pub(crate) checksum_sha256_hex: String,
+    pub(crate) status: String,
+    pub(crate) verified_checksum_sha256_hex: Option<String>,
+    pub(crate) failure_message: Option<String>,
+}
+
+/// Report returned by a drive call, so the caller learns what this batch did
+/// without a second round trip.
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct StorageMigrationRunResponse {
+    pub(crate) migration: StorageMigrationResponse,
+    #[serde(with = "sdkwork_utils_rust::serde_int64")]
+    pub(crate) copied_this_batch: i64,
+    #[serde(with = "sdkwork_utils_rust::serde_int64")]
+    pub(crate) failed_this_batch: i64,
+    pub(crate) completed: bool,
 }

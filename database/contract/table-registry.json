@@ -259,6 +259,12 @@
       "owner": "drive-platform",
       "compliance_level": "L2",
       "lifecycle_status": "active"
+    },
+    {
+      "table_name": "dr_drive_storage_provider_kind_translation",
+      "owner": "drive-platform",
+      "compliance_level": "L2",
+      "lifecycle_status": "active"
     }
   ]
 }

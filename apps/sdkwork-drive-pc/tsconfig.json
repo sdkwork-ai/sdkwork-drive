@@ -99,6 +99,9 @@
     "node_modules",
     "dist",
     "packages/**/src-tauri/target/**",
-    "packages/**/src-tauri/target-test-migrate/**"
+    "packages/**/src-tauri/target-test-migrate/**",
+    "packages/sdkwork-drive-pc-electron/src-electron/**",
+    "packages/sdkwork-drive-pc-electron/scripts/**",
+    "packages/sdkwork-drive-pc-electron/electron-builder.config.mjs"
   ]
 }

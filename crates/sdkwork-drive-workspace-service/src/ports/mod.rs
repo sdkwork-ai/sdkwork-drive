@@ -14,6 +14,8 @@ pub mod sandbox_mutation_operation_store;
 pub mod sandbox_principal_resolver;
 pub mod sandbox_store;
 pub mod space_store;
+pub mod storage_migration_copier;
+pub mod storage_migration_store;
 pub mod storage_object_store;
 pub mod storage_provider_kind_store;
 pub mod storage_provider_store;

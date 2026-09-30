@@ -3,6 +3,7 @@ import {
   Bot,
   CircleHelp,
   GitBranch,
+  Globe,
   MessageCircle,
   Package,
   Rocket,
@@ -145,6 +146,23 @@ export const SPACE_TYPES: SpaceTypeMeta[] = [
     bgClass: 'bg-amber-50 dark:bg-amber-950/30',
     textClass: 'text-amber-700 dark:text-amber-300',
     description: 'Notary documents and attestations',
+    isSystem: true,
+  },
+  {
+    // `website` is a first-class space type on the platform — published-site
+    // content lives in its own space, with its own publishing tables — so it has
+    // to be bindable like every other type. Without the row here a website space
+    // silently resolved to the tenant's private bucket, which is the one place a
+    // public, CDN-fronted bucket is usually wanted instead.
+    value: 'website',
+    label: 'Website',
+    shortLabel: 'Site',
+    labelKey: 'spaceTypeWebsiteLabel',
+    descriptionKey: 'spaceTypeWebsiteDesc',
+    icon: Globe,
+    bgClass: 'bg-sky-50 dark:bg-sky-950/30',
+    textClass: 'text-sky-700 dark:text-sky-300',
+    description: 'Published website content and static assets',
     isSystem: true,
   },
 ];

@@ -10,7 +10,10 @@ use crate::error::{
 };
 use crate::object_store::build_object_store_for_provider;
 use crate::provider_lookup::get_active_provider;
-use crate::response::{no_content, success_cursor_list_page, StorageListHttpResponse};
+use crate::response::{
+    no_content, success_cursor_list_page, success_item, StorageItemHttpResponse,
+    StorageListHttpResponse,
+};
 use crate::state::AdminStorageState;
 use crate::validators::{
     decode_path_object_key, validate_object_delimiter, validate_object_key, validate_object_prefix,
@@ -30,6 +33,7 @@ use sdkwork_utils_rust::{DEFAULT_LIST_PAGE_SIZE, MAX_LIST_PAGE_SIZE};
 
 pub(crate) async fn list_storage_provider_objects(
     State(state): State<AdminStorageState>,
+    Extension(ctx): Extension<DriveRequestContext>,
     Path(provider_id): Path<String>,
     Query(query): Query<ListProviderObjectsQuery>,
 ) -> Result<StorageListHttpResponse<ProviderObjectResponse>, (StatusCode, Json<ProblemDetail>)> {
@@ -41,8 +45,10 @@ pub(crate) async fn list_storage_provider_objects(
         "page_size",
     )?;
     let prefix = validate_object_prefix(query.prefix, "prefix")?;
+    let tenant_id = ctx.resolve_tenant_id()?;
+
     let delimiter = validate_object_delimiter(query.delimiter, "delimiter")?;
-    let provider = get_active_provider(&state, &provider_id).await?;
+    let provider = get_active_provider(&state, &tenant_id, &provider_id).await?;
     let object_store = build_object_store_for_provider(&state, &provider).await?;
     let result = object_store
         .list_objects(ListObjectsRequest {
@@ -92,9 +98,11 @@ pub(crate) async fn list_storage_provider_objects(
 
 pub(crate) async fn head_storage_provider_object(
     State(state): State<AdminStorageState>,
+    Extension(ctx): Extension<DriveRequestContext>,
     Path((provider_id, object_key)): Path<(String, String)>,
-) -> Result<Json<ProviderObjectResponse>, (StatusCode, Json<ProblemDetail>)> {
-    let provider = get_active_provider(&state, &provider_id).await?;
+) -> Result<StorageItemHttpResponse<ProviderObjectResponse>, (StatusCode, Json<ProblemDetail>)> {
+    let tenant_id = ctx.resolve_tenant_id()?;
+    let provider = get_active_provider(&state, &tenant_id, &provider_id).await?;
     let object_store = build_object_store_for_provider(&state, &provider).await?;
     let object_key = decode_path_object_key(&object_key)?;
     let result = object_store
@@ -106,7 +114,7 @@ pub(crate) async fn head_storage_provider_object(
         })
         .await
         .map_err(map_object_store_route_error)?;
-    Ok(Json(ProviderObjectResponse {
+    Ok(success_item(ProviderObjectResponse {
         provider_id,
         bucket: result.locator.bucket,
         object_kind: "object".to_string(),
@@ -126,14 +134,16 @@ pub(crate) async fn delete_storage_provider_object(
     Path((provider_id, object_key)): Path<(String, String)>,
 ) -> Result<StatusCode, (StatusCode, Json<ProblemDetail>)> {
     let operator_id = ctx.resolve_operator_id()?;
-    let provider = get_active_provider(&state, &provider_id).await?;
+    let tenant_id = ctx.resolve_tenant_id()?;
+
+    let provider = get_active_provider(&state, &tenant_id, &provider_id).await?;
     let object_store = build_object_store_for_provider(&state, &provider).await?;
     let object_key = decode_path_object_key(&object_key)?;
     let result = object_store
         .delete_object(DeleteObjectRequest {
             locator: DriveObjectLocator {
                 bucket: provider.bucket.clone(),
-                object_key,
+                object_key: object_key.clone(),
             },
         })
         .await
@@ -141,8 +151,9 @@ pub(crate) async fn delete_storage_provider_object(
     record_storage_provider_audit(
         &state,
         admin_audit::storage_provider::OBJECT_DELETED,
-        &provider_id,
+        &format!("{provider_id}/{object_key}"),
         &operator_id,
+        &tenant_id,
     )
     .await?;
     let _deleted = result.deleted;
@@ -154,13 +165,18 @@ pub(crate) async fn copy_storage_provider_object(
     Extension(ctx): Extension<DriveRequestContext>,
     Path(provider_id): Path<String>,
     payload: Result<Json<CopyProviderObjectRequest>, JsonRejection>,
-) -> Result<Json<ProviderObjectMutationResponse>, (StatusCode, Json<ProblemDetail>)> {
+) -> Result<
+    StorageItemHttpResponse<ProviderObjectMutationResponse>,
+    (StatusCode, Json<ProblemDetail>),
+> {
     let Json(payload) = payload.map_err(invalid_json_problem)?;
     let source_key = validate_object_key(payload.source_object_key, "sourceObjectKey")?;
     let destination_key =
         validate_object_key(payload.destination_object_key, "destinationObjectKey")?;
     let operator_id = ctx.resolve_operator_id()?;
-    let provider = get_active_provider(&state, &provider_id).await?;
+    let tenant_id = ctx.resolve_tenant_id()?;
+
+    let provider = get_active_provider(&state, &tenant_id, &provider_id).await?;
     let object_store = build_object_store_for_provider(&state, &provider).await?;
     let destination_bucket = match payload.destination_bucket.as_deref() {
         Some(value) if !value.trim().is_empty() => {
@@ -178,7 +194,7 @@ pub(crate) async fn copy_storage_provider_object(
             },
             destination: DriveObjectLocator {
                 bucket: destination_bucket,
-                object_key: destination_key,
+                object_key: destination_key.clone(),
             },
             metadata_directive: payload.metadata_directive,
         })
@@ -187,11 +203,12 @@ pub(crate) async fn copy_storage_provider_object(
     record_storage_provider_audit(
         &state,
         admin_audit::storage_provider::OBJECT_COPIED,
-        &provider_id,
+        &format!("{provider_id}/{destination_key}"),
         &operator_id,
+        &tenant_id,
     )
     .await?;
-    Ok(Json(ProviderObjectMutationResponse {
+    Ok(success_item(ProviderObjectMutationResponse {
         provider_id,
         bucket: result.locator.bucket,
         object_key: result.locator.object_key,
@@ -206,9 +223,12 @@ const MAX_OBJECT_CONTENT_BASE64_CHARS: usize = 11_184_812;
 
 pub(crate) async fn read_storage_provider_object_content(
     State(state): State<AdminStorageState>,
+    Extension(ctx): Extension<DriveRequestContext>,
     Path((provider_id, object_key)): Path<(String, String)>,
-) -> Result<Json<ProviderObjectContentResponse>, (StatusCode, Json<ProblemDetail>)> {
-    let provider = get_active_provider(&state, &provider_id).await?;
+) -> Result<StorageItemHttpResponse<ProviderObjectContentResponse>, (StatusCode, Json<ProblemDetail>)>
+{
+    let tenant_id = ctx.resolve_tenant_id()?;
+    let provider = get_active_provider(&state, &tenant_id, &provider_id).await?;
     let object_store = build_object_store_for_provider(&state, &provider).await?;
     let object_key = decode_path_object_key(&object_key)?;
     let head = object_store
@@ -258,7 +278,7 @@ pub(crate) async fn read_storage_provider_object_content(
             }));
         }
     }
-    Ok(Json(ProviderObjectContentResponse {
+    Ok(success_item(ProviderObjectContentResponse {
         provider_id,
         bucket: head.locator.bucket,
         object_key,
@@ -275,7 +295,7 @@ pub(crate) async fn write_storage_provider_object_content(
     Extension(ctx): Extension<DriveRequestContext>,
     Path((provider_id, object_key)): Path<(String, String)>,
     payload: Result<Json<UpdateProviderObjectContentRequest>, JsonRejection>,
-) -> Result<Json<ProviderObjectResponse>, (StatusCode, Json<ProblemDetail>)> {
+) -> Result<StorageItemHttpResponse<ProviderObjectResponse>, (StatusCode, Json<ProblemDetail>)> {
     let Json(payload) = payload.map_err(invalid_json_problem)?;
     let encoding = payload.encoding.as_deref().unwrap_or("utf8");
     let object_key = decode_path_object_key(&object_key)?;
@@ -300,7 +320,8 @@ pub(crate) async fn write_storage_provider_object_content(
         .content_type
         .map(|value| value.trim().to_string())
         .filter(|value| !value.is_empty());
-    let provider = get_active_provider(&state, &provider_id).await?;
+    let tenant_id = ctx.resolve_tenant_id()?;
+    let provider = get_active_provider(&state, &tenant_id, &provider_id).await?;
     let object_store = build_object_store_for_provider(&state, &provider).await?;
     let checksum = sdkwork_utils_rust::sha256_hash(&bytes);
     object_store
@@ -317,11 +338,14 @@ pub(crate) async fn write_storage_provider_object_content(
         .await
         .map_err(map_object_store_route_error)?;
     let operator_id = ctx.resolve_operator_id()?;
+    let tenant_id = ctx.resolve_tenant_id()?;
+
     record_storage_provider_audit(
         &state,
         admin_audit::storage_provider::OBJECT_PUT,
-        &provider_id,
+        &format!("{provider_id}/{object_key}"),
         &operator_id,
+        &tenant_id,
     )
     .await?;
     let head = object_store
@@ -333,7 +357,7 @@ pub(crate) async fn write_storage_provider_object_content(
         })
         .await
         .map_err(map_object_store_route_error)?;
-    Ok(Json(ProviderObjectResponse {
+    Ok(success_item(ProviderObjectResponse {
         provider_id,
         bucket: head.locator.bucket,
         object_kind: "object".to_string(),

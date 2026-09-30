@@ -102,7 +102,7 @@ async fn cleanup_expires_sync_deletes_provider_object_and_retires_staging_tree()
            status, version, created_by, updated_by
          ) VALUES (
            'provider-cleanup', 'local_filesystem', 'Cleanup Provider', $1,
-           'bucket-cleanup', 1, 1, 'active', 1, 'test', 'test'
+           'bucket-cleanup', TRUE, TRUE, 'active', 1, 'test', 'test'
          )",
     )
     .bind(endpoint_url)

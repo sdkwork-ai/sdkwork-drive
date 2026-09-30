@@ -42,7 +42,10 @@
 
 use crate::app_context::DriveRequestContext;
 use crate::audit::record_audit_event;
-use crate::dto::{OffsetPage, StorageProviderAccountDefaultResponse};
+use crate::dto::{
+    OffsetPage, StorageProviderAccountDefaultResponse, VendorCapabilityDefaultsResponse,
+    VendorCredentialFieldResponse,
+};
 use crate::error::{map_provider_account_error, map_service_error, ProblemDetail};
 use crate::provider_mappers::parse_storage_provider_kind;
 use crate::response::{success_list_page_simple, StorageListHttpResponse};
@@ -59,6 +62,7 @@ use sdkwork_drive_workspace_service::application::storage_provider_kind_service:
 use sdkwork_drive_workspace_service::application::storage_provider_service::{
     CreateStorageProviderCommand, DriveStorageProviderService, GetStorageProviderCommand,
 };
+use sdkwork_drive_workspace_service::domain::storage_provider::DriveStorageProviderKind;
 use sdkwork_drive_workspace_service::infrastructure::sql::storage_provider_kind_store::SqlStorageProviderKindStore;
 use sdkwork_drive_workspace_service::infrastructure::sql::storage_provider_store::SqlStorageProviderStore;
 use sdkwork_drive_workspace_service::DriveServiceError;
@@ -86,6 +90,43 @@ const LOCAL_PROVIDER_ENDPOINT: &str = "file:///var/lib/sdkwork-drive";
 /// pointing the row at a real bucket.
 const LOCAL_PROVIDER_BUCKET: &str = "sdkwork-drive";
 
+/// The cloud provider a fresh tenant's default binding points at.
+///
+/// SDKWork's primary cloud is Tencent Cloud COS, so a freshly bootstrapped plane
+/// stores real objects there rather than only on the local filesystem. The
+/// binding falls back to `local_filesystem` when the kind is disabled or its row
+/// was never created, so the default is never a dangling reference.
+const DEFAULT_PROVIDER_KIND: &str = "tencent_cos";
+const DEFAULT_PROVIDER_ID: &str = "builtin-storage-provider-tencent-cos";
+
+/// One vendor's credential-field shape: the labels an operator sees next to the
+/// two halves of the key pair, and the identifier shape each half has.
+///
+/// This exists so a built-in vendor does not arrive in the console wearing
+/// generic "Access Key ID / Secret Access Key" labels. Tencent calls its pair
+/// SecretId/SecretKey, Huawei calls it AK/SK, Backblaze calls the id an
+/// "Application Key ID" — an operator pasting keys into the wrong field is a
+/// real, avoidable failure, and the label is what prevents it.
+///
+/// It is deliberately *metadata only*: nothing here changes how a credential is
+/// sealed or sent. The account centre stores an access-key pair regardless of
+/// what the vendor calls it, and the field labels travel with the bootstrap
+/// response so the console renders the vendor's own vocabulary without a second
+/// hand-maintained table.
+#[derive(Clone, Copy)]
+struct VendorCredentialFields {
+    /// Label for the public half (`SecretId`, `AK`, `Application Key ID`, …).
+    access_key_label: &'static str,
+    /// Label for the private half (`SecretKey`, `SK`, …).
+    secret_key_label: &'static str,
+    /// Vendor-namespaced environment variable an operator may prefer over a
+    /// literal, e.g. `COS_SECRET_ID`. Mirrors the console's default.
+    default_env_access_key: &'static str,
+    default_env_secret_key: &'static str,
+    /// Console deep link where the operator mints the key pair.
+    console_url: &'static str,
+}
+
 /// A built-in cloud provider kind, with the account it is bound to.
 ///
 /// The endpoint and region mirror the console's kind picker
@@ -110,9 +151,21 @@ struct BuiltinCloudProvider {
     /// operator can see at a glance that it is a placeholder.
     access_key_id: &'static str,
     secret_access_key: &'static str,
+    /// The vendor's own field labels, so the console shows the right vocabulary.
+    credential_fields: VendorCredentialFields,
 }
 
-const BUILTIN_CLOUD_PROVIDERS: [BuiltinCloudProvider; 6] = [
+/// The built-in cloud providers bootstrapped on a fresh plane.
+///
+/// One row per catalogued cloud vendor, so the console's provider list is
+/// populated the moment the plane initializes. Endpoints and regions mirror the
+/// console's kind picker (`providerKindConfig.ts`); the account key shapes are
+/// unmistakable placeholders carrying the vendor's own identifier prefix.
+///
+/// `vendor_code` feeds `iam_provider_account.vendor_code`; adding a vendor here
+/// also means adding it to the account center's accepted vendor list if that
+/// list is ever narrowed (today it accepts any `^[a-z][a-z0-9_]{1,31}$`).
+const BUILTIN_CLOUD_PROVIDERS: [BuiltinCloudProvider; 24] = [
     BuiltinCloudProvider {
         provider_kind: "s3_compatible",
         provider_name: "Built-in Amazon S3",
@@ -126,6 +179,13 @@ const BUILTIN_CLOUD_PROVIDERS: [BuiltinCloudProvider; 6] = [
         // shaped exactly like a real access key id / secret.
         access_key_id: "AKIAIOSFODNN7EXAMPLE",
         secret_access_key: "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
+        credential_fields: VendorCredentialFields {
+            access_key_label: "Access Key ID",
+            secret_key_label: "Secret Access Key",
+            default_env_access_key: "AWS_ACCESS_KEY_ID",
+            default_env_secret_key: "AWS_SECRET_ACCESS_KEY",
+            console_url: "https://console.aws.amazon.com/iam/home#/security_credentials",
+        },
     },
     BuiltinCloudProvider {
         provider_kind: "aliyun_oss",
@@ -138,6 +198,13 @@ const BUILTIN_CLOUD_PROVIDERS: [BuiltinCloudProvider; 6] = [
         account_display_name: "Built-in Alibaba Cloud storage account",
         access_key_id: "LTAI5tPLACEHOLDER0000",
         secret_access_key: "PLACEHOLDER0000000000000000000000",
+        credential_fields: VendorCredentialFields {
+            access_key_label: "AccessKey ID",
+            secret_key_label: "AccessKey Secret",
+            default_env_access_key: "ALIBABA_CLOUD_ACCESS_KEY_ID",
+            default_env_secret_key: "ALIBABA_CLOUD_ACCESS_KEY_SECRET",
+            console_url: "https://ram.console.aliyun.com/manage/ak",
+        },
     },
     BuiltinCloudProvider {
         provider_kind: "tencent_cos",
@@ -150,6 +217,13 @@ const BUILTIN_CLOUD_PROVIDERS: [BuiltinCloudProvider; 6] = [
         account_display_name: "Built-in Tencent Cloud storage account",
         access_key_id: "AKIDPLACEHOLDER00000000",
         secret_access_key: "PLACEHOLDER0000000000000000000000",
+        credential_fields: VendorCredentialFields {
+            access_key_label: "SecretId",
+            secret_key_label: "SecretKey",
+            default_env_access_key: "COS_SECRET_ID",
+            default_env_secret_key: "COS_SECRET_KEY",
+            console_url: "https://console.cloud.tencent.com/cam/capi",
+        },
     },
     BuiltinCloudProvider {
         provider_kind: "huawei_obs",
@@ -162,6 +236,13 @@ const BUILTIN_CLOUD_PROVIDERS: [BuiltinCloudProvider; 6] = [
         account_display_name: "Built-in Huawei Cloud storage account",
         access_key_id: "PLACEHOLDER00000000",
         secret_access_key: "PLACEHOLDER0000000000000000000000000000000000",
+        credential_fields: VendorCredentialFields {
+            access_key_label: "Access Key ID (AK)",
+            secret_key_label: "Secret Access Key (SK)",
+            default_env_access_key: "HUAWEI_ACCESS_KEY_ID",
+            default_env_secret_key: "HUAWEI_SECRET_ACCESS_KEY",
+            console_url: "https://console.huaweicloud.com/iam/#/myCredential",
+        },
     },
     BuiltinCloudProvider {
         provider_kind: "volcengine_tos",
@@ -174,6 +255,13 @@ const BUILTIN_CLOUD_PROVIDERS: [BuiltinCloudProvider; 6] = [
         account_display_name: "Built-in Volcengine storage account",
         access_key_id: "AKPLACEHOLDER00000000",
         secret_access_key: "PLACEHOLDER0000000000000000000000",
+        credential_fields: VendorCredentialFields {
+            access_key_label: "Access Key ID (AK)",
+            secret_key_label: "Secret Access Key (SK)",
+            default_env_access_key: "VOLC_ACCESSKEY",
+            default_env_secret_key: "VOLC_SECRETKEY",
+            console_url: "https://console.volcengine.com/iam/keymanage/",
+        },
     },
     BuiltinCloudProvider {
         provider_kind: "google_cloud_storage",
@@ -186,12 +274,363 @@ const BUILTIN_CLOUD_PROVIDERS: [BuiltinCloudProvider; 6] = [
         account_display_name: "Built-in Google Cloud storage account",
         access_key_id: "GOOGPLACEHOLDER0000000000000000000000000000000000000000000000",
         secret_access_key: "PLACEHOLDER0000000000000000000000000000000000000000",
+        credential_fields: VendorCredentialFields {
+            access_key_label: "HMAC Access ID",
+            secret_key_label: "HMAC Secret",
+            default_env_access_key: "GOOGLE_ACCESS_KEY_ID",
+            default_env_secret_key: "GOOGLE_SECRET_ACCESS_KEY",
+            console_url: "https://console.cloud.google.com/storage/settings;tab=interoperability",
+        },
+    },
+    // --- Mainland China ---------------------------------------------------
+    BuiltinCloudProvider {
+        provider_kind: "baidu_bos",
+        provider_name: "Built-in Baidu Cloud BOS",
+        endpoint_url: "https://s3.bj.bcebos.com",
+        region: "bj",
+        bucket: "sdkwork-drive-baidu-bos",
+        vendor_code: "baidu",
+        account_code: "builtin-baidu-storage",
+        account_display_name: "Built-in Baidu Cloud storage account",
+        access_key_id: "ALTAKPLACEHOLDER00000000",
+        secret_access_key: "PLACEHOLDER0000000000000000000000000000",
+        credential_fields: VendorCredentialFields {
+            access_key_label: "Access Key ID (AK)",
+            secret_key_label: "Secret Access Key (SK)",
+            default_env_access_key: "BCE_ACCESS_KEY_ID",
+            default_env_secret_key: "BCE_SECRET_ACCESS_KEY",
+            console_url: "https://console.bce.baidu.com/iam/#/iam/accesslist",
+        },
+    },
+    BuiltinCloudProvider {
+        provider_kind: "kingsoft_ks3",
+        provider_name: "Built-in Kingsoft Cloud KS3",
+        endpoint_url: "https://ks3-cn-beijing.ksyuncs.com",
+        region: "BEIJING",
+        bucket: "sdkwork-drive-ks3",
+        vendor_code: "kingsoft",
+        account_code: "builtin-kingsoft-storage",
+        account_display_name: "Built-in Kingsoft Cloud storage account",
+        access_key_id: "AKLTPLACEHOLDER000000",
+        secret_access_key: "PLACEHOLDER0000000000000000000000000000",
+        credential_fields: VendorCredentialFields {
+            access_key_label: "Access Key ID",
+            secret_key_label: "Secret Access Key",
+            default_env_access_key: "KS3_ACCESS_KEY_ID",
+            default_env_secret_key: "KS3_SECRET_ACCESS_KEY",
+            console_url: "https://console.ksyun.com/#/accessKey/list",
+        },
+    },
+    BuiltinCloudProvider {
+        provider_kind: "qiniu_kodo",
+        provider_name: "Built-in Qiniu Kodo",
+        endpoint_url: "https://s3-cn-east-1.qiniucs.com",
+        region: "cn-east-1",
+        bucket: "sdkwork-drive-qiniu-kodo",
+        vendor_code: "qiniu",
+        account_code: "builtin-qiniu-storage",
+        account_display_name: "Built-in Qiniu storage account",
+        access_key_id: "PLACEHOLDER0000000000000000",
+        secret_access_key: "PLACEHOLDER0000000000000000000000000000",
+        credential_fields: VendorCredentialFields {
+            access_key_label: "AccessKey",
+            secret_key_label: "SecretKey",
+            default_env_access_key: "QINIU_ACCESS_KEY",
+            default_env_secret_key: "QINIU_SECRET_KEY",
+            console_url: "https://portal.qiniu.com/user/key",
+        },
+    },
+    BuiltinCloudProvider {
+        provider_kind: "china_mobile_ecloud",
+        provider_name: "Built-in China Mobile Ecloud",
+        endpoint_url: "https://eos-wuxi-1.cmecloud.cn",
+        region: "wuxi-1",
+        bucket: "sdkwork-drive-ecloud",
+        vendor_code: "china_mobile",
+        account_code: "builtin-china-mobile-storage",
+        account_display_name: "Built-in China Mobile Ecloud storage account",
+        access_key_id: "PLACEHOLDER0000000000000000",
+        secret_access_key: "PLACEHOLDER0000000000000000000000000000",
+        credential_fields: VendorCredentialFields {
+            access_key_label: "Access Key (AK)",
+            secret_key_label: "Secret Key (SK)",
+            default_env_access_key: "ECLOUD_ACCESS_KEY",
+            default_env_secret_key: "ECLOUD_SECRET_KEY",
+            console_url: "https://ecloud.10086.cn/",
+        },
+    },
+    BuiltinCloudProvider {
+        provider_kind: "china_telecom_eos",
+        provider_name: "Built-in China Telecom EOS",
+        endpoint_url: "https://ooscn-shanghai.ctyunapi.cn",
+        region: "shanghai",
+        bucket: "sdkwork-drive-ctyun-eos",
+        vendor_code: "china_telecom",
+        account_code: "builtin-china-telecom-storage",
+        account_display_name: "Built-in China Telecom EOS storage account",
+        access_key_id: "PLACEHOLDER0000000000000000",
+        secret_access_key: "PLACEHOLDER0000000000000000000000000000",
+        credential_fields: VendorCredentialFields {
+            access_key_label: "Access Key (AK)",
+            secret_key_label: "Secret Key (SK)",
+            default_env_access_key: "CTYUN_ACCESS_KEY",
+            default_env_secret_key: "CTYUN_SECRET_KEY",
+            console_url: "https://www.ctyun.cn/console/user/aksk",
+        },
+    },
+    BuiltinCloudProvider {
+        provider_kind: "china_unicom_wo",
+        provider_name: "Built-in China Unicom Wo Cloud",
+        endpoint_url: "https://oss-cn-hangzhou.wocloud.com",
+        region: "hangzhou",
+        bucket: "sdkwork-drive-unicom-wo",
+        vendor_code: "china_unicom",
+        account_code: "builtin-china-unicom-storage",
+        account_display_name: "Built-in China Unicom Wo Cloud storage account",
+        access_key_id: "PLACEHOLDER0000000000000000",
+        secret_access_key: "PLACEHOLDER0000000000000000000000000000",
+        credential_fields: VendorCredentialFields {
+            access_key_label: "Access Key (AK)",
+            secret_key_label: "Secret Key (SK)",
+            default_env_access_key: "WO_ACCESS_KEY",
+            default_env_secret_key: "WO_SECRET_KEY",
+            console_url: "https://www.wocloud.com.cn/",
+        },
+    },
+    // --- Rest of world ----------------------------------------------------
+    BuiltinCloudProvider {
+        provider_kind: "minio",
+        provider_name: "Built-in MinIO",
+        endpoint_url: "https://minio.internal.sdkwork.local",
+        region: "us-east-1",
+        bucket: "sdkwork-drive-minio",
+        vendor_code: "minio",
+        account_code: "builtin-minio-storage",
+        account_display_name: "Built-in MinIO storage account",
+        access_key_id: "minioadmin-placeholder",
+        secret_access_key: "minioadmin-placeholder-secret",
+        credential_fields: VendorCredentialFields {
+            access_key_label: "Access Key",
+            secret_key_label: "Secret Key",
+            default_env_access_key: "MINIO_ROOT_USER",
+            default_env_secret_key: "MINIO_ROOT_PASSWORD",
+            console_url: "https://min.io/docs/minio/linux/administration/identity-access-management/minio-user-management.html",
+        },
+    },
+    BuiltinCloudProvider {
+        provider_kind: "cloudflare_r2",
+        provider_name: "Built-in Cloudflare R2",
+        endpoint_url: "https://placeholder.r2.cloudflarestorage.com",
+        region: "auto",
+        bucket: "sdkwork-drive-r2",
+        vendor_code: "cloudflare",
+        account_code: "builtin-cloudflare-r2-storage",
+        account_display_name: "Built-in Cloudflare R2 storage account",
+        access_key_id: "PLACEHOLDER0000000000000000",
+        secret_access_key: "PLACEHOLDER0000000000000000000000000000",
+        credential_fields: VendorCredentialFields {
+            access_key_label: "Access Key ID",
+            secret_key_label: "Secret Access Key",
+            default_env_access_key: "R2_ACCESS_KEY_ID",
+            default_env_secret_key: "R2_SECRET_ACCESS_KEY",
+            console_url: "https://dash.cloudflare.com/?to=/:account/r2/api-tokens",
+        },
+    },
+    BuiltinCloudProvider {
+        provider_kind: "backblaze_b2",
+        provider_name: "Built-in Backblaze B2",
+        endpoint_url: "https://s3.us-west-004.backblazeb2.com",
+        region: "us-west-004",
+        bucket: "sdkwork-drive-b2",
+        vendor_code: "backblaze",
+        account_code: "builtin-backblaze-storage",
+        account_display_name: "Built-in Backblaze B2 storage account",
+        access_key_id: "PLACEHOLDER0000000000000000",
+        secret_access_key: "PLACEHOLDER0000000000000000000000000000",
+        credential_fields: VendorCredentialFields {
+            access_key_label: "Application Key ID",
+            secret_key_label: "Application Key",
+            default_env_access_key: "B2_APPLICATION_KEY_ID",
+            default_env_secret_key: "B2_APPLICATION_KEY",
+            console_url: "https://secure.backblaze.com/app_keys.htm",
+        },
+    },
+    BuiltinCloudProvider {
+        provider_kind: "wasabi",
+        provider_name: "Built-in Wasabi",
+        endpoint_url: "https://s3.us-east-1.wasabisys.com",
+        region: "us-east-1",
+        bucket: "sdkwork-drive-wasabi",
+        vendor_code: "wasabi",
+        account_code: "builtin-wasabi-storage",
+        account_display_name: "Built-in Wasabi storage account",
+        access_key_id: "PLACEHOLDER0000000000000000",
+        secret_access_key: "PLACEHOLDER0000000000000000000000000000",
+        credential_fields: VendorCredentialFields {
+            access_key_label: "Access Key",
+            secret_key_label: "Secret Key",
+            default_env_access_key: "WASABI_ACCESS_KEY",
+            default_env_secret_key: "WASABI_SECRET_KEY",
+            console_url: "https://console.wasabisys.com/#/access_keys",
+        },
+    },
+    BuiltinCloudProvider {
+        provider_kind: "digitalocean_spaces",
+        provider_name: "Built-in DigitalOcean Spaces",
+        endpoint_url: "https://nyc3.digitaloceanspaces.com",
+        region: "nyc3",
+        bucket: "sdkwork-drive-do-spaces",
+        vendor_code: "digitalocean",
+        account_code: "builtin-digitalocean-storage",
+        account_display_name: "Built-in DigitalOcean Spaces storage account",
+        access_key_id: "DO00PLACEHOLDER0000000000",
+        secret_access_key: "PLACEHOLDER0000000000000000000000000000",
+        credential_fields: VendorCredentialFields {
+            access_key_label: "Access Key",
+            secret_key_label: "Secret Key",
+            default_env_access_key: "SPACES_ACCESS_KEY_ID",
+            default_env_secret_key: "SPACES_SECRET_ACCESS_KEY",
+            console_url: "https://cloud.digitalocean.com/account/api/tokens",
+        },
+    },
+    BuiltinCloudProvider {
+        provider_kind: "linode_object_storage",
+        provider_name: "Built-in Akamai / Linode Object Storage",
+        endpoint_url: "https://us-east-1.linodeobjects.com",
+        region: "us-east-1",
+        bucket: "sdkwork-drive-linode",
+        vendor_code: "linode",
+        account_code: "builtin-linode-storage",
+        account_display_name: "Built-in Linode Object Storage account",
+        access_key_id: "PLACEHOLDER0000000000000000",
+        secret_access_key: "PLACEHOLDER0000000000000000000000000000",
+        credential_fields: VendorCredentialFields {
+            access_key_label: "Access Key",
+            secret_key_label: "Secret Key",
+            default_env_access_key: "LINODE_ACCESS_KEY",
+            default_env_secret_key: "LINODE_SECRET_KEY",
+            console_url: "https://cloud.linode.com/object-storage/access-keys",
+        },
+    },
+    BuiltinCloudProvider {
+        provider_kind: "vultr_object_storage",
+        provider_name: "Built-in Vultr Object Storage",
+        endpoint_url: "https://ewr1.vultrobjects.com",
+        region: "ewr1",
+        bucket: "sdkwork-drive-vultr",
+        vendor_code: "vultr",
+        account_code: "builtin-vultr-storage",
+        account_display_name: "Built-in Vultr Object Storage account",
+        access_key_id: "PLACEHOLDER0000000000000000",
+        secret_access_key: "PLACEHOLDER0000000000000000000000000000",
+        credential_fields: VendorCredentialFields {
+            access_key_label: "Access Key",
+            secret_key_label: "Secret Key",
+            default_env_access_key: "VULTR_ACCESS_KEY",
+            default_env_secret_key: "VULTR_SECRET_KEY",
+            console_url: "https://my.vultr.com/objectstorage/",
+        },
+    },
+    BuiltinCloudProvider {
+        provider_kind: "scaleway_object_storage",
+        provider_name: "Built-in Scaleway Object Storage",
+        endpoint_url: "https://s3.fr-par.scw.cloud",
+        region: "fr-par",
+        bucket: "sdkwork-drive-scaleway",
+        vendor_code: "scaleway",
+        account_code: "builtin-scaleway-storage",
+        account_display_name: "Built-in Scaleway Object Storage account",
+        access_key_id: "SCWPLACEHOLDER00000000",
+        secret_access_key: "PLACEHOLDER0000000000000000000000000000",
+        credential_fields: VendorCredentialFields {
+            access_key_label: "Access Key",
+            secret_key_label: "Secret Key",
+            default_env_access_key: "SCW_ACCESS_KEY",
+            default_env_secret_key: "SCW_SECRET_KEY",
+            console_url: "https://console.scaleway.com/iam/api-keys",
+        },
+    },
+    BuiltinCloudProvider {
+        provider_kind: "oracle_cloud_storage",
+        provider_name: "Built-in Oracle Cloud Object Storage",
+        endpoint_url: "https://placeholder.oraclecloud.com",
+        region: "us-ashburn-1",
+        bucket: "sdkwork-drive-oci",
+        vendor_code: "oracle",
+        account_code: "builtin-oracle-storage",
+        account_display_name: "Built-in Oracle Cloud storage account",
+        access_key_id: "PLACEHOLDER0000000000000000",
+        secret_access_key: "PLACEHOLDER0000000000000000000000000000",
+        credential_fields: VendorCredentialFields {
+            access_key_label: "Access Key",
+            secret_key_label: "Secret Key",
+            default_env_access_key: "OCI_ACCESS_KEY",
+            default_env_secret_key: "OCI_SECRET_KEY",
+            console_url: "https://cloud.oracle.com/identity/domains/my-profile/api-keys",
+        },
+    },
+    BuiltinCloudProvider {
+        provider_kind: "ibm_cos",
+        provider_name: "Built-in IBM Cloud Object Storage",
+        endpoint_url: "https://s3.us-east.cloud-object-storage.appdomain.cloud",
+        region: "us-east",
+        bucket: "sdkwork-drive-ibm-cos",
+        vendor_code: "ibm",
+        account_code: "builtin-ibm-storage",
+        account_display_name: "Built-in IBM Cloud Object Storage account",
+        access_key_id: "PLACEHOLDER0000000000000000",
+        secret_access_key: "PLACEHOLDER0000000000000000000000000000",
+        credential_fields: VendorCredentialFields {
+            access_key_label: "Access Key ID",
+            secret_key_label: "Secret Access Key",
+            default_env_access_key: "IBM_COS_ACCESS_KEY_ID",
+            default_env_secret_key: "IBM_COS_SECRET_ACCESS_KEY",
+            console_url: "https://cloud.ibm.com/iam/apikeys",
+        },
+    },
+    BuiltinCloudProvider {
+        provider_kind: "alibaba_cloud_international",
+        provider_name: "Built-in Alibaba Cloud OSS (International)",
+        endpoint_url: "https://oss-ap-southeast-1.aliyuncs.com",
+        region: "ap-southeast-1",
+        bucket: "sdkwork-drive-aliyun-intl",
+        vendor_code: "aliyun",
+        account_code: "builtin-aliyun-intl-storage",
+        account_display_name: "Built-in Alibaba Cloud international storage account",
+        access_key_id: "LTAI5tPLACEHOLDER0000",
+        secret_access_key: "PLACEHOLDER0000000000000000000000",
+        credential_fields: VendorCredentialFields {
+            access_key_label: "AccessKey ID",
+            secret_key_label: "AccessKey Secret",
+            default_env_access_key: "ALIBABA_CLOUD_ACCESS_KEY_ID",
+            default_env_secret_key: "ALIBABA_CLOUD_ACCESS_KEY_SECRET",
+            console_url: "https://account.alibabacloud.com/",
+        },
+    },
+    BuiltinCloudProvider {
+        provider_kind: "tencent_cloud_international",
+        provider_name: "Built-in Tencent Cloud COS (International)",
+        endpoint_url: "https://cos.ap-singapore.myqcloud.com",
+        region: "ap-singapore",
+        bucket: "sdkwork-drive-cos-intl-1250000000",
+        vendor_code: "tencent",
+        account_code: "builtin-tencent-intl-storage",
+        account_display_name: "Built-in Tencent Cloud international storage account",
+        access_key_id: "AKIDPLACEHOLDER00000000",
+        secret_access_key: "PLACEHOLDER0000000000000000000000",
+        credential_fields: VendorCredentialFields {
+            access_key_label: "SecretId",
+            secret_key_label: "SecretKey",
+            default_env_access_key: "COS_SECRET_ID",
+            default_env_secret_key: "COS_SECRET_KEY",
+            console_url: "https://console.intl.cloud.tencent.com/cam/capi",
+        },
     },
 ];
 
-/// Offset page covering every built-in kind in one response: seven rows at most,
-/// so the endpoint is not paginated — it answers "what does the plane look like
-/// now", not "give me a slice of a large set".
+/// Offset page covering every built-in kind in one response: one row per
+/// catalogued kind, so the endpoint is not paginated — it answers "what does the
+/// plane look like now", not "give me a slice of a large set".
 const ALL_BUILTIN_KINDS_PAGE: OffsetPage = OffsetPage {
     limit: 100,
     offset: 0,
@@ -202,6 +641,32 @@ fn provider_id_for(provider_kind: &str) -> String {
         "{BUILTIN_PROVIDER_ID_PREFIX}{}",
         provider_kind.replace('_', "-")
     )
+}
+
+/// The advanced-control defaults a bootstrap run reports for one vendor.
+///
+/// Extracted as a free function so the handler and the test that guards its
+/// payload call *the same* code: a test that rebuilt this body inline would
+/// keep passing after the handler stopped calling it.
+///
+/// Reads the contract's single vendor table, so the server's capability report
+/// and the console's editor dropdowns cannot disagree about what a vendor
+/// accepts.
+fn vendor_capability_defaults_for(
+    kind: &DriveStorageProviderKind,
+) -> VendorCapabilityDefaultsResponse {
+    VendorCapabilityDefaultsResponse {
+        server_side_encryption_modes: kind
+            .supported_sse_modes()
+            .iter()
+            .map(|mode| (*mode).to_owned())
+            .collect(),
+        storage_classes: kind
+            .supported_storage_classes()
+            .iter()
+            .map(|class| (*class).to_owned())
+            .collect(),
+    }
 }
 
 fn provider_service(
@@ -385,6 +850,20 @@ async fn ensure_provider(
         return Ok(false);
     }
     let kind = parse_storage_provider_kind(provider_kind).map_err(map_service_error)?;
+    // A bootstrapped provider must be *usable as it stands*, not merely present:
+    // the operator should only have to replace the credential, never discover
+    // that the encryption mode or the storage class was left unset. Both come
+    // from the same contract vendor table the console's dropdowns read, and the
+    // first entry of each is that vendor's own default. A vendor that genuinely
+    // has no choice gets `None`, which the service keeps as an unset field.
+    let server_side_encryption_mode = kind
+        .supported_sse_modes()
+        .first()
+        .map(|mode| (*mode).to_owned());
+    let default_storage_class = kind
+        .supported_storage_classes()
+        .first()
+        .map(|class| (*class).to_owned());
     provider_service(state)
         .create_storage_provider(CreateStorageProviderCommand {
             id: provider_id.to_owned(),
@@ -400,8 +879,8 @@ async fn ensure_provider(
             strict_tls: None,
             credential_ref: None,
             provider_account_id: provider_account_id.map(str::to_owned),
-            server_side_encryption_mode: None,
-            default_storage_class: None,
+            server_side_encryption_mode,
+            default_storage_class,
             status: Some("active".to_owned()),
             operator_id: operator_id.to_owned(),
         })
@@ -480,18 +959,31 @@ pub(crate) async fn initialize_storage_provider_account_defaults(
     let tenant_id = ctx.resolve_tenant_id()?;
     let operator_id = ctx.resolve_operator_id()?;
 
-    let kinds =
-        DriveStorageProviderKindService::new(SqlStorageProviderKindStore::new(state.pool.clone()))
-            .list_storage_provider_kinds()
-            .await
-            .map_err(map_service_error)?;
+    // Seed the kind catalog *first*, in the same call the operator makes.
+    //
+    // Every cloud provider below is gated on `kind_is_enabled`, which reads
+    // `dr_drive_storage_provider_kind`. Keeping the seed on a separate endpoint
+    // meant a fresh plane ran this handler against an **empty** catalog: every
+    // vendor took the `continue` below, the response came back 200 with just the
+    // local row, the console showed "initialized", and not one provider existed.
+    // The failure was silent because nothing errored — there was simply nothing
+    // enabled to create.
+    //
+    // The seed is idempotent and `ON CONFLICT DO NOTHING`, so an operator's own
+    // enable/disable decisions survive; a re-run only fills what is missing.
+    let kind_service =
+        DriveStorageProviderKindService::new(SqlStorageProviderKindStore::new(state.pool.clone()));
+    let kinds = kind_service
+        .initialize_storage_provider_kinds()
+        .await
+        .map_err(map_service_error)?;
     // A kind the operator disabled is a decision: it must not come back to life
     // through a bootstrap run, so it is skipped and simply absent from the
     // response.
     let kind_is_enabled = |provider_kind: &str| {
         kinds
             .iter()
-            .any(|summary| summary.kind.provider_kind == provider_kind && summary.kind.enabled)
+            .any(|registry| registry.provider_kind == provider_kind && registry.enabled)
     };
 
     let mut items = Vec::with_capacity(BUILTIN_CLOUD_PROVIDERS.len() + 1);
@@ -526,6 +1018,10 @@ pub(crate) async fn initialize_storage_provider_account_defaults(
             continue;
         }
         let provider_id = provider_id_for(builtin.provider_kind);
+        // The same contract table `capabilities_for_provider` reads, so the
+        // console's editor dropdowns and the server's own capability report can
+        // never disagree about what this vendor accepts.
+        let kind = parse_storage_provider_kind(builtin.provider_kind).map_err(map_service_error)?;
         let (account_id, account_created, credential_seeded) =
             ensure_vendor_account(&state, &tenant_id, &operator_id, builtin).await?;
         let provider_created = ensure_provider(
@@ -550,13 +1046,39 @@ pub(crate) async fn initialize_storage_provider_account_defaults(
             account_code: Some(builtin.account_code.to_owned()),
             account_created,
             credential_seeded,
+            credential_fields: Some(VendorCredentialFieldResponse {
+                access_key_label: builtin.credential_fields.access_key_label.to_owned(),
+                secret_key_label: builtin.credential_fields.secret_key_label.to_owned(),
+                default_env_access_key: builtin.credential_fields.default_env_access_key.to_owned(),
+                default_env_secret_key: builtin.credential_fields.default_env_secret_key.to_owned(),
+                console_url: builtin.credential_fields.console_url.to_owned(),
+            }),
+            vendor_capabilities: Some(vendor_capability_defaults_for(&kind)),
         });
     }
 
-    // Only when the credential-free provider exists to point at; and
-    // `ensure_default_binding` itself declines to touch an operator's default.
-    if local_provider_available {
-        ensure_default_binding(&state, &tenant_id, &operator_id, LOCAL_PROVIDER_ID).await?;
+    // The default binding points at the console's *primary* cloud provider, not
+    // at the credential-free fallback: a fresh plane should be usable for real
+    // objects, and "usable" in the product sense means the vendor the deployment
+    // targets. Tencent COS is that vendor for SDKWork.
+    //
+    // Two guards keep this honest:
+    //   * the kind may have been disabled by the operator — a decision, not a
+    //     gap — so the binding falls back to `local_filesystem` rather than
+    //     pointing at a provider that was never created;
+    //   * `ensure_default_binding` itself declines to touch an operator's own
+    //     default, so re-running the bootstrap never re-points a live tenant.
+    let default_provider_id = if kind_is_enabled(DEFAULT_PROVIDER_KIND)
+        && provider_exists(&state, DEFAULT_PROVIDER_ID).await?
+    {
+        DEFAULT_PROVIDER_ID
+    } else {
+        LOCAL_PROVIDER_ID
+    };
+    // A `local_filesystem` binding only makes sense when that provider exists;
+    // the preferred-provider branch is already existence-checked above.
+    if default_provider_id != LOCAL_PROVIDER_ID || local_provider_available {
+        ensure_default_binding(&state, &tenant_id, &operator_id, default_provider_id).await?;
     }
 
     items.push(StorageProviderAccountDefaultResponse {
@@ -568,6 +1090,10 @@ pub(crate) async fn initialize_storage_provider_account_defaults(
         account_code: None,
         account_created: false,
         credential_seeded: false,
+        credential_fields: None,
+        // The credential-free kind exposes neither control, so the console has
+        // nothing to offer and no table to consult.
+        vendor_capabilities: None,
     });
 
     record_audit_event(
@@ -576,6 +1102,7 @@ pub(crate) async fn initialize_storage_provider_account_defaults(
         "storage_provider_account",
         &tenant_id,
         &operator_id,
+        &tenant_id,
     )
     .await?;
 
@@ -786,13 +1313,23 @@ mod tests {
             // The vendor shape is the requirement: an operator should see
             // "LTAI…" next to OSS and "AKIA…" next to S3 without reading docs.
             let expected_prefix = match builtin.vendor_code {
+                // Distinctive, documented AK prefixes.
                 "aws" => Some("AKIA"),
                 "aliyun" => Some("LTAI"),
                 "tencent" => Some("AKID"),
                 "google" => Some("GOOG"),
-                // Huawei OBS and Volcengine AKs have no distinctive prefix; the
-                // placeholder marker above is the whole signal there.
-                "huawei" | "volcengine" => None,
+                "baidu" => Some("ALTAK"),
+                "kingsoft" => Some("AKLT"),
+                "scaleway" => Some("SCW"),
+                "minio" => Some("minioadmin"),
+                // Huawei OBS, Volcengine TOS, Qiniu Kodo, China Mobile Ecloud,
+                // China Telecom Eos, China Unicom Wo, Cloudflare R2, Backblaze
+                // B2, Wasabi, DigitalOcean Spaces, Linode, Vultr, Oracle OCI, and
+                // IBM COS access keys carry no portable distinguishing prefix, so
+                // the placeholder marker above is the whole signal there.
+                "huawei" | "volcengine" | "qiniu" | "china_mobile" | "china_telecom"
+                | "china_unicom" | "cloudflare" | "backblaze" | "wasabi" | "digitalocean"
+                | "linode" | "vultr" | "oracle" | "ibm" => None,
                 other => panic!("{other} has no documented placeholder shape"),
             };
             if let Some(prefix) = expected_prefix {
@@ -804,6 +1341,176 @@ mod tests {
                 );
             }
         }
+    }
+
+    /// A bootstrapped provider must arrive *complete*: the operator replaces a
+    /// credential, not a configuration. That promise is only real if the kind
+    /// the bootstrap targets has a default encryption mode and storage class to
+    /// write — an empty vendor table would silently leave the field unset and
+    /// the operator would meet an empty control in the editor.
+    #[test]
+    fn every_bootstrapped_cloud_kind_has_a_default_sse_mode_and_storage_class() {
+        for builtin in &BUILTIN_CLOUD_PROVIDERS {
+            let kind = parse_storage_provider_kind(builtin.provider_kind)
+                .expect("bootstrap kind must parse");
+            assert_eq!(
+                kind.as_str(),
+                builtin.provider_kind,
+                "the parsed kind must round-trip its own key"
+            );
+            assert!(
+                !kind.supported_sse_modes().is_empty(),
+                "{} would bootstrap with no encryption-mode default",
+                builtin.provider_kind
+            );
+            assert!(
+                !kind.supported_storage_classes().is_empty(),
+                "{} would bootstrap with no storage-class default",
+                builtin.provider_kind
+            );
+            // The first entry is what the bootstrap writes, so it has to be a
+            // value the vendor actually accepts.
+            assert!(
+                !kind.supported_sse_modes()[0].is_empty(),
+                "{} leads with an empty SSE mode",
+                builtin.provider_kind
+            );
+            assert!(
+                !kind.supported_storage_classes()[0].is_empty(),
+                "{} leads with an empty storage class",
+                builtin.provider_kind
+            );
+        }
+    }
+
+    /// Tencent is the deployment's default vendor, so its bootstrapped row must
+    /// carry Tencent's own vocabulary — not AWS's. This is the concrete case the
+    /// shared-generic-list defect used to get wrong.
+    #[test]
+    fn the_default_vendor_bootstraps_with_its_own_vendor_defaults() {
+        let kind = parse_storage_provider_kind(DEFAULT_PROVIDER_KIND)
+            .expect("default provider kind must parse");
+        let sse = kind.supported_sse_modes();
+        assert!(
+            sse.contains(&"KMS") && sse.contains(&"AES256"),
+            "Tencent must offer KMS and AES256, got {sse:?}"
+        );
+        assert!(
+            !sse.contains(&"aws:kms"),
+            "Tencent must not be offered AWS's aws:kms token"
+        );
+        assert_eq!(kind.supported_storage_classes()[0], "STANDARD");
+    }
+
+    /// The response the console actually receives must carry the vendor's
+    /// capability vocabulary, not just the row the server writes.
+    ///
+    /// This is the half of the contract a unit test on the kind would miss: the
+    /// bootstrap could resolve the right defaults and still serialize an empty
+    /// or mismatched payload, and the console's dropdowns would fall back to
+    /// their own list — reinstating the drift with no red test.
+    #[test]
+    fn the_bootstrap_response_payload_carries_the_vendors_capabilities() {
+        for builtin in &BUILTIN_CLOUD_PROVIDERS {
+            let kind = parse_storage_provider_kind(builtin.provider_kind)
+                .expect("bootstrap kind must parse");
+
+            // Call the very function the handler calls, so this test and the
+            // handler cannot drift *from each other* by each carrying a private
+            // copy of the mapping.
+            //
+            // Scope, stated honestly: this does not prove the handler still
+            // calls it — the handler is an async fn over DB state and cannot be
+            // invoked here, so a mutation that inlined a hard-coded payload
+            // would leave this green. What it does prove is that the contract
+            // table answers non-empty, per-vendor, ordered defaults for all 24
+            // built-ins, which is what an empty console dropdown would need.
+            let payload = vendor_capability_defaults_for(&kind);
+
+            assert!(
+                !payload.server_side_encryption_modes.is_empty()
+                    && !payload.storage_classes.is_empty(),
+                "{} would serialize an empty capability payload",
+                builtin.provider_kind
+            );
+            assert_eq!(
+                payload.server_side_encryption_modes,
+                kind.supported_sse_modes()
+                    .iter()
+                    .map(|mode| (*mode).to_owned())
+                    .collect::<Vec<_>>(),
+                "{} would serialize an SSE list that disagrees with the contract",
+                builtin.provider_kind
+            );
+            assert_eq!(
+                payload.storage_classes,
+                kind.supported_storage_classes()
+                    .iter()
+                    .map(|class| (*class).to_owned())
+                    .collect::<Vec<_>>(),
+                "{} would serialize a storage-class list that disagrees with the contract",
+                builtin.provider_kind
+            );
+        }
+    }
+
+    /// The default vendor's payload must lead with Tencent's own values, since
+    /// those are what the editor pre-selects for the provider a fresh plane
+    /// points at.
+    #[test]
+    fn the_default_vendors_payload_leads_with_tencent_values() {
+        let kind = parse_storage_provider_kind(DEFAULT_PROVIDER_KIND)
+            .expect("default provider kind must parse");
+        let payload = vendor_capability_defaults_for(&kind);
+        assert_eq!(payload.server_side_encryption_modes[0], "AES256");
+        assert!(payload
+            .server_side_encryption_modes
+            .contains(&"KMS".to_owned()));
+        assert!(!payload
+            .server_side_encryption_modes
+            .contains(&"aws:kms".to_owned()));
+        assert_eq!(payload.storage_classes[0], "STANDARD");
+    }
+
+    /// The handler is an async fn over live DB state, so no unit test can call
+    /// it and observe which factory it used. This reads the handler's own source
+    /// instead and pins the two things that matter:
+    ///
+    /// 1. it builds `vendor_capabilities` through the shared factory, not by
+    ///    inlining a list;
+    /// 2. it does not carry a hard-coded `["AES256"]`-style literal, which is
+    ///    exactly what a "make the dropdowns stop being empty" drive-by fix
+    ///    looks like — and which would hand every vendor one generic list, the
+    ///    defect the whole vendor table exists to prevent.
+    ///
+    /// The check is deliberately structural: it asserts the *shape* of the
+    /// handler body, so a mutation that inlines a fixed payload goes red here
+    /// even though the behavioural test above cannot see it.
+    #[test]
+    fn the_handler_derives_capabilities_from_the_contract_not_an_inline_list() {
+        let source = include_str!("provider_account_defaults.rs");
+        let handler = source
+            .split("pub(crate) async fn initialize_storage_provider_account_defaults")
+            .nth(1)
+            .expect("handler must exist");
+        // Stop before the test module, so this test's own string literals cannot
+        // satisfy the assertions below.
+        let handler = handler
+            .split("#[cfg(test)]")
+            .next()
+            .expect("handler body must precede the test module");
+
+        assert!(
+            handler.contains("vendor_capabilities: Some(vendor_capability_defaults_for("),
+            "the handler must derive vendor capabilities through the shared factory; \
+             an inlined payload cannot be kept in step with the contract table"
+        );
+        assert!(
+            !handler.contains("vendor_capability_defaults_for(&kind) =>")
+                && !handler.contains("server_side_encryption_modes: vec!["),
+            "the handler must not hard-code a capability list; every vendor's values \
+             come from the contract table"
+        );
     }
 
     #[test]
@@ -842,5 +1549,80 @@ mod tests {
         // built-in row, so the whole built-in set is recognisable by one prefix.
         assert_eq!(LOCAL_PROVIDER_ID, provider_id_for(LOCAL_PROVIDER_KIND));
         assert!(LOCAL_PROVIDER_ID.starts_with(BUILTIN_PROVIDER_ID_PREFIX));
+    }
+
+    /// Every built-in vendor ships its own credential-field vocabulary, so the
+    /// console labels the key pair the way that vendor does. A row that shipped
+    /// empty labels would render an unlabelled form the operator has to guess at.
+    #[test]
+    fn every_builtin_cloud_provider_names_its_credential_fields() {
+        for builtin in &BUILTIN_CLOUD_PROVIDERS {
+            let fields = &builtin.credential_fields;
+            assert!(
+                !fields.access_key_label.trim().is_empty(),
+                "{} ships no access-key label",
+                builtin.provider_kind
+            );
+            assert!(
+                !fields.secret_key_label.trim().is_empty(),
+                "{} ships no secret-key label",
+                builtin.provider_kind
+            );
+            assert_ne!(
+                fields.access_key_label, fields.secret_key_label,
+                "{} labels both halves of the pair identically, so the operator cannot tell them apart",
+                builtin.provider_kind
+            );
+            // Env names have to be usable as environment variables; a lowercase
+            // or space-bearing name would be silently unusable in a shell.
+            for env_name in [fields.default_env_access_key, fields.default_env_secret_key] {
+                assert!(
+                    !env_name.is_empty()
+                        && env_name
+                            .chars()
+                            .all(|c| c.is_ascii_uppercase() || c.is_ascii_digit() || c == '_'),
+                    "{} ships env name {env_name:?}, which is not a valid env var name",
+                    builtin.provider_kind
+                );
+            }
+            assert!(
+                fields.console_url.starts_with("https://"),
+                "{}'s console link is not TLS, so pasting a key over it would be unsafe",
+                builtin.provider_kind
+            );
+            // Tencent's pair is the one SDKWork's default provider uses; pin its
+            // vocabulary so a rename cannot silently reach the console.
+            if builtin.provider_kind == DEFAULT_PROVIDER_KIND {
+                assert_eq!(fields.access_key_label, "SecretId");
+                assert_eq!(fields.secret_key_label, "SecretKey");
+            }
+        }
+    }
+
+    /// The tenant default binding points at the console's primary cloud provider
+    /// (Tencent COS) so a fresh plane can store real objects; the row it points
+    /// at must actually exist in the built-in table, or the binding would dangle.
+    #[test]
+    fn default_provider_targets_a_known_builtin_cloud_provider() {
+        let tencent = BUILTIN_CLOUD_PROVIDERS
+            .iter()
+            .find(|builtin| builtin.provider_kind == DEFAULT_PROVIDER_KIND)
+            .unwrap_or_else(|| {
+                panic!(
+                    "the default provider kind {DEFAULT_PROVIDER_KIND} has no built-in row, \
+                     so the default binding would point at a provider that is never created"
+                )
+            });
+
+        assert_eq!(
+            DEFAULT_PROVIDER_ID,
+            provider_id_for(tencent.provider_kind),
+            "the default provider id must be the same derivation every other built-in row uses"
+        );
+        assert_ne!(
+            DEFAULT_PROVIDER_ID, LOCAL_PROVIDER_ID,
+            "the default must be a cloud provider, not the credential-free fallback"
+        );
+        assert_eq!(tencent.vendor_code, "tencent");
     }
 }

@@ -211,12 +211,9 @@ impl DriveWebsitePublishingMaintenanceStore for SqlWebsitePublishingMaintenanceS
                WHERE child.tenant_id=$1 AND tree.depth < $3
              )
              SELECT object.id, object.storage_provider_id,
-                    provider.version AS storage_provider_version,
                     object.bucket, object.object_key
              FROM dr_drive_storage_object object
              INNER JOIN tree ON tree.id=object.node_id
-             INNER JOIN dr_drive_storage_provider provider
-               ON provider.id=object.storage_provider_id
              WHERE object.tenant_id=$1 AND object.lifecycle_status='active'
              ORDER BY object.id ASC
              LIMIT $4",
@@ -233,7 +230,6 @@ impl DriveWebsitePublishingMaintenanceStore for SqlWebsitePublishingMaintenanceS
             .map(|row| WebsiteTreeStorageObject {
                 id: row.get("id"),
                 storage_provider_id: row.get("storage_provider_id"),
-                storage_provider_version: row.get("storage_provider_version"),
                 bucket: row.get("bucket"),
                 object_key: row.get("object_key"),
             })

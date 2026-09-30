@@ -5,6 +5,7 @@ use crate::error::{
 use crate::state::AdminStorageState;
 use axum::http::StatusCode;
 use axum::Json;
+use sdkwork_drive_object_runtime::build_local_store_for_provider;
 use sdkwork_drive_storage_contract::{DriveObjectStore, DriveStorageCredentialSnapshot};
 #[cfg(not(feature = "opendal-s3-plugin"))]
 use sdkwork_drive_storage_contract::{DriveObjectStoreError, DriveObjectStoreErrorKind};
@@ -77,6 +78,17 @@ pub(crate) async fn build_object_store_for_provider(
     state: &AdminStorageState,
     provider: &DriveStorageProvider,
 ) -> Result<Box<dyn DriveObjectStore>, (StatusCode, Json<ProblemDetail>)> {
+    // Local filesystem rows speak the on-disk protocol, not S3; they are
+    // served by the same store builder the object runtime uses so bucket and
+    // file management stay available for every catalog kind.
+    if matches!(
+        provider.provider_kind,
+        DriveStorageProviderKind::LocalFilesystem
+    ) {
+        let store =
+            build_local_store_for_provider(provider).map_err(map_object_store_route_error)?;
+        return Ok(Box::new(store));
+    }
     if !provider_supports_s3_object_store(&provider.provider_kind) {
         return Err(map_service_error(DriveServiceError::Conflict(
             "storage provider does not support s3-compatible object store operations".to_string(),
@@ -180,15 +192,10 @@ async fn build_opendal_object_store_for_provider(
     )))
 }
 
+/// Whether this kind is served by the S3 object store.
+///
+/// Delegates to the contract so a newly catalogued vendor is covered the moment
+/// it is added there, instead of needing a second edit here.
 pub(crate) fn provider_supports_s3_object_store(provider_kind: &DriveStorageProviderKind) -> bool {
-    matches!(
-        provider_kind,
-        DriveStorageProviderKind::S3Compatible
-            | DriveStorageProviderKind::AliyunOss
-            | DriveStorageProviderKind::TencentCos
-            | DriveStorageProviderKind::HuaweiObs
-            | DriveStorageProviderKind::VolcengineTos
-            | DriveStorageProviderKind::GoogleCloudStorage
-            | DriveStorageProviderKind::Custom(_)
-    )
+    provider_kind.is_s3_compatible()
 }

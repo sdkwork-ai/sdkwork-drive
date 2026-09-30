@@ -81,32 +81,28 @@ fn get_bool(row: &PgRow, column: &str) -> Result<bool, DriveServiceError> {
 pub(crate) async fn build_s3_object_store_for_provider(
     provider: &ActiveStorageProviderRecord,
 ) -> Result<Option<S3DriveObjectStore>, DriveServiceError> {
-    match &provider.provider_kind {
-        DriveStorageProviderKind::S3Compatible
-        | DriveStorageProviderKind::AliyunOss
-        | DriveStorageProviderKind::TencentCos
-        | DriveStorageProviderKind::HuaweiObs
-        | DriveStorageProviderKind::VolcengineTos
-        | DriveStorageProviderKind::GoogleCloudStorage
-        | DriveStorageProviderKind::Custom(_) => S3DriveObjectStore::new(
-            S3StoreConfig::from_provider_parts(
-                provider.provider_kind.as_str(),
-                &provider.endpoint_url,
-                provider.region.as_deref(),
-                &provider.bucket,
-                provider.path_style,
-                provider.credential_ref.as_deref(),
-                Some(provider.strict_tls),
-            )
-            .map_err(map_object_store_error)?,
-        )
-        .await
-        .map(Some)
-        .map_err(|error| {
-            DriveServiceError::Internal(format!("build s3-compatible object store failed: {error}"))
-        }),
-        _ => Ok(None),
+    // Branch on the protocol: any S3-compatible kind is served by the S3 store,
+    // and the local filesystem provider has no S3 endpoint to build.
+    if !provider.provider_kind.is_s3_compatible() {
+        return Ok(None);
     }
+    S3DriveObjectStore::new(
+        S3StoreConfig::from_provider_parts(
+            provider.provider_kind.as_str(),
+            &provider.endpoint_url,
+            provider.region.as_deref(),
+            &provider.bucket,
+            provider.path_style,
+            provider.credential_ref.as_deref(),
+            Some(provider.strict_tls),
+        )
+        .map_err(map_object_store_error)?,
+    )
+    .await
+    .map(Some)
+    .map_err(|error| {
+        DriveServiceError::Internal(format!("build s3-compatible object store failed: {error}"))
+    })
 }
 
 fn map_object_store_error(error: DriveObjectStoreError) -> DriveServiceError {

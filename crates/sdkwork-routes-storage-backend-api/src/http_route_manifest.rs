@@ -29,6 +29,42 @@ const HTTP_ROUTES: &[HttpRoute] = &[
     ),
     HttpRoute::dual_token(
         HttpMethod::Get,
+        "/backend/v3/api/drive/storage/migrations",
+        "drive-admin-storage-api",
+        "storageMigrations.list",
+    ),
+    HttpRoute::dual_token(
+        HttpMethod::Post,
+        "/backend/v3/api/drive/storage/migrations",
+        "drive-admin-storage-api",
+        "storageMigrations.create",
+    ),
+    HttpRoute::dual_token(
+        HttpMethod::Get,
+        "/backend/v3/api/drive/storage/migrations/{migrationId}",
+        "drive-admin-storage-api",
+        "storageMigrations.retrieve",
+    ),
+    HttpRoute::dual_token(
+        HttpMethod::Post,
+        "/backend/v3/api/drive/storage/migrations/{migrationId}/cancel",
+        "drive-admin-storage-api",
+        "storageMigrations.cancel",
+    ),
+    HttpRoute::dual_token(
+        HttpMethod::Get,
+        "/backend/v3/api/drive/storage/migrations/{migrationId}/items",
+        "drive-admin-storage-api",
+        "storageMigrations.items.list",
+    ),
+    HttpRoute::dual_token(
+        HttpMethod::Post,
+        "/backend/v3/api/drive/storage/migrations/{migrationId}/run",
+        "drive-admin-storage-api",
+        "storageMigrations.run",
+    ),
+    HttpRoute::dual_token(
+        HttpMethod::Get,
         "/backend/v3/api/drive/storage/overview",
         "drive-admin-storage-api",
         "storageOverview.retrieve",

@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useState } from 'react';
 import {
   Box,
   ChevronRight,
@@ -12,13 +12,32 @@ import {
   Zap,
 } from 'lucide-react';
 import type { StorageProviderView } from '../types/storageProviderAdminTypes';
-import { getAllProviderKindMeta, getProviderKindMeta, HEALTH_STATUS_CONFIG } from '../utils/providerKindConfig';
+import { getProviderKindMeta, HEALTH_STATUS_CONFIG } from '../utils/providerKindConfig';
 import { GHOST_BUTTON_CLASS, BADGE_BASE_CLASS, SECONDARY_BUTTON_CLASS, PRIMARY_BUTTON_CLASS } from '../utils/uiPrimitives';
 import { ConfirmDialog } from './ConfirmDialog';
 import { useTranslation } from '../hooks/useTranslation';
 
 interface StorageProviderTableProps {
   providers: StorageProviderView[];
+  /**
+   * Providers carrying a bootstrap placeholder credential the operator has not
+   * replaced. Shown as "待配置" so a freshly initialized plane reads as a
+   * worklist instead of a row of green checks that do not actually connect.
+   */
+  pendingPlaceholderIds?: ReadonlySet<string>;
+  /**
+   * True when the surface's provider-kind switch is narrowing the list on the
+   * server.
+   *
+   * The kind selector itself is owned by the page (`StorageProvidersAdminPage`),
+   * because it is a *server* filter: it has to be applied before the cursor
+   * window, so it cannot live in this table's page-local filter bar. What the
+   * table still needs to know is that an empty result means "this kind matched
+   * nothing", not "there are no providers yet".
+   */
+  providerKindFilterActive?: boolean;
+  /** Clears that switch, offered from the empty state. */
+  onClearProviderKindFilter?: () => void;
   onNewProvider: () => void;
   onEditProvider: (provider: StorageProviderView) => void;
   onViewDetail: (provider: StorageProviderView) => void;
@@ -35,19 +54,20 @@ const HEALTH_LABELS = { unknown: 'healthUnknown', healthy: 'healthHealthy', degr
 type ProviderFilters = {
   search: string;
   status: 'all' | 'active' | 'inactive';
-  kind: string;
-  credential: 'all' | 'configured' | 'missing';
+  credential: 'all' | 'configured' | 'missing' | 'pending';
 };
 
 const INITIAL_FILTERS: ProviderFilters = {
   search: '',
   status: 'all',
-  kind: 'all',
   credential: 'all',
 };
 
 export function StorageProviderTable({
   providers,
+  pendingPlaceholderIds,
+  providerKindFilterActive,
+  onClearProviderKindFilter,
   onNewProvider,
   onEditProvider,
   onViewDetail,
@@ -65,27 +85,21 @@ export function StorageProviderTable({
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
   const [bulkTesting, setBulkTesting] = useState(false);
 
-  const kindOptions = useMemo(() => {
-    const kinds = new Set(providers.map((p) => p.providerKind));
-    return getAllProviderKindMeta().filter((meta) => kinds.has(String(meta.value)) || kinds.has(`custom:${meta.shortLabel}`));
-  }, [providers]);
-
   const filtered = providers.filter((p) => {
     const q = appliedFilters.search.trim().toLowerCase();
     const matchSearch = !q || p.displayName.toLowerCase().includes(q) || p.id.toLowerCase().includes(q) || p.endpointUrl.toLowerCase().includes(q) || p.bucket.toLowerCase().includes(q);
     const matchStatus = appliedFilters.status === 'all' || p.status === appliedFilters.status;
-    const matchKind = appliedFilters.kind === 'all' || p.providerKind === appliedFilters.kind || (appliedFilters.kind === 'custom' && p.providerKind.startsWith('custom:'));
     const matchCredential =
       appliedFilters.credential === 'all'
-        || (appliedFilters.credential === 'configured' && p.credentialConfigured)
-        || (appliedFilters.credential === 'missing' && !p.credentialConfigured);
-    return matchSearch && matchStatus && matchKind && matchCredential;
+        || (appliedFilters.credential === 'configured' && p.credentialConfigured && !pendingPlaceholderIds?.has(p.id))
+        || (appliedFilters.credential === 'missing' && !p.credentialConfigured)
+        || (appliedFilters.credential === 'pending' && pendingPlaceholderIds?.has(p.id) === true);
+    return matchSearch && matchStatus && matchCredential;
   });
 
   const filtersDirty =
     draftFilters.search !== appliedFilters.search
     || draftFilters.status !== appliedFilters.status
-    || draftFilters.kind !== appliedFilters.kind
     || draftFilters.credential !== appliedFilters.credential;
 
   const applyFilters = () => setAppliedFilters({ ...draftFilters });
@@ -108,61 +122,38 @@ export function StorageProviderTable({
   return (
     <>
       <div className="mb-4 rounded-lg border border-neutral-200 bg-white p-4 dark:border-neutral-700 dark:bg-neutral-900">
-        <div className="flex flex-wrap items-end gap-3">
-          <div className="min-w-[220px] flex-1 max-w-md">
-            <label className="mb-1 block text-xs font-medium text-neutral-500 dark:text-neutral-400">{t('searchLabel')}</label>
-            <div className="relative">
-              <Search aria-hidden="true" className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400" size={16} />
-              <input
-                type="text"
-                value={draftFilters.search}
-                onChange={(e) => setDraftFilters((prev) => ({ ...prev, search: e.target.value }))}
-                onKeyDown={(e) => { if (e.key === 'Enter') applyFilters(); }}
-                placeholder={t('searchPlaceholder')}
-                className="h-9 w-full rounded-md border border-neutral-300 bg-white pl-9 pr-3 text-sm outline-none placeholder:text-neutral-400 focus:border-blue-500 dark:border-neutral-600 dark:bg-neutral-950 dark:text-neutral-100"
-              />
-            </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="relative min-w-[200px] flex-1 max-w-md">
+            <Search aria-hidden="true" className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400" size={16} />
+            <input
+              type="text"
+              value={draftFilters.search}
+              onChange={(e) => setDraftFilters((prev) => ({ ...prev, search: e.target.value }))}
+              onKeyDown={(e) => { if (e.key === 'Enter') applyFilters(); }}
+              aria-label={t('searchLabel')}
+              placeholder={t('searchPlaceholder')}
+              className="h-9 w-full rounded-md border border-neutral-300 bg-white pl-9 pr-3 text-sm outline-none placeholder:text-neutral-400 focus:border-blue-500 dark:border-neutral-600 dark:bg-neutral-950 dark:text-neutral-100"
+            />
           </div>
-          <div>
-            <label className="mb-1 block text-xs font-medium text-neutral-500 dark:text-neutral-400">{t('colKind')}</label>
-            <select value={draftFilters.kind} onChange={(e) => setDraftFilters((prev) => ({ ...prev, kind: e.target.value }))} className="h-9 rounded-md border border-neutral-300 bg-white px-2 text-sm dark:border-neutral-600 dark:bg-neutral-950 dark:text-neutral-200">
-              <option value="all">{t('allKinds')}</option>
-              {kindOptions.map((meta) => (
-                <option key={String(meta.value)} value={meta.value}>{meta.shortLabel}</option>
-              ))}
-              {providers.some((p) => p.providerKind.startsWith('custom:')) && (
-                <option value="custom">Custom</option>
-              )}
-            </select>
-          </div>
-          <div>
-            <label className="mb-1 block text-xs font-medium text-neutral-500 dark:text-neutral-400">{t('colStatus')}</label>
-            <select value={draftFilters.status} onChange={(e) => setDraftFilters((prev) => ({ ...prev, status: e.target.value as ProviderFilters['status'] }))} className="h-9 rounded-md border border-neutral-300 bg-white px-2 text-sm dark:border-neutral-600 dark:bg-neutral-950 dark:text-neutral-200">
-              <option value="all">{t('allStatus')}</option>
-              <option value="active">{t('active')}</option>
-              <option value="inactive">{t('inactive')}</option>
-            </select>
-          </div>
-          <div>
-            <label className="mb-1 block text-xs font-medium text-neutral-500 dark:text-neutral-400">{t('colCredential')}</label>
-            <select value={draftFilters.credential} onChange={(e) => setDraftFilters((prev) => ({ ...prev, credential: e.target.value as ProviderFilters['credential'] }))} className="h-9 rounded-md border border-neutral-300 bg-white px-2 text-sm dark:border-neutral-600 dark:bg-neutral-950 dark:text-neutral-200">
-              <option value="all">{t('allCredentials')}</option>
-              <option value="configured">{t('credentialConfiguredFilter')}</option>
-              <option value="missing">{t('credentialMissingFilter')}</option>
-            </select>
-          </div>
-          <div className="flex items-center gap-2">
-            <button type="button" className={PRIMARY_BUTTON_CLASS} onClick={applyFilters}>
-              <Search aria-hidden="true" size={15} />
-              {t('searchAction')}
-            </button>
-            <button type="button" className={SECONDARY_BUTTON_CLASS} onClick={resetFilters} disabled={!filtersDirty && appliedFilters.search === '' && appliedFilters.status === 'all' && appliedFilters.kind === 'all' && appliedFilters.credential === 'all'}>
-              <RotateCcw aria-hidden="true" size={15} />
-              {t('resetFilters')}
-            </button>
-          </div>
-        </div>
-        <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-neutral-100 pt-3 dark:border-neutral-800">
+          <select aria-label={t('colStatus')} value={draftFilters.status} onChange={(e) => setDraftFilters((prev) => ({ ...prev, status: e.target.value as ProviderFilters['status'] }))} className="h-9 rounded-md border border-neutral-300 bg-white px-2 text-sm dark:border-neutral-600 dark:bg-neutral-950 dark:text-neutral-200">
+            <option value="all">{t('allStatus')}</option>
+            <option value="active">{t('active')}</option>
+            <option value="inactive">{t('inactive')}</option>
+          </select>
+          <select aria-label={t('colCredential')} value={draftFilters.credential} onChange={(e) => setDraftFilters((prev) => ({ ...prev, credential: e.target.value as ProviderFilters['credential'] }))} className="h-9 rounded-md border border-neutral-300 bg-white px-2 text-sm dark:border-neutral-600 dark:bg-neutral-950 dark:text-neutral-200">
+            <option value="all">{t('allCredentials')}</option>
+            <option value="configured">{t('credentialConfiguredFilter')}</option>
+            <option value="pending">{t('credentialPendingFilter')}</option>
+            <option value="missing">{t('credentialMissingFilter')}</option>
+          </select>
+          <button type="button" className={PRIMARY_BUTTON_CLASS} onClick={applyFilters}>
+            <Search aria-hidden="true" size={15} />
+            {t('searchAction')}
+          </button>
+          <button type="button" className={SECONDARY_BUTTON_CLASS} onClick={resetFilters} disabled={!filtersDirty && appliedFilters.search === '' && appliedFilters.status === 'all' && appliedFilters.credential === 'all'}>
+            <RotateCcw aria-hidden="true" size={15} />
+            {t('resetFilters')}
+          </button>
           <span className="text-xs text-neutral-500">{t('countOf', { filtered: filtered.length, total: providers.length })}</span>
           {onTestProviders && (
             <button
@@ -195,7 +186,26 @@ export function StorageProviderTable({
           <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800">
             {filtered.length === 0 ? (
               <tr><td colSpan={8} className="px-4 py-16 text-center">
-                {providers.length === 0 ? (
+                {providers.length === 0 && providerKindFilterActive ? (
+                  /*
+                    The server answered "this kind matched nothing". Saying
+                    "create your first provider" here would be a lie — and it is
+                    the exact confusion the old client-side filter created when
+                    it narrowed one page and reported the page as the world.
+                  */
+                  <div className="flex flex-col items-center">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-neutral-100 text-neutral-400 dark:bg-neutral-800 dark:text-neutral-500">
+                      <Search aria-hidden="true" size={22} strokeWidth={1.7} />
+                    </div>
+                    <h3 className="mt-3 text-sm font-semibold text-neutral-900 dark:text-neutral-100">{t('filteredEmptyTitle')}</h3>
+                    <p className="mt-1 max-w-sm text-xs text-neutral-500">{t('filteredEmptyDesc')}</p>
+                    {onClearProviderKindFilter && (
+                      <button type="button" className="mt-4 inline-flex h-9 items-center gap-1.5 rounded-md border border-neutral-300 bg-white px-4 text-sm font-medium text-neutral-700 hover:bg-neutral-50 dark:border-neutral-600 dark:bg-neutral-900 dark:text-neutral-200 dark:hover:bg-neutral-800" onClick={onClearProviderKindFilter}>
+                        {t('filteredEmptyClear')}
+                      </button>
+                    )}
+                  </div>
+                ) : providers.length === 0 ? (
                   <div className="flex flex-col items-center">
                     <div className="flex h-12 w-12 items-center justify-center rounded-full bg-neutral-100 text-neutral-400 dark:bg-neutral-800 dark:text-neutral-500">
                       <Box aria-hidden="true" size={22} strokeWidth={1.7} />
@@ -228,7 +238,12 @@ export function StorageProviderTable({
                   <td className="px-4 py-3">{provider.status === 'active' ? <span className={`${BADGE_BASE_CLASS} bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300`}>{t('active')}</span> : <span className={`${BADGE_BASE_CLASS} bg-neutral-100 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400`}>{t('inactive')}</span>}</td>
                   <td className="px-4 py-3"><span className={`${BADGE_BASE_CLASS} ${health.bgClass} ${health.textClass}`}><span className={`h-1.5 w-1.5 rounded-full ${health.dotClass}`} />{t(HEALTH_LABELS[provider.healthStatus ?? 'unknown'])}</span></td>
                   <td className="px-4 py-3">
-                    {provider.credentialConfigured ? (
+                    {pendingPlaceholderIds?.has(provider.id) ? (
+                      <span className="flex items-center gap-1 text-xs text-amber-600 dark:text-amber-400" title={t('credentialPendingHint')}>
+                        <CircleAlert aria-hidden="true" size={14} />
+                        {t('credentialPending')}
+                      </span>
+                    ) : provider.credentialConfigured ? (
                       <span className="flex items-center gap-1 text-xs text-emerald-600 dark:text-emerald-400"><ShieldCheck aria-hidden="true" size={14} />{t('credentialSet')}</span>
                     ) : (
                       <span className="flex items-center gap-1 text-xs text-amber-600 dark:text-amber-400"><CircleAlert aria-hidden="true" size={14} />{t('credentialMissing')}</span>

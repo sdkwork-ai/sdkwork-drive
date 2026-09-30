@@ -12,7 +12,10 @@ use crate::provider_lookup::get_provider;
 use crate::provider_mappers::{
     map_storage_provider, map_storage_provider_capabilities, parse_storage_provider_kind,
 };
-use crate::response::{no_content, success_list_page_simple, StorageListHttpResponse};
+use crate::response::{
+    no_content, success_item, success_list_page_simple, StorageItemHttpResponse,
+    StorageListHttpResponse,
+};
 use crate::state::AdminStorageState;
 use crate::validators::{next_page_token, parse_offset_page};
 use axum::extract::rejection::JsonRejection;
@@ -45,13 +48,17 @@ async fn ensure_provider_kind_available(
 
 pub(crate) async fn list_storage_providers(
     State(state): State<AdminStorageState>,
+    Extension(ctx): Extension<DriveRequestContext>,
     Query(query): Query<ListStorageProvidersQuery>,
 ) -> Result<StorageListHttpResponse<StorageProviderResponse>, (StatusCode, Json<ProblemDetail>)> {
     let page = parse_offset_page(query.page_size, query.page_token)?;
+    let tenant_id = ctx.resolve_tenant_id()?;
     let service =
         DriveStorageProviderService::new(SqlStorageProviderStore::new(state.pool.clone()));
     let mut items = service
         .list_storage_providers(ListStorageProvidersCommand {
+            tenant_id,
+            provider_kind: query.provider_kind,
             status: query.status,
             offset: page.offset,
             limit: page.limit + 1,
@@ -128,10 +135,14 @@ pub(crate) async fn create_storage_provider(
     State(state): State<AdminStorageState>,
     Extension(ctx): Extension<DriveRequestContext>,
     payload: Result<Json<CreateStorageProviderRequest>, JsonRejection>,
-) -> Result<(StatusCode, Json<StorageProviderResponse>), (StatusCode, Json<ProblemDetail>)> {
+) -> Result<
+    (StatusCode, StorageItemHttpResponse<StorageProviderResponse>),
+    (StatusCode, Json<ProblemDetail>),
+> {
     let Json(payload) = payload.map_err(invalid_json_problem)?;
     let operator_id = ctx.resolve_operator_id()?;
     let tenant_id = ctx.resolve_tenant_id()?;
+
     let service =
         DriveStorageProviderService::new(SqlStorageProviderStore::new(state.pool.clone()));
     let provider_kind =
@@ -147,7 +158,7 @@ pub(crate) async fn create_storage_provider(
     let created = service
         .create_storage_provider(CreateStorageProviderCommand {
             id: payload.id,
-            tenant_id,
+            tenant_id: tenant_id.clone(),
             provider_kind,
             name: payload.name,
             endpoint_url: payload.endpoint_url,
@@ -169,17 +180,23 @@ pub(crate) async fn create_storage_provider(
         admin_audit::storage_provider::CREATED,
         &created.id,
         &operator_id,
+        &tenant_id,
     )
     .await?;
-    Ok((StatusCode::CREATED, Json(map_storage_provider(created))))
+    Ok((
+        StatusCode::CREATED,
+        success_item(map_storage_provider(created)),
+    ))
 }
 
 pub(crate) async fn get_storage_provider(
     State(state): State<AdminStorageState>,
+    Extension(ctx): Extension<DriveRequestContext>,
     Path(provider_id): Path<String>,
-) -> Result<Json<StorageProviderResponse>, (StatusCode, Json<ProblemDetail>)> {
-    let provider = get_provider(&state, &provider_id).await?;
-    Ok(Json(map_storage_provider(provider)))
+) -> Result<StorageItemHttpResponse<StorageProviderResponse>, (StatusCode, Json<ProblemDetail>)> {
+    let tenant_id = ctx.resolve_tenant_id()?;
+    let provider = get_provider(&state, &tenant_id, &provider_id).await?;
+    Ok(success_item(map_storage_provider(provider)))
 }
 
 pub(crate) async fn update_storage_provider(
@@ -187,16 +204,17 @@ pub(crate) async fn update_storage_provider(
     Extension(ctx): Extension<DriveRequestContext>,
     Path(provider_id): Path<String>,
     payload: Result<Json<UpdateStorageProviderRequest>, JsonRejection>,
-) -> Result<Json<StorageProviderResponse>, (StatusCode, Json<ProblemDetail>)> {
+) -> Result<StorageItemHttpResponse<StorageProviderResponse>, (StatusCode, Json<ProblemDetail>)> {
     let Json(payload) = payload.map_err(invalid_json_problem)?;
     let operator_id = ctx.resolve_operator_id()?;
     let tenant_id = ctx.resolve_tenant_id()?;
+
     if payload
         .status
         .as_deref()
         .is_some_and(|status| status.trim().eq_ignore_ascii_case("active"))
     {
-        let current = get_provider(&state, &provider_id).await?;
+        let current = get_provider(&state, &tenant_id, &provider_id).await?;
         ensure_provider_kind_available(&state, &current.provider_kind).await?;
     }
     ensure_bindable_provider_account(
@@ -231,9 +249,10 @@ pub(crate) async fn update_storage_provider(
         admin_audit::storage_provider::UPDATED,
         &updated.id,
         &operator_id,
+        &tenant_id,
     )
     .await?;
-    Ok(Json(map_storage_provider(updated)))
+    Ok(success_item(map_storage_provider(updated)))
 }
 
 pub(crate) async fn delete_storage_provider(
@@ -242,6 +261,8 @@ pub(crate) async fn delete_storage_provider(
     Path(provider_id): Path<String>,
 ) -> Result<StatusCode, (StatusCode, Json<ProblemDetail>)> {
     let operator_id = ctx.resolve_operator_id()?;
+    let tenant_id = ctx.resolve_tenant_id()?;
+
     let service =
         DriveStorageProviderService::new(SqlStorageProviderStore::new(state.pool.clone()));
     let deleted = service
@@ -256,6 +277,7 @@ pub(crate) async fn delete_storage_provider(
         admin_audit::storage_provider::DELETED,
         &provider_id,
         &operator_id,
+        &tenant_id,
     )
     .await?;
     let _deleted = deleted.deleted;
@@ -265,23 +287,31 @@ pub(crate) async fn delete_storage_provider(
 pub(crate) async fn get_storage_provider_capabilities(
     State(state): State<AdminStorageState>,
     Path(provider_id): Path<String>,
-) -> Result<Json<StorageProviderCapabilitiesResponse>, (StatusCode, Json<ProblemDetail>)> {
+) -> Result<
+    StorageItemHttpResponse<StorageProviderCapabilitiesResponse>,
+    (StatusCode, Json<ProblemDetail>),
+> {
     let service =
         DriveStorageProviderService::new(SqlStorageProviderStore::new(state.pool.clone()));
     let capabilities = service
         .get_storage_provider_capabilities(StorageProviderCapabilitiesCommand { provider_id })
         .await
         .map_err(map_service_error)?;
-    Ok(Json(map_storage_provider_capabilities(capabilities)))
+    Ok(success_item(map_storage_provider_capabilities(
+        capabilities,
+    )))
 }
 
 pub(crate) async fn test_storage_provider(
     State(state): State<AdminStorageState>,
     Extension(ctx): Extension<DriveRequestContext>,
     Path(provider_id): Path<String>,
-) -> Result<Json<TestStorageProviderResponse>, (StatusCode, Json<ProblemDetail>)> {
+) -> Result<StorageItemHttpResponse<TestStorageProviderResponse>, (StatusCode, Json<ProblemDetail>)>
+{
     let operator_id = ctx.resolve_operator_id()?;
-    let provider = get_provider(&state, &provider_id).await?;
+    let tenant_id = ctx.resolve_tenant_id()?;
+
+    let provider = get_provider(&state, &tenant_id, &provider_id).await?;
     if provider.status == "deleted" {
         return Err(map_service_error(DriveServiceError::Conflict(
             "deleted storage provider cannot be tested".to_string(),
@@ -312,9 +342,10 @@ pub(crate) async fn test_storage_provider(
         admin_audit::storage_provider::TESTED,
         &provider_id,
         &operator_id,
+        &tenant_id,
     )
     .await?;
-    Ok(Json(TestStorageProviderResponse {
+    Ok(success_item(TestStorageProviderResponse {
         provider_id: provider.id,
         reachable,
     }))
@@ -324,18 +355,22 @@ pub(crate) async fn activate_storage_provider(
     State(state): State<AdminStorageState>,
     Extension(ctx): Extension<DriveRequestContext>,
     Path(provider_id): Path<String>,
-) -> Result<Json<StorageProviderResponse>, (StatusCode, Json<ProblemDetail>)> {
+) -> Result<StorageItemHttpResponse<StorageProviderResponse>, (StatusCode, Json<ProblemDetail>)> {
     let operator_id = ctx.resolve_operator_id()?;
-    set_storage_provider_status(state, provider_id, operator_id, "active").await
+    let tenant_id = ctx.resolve_tenant_id()?;
+
+    set_storage_provider_status(state, tenant_id, provider_id, operator_id, "active").await
 }
 
 pub(crate) async fn deactivate_storage_provider(
     State(state): State<AdminStorageState>,
     Extension(ctx): Extension<DriveRequestContext>,
     Path(provider_id): Path<String>,
-) -> Result<Json<StorageProviderResponse>, (StatusCode, Json<ProblemDetail>)> {
+) -> Result<StorageItemHttpResponse<StorageProviderResponse>, (StatusCode, Json<ProblemDetail>)> {
     let operator_id = ctx.resolve_operator_id()?;
-    set_storage_provider_status(state, provider_id, operator_id, "disabled").await
+    let tenant_id = ctx.resolve_tenant_id()?;
+
+    set_storage_provider_status(state, tenant_id, provider_id, operator_id, "disabled").await
 }
 
 pub(crate) async fn rotate_storage_provider_credentials(
@@ -343,9 +378,11 @@ pub(crate) async fn rotate_storage_provider_credentials(
     Extension(ctx): Extension<DriveRequestContext>,
     Path(provider_id): Path<String>,
     payload: Result<Json<RotateStorageProviderCredentialRequest>, JsonRejection>,
-) -> Result<Json<StorageProviderResponse>, (StatusCode, Json<ProblemDetail>)> {
+) -> Result<StorageItemHttpResponse<StorageProviderResponse>, (StatusCode, Json<ProblemDetail>)> {
     let Json(payload) = payload.map_err(invalid_json_problem)?;
     let operator_id = ctx.resolve_operator_id()?;
+    let tenant_id = ctx.resolve_tenant_id()?;
+
     let service =
         DriveStorageProviderService::new(SqlStorageProviderStore::new(state.pool.clone()));
     let updated = service
@@ -361,19 +398,21 @@ pub(crate) async fn rotate_storage_provider_credentials(
         admin_audit::storage_provider::CREDENTIALS_ROTATED,
         &provider_id,
         &operator_id,
+        &tenant_id,
     )
     .await?;
-    Ok(Json(map_storage_provider(updated)))
+    Ok(success_item(map_storage_provider(updated)))
 }
 
 pub(crate) async fn set_storage_provider_status(
     state: AdminStorageState,
+    tenant_id: String,
     provider_id: String,
     operator_id: String,
     status: &str,
-) -> Result<Json<StorageProviderResponse>, (StatusCode, Json<ProblemDetail>)> {
+) -> Result<StorageItemHttpResponse<StorageProviderResponse>, (StatusCode, Json<ProblemDetail>)> {
     if status == "active" {
-        let current = get_provider(&state, &provider_id).await?;
+        let current = get_provider(&state, &tenant_id, &provider_id).await?;
         ensure_provider_kind_available(&state, &current.provider_kind).await?;
     }
     let service =
@@ -391,6 +430,6 @@ pub(crate) async fn set_storage_provider_status(
         "disabled" => admin_audit::storage_provider::DEACTIVATED,
         _ => admin_audit::storage_provider::STATUS_CHANGED,
     };
-    record_storage_provider_audit(&state, action, &provider_id, &operator_id).await?;
-    Ok(Json(map_storage_provider(updated)))
+    record_storage_provider_audit(&state, action, &provider_id, &operator_id, &tenant_id).await?;
+    Ok(success_item(map_storage_provider(updated)))
 }

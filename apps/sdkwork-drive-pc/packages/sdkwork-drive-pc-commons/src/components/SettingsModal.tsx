@@ -3,10 +3,12 @@ import {
   Bell,
   HardDrive,
   Info,
+  Keyboard,
   Languages,
   LogOut,
   Monitor,
   Moon,
+  RotateCcw,
   Shield,
   Sun,
   UserRound,
@@ -14,10 +16,22 @@ import {
 } from 'lucide-react';
 import { useTheme } from './ThemeProvider';
 import { useTranslation, type Language } from './LanguageProvider';
-import { useDrivePcPreferences, type DrivePcPreferences } from './drivePcPreferences';
+import {
+  useDrivePcPreferences,
+  type DrivePcPreferences,
+  type DrivePcShortcutCommandId,
+} from './drivePcPreferences';
+import { ShortcutRecorder } from './ShortcutRecorder';
 import type { DriveSidebarAccount } from './UserProfileModal';
 
-export type SettingsTab = 'account' | 'general' | 'notifications' | 'security' | 'storage' | 'about';
+export type SettingsTab =
+  | 'account'
+  | 'general'
+  | 'shortcuts'
+  | 'notifications'
+  | 'security'
+  | 'storage'
+  | 'about';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -40,7 +54,12 @@ export function SettingsModal({
 }: SettingsModalProps) {
   const { theme, setTheme } = useTheme();
   const { language, setLanguage, t } = useTranslation();
-  const { preferences, updatePreferences } = useDrivePcPreferences();
+  const {
+    preferences,
+    updatePreferences,
+    updateShortcutBinding,
+    resetShortcutBindings,
+  } = useDrivePcPreferences();
   const [activeTab, setActiveTab] = useState<SettingsTab>(initialTab ?? 'account');
 
   useEffect(() => {
@@ -54,6 +73,7 @@ export function SettingsModal({
   const activeTitle: Record<SettingsTab, string> = {
     account: t('settings.account'),
     general: t('commons.general'),
+    shortcuts: t('settings.shortcuts'),
     notifications: t('commons.notifications'),
     security: t('settings.security'),
     storage: t('commons.storage'),
@@ -83,6 +103,12 @@ export function SettingsModal({
               label={t('commons.general')}
               active={activeTab === 'general'}
               onClick={() => setActiveTab('general')}
+            />
+            <SettingsNavItem
+              icon={<Keyboard size={16} />}
+              label={t('settings.shortcuts')}
+              active={activeTab === 'shortcuts'}
+              onClick={() => setActiveTab('shortcuts')}
             />
             <SettingsNavItem
               icon={<Bell size={16} />}
@@ -148,6 +174,15 @@ export function SettingsModal({
                   setTheme={setTheme}
                   compactMode={preferences.compactMode}
                   onCompactModeChange={(checked) => updatePreferences({ compactMode: checked })}
+                  t={t}
+                />
+              )}
+              {activeTab === 'shortcuts' && (
+                <ShortcutSettings
+                  preferences={preferences}
+                  onPreferenceChange={updatePreferences}
+                  onBindingChange={updateShortcutBinding}
+                  onResetBindings={resetShortcutBindings}
                   t={t}
                 />
               )}
@@ -267,6 +302,115 @@ function GeneralSettings({
           checked={compactMode}
           onCheckedChange={onCompactModeChange}
         />
+      </SettingsSection>
+    </div>
+  );
+}
+
+/** Command ids offered in the Settings Center, in display order. */
+const SHORTCUT_COMMANDS: DrivePcShortcutCommandId[] = [
+  'drive.openSettings',
+  'drive.showWindow',
+  'drive.cutSelection',
+  'drive.pasteSelection',
+  'drive.refresh',
+  'drive.toggleTray',
+];
+
+/** i18n key suffix per command; `settings.shortcut_<suffix>.label` / `.desc`. */
+const SHORTCUT_COMMAND_KEY: Record<DrivePcShortcutCommandId, string> = {
+  'drive.openSettings': 'openSettings',
+  'drive.showWindow': 'showWindow',
+  'drive.cutSelection': 'cutSelection',
+  'drive.pasteSelection': 'pasteSelection',
+  'drive.refresh': 'refresh',
+  'drive.toggleTray': 'toggleTray',
+};
+
+function ShortcutSettings({
+  preferences,
+  onPreferenceChange,
+  onBindingChange,
+  onResetBindings,
+  t,
+}: {
+  preferences: DrivePcPreferences;
+  onPreferenceChange: (patch: Partial<DrivePcPreferences>) => void;
+  onBindingChange: (commandId: DrivePcShortcutCommandId, accelerator: string) => void;
+  onResetBindings: () => void;
+  t: (key: string, params?: Record<string, string | number>) => string;
+}) {
+  const shortcutsDisabled = !preferences.globalShortcutsEnabled;
+
+  return (
+    <div className="space-y-6">
+      <SettingsSection title={t('settings.shortcutsTrayTitle')} description={t('settings.shortcutsTrayDesc')}>
+        <div className="space-y-4">
+          <NotificationToggle
+            label={t('settings.trayEnabled')}
+            desc={t('settings.trayEnabledDesc')}
+            checked={preferences.trayEnabled}
+            onCheckedChange={(checked) => onPreferenceChange({ trayEnabled: checked })}
+          />
+          <NotificationToggle
+            label={t('settings.minimizeToTrayOnClose')}
+            desc={t('settings.minimizeToTrayOnCloseDesc')}
+            checked={preferences.minimizeToTrayOnClose}
+            onCheckedChange={(checked) => onPreferenceChange({ minimizeToTrayOnClose: checked })}
+          />
+        </div>
+      </SettingsSection>
+
+      <SettingsSection title={t('settings.shortcutBindingsTitle')} description={t('settings.shortcutBindingsDesc')}>
+        <div className="space-y-4">
+          <NotificationToggle
+            label={t('settings.globalShortcutsEnabled')}
+            desc={t('settings.globalShortcutsEnabledDesc')}
+            checked={preferences.globalShortcutsEnabled}
+            onCheckedChange={(checked) => onPreferenceChange({ globalShortcutsEnabled: checked })}
+          />
+          {shortcutsDisabled && (
+            <p className="rounded-xl border border-amber-500/20 bg-amber-500/5 px-4 py-2.5 text-[11px] leading-5 text-amber-300">
+              {t('settings.globalShortcutsDisabledHint')}
+            </p>
+          )}
+          {SHORTCUT_COMMANDS.map((commandId) => {
+            const key = SHORTCUT_COMMAND_KEY[commandId];
+            const binding = preferences.shortcutBindings[commandId] ?? '';
+            return (
+              <div
+                key={commandId}
+                className="flex items-center justify-between gap-4 rounded-xl border border-white/5 bg-[#202020] px-4 py-3"
+              >
+                <div className="min-w-0 space-y-0.5">
+                  <span className="block text-xs font-semibold text-gray-200">
+                    {t(`settings.shortcut_${key}_label`)}
+                  </span>
+                  <span className="block text-[10px] text-gray-500">
+                    {t(`settings.shortcut_${key}_desc`)}
+                  </span>
+                </div>
+                <div className="shrink-0">
+                  <ShortcutRecorder
+                    value={binding}
+                    onChange={(accelerator) => onBindingChange(commandId, accelerator)}
+                    ariaLabel={t(`settings.shortcut_${key}_label`)}
+                    placeholder={t('settings.shortcutUnbound')}
+                    disabled={shortcutsDisabled}
+                  />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+        <button
+          type="button"
+          onClick={onResetBindings}
+          className="mt-1 flex items-center gap-2 rounded-xl border border-white/10 px-3 py-2 text-[11px] text-gray-400 transition-colors hover:border-white/20 hover:text-gray-200"
+        >
+          <RotateCcw size={13} />
+          {t('settings.resetShortcuts')}
+        </button>
       </SettingsSection>
     </div>
   );

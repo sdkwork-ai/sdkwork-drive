@@ -163,6 +163,7 @@ pub mod admin_audit {
     /// attributing it to a single provider row would lose the account writes.
     pub mod storage_provider_account {
         pub const INITIALIZED: &str = "drive.storage_provider_account.initialized";
+        pub const CREATED: &str = "drive.storage_provider_account.created";
     }
 
     /// Default storage provider binding mutations (backend-api).

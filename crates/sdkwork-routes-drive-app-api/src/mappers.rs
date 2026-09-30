@@ -101,7 +101,9 @@ pub fn map_space_response(space: DriveSpace) -> CreateSpaceResponse {
 }
 
 pub fn map_permission_row(row: &sqlx::postgres::PgRow) -> PermissionResponse {
-    let inherited: i64 = row.get("inherited");
+    // `dr_drive_node_permission.inherited` is BOOLEAN in the baseline DDL; sqlx
+    // refuses to widen it to an integer, so decode the native type directly.
+    let inherited: bool = row.get("inherited");
     PermissionResponse {
         id: row.get("id"),
         tenant_id: row.get("tenant_id"),
@@ -109,7 +111,7 @@ pub fn map_permission_row(row: &sqlx::postgres::PgRow) -> PermissionResponse {
         subject_type: row.get("subject_type"),
         subject_id: row.get("subject_id"),
         role: row.get("role"),
-        inherited: inherited != 0,
+        inherited,
         lifecycle_status: row.get("lifecycle_status"),
         version: row.get("version"),
     }
@@ -167,14 +169,16 @@ pub fn map_share_link_record(row: &sqlx::postgres::PgRow) -> ShareLinkRecord {
 }
 
 pub fn map_comment_row(row: &sqlx::postgres::PgRow) -> CommentRecord {
-    let resolved: i64 = row.get("resolved");
+    // `dr_drive_node_comment.resolved` is BOOLEAN in the baseline DDL; decode the
+    // native type rather than coercing through an integer.
+    let resolved: bool = row.get("resolved");
     CommentRecord {
         id: row.get("id"),
         tenant_id: row.get("tenant_id"),
         node_id: row.get("node_id"),
         content: row.get("content"),
         anchor: row.get("anchor"),
-        resolved: resolved != 0,
+        resolved,
         lifecycle_status: row.get("lifecycle_status"),
         version: row.get("version"),
         created_by: row.get("created_by"),

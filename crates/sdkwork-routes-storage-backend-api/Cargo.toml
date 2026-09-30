@@ -12,6 +12,7 @@ default = []
 opendal-s3-plugin = ["dep:sdkwork-drive-storage-opendal"]
 
 [dependencies]
+async-trait.workspace = true
 axum.workspace = true
 http.workspace = true
 serde.workspace = true
@@ -19,6 +20,7 @@ serde_json.workspace = true
 sdkwork-drive-contract.workspace = true
 sdkwork-drive-config.workspace = true
 sdkwork-drive-http = { workspace = true, features = ["redis-rate-limit"] }
+sdkwork-drive-object-runtime.workspace = true
 sdkwork-drive-observability = { workspace = true, features = ["otlp"] }
 sdkwork-drive-workspace-service.workspace = true
 sdkwork-drive-security.workspace = true

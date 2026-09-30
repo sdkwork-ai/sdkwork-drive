@@ -182,6 +182,15 @@ function responseFor(request: DriveAdminStorageSdkRequest): unknown {
           accountCode: 'builtin-aliyun-storage',
           accountCreated: true,
           credentialSeeded: true,
+          // 服务端在铸造占位账号时同样知道这个厂商怎么称呼两半密钥，随响应带回，
+          // 这样控制台就不必再维护第二份会漂移的表。
+          credentialFields: {
+            accessKeyLabel: 'AccessKey ID',
+            secretKeyLabel: 'AccessKey Secret',
+            defaultEnvAccessKey: 'ALIBABA_CLOUD_ACCESS_KEY_ID',
+            defaultEnvSecretKey: 'ALIBABA_CLOUD_ACCESS_KEY_SECRET',
+            consoleUrl: 'https://ram.console.aliyun.com/manage/ak',
+          },
         },
       ],
     };
@@ -317,6 +326,31 @@ function lastCall(calls: DriveAdminStorageSdkRequest[]): DriveAdminStorageSdkReq
   return call;
 }
 
+/** A client that records every request and answers from a per-call builder. */
+function recordingClient(
+  calls: DriveAdminStorageSdkRequest[],
+  responseForCall: () => unknown,
+): DriveAdminStorageSdkClient {
+  return {
+    metadata: {},
+    operations: {},
+    setTokenManager: () => undefined,
+    async request<T>(request: DriveAdminStorageSdkRequest): Promise<T> {
+      calls.push(request);
+      return responseForCall() as T;
+    },
+  } as unknown as DriveAdminStorageSdkClient;
+}
+
+function createServiceWithClient(client: DriveAdminStorageSdkClient): StorageProviderAdminService {
+  return createStorageProviderAdminService({
+    adminStorageSdkClient: client,
+    getSession: () => ({
+      context: { tenantId: 'tenant-100', userId: 'user-100', actorId: 'operator-100' },
+    }),
+  });
+}
+
 describe('storage provider admin service', () => {
   it('lists storage providers through the Drive admin storage SDK', async () => {
     const { calls, service } = createFakeService();
@@ -334,6 +368,127 @@ describe('storage provider admin service', () => {
     expect(lastCall(calls)).toMatchObject({
       operationId: 'storageProviders.list',
       query: { status: 'active' },
+    });
+  });
+
+  it('projects the item envelope the transport delivers for single resources', async () => {
+    // The SDKWork transport unwraps `data`, so a single resource arrives as
+    // `{ item: {...} }`. Reading the fields off the outer object type-checks and
+    // returns `undefined` for every one of them, which is how a bound tenant came
+    // to read as unconfigured and every provider test as unreachable.
+    const calls: DriveAdminStorageSdkRequest[] = [];
+    const responses: Record<string, unknown> = {
+      'storageProviderBindings.default.retrieve': {
+        item: {
+          id: 'default:tenant:tenant-100',
+          tenantId: 'tenant-100',
+          providerId: 'provider-cos',
+          bindingScope: 'tenant',
+          purpose: 'primary',
+          lifecycleStatus: 'active',
+          version: 3,
+          storageRootPrefix: 'sdkwork-drive/v1/tenants/tenant-100',
+          storageProvider: {
+            id: 'provider-cos',
+            providerKind: 'tencent_cos',
+            name: 'Tencent COS',
+            endpointUrl: 'https://cos.ap-shanghai.myqcloud.com',
+            bucket: 'drive-prod',
+            pathStyle: false,
+            status: 'active',
+            version: 2,
+            credentialConfigured: true,
+          },
+        },
+      },
+      'storageProviders.test': { item: { providerId: 'provider-cos', reachable: true } },
+      'storageProviders.bucket.retrieve': {
+        item: { providerId: 'provider-cos', bucket: 'drive-prod', exists: true },
+      },
+      'storageProviders.bucket.update': {
+        item: { providerId: 'provider-cos', bucket: 'drive-prod', changed: true },
+      },
+      'storageProviders.create': {
+        item: {
+          id: 'provider-new',
+          providerKind: 'tencent_cos',
+          name: 'New COS',
+          endpointUrl: 'https://cos.ap-shanghai.myqcloud.com',
+          bucket: 'drive-new',
+          pathStyle: false,
+          status: 'active',
+          version: 1,
+          credentialConfigured: true,
+        },
+      },
+    };
+    const service = createServiceWithClient(
+      recordingClient(calls, () => responses[calls.at(-1)?.operationId ?? '']),
+    );
+
+    const binding = await service.getDefaultBinding();
+    expect(binding).toMatchObject({
+      id: 'default:tenant:tenant-100',
+      providerId: 'provider-cos',
+      bindingScope: 'tenant',
+      storageRootPrefix: 'sdkwork-drive/v1/tenants/tenant-100',
+    });
+    expect(binding?.storageProvider).toMatchObject({
+      id: 'provider-cos',
+      providerKind: 'tencent_cos',
+      bucket: 'drive-prod',
+    });
+
+    await expect(service.testProvider('provider-cos')).resolves.toBe(true);
+    await expect(service.headBucket('provider-cos')).resolves.toMatchObject({ exists: true });
+    await expect(service.initializeBucket('provider-cos')).resolves.toMatchObject({
+      bucket: 'drive-prod',
+      changed: true,
+    });
+    await expect(
+      service.createProvider({
+        id: 'provider-new',
+        providerKind: 'tencent_cos',
+        name: 'New COS',
+        endpointUrl: 'https://cos.ap-shanghai.myqcloud.com',
+        bucket: 'drive-new',
+      }),
+    ).resolves.toMatchObject({ id: 'provider-new', displayName: 'New COS' });
+  });
+
+  it('narrows the binding list to one resolution step', async () => {
+    const { calls, service } = createFakeService();
+
+    await service.listBindingsPage({ bindingScope: 'space_type', pageSize: 200 });
+
+    // The console renders a section per step; the unfiltered list is one page of
+    // every step, so the filter has to be a server query.
+    expect(lastCall(calls)).toMatchObject({
+      operationId: 'storageProviderBindings.list',
+      query: { binding_scope: 'space_type', page_size: 200 },
+    });
+  });
+
+  it('sends the provider-kind switch as a server-side list filter', async () => {
+    const { calls, service } = createFakeService();
+
+    await service.listProvidersPage({
+      providerKind: 'tencent_cos',
+      pageSize: 20,
+      pageToken: 'cursor-2',
+    });
+
+    // The filter has to travel with the request: applied to a fetched page it
+    // can only report the page, which is how "select Tencent COS" came back
+    // empty while the row sat on page 2. The wire name is the canonical
+    // lower_snake_case `provider_kind` (`API_SPEC.md` §13).
+    expect(lastCall(calls)).toMatchObject({
+      operationId: 'storageProviders.list',
+      query: {
+        provider_kind: 'tencent_cos',
+        page_size: 20,
+        cursor: 'cursor-2',
+      },
     });
   });
 
@@ -778,6 +933,61 @@ describe('storage provider admin service', () => {
     expect(rows[0].providerAccountId).toBeUndefined();
     expect(rows[0].accountCode).toBeUndefined();
     expect(rows[0].vendorCode).toBeUndefined();
+  });
+
+  it('carries the server-side vendor credential vocabulary back to the console', async () => {
+    const { service } = createFakeService();
+
+    const rows = await service.initializeProviderAccountDefaults();
+
+    // The server minted the placeholder key pair, so the labels it returns are
+    // the authority; dropping them here is exactly the defect that let the
+    // editor pre-fill an env name the bootstrapped account was not created
+    // under.
+    expect(rows[1].credentialFields).toEqual({
+      accessKeyLabel: 'AccessKey ID',
+      secretKeyLabel: 'AccessKey Secret',
+      defaultEnvAccessKey: 'ALIBABA_CLOUD_ACCESS_KEY_ID',
+      defaultEnvSecretKey: 'ALIBABA_CLOUD_ACCESS_KEY_SECRET',
+      consoleUrl: 'https://ram.console.aliyun.com/manage/ak',
+    });
+    // A credential-free kind has no key pair, so it must not invent a
+    // half-populated field object the editor could render.
+    expect(rows[0].credentialFields).toBeUndefined();
+  });
+
+  it('degrades to no credential fields when the server omits a label', async () => {
+    // Version skew: an older server returns the row without (or with a partial)
+    // `credentialFields`. The console must fall back to its own static catalog
+    // rather than hand the editor an object with empty strings.
+    const client = {
+      metadata: {},
+      operations: {},
+      setTokenManager: () => undefined,
+      request: async () => ({
+        items: [
+          {
+            providerKind: 'aliyun_oss',
+            providerId: 'builtin-storage-provider-aliyun-oss',
+            providerCreated: true,
+            credentialFields: {
+              accessKeyLabel: 'AccessKey ID',
+              secretKeyLabel: '',
+            },
+          },
+        ],
+      }),
+    } as unknown as DriveAdminStorageSdkClient;
+    const service = createStorageProviderAdminService({
+      adminStorageSdkClient: client,
+      getSession: () => ({
+        context: { tenantId: 'tenant-100', actorId: 'user-100', userId: 'user-100' },
+      }),
+    });
+
+    const rows = await service.initializeProviderAccountDefaults();
+
+    expect(rows[0].credentialFields).toBeUndefined();
   });
 
   it('requires an identified operator before bootstrapping provider accounts', async () => {

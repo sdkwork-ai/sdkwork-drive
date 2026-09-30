@@ -10,6 +10,7 @@ import {
   driveSectionToPath,
   isShareLinkClaimPath,
   parseShareLinkClaimToken,
+  runDriveFileBrowserCommand,
   type DriveSection,
 } from 'sdkwork-drive-pc-file';
 import {
@@ -17,8 +18,13 @@ import {
   DriveRuntimeProvider,
   isDriveAbortError,
   isDriveAuthRoute,
+  useDriveHostEffects,
   type DriveStorageSummary,
 } from 'sdkwork-drive-pc-core';
+import {
+  useDrivePcPreferences,
+  useTranslation,
+} from 'sdkwork-drive-pc-commons';
 import {
   canAccessAdminSection,
   resolveDriveAdminSectionAccess,
@@ -234,6 +240,48 @@ export default function App({ runtime }: { runtime: DriveRuntime }) {
     setIsSettingsOpen(true);
   };
 
+  /**
+   * Desktop host effects: tray menu, global shortcut bindings, in-app key
+   * fallback. Commands resolve through the shared command table so a tray click
+   * and a shortcut press produce identical behavior.
+   */
+  const { preferences } = useDrivePcPreferences();
+  const { t } = useTranslation();
+  const trayLabels = useMemo(
+    () => ({
+      openSettings: t('settings.shortcut_openSettings_label'),
+      showWindow: t('settings.shortcut_showWindow_label'),
+      cutSelection: t('settings.shortcut_cutSelection_label'),
+      pasteSelection: t('settings.shortcut_pasteSelection_label'),
+      refresh: t('settings.shortcut_refresh_label'),
+      toggleTray: t('settings.shortcut_toggleTray_label'),
+    }),
+    [t],
+  );
+  useDriveHostEffects({
+    host: runtime.host,
+    preferences,
+    trayLabels,
+    handlers: {
+      openSettings: () => openSettings('shortcuts'),
+      showWindow: () => {
+        void runtime.host.tray.restoreWindow();
+      },
+      cutSelection: () => {
+        runDriveFileBrowserCommand('cut');
+      },
+      pasteSelection: () => {
+        runDriveFileBrowserCommand('paste');
+      },
+      refresh: () => {
+        runDriveFileBrowserCommand('refresh');
+      },
+      toggleTray: () => {
+        void runtime.host.tray.setVisible(!preferences.trayEnabled);
+      },
+    },
+  });
+
   const getIamRuntime = useMemo(() => {
     return () => getDriveIamRuntime(runtime);
   }, [runtime]);
@@ -275,6 +323,7 @@ export default function App({ runtime }: { runtime: DriveRuntime }) {
                   <StorageBindingsAdminPage
                     adminStorageSdkClient={runtime.admin.adminStorage}
                     getSession={runtime.session.getSnapshot}
+                    onManageProviders={() => setActiveSection('admin-storage-providers')}
                   />
                 ) : adminSectionAccess.storageKinds && activeSection === 'admin-storage-kinds' ? (
                   <StorageProviderKindsAdminPage
@@ -285,6 +334,8 @@ export default function App({ runtime }: { runtime: DriveRuntime }) {
                   <StorageBucketsAdminPage
                     adminStorageSdkClient={runtime.admin.adminStorage}
                     getSession={runtime.session.getSnapshot}
+                    onCreateProvider={() => setActiveSection('admin-storage-providers')}
+                    onConfigureProviders={() => setActiveSection('admin-storage-providers')}
                   />
                 ) : adminSectionAccess.audit && activeSection === 'admin-audit' ? (
                   <AuditAdminPage

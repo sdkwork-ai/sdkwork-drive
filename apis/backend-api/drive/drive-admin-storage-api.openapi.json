@@ -369,7 +369,17 @@
           "storageAdmin"
         ],
         "operationId": "storageProviders.list",
+        "description": "List storage provider configurations. Supports cursor pagination (`page_size`, `cursor`); every filter is applied before the cursor window is selected, so `provider_kind=tencent_cos` returns the tenant's COS rows as the first page of the filtered set instead of only when they happen to fall inside an unfiltered page.",
         "parameters": [
+          {
+            "name": "provider_kind",
+            "in": "query",
+            "required": false,
+            "description": "Filter by storage provider kind. Matches the stored kind exactly (`tencent_cos`, `aliyun_oss`, `s3_compatible`, `local_filesystem`, ...). The single value `custom` matches the whole custom family: `custom` and every `custom:<vendor_key>` row. Matching is case-insensitive; an unknown value selects nothing rather than failing, because `custom:<vendor_key>` is open-ended.",
+            "schema": {
+              "type": "string"
+            }
+          },
           {
             "name": "status",
             "in": "query",
@@ -1734,7 +1744,9 @@
         "x-sdkwork-api-authority": "sdkwork-drive.admin.storage",
         "x-sdkwork-request-context": "WebRequestContext",
         "x-sdkwork-api-surface": "backend-api",
-        "x-sdkwork-permission": "drive.storage.admin"
+        "x-sdkwork-permission": "drive.storage.admin",
+        "summary": "Initialize storage bucket",
+        "description": "Idempotent bucket initialization: ensures the provider’s configured bucket exists on its vendor, creating it only when missing. Re-running the operation converges (response changed=false) instead of failing with vendor-specific \"already exists\" errors, so initialization can be replayed after configuration changes or bucket deletion. Supported for every provider kind that exposes an object store (S3-compatible vendors and the local filesystem store)."
       },
       "delete": {
         "tags": [
@@ -2511,7 +2523,22 @@
         ],
         "summary": "List Drive storage provider bindings",
         "operationId": "storageProviderBindings.list",
+        "description": "List storage bindings, ordered by resolution priority (space, then space type, then tenant). Filter with `binding_scope` when the caller renders one resolution step at a time: the unfiltered list is a single page window over every step, so enough space-scoped bindings push the space-type rows past it.",
         "parameters": [
+          {
+            "name": "binding_scope",
+            "in": "query",
+            "required": false,
+            "description": "Restrict the list to one resolution step. `space` = a specific space's own binding (highest priority), `space_type` = a space type's binding, `tenant` = the tenant-wide storage provider configuration (lowest priority). An unknown value is rejected with a validation error rather than answered with an empty page.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "tenant",
+                "space",
+                "space_type"
+              ]
+            }
+          },
           {
             "name": "spaceId",
             "in": "query",
@@ -3774,6 +3801,743 @@
         "x-sdkwork-api-surface": "backend-api",
         "x-sdkwork-permission": "drive.storage.admin"
       }
+    },
+    "/backend/v3/api/drive/storage/migrations": {
+      "get": {
+        "tags": [
+          "storageAdmin"
+        ],
+        "operationId": "storageMigrations.list",
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200
+            }
+          },
+          {
+            "name": "pageToken",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SdkWorkApiResponse"
+                    },
+                    {
+                      "type": "object",
+                      "required": [
+                        "data"
+                      ],
+                      "properties": {
+                        "data": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "required": [
+                            "items",
+                            "pageInfo"
+                          ],
+                          "properties": {
+                            "items": {
+                              "type": "array",
+                              "items": {
+                                "$ref": "#/components/schemas/StorageMigration"
+                              }
+                            },
+                            "pageInfo": {
+                              "$ref": "#/components/schemas/PageInfo"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "AuthToken": [],
+            "AccessToken": []
+          }
+        ],
+        "x-sdkwork-owner": "sdkwork-drive",
+        "x-sdkwork-api-authority": "sdkwork-drive.admin.storage",
+        "x-sdkwork-request-context": "WebRequestContext",
+        "x-sdkwork-api-surface": "backend-api",
+        "x-sdkwork-permission": "drive.storage.admin"
+      },
+      "post": {
+        "tags": [
+          "storageAdmin"
+        ],
+        "operationId": "storageMigrations.create",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateStorageMigrationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SdkWorkApiResponse"
+                    },
+                    {
+                      "type": "object",
+                      "required": [
+                        "data"
+                      ],
+                      "properties": {
+                        "data": {
+                          "type": "object",
+                          "required": [
+                            "item"
+                          ],
+                          "properties": {
+                            "item": {
+                              "$ref": "#/components/schemas/StorageMigration"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "AuthToken": [],
+            "AccessToken": []
+          }
+        ],
+        "x-sdkwork-owner": "sdkwork-drive",
+        "x-sdkwork-api-authority": "sdkwork-drive.admin.storage",
+        "x-sdkwork-request-context": "WebRequestContext",
+        "x-sdkwork-api-surface": "backend-api",
+        "x-sdkwork-permission": "drive.storage.admin"
+      }
+    },
+    "/backend/v3/api/drive/storage/migrations/{migrationId}": {
+      "get": {
+        "tags": [
+          "storageAdmin"
+        ],
+        "operationId": "storageMigrations.retrieve",
+        "parameters": [
+          {
+            "name": "migrationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SdkWorkApiResponse"
+                    },
+                    {
+                      "type": "object",
+                      "required": [
+                        "data"
+                      ],
+                      "properties": {
+                        "data": {
+                          "type": "object",
+                          "required": [
+                            "item"
+                          ],
+                          "properties": {
+                            "item": {
+                              "$ref": "#/components/schemas/StorageMigration"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "AuthToken": [],
+            "AccessToken": []
+          }
+        ],
+        "x-sdkwork-owner": "sdkwork-drive",
+        "x-sdkwork-api-authority": "sdkwork-drive.admin.storage",
+        "x-sdkwork-request-context": "WebRequestContext",
+        "x-sdkwork-api-surface": "backend-api",
+        "x-sdkwork-permission": "drive.storage.admin"
+      }
+    },
+    "/backend/v3/api/drive/storage/migrations/{migrationId}/run": {
+      "post": {
+        "tags": [
+          "storageAdmin"
+        ],
+        "operationId": "storageMigrations.run",
+        "parameters": [
+          {
+            "name": "migrationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RunStorageMigrationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SdkWorkApiResponse"
+                    },
+                    {
+                      "type": "object",
+                      "required": [
+                        "data"
+                      ],
+                      "properties": {
+                        "data": {
+                          "type": "object",
+                          "required": [
+                            "item"
+                          ],
+                          "properties": {
+                            "item": {
+                              "$ref": "#/components/schemas/StorageMigrationRunReport"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "AuthToken": [],
+            "AccessToken": []
+          }
+        ],
+        "x-sdkwork-owner": "sdkwork-drive",
+        "x-sdkwork-api-authority": "sdkwork-drive.admin.storage",
+        "x-sdkwork-request-context": "WebRequestContext",
+        "x-sdkwork-api-surface": "backend-api",
+        "x-sdkwork-permission": "drive.storage.admin"
+      }
+    },
+    "/backend/v3/api/drive/storage/migrations/{migrationId}/items": {
+      "get": {
+        "tags": [
+          "storageAdmin"
+        ],
+        "operationId": "storageMigrations.items.list",
+        "parameters": [
+          {
+            "name": "migrationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200
+            }
+          },
+          {
+            "name": "pageToken",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SdkWorkApiResponse"
+                    },
+                    {
+                      "type": "object",
+                      "required": [
+                        "data"
+                      ],
+                      "properties": {
+                        "data": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "required": [
+                            "items",
+                            "pageInfo"
+                          ],
+                          "properties": {
+                            "items": {
+                              "type": "array",
+                              "items": {
+                                "$ref": "#/components/schemas/StorageMigrationItem"
+                              }
+                            },
+                            "pageInfo": {
+                              "$ref": "#/components/schemas/PageInfo"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "AuthToken": [],
+            "AccessToken": []
+          }
+        ],
+        "x-sdkwork-owner": "sdkwork-drive",
+        "x-sdkwork-api-authority": "sdkwork-drive.admin.storage",
+        "x-sdkwork-request-context": "WebRequestContext",
+        "x-sdkwork-api-surface": "backend-api",
+        "x-sdkwork-permission": "drive.storage.admin"
+      }
+    },
+    "/backend/v3/api/drive/storage/migrations/{migrationId}/cancel": {
+      "post": {
+        "tags": [
+          "storageAdmin"
+        ],
+        "operationId": "storageMigrations.cancel",
+        "parameters": [
+          {
+            "name": "migrationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SdkWorkApiResponse"
+                    },
+                    {
+                      "type": "object",
+                      "required": [
+                        "data"
+                      ],
+                      "properties": {
+                        "data": {
+                          "type": "object",
+                          "required": [
+                            "item"
+                          ],
+                          "properties": {
+                            "item": {
+                              "$ref": "#/components/schemas/StorageMigration"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "AuthToken": [],
+            "AccessToken": []
+          }
+        ],
+        "x-sdkwork-owner": "sdkwork-drive",
+        "x-sdkwork-api-authority": "sdkwork-drive.admin.storage",
+        "x-sdkwork-request-context": "WebRequestContext",
+        "x-sdkwork-api-surface": "backend-api",
+        "x-sdkwork-permission": "drive.storage.admin"
+      }
     }
   },
   "components": {
@@ -4958,6 +5722,71 @@
           "credentialSeeded": {
             "type": "boolean",
             "description": "True when this call wrote the placeholder access-key pair. False means an account already existed, so its credential was deliberately not overwritten."
+          },
+          "credentialFields": {
+            "$ref": "#/components/schemas/StorageProviderVendorCredentialFields"
+          },
+          "vendorCapabilities": {
+            "$ref": "#/components/schemas/StorageProviderVendorCapabilityDefaults"
+          }
+        }
+      },
+      "StorageProviderVendorCapabilityDefaults": {
+        "type": "object",
+        "additionalProperties": false,
+        "description": "The encryption modes and storage classes a vendor accepts, in the contract's preference order ([0] is the default a fresh configuration carries). Carried on the bootstrap response so the console's editor dropdowns and the server's own capability report read one table instead of two that can drift. Absent for a credential-free kind; an empty list means the vendor offers no choice.",
+        "required": [
+          "serverSideEncryptionModes",
+          "storageClasses"
+        ],
+        "properties": {
+          "serverSideEncryptionModes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Server-side encryption tokens this vendor accepts (AES256, KMS, aws:kms, ...), preferred first."
+          },
+          "storageClasses": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Storage classes this vendor accepts (STANDARD, IA, VAULT, ...), the standard tier first."
+          }
+        }
+      },
+      "StorageProviderVendorCredentialFields": {
+        "type": "object",
+        "additionalProperties": false,
+        "description": "How the vendor names the two halves of its credential pair, plus the environment variables and console link the operator may use. Carried on the bootstrap response so the console labels an account the way the vendor does instead of maintaining a second table that can drift.",
+        "required": [
+          "accessKeyLabel",
+          "secretKeyLabel",
+          "defaultEnvAccessKey",
+          "defaultEnvSecretKey",
+          "consoleUrl"
+        ],
+        "properties": {
+          "accessKeyLabel": {
+            "type": "string",
+            "description": "Vendor's label for the public half of the pair (SecretId, Access Key ID, Application Key ID, ...)."
+          },
+          "secretKeyLabel": {
+            "type": "string",
+            "description": "Vendor's label for the private half of the pair (SecretKey, Secret Access Key, Application Key, ...)."
+          },
+          "defaultEnvAccessKey": {
+            "type": "string",
+            "description": "Vendor-namespaced environment variable name offered as the default for the public half."
+          },
+          "defaultEnvSecretKey": {
+            "type": "string",
+            "description": "Vendor-namespaced environment variable name offered as the default for the private half."
+          },
+          "consoleUrl": {
+            "type": "string",
+            "description": "Console deep link where the operator mints the key pair."
           }
         }
       },
@@ -5329,6 +6158,267 @@
             "format": "int64",
             "description": "Sum of content_length created in that month.",
             "x-sdkwork-int64-string": true
+          }
+        }
+      },
+      "StorageMigration": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "name",
+          "sourceProviderId",
+          "targetProviderId",
+          "status",
+          "applyBindingSwitch",
+          "objectsTotal",
+          "objectsCopied",
+          "objectsFailed",
+          "objectsOutstanding",
+          "bytesCopied",
+          "progressRatio",
+          "createdBy",
+          "updatedBy"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "sourceProviderId": {
+            "type": "string"
+          },
+          "targetProviderId": {
+            "type": "string"
+          },
+          "targetBucket": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "running",
+              "succeeded",
+              "failed",
+              "cancelled"
+            ]
+          },
+          "applyBindingSwitch": {
+            "type": "boolean",
+            "description": "When true, every migrated object is re-pointed at the target provider once the run completes without failures. When false the bytes land on the target but the registry keeps reading from the source."
+          },
+          "objectsTotal": {
+            "type": "string",
+            "format": "int64",
+            "x-sdkwork-int64-string": true,
+            "description": "Objects queued when the run was seeded."
+          },
+          "objectsCopied": {
+            "type": "string",
+            "format": "int64",
+            "x-sdkwork-int64-string": true,
+            "description": "Objects copied and whose checksum was verified."
+          },
+          "objectsFailed": {
+            "type": "string",
+            "format": "int64",
+            "x-sdkwork-int64-string": true,
+            "description": "Objects that failed verification."
+          },
+          "objectsOutstanding": {
+            "type": "string",
+            "format": "int64",
+            "x-sdkwork-int64-string": true,
+            "description": "Objects still pending, derived from the queue."
+          },
+          "bytesCopied": {
+            "type": "string",
+            "format": "int64",
+            "x-sdkwork-int64-string": true
+          },
+          "progressRatio": {
+            "type": "number",
+            "format": "double",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "failureMessage": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "createdBy": {
+            "type": "string"
+          },
+          "updatedBy": {
+            "type": "string"
+          }
+        }
+      },
+      "StorageMigrationItem": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "storageObjectId",
+          "sourceProviderId",
+          "sourceBucket",
+          "sourceObjectKey",
+          "targetProviderId",
+          "targetBucket",
+          "targetObjectKey",
+          "contentType",
+          "contentLength",
+          "checksumSha256Hex",
+          "status"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "storageObjectId": {
+            "type": "string"
+          },
+          "sourceProviderId": {
+            "type": "string"
+          },
+          "sourceBucket": {
+            "type": "string"
+          },
+          "sourceObjectKey": {
+            "type": "string"
+          },
+          "targetProviderId": {
+            "type": "string"
+          },
+          "targetBucket": {
+            "type": "string"
+          },
+          "targetObjectKey": {
+            "type": "string"
+          },
+          "contentType": {
+            "type": "string"
+          },
+          "contentLength": {
+            "type": "string",
+            "format": "int64",
+            "x-sdkwork-int64-string": true
+          },
+          "checksumSha256Hex": {
+            "type": "string",
+            "description": "SHA-256 recorded on the source registry row, in lowercase hex."
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "copied",
+              "failed"
+            ]
+          },
+          "verifiedChecksumSha256Hex": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "SHA-256 observed on the target after the copy, present only on success."
+          },
+          "failureMessage": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "CreateStorageMigrationRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "name",
+          "sourceProviderId",
+          "targetProviderId"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Caller-owned id. Supplying it makes a retried plan idempotent instead of opening a second run for the same intended migration."
+          },
+          "name": {
+            "type": "string"
+          },
+          "sourceProviderId": {
+            "type": "string",
+            "description": "Provider to drain. May be disabled; a deleted provider is rejected."
+          },
+          "targetProviderId": {
+            "type": "string",
+            "description": "Provider to copy onto. Must be active."
+          },
+          "targetBucket": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Target bucket. Defaults to the target provider's own bucket."
+          },
+          "applyBindingSwitch": {
+            "type": "boolean",
+            "default": false,
+            "description": "Re-point objects and bindings at the target once every object is copied and verified."
+          }
+        }
+      },
+      "RunStorageMigrationRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "batchSize": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64",
+            "minimum": 1,
+            "description": "Objects to copy in this call. Clamped into the supported range rather than rejected, because it is a throughput knob and not a contract."
+          }
+        }
+      },
+      "StorageMigrationRunReport": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "migration",
+          "copiedThisBatch",
+          "failedThisBatch",
+          "completed"
+        ],
+        "properties": {
+          "migration": {
+            "$ref": "#/components/schemas/StorageMigration"
+          },
+          "copiedThisBatch": {
+            "type": "string",
+            "format": "int64",
+            "x-sdkwork-int64-string": true
+          },
+          "failedThisBatch": {
+            "type": "string",
+            "format": "int64",
+            "x-sdkwork-int64-string": true
+          },
+          "completed": {
+            "type": "boolean",
+            "description": "True once the run reached `succeeded` on this call."
           }
         }
       }

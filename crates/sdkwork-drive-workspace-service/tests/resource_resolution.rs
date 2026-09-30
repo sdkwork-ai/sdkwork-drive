@@ -13,7 +13,7 @@ async fn insert_provider(pool: &PgPool) {
             strict_tls, credential_ref, status, version, created_by, updated_by
          ) VALUES (
             'provider-local', 'local_filesystem', 'Local', 'file:///tmp/sdkwork-drive',
-            NULL, 'website-bucket', 1, 0, NULL, 'active', 1, 'test', 'test'
+            NULL, 'website-bucket', true, false, NULL, 'active', 1, 'test', 'test'
          )",
     )
     .execute(pool)
@@ -286,7 +286,11 @@ async fn website_root_resolution_returns_current_and_pinned_logical_versions() {
         current.content_locator.storage_provider_id,
         "provider-local"
     );
-    assert_eq!(current.content_locator.storage_provider_version, 1);
+    assert_eq!(current.content_locator.bucket, "website-bucket");
+    assert_eq!(
+        current.content_locator.object_key,
+        "tenant-web/file-index/2.html"
+    );
 
     let mut pinned = resolve_command(
         "tenant-web",

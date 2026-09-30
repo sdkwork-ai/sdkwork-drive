@@ -69,6 +69,36 @@ describe('drive admin storage sdk client', () => {
     expect(request.mock.calls[0]![1]).not.toHaveProperty('headers');
   });
 
+  it('propagates the host locale as the standard Accept-Language header', async () => {
+    const tokenManager = createDriveSessionTokenManager(createSessionStore());
+    const request = vi.fn(async <T>(
+      _path: string,
+      _options?: Record<string, unknown>,
+    ): Promise<T> => ({ items: [] }) as T);
+    const sdkClient = {
+      http: {
+        request,
+      },
+      setTokenManager: vi.fn(),
+    };
+
+    const client = createDriveAdminStorageSdkClient({
+      config,
+      sdkClient: sdkClient as never,
+      tokenManager,
+      locale: 'en-US',
+    });
+
+    await client.request({ operationId: 'storageProviderKinds.list' });
+
+    expect(request).toHaveBeenCalledWith(
+      '/backend/v3/api/drive/storage/provider-kinds',
+      expect.objectContaining({
+        headers: { 'Accept-Language': 'en-US' },
+      }),
+    );
+  });
+
   it('normalizes generated SDK failures at the admin storage SDK facade boundary', async () => {
     const tokenManager = createDriveSessionTokenManager(createSessionStore());
     const request = vi.fn(async <T>(): Promise<T> => {

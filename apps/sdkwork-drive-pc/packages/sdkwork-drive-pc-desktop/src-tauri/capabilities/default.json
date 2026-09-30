@@ -22,6 +22,16 @@
     "allow-write-secure-session-value",
     "allow-remove-secure-session-value",
     "allow-clear-secure-session-values",
-    "allow-read-secure-session-snapshot"
+    "allow-read-secure-session-snapshot",
+    "allow-tray-set-visible",
+    "allow-tray-set-menu",
+    "allow-tray-emit-menu",
+    "allow-tray-restore-window",
+    "allow-shortcut-register-all",
+    "allow-shortcut-unregister",
+    "allow-shortcut-unregister-all",
+    "allow-clipboard-cut-paths",
+    "allow-clipboard-read-paths",
+    "allow-clipboard-write-text"
   ]
 }

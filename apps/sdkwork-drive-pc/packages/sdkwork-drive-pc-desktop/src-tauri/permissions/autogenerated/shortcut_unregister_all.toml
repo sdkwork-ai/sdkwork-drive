@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-shortcut-unregister-all"
+description = "Enables the shortcut_unregister_all command without any pre-configured scope."
+commands.allow = ["shortcut_unregister_all"]
+
+[[permission]]
+identifier = "deny-shortcut-unregister-all"
+description = "Denies the shortcut_unregister_all command without any pre-configured scope."
+commands.deny = ["shortcut_unregister_all"]

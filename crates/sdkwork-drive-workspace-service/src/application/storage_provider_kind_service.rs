@@ -9,14 +9,67 @@ use crate::DriveServiceError;
 
 /// Built-in provider kind catalog used for registry initialization.
 /// Display names mirror the operator admin surfaces.
-pub const BUILTIN_STORAGE_PROVIDER_KIND_CATALOG: [(&str, &str, i32); 7] = [
+///
+/// `sort_order` groups the catalog the way an operator scans it: local first
+/// (the no-credential default), then Amazon S3 as the reference implementation,
+/// then the mainland-China vendors, then the rest-of-world vendors, then Google
+/// Cloud Storage, which closes the group because its S3 surface is an
+/// interoperability layer rather than the vendor's native protocol.
+///
+/// Kept in lockstep with `DriveStorageProviderKind::BUILTIN` and with the
+/// Postgres `provider_kind` whitelist; the three describe the same set.
+/// Table holding the built-in provider kind catalog.
+///
+/// Exported so infrastructure that resets Drive state (test fixtures, dev seed
+/// scripts) can treat the catalog as reference data and skip it. The rows are
+/// installed by the baseline DDL and migration `0008`, so truncating the table
+/// would silently disable every built-in kind.
+pub const STORAGE_PROVIDER_KIND_TABLE: &str = "dr_drive_storage_provider_kind";
+
+pub const BUILTIN_STORAGE_PROVIDER_KIND_CATALOG: [(&str, &str, i32); 25] = [
     ("local_filesystem", "Local Filesystem", 1),
     ("s3_compatible", "Amazon S3 / S3 Compatible", 2),
-    ("google_cloud_storage", "Google Cloud Storage", 3),
-    ("aliyun_oss", "Alibaba Cloud OSS", 4),
-    ("tencent_cos", "Tencent Cloud COS", 5),
-    ("huawei_obs", "Huawei Cloud OBS", 6),
-    ("volcengine_tos", "Volcengine TOS", 7),
+    // --- Mainland China ---------------------------------------------------
+    ("aliyun_oss", "Alibaba Cloud OSS", 10),
+    ("tencent_cos", "Tencent Cloud COS", 11),
+    ("huawei_obs", "Huawei Cloud OBS", 12),
+    ("volcengine_tos", "Volcengine TOS", 13),
+    ("baidu_bos", "Baidu Cloud BOS", 14),
+    ("kingsoft_ks3", "Kingsoft Cloud KS3", 15),
+    ("qiniu_kodo", "Qiniu Kodo", 16),
+    ("china_mobile_ecloud", "China Mobile Ecloud", 17),
+    ("china_telecom_eos", "China Telecom EOS", 18),
+    ("china_unicom_wo", "China Unicom Wo Cloud", 19),
+    // --- Rest of world ----------------------------------------------------
+    ("minio", "MinIO", 30),
+    ("cloudflare_r2", "Cloudflare R2", 31),
+    ("backblaze_b2", "Backblaze B2", 32),
+    ("wasabi", "Wasabi", 33),
+    ("digitalocean_spaces", "DigitalOcean Spaces", 34),
+    (
+        "linode_object_storage",
+        "Akamai / Linode Object Storage",
+        35,
+    ),
+    ("vultr_object_storage", "Vultr Object Storage", 36),
+    ("scaleway_object_storage", "Scaleway Object Storage", 37),
+    (
+        "oracle_cloud_storage",
+        "Oracle Cloud Infrastructure Object Storage",
+        38,
+    ),
+    ("ibm_cos", "IBM Cloud Object Storage", 39),
+    (
+        "alibaba_cloud_international",
+        "Alibaba Cloud OSS (International)",
+        40,
+    ),
+    (
+        "tencent_cloud_international",
+        "Tencent Cloud COS (International)",
+        41,
+    ),
+    ("google_cloud_storage", "Google Cloud Storage", 50),
 ];
 
 #[derive(Debug, Clone)]
@@ -71,10 +124,16 @@ where
 
     /// List the provider kind catalog with per-kind configuration counts
     /// (non-deleted `dr_drive_storage_provider` rows).
+    ///
+    /// `locale` is a normalized BCP 47 tag from the supported set (`zh-CN`,
+    /// `en-US`); when present, the seeded translation for that locale replaces
+    /// the locale-neutral base display name, and a missing translation falls
+    /// back to the base name.
     pub async fn list_storage_provider_kinds(
         &self,
+        locale: Option<&str>,
     ) -> Result<Vec<StorageProviderKindSummary>, DriveServiceError> {
-        let kinds = self.store.list_storage_provider_kinds().await?;
+        let kinds = self.store.list_storage_provider_kinds(locale).await?;
         let counts = self
             .store
             .count_storage_provider_configs_by_kind()

@@ -19,16 +19,20 @@
   ],
   "localeSets": {
     "zh-CN": {
-      "version": "1.0.0",
+      "version": "1.1.0",
       "required": true,
-      "checksum": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "files": []
+      "checksum": "sha256:901f860947eecd8eef58f4d601fc3648d3e033d7873e35ed7f0f811db1d89d75",
+      "files": [
+        "001_drive_storage_provider_kind_translations.sql"
+      ]
     },
     "en-US": {
-      "version": "1.0.0",
+      "version": "1.1.0",
       "required": false,
-      "checksum": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
-      "files": []
+      "checksum": "sha256:7578e380301912c3f46793af3c8dbb213f2fcfd82d1ab21d6124fc70029809f8",
+      "files": [
+        "001_drive_storage_provider_kind_translations.sql"
+      ]
     }
   },
   "profiles": {
@@ -37,16 +41,25 @@
         "common/001_bootstrap.sql"
       ],
       "locales": {
-        "zh-CN": []
+        "zh-CN": [
+          "001_drive_storage_provider_kind_translations.sql"
+        ],
+        "en-US": [
+          "001_drive_storage_provider_kind_translations.sql"
+        ]
       }
     },
     "standard": {
       "common": [
-        "common/001_bootstrap.sql",
-        "001_bootstrap.sql"
+        "common/001_bootstrap.sql"
       ],
       "locales": {
-        "zh-CN": []
+        "zh-CN": [
+          "001_drive_storage_provider_kind_translations.sql"
+        ],
+        "en-US": [
+          "001_drive_storage_provider_kind_translations.sql"
+        ]
       }
     }
   }

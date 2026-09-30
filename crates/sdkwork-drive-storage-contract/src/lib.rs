@@ -20,6 +20,36 @@ pub trait DriveObjectStore: Send + Sync {
         request: PutObjectRequest,
     ) -> Result<PutObjectResponse, DriveObjectStoreError>;
 
+    /// Store an object whose bytes already live in a local file.
+    ///
+    /// Separate from [`Self::put_object`] because the size is unbounded: a
+    /// download package archive is staged on disk precisely so it never has to
+    /// be held in memory. An adapter that can stream from a path should; the
+    /// contract default reads the file once and delegates to `put_object`, which
+    /// keeps every provider correct while letting the S3 adapter avoid a
+    /// needless full-buffer copy.
+    async fn put_object_from_path(
+        &self,
+        request: PutObjectFromPathRequest,
+    ) -> Result<PutObjectResponse, DriveObjectStoreError> {
+        let body = tokio::fs::read(&request.source_path)
+            .await
+            .map_err(|error| {
+                DriveObjectStoreError::new(
+                    DriveObjectStoreErrorKind::Internal,
+                    format!("read object source file failed: {error}"),
+                )
+            })?;
+        self.put_object(PutObjectRequest {
+            locator: request.locator,
+            content_type: request.content_type,
+            metadata: request.metadata,
+            body,
+            checksum_sha256_hex: request.checksum_sha256_hex,
+        })
+        .await
+    }
+
     async fn head_object(
         &self,
         request: HeadObjectRequest,
@@ -35,11 +65,18 @@ pub trait DriveObjectStore: Send + Sync {
         request: HeadBucketRequest,
     ) -> Result<HeadBucketResponse, DriveObjectStoreError>;
 
+    /// Ensure the bucket exists. Implementations MUST be idempotent: calling
+    /// this for a bucket that already exists (and is owned by the caller)
+    /// succeeds with `created: false` instead of failing, so re-running
+    /// bucket initialization converges instead of erroring on vendors that
+    /// reject re-creation.
     async fn list_buckets(
         &self,
         request: ListBucketsRequest,
     ) -> Result<ListBucketsResponse, DriveObjectStoreError>;
 
+    /// Ensure the bucket exists; `created` reports whether this call made the
+    /// change. Idempotent per the contract-wide initialization semantics.
     async fn create_bucket(
         &self,
         request: CreateBucketRequest,

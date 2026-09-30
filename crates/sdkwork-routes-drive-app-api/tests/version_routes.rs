@@ -171,7 +171,7 @@ async fn seed_file_version(pool: &sqlx::PgPool) {
             status, version, created_by, updated_by
         ) VALUES (
             'provider-001', 's3_compatible', 'provider-001', 'https://s3.example.com', 'us-east-1',
-            'bucket-001', 1, 1, 'plain:test-access:test-secret', NULL, NULL,
+            'bucket-001', TRUE, TRUE, 'plain:test-access:test-secret', NULL, NULL,
             'active', 1, 'user-001', 'user-001'
         )",
     )
@@ -192,8 +192,8 @@ async fn seed_file_version(pool: &sqlx::PgPool) {
     sqlx::query(
         "INSERT INTO dr_drive_node (
             id, tenant_id, space_id, parent_node_id, node_type, node_name,
-            content_state, lifecycle_status, version, created_by, updated_by
-        ) VALUES ('node-001', 'tenant-001', 'space-001', NULL, 'file', 'page.md', 'ready', 'active', 1, 'user-001', 'user-001')",
+            content_state, head_content_type, head_content_type_group, head_content_length, head_version_no, lifecycle_status, version, created_by, updated_by
+        ) VALUES ('node-001', 'tenant-001', 'space-001', NULL, 'file', 'page.md', 'ready', 'application/octet-stream', 'binary', 0, 1, 'active', 1, 'user-001', 'user-001')",
     )
     .execute(pool)
     .await

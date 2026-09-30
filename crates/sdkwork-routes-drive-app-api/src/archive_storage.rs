@@ -17,9 +17,9 @@ use axum::Json;
 use sdkwork_drive_storage_contract::{
     DriveByteRange, DriveObjectLocator, DriveObjectStore, ReadObjectRangeRequest,
 };
-use sdkwork_drive_storage_s3::S3DriveObjectStore;
 use sqlx::PgPool;
 use sqlx::Row;
+use std::sync::Arc;
 
 pub(crate) async fn read_archive_node_bytes(
     state: &AppState,
@@ -43,7 +43,7 @@ pub(crate) async fn read_archive_node_bytes(
         .ok_or_else(|| map_service_error(missing_signing_provider_error(&object_ref.bucket)))?;
     let provider =
         require_active_storage_provider(provider, &object_ref.bucket).map_err(map_service_error)?;
-    let object_store = build_s3_object_store_for_provider(&provider)
+    let object_store = build_s3_object_store_for_provider(state, &provider.to_domain_provider())
         .await
         .map_err(map_service_error)?
         .ok_or_else(|| map_service_error(unsupported_signing_provider_error(&object_ref.bucket)))?;
@@ -86,7 +86,7 @@ async fn find_active_storage_object_ref(
 }
 
 async fn read_full_storage_object(
-    object_store: &S3DriveObjectStore,
+    object_store: &Arc<dyn DriveObjectStore>,
     object_ref: &ActiveStorageObjectRef,
 ) -> Result<Vec<u8>, (StatusCode, Json<ProblemDetail>)> {
     if object_ref.content_length < 0 {

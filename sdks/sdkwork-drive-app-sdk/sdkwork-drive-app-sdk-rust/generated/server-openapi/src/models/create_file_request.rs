@@ -23,6 +23,11 @@ pub struct CreateFileRequest {
     #[serde(rename = "expiresAtEpochMs")]
     pub expires_at_epoch_ms: String,
 
+    /// Optional storage provider the caller wants this object written to. It must be an active provider of the caller's tenant. When omitted, the provider is resolved from the bucket, the space binding, the space-type binding, or the tenant binding, in that order.
+    #[serde(rename = "storageProviderId")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub storage_provider_id: Option<String>,
+
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub bucket: Option<String>,
 

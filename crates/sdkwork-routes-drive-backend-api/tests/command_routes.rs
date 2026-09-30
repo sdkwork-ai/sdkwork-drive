@@ -356,8 +356,8 @@ async fn list_quotas_route_returns_usage_aggregated_from_storage_objects() {
         sqlx::query(
             "INSERT INTO dr_drive_node (
                 id, tenant_id, space_id, parent_node_id, node_type, node_name,
-                content_state, lifecycle_status, version, created_by, updated_by
-            ) VALUES ($1, $2, $3, NULL, 'file', $4, 'ready', 'active', 1, $5, $6)",
+                content_state, head_content_type, head_content_type_group, head_content_length, head_version_no, lifecycle_status, version, created_by, updated_by
+            ) VALUES ($1, $2, $3, NULL, 'file', $4, 'ready', 'application/octet-stream', 'binary', 0, 1, 'active', 1, $5, $6)",
         )
         .bind(node_id)
         .bind("tenant-001")
@@ -377,7 +377,7 @@ async fn list_quotas_route_returns_usage_aggregated_from_storage_objects() {
             status, version, created_by, updated_by
         ) VALUES (
             'provider-001', 's3_compatible', 'Quota S3', 'https://s3.example.com',
-            'us-east-1', 'bucket-001', 1, 1, 'plain:test-access-key:test-secret-key',
+            'us-east-1', 'bucket-001', TRUE, TRUE, 'plain:test-access-key:test-secret-key',
             'AES256', 'STANDARD', 'active', 1, 'admin-001', 'admin-001'
         )",
     )
@@ -783,8 +783,8 @@ async fn maintenance_routes_sweep_objects_and_upload_sessions_and_emit_audit_eve
     sqlx::query(
         "INSERT INTO dr_drive_node (
             id, tenant_id, space_id, parent_node_id, node_type, node_name,
-            content_state, lifecycle_status, version, created_by, updated_by
-        ) VALUES ($1, $2, $3, NULL, 'file', $4, 'ready', 'active', 1, $5, $6)",
+            content_state, head_content_type, head_content_type_group, head_content_length, head_version_no, lifecycle_status, version, created_by, updated_by
+        ) VALUES ($1, $2, $3, NULL, 'file', $4, 'ready', 'application/octet-stream', 'binary', 0, 1, 'active', 1, $5, $6)",
     )
     .bind("node-001")
     .bind("tenant-001")
@@ -803,7 +803,7 @@ async fn maintenance_routes_sweep_objects_and_upload_sessions_and_emit_audit_eve
             status, version, created_by, updated_by
         ) VALUES (
             'provider-001', 's3_compatible', 'Maintenance S3',
-            'https://s3.example.com', 'us-east-1', 'bucket-001', 1,
+            'https://s3.example.com', 'us-east-1', 'bucket-001', TRUE,
             'plain:test-access-key:test-secret-key', 'AES256', 'STANDARD',
             'active', 1, 'admin-001', 'admin-001'
         )",
@@ -1071,7 +1071,7 @@ async fn list_download_packages_route_supports_filters_and_pagination() {
             status, version, created_by, updated_by
         ) VALUES (
             'provider-001', 's3_compatible', 'Download Package S3',
-            'https://s3.example.com', 'us-east-1', 'bucket-001', 1,
+            'https://s3.example.com', 'us-east-1', 'bucket-001', TRUE,
             'plain:test-access-key:test-secret-key', 'AES256', 'STANDARD',
             'active', 1, 'admin-001', 'admin-001'
         )",
@@ -1231,10 +1231,8 @@ async fn maintenance_routes_record_failed_jobs_with_server_context() {
         return;
     };
 
-    sqlx::query("DROP TABLE dr_drive_storage_object")
-        .execute(&pool)
-        .await
-        .expect("drop storage object table should succeed");
+    let absent_storage_object =
+        sdkwork_drive_test_support::TableAbsenceGuard::hide(&pool, "dr_drive_storage_object").await;
 
     let app = build_router_with_pool(pool.clone());
     let failed_response = app
@@ -1306,6 +1304,8 @@ async fn maintenance_routes_record_failed_jobs_with_server_context() {
     .await
     .expect("failed maintenance audit rows should be queryable");
     assert_eq!(failed_audit_count, 1);
+
+    absent_storage_object.restore().await;
 }
 
 #[tokio::test]
@@ -1315,10 +1315,8 @@ async fn maintenance_upload_sweep_failure_records_failed_job_and_audit() {
         return;
     };
 
-    sqlx::query("DROP TABLE dr_drive_upload_session")
-        .execute(&pool)
-        .await
-        .expect("drop upload session table should succeed");
+    let absent_upload_session =
+        sdkwork_drive_test_support::TableAbsenceGuard::hide(&pool, "dr_drive_upload_session").await;
 
     let app = build_router_with_pool(pool.clone());
     let failed_response = app
@@ -1391,6 +1389,8 @@ async fn maintenance_upload_sweep_failure_records_failed_job_and_audit() {
     .await
     .expect("failed upload maintenance audit rows should be queryable");
     assert_eq!(failed_audit_count, 1);
+
+    absent_upload_session.restore().await;
 }
 
 #[tokio::test]

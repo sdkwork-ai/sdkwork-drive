@@ -17,7 +17,7 @@ use axum::http::StatusCode;
 use axum::Json;
 use sdkwork_drive_storage_contract::{
     AbortMultipartUploadRequest, CompleteMultipartUploadRequest, CompletedMultipartPart,
-    CreateMultipartUploadRequest, DeleteObjectRequest, DriveObjectLocator, DriveObjectStore,
+    CreateMultipartUploadRequest, DeleteObjectRequest, DriveObjectLocator,
 };
 use sdkwork_drive_workspace_service::application::storage_key_service::{
     BuildStorageObjectKeyCommand, DriveStorageKeyService,
@@ -30,29 +30,52 @@ use sqlx::PgPool;
 use sqlx::Row;
 use std::collections::BTreeMap;
 
+/// Resolve where a new object version should be written.
+///
+/// Three routing inputs are honoured, in decreasing priority:
+///
+/// 1. `requested_provider_id` - a business that knows which provider it wants
+///    (for example a deployment pipeline pinning artifacts to a dedicated
+///    bucket). It is verified to belong to the caller's tenant and to be
+///    `active` before use, so naming a provider is not a way to reach across
+///    tenants or write into a retired one.
+/// 2. `requested_bucket` - resolves through the tenant-scoped bucket lookup.
+/// 3. Otherwise the provider bound to the space / space type / tenant.
+///
+/// The provider chosen here is persisted onto the storage object, which is what
+/// keeps the object readable after the provider is later renamed, disabled or
+/// swapped: reads re-resolve from the stored locator instead of guessing.
 pub(crate) async fn resolve_storage_target(
     pool: &PgPool,
     tenant_id: &str,
     space_id: &str,
+    requested_provider_id: Option<&str>,
     requested_bucket: Option<&str>,
     node_id: &str,
     object_id: &str,
     version_no: i64,
 ) -> Result<StorageTarget, (StatusCode, Json<ProblemDetail>)> {
-    let default_target = match requested_bucket
+    let default_target = if let Some(provider_id) = requested_provider_id
         .map(str::trim)
         .filter(|value| !value.is_empty())
     {
-        Some(bucket) => DefaultStorageProviderTarget {
-            provider_id: find_active_storage_provider_by_bucket(pool, bucket)
-                .await
-                .map_err(map_service_error)?
-                .ok_or_else(|| map_service_error(missing_signing_provider_error(bucket)))?
-                .id,
-            bucket: bucket.to_string(),
-            storage_root_prefix: default_storage_root_prefix(tenant_id, Some(space_id)),
-        },
-        None => resolve_default_provider_target(pool, tenant_id, space_id).await?,
+        resolve_explicit_provider_target(pool, tenant_id, space_id, provider_id).await?
+    } else {
+        match requested_bucket
+            .map(str::trim)
+            .filter(|value| !value.is_empty())
+        {
+            Some(bucket) => DefaultStorageProviderTarget {
+                provider_id: find_active_storage_provider_by_bucket(pool, tenant_id, bucket)
+                    .await
+                    .map_err(map_service_error)?
+                    .ok_or_else(|| map_service_error(missing_signing_provider_error(bucket)))?
+                    .id,
+                bucket: bucket.to_string(),
+                storage_root_prefix: default_storage_root_prefix(tenant_id, Some(space_id)),
+            },
+            None => resolve_default_provider_target(pool, tenant_id, space_id).await?,
+        }
     };
     let standard_object_key =
         DriveStorageKeyService::build_object_key(BuildStorageObjectKeyCommand {
@@ -96,6 +119,37 @@ pub(crate) async fn next_storage_object_version_no(
         "compute dr_drive_storage_object version failed",
     ))
 }
+/// Resolve a provider the caller named explicitly on the write path.
+///
+/// Naming a provider is the strongest form of "business-specified provider", so
+/// it bypasses the binding chain - but not the tenant boundary. A provider that
+/// exists under a different tenant is reported as "not found" rather than
+/// "forbidden": confirming existence across tenants would itself be a leak.
+/// A provider that exists but is disabled or deleted is rejected here, because
+/// the only reason to name one on the write path is to write to it.
+async fn resolve_explicit_provider_target(
+    pool: &PgPool,
+    tenant_id: &str,
+    space_id: &str,
+    provider_id: &str,
+) -> Result<DefaultStorageProviderTarget, (StatusCode, Json<ProblemDetail>)> {
+    let provider = find_storage_provider_by_id(pool, provider_id)
+        .await
+        .map_err(map_service_error)?
+        .filter(|provider| provider.tenant_id == tenant_id)
+        .ok_or_else(|| not_found_problem("storage provider not found"))?;
+    if provider.status != "active" {
+        return Err(map_service_error(missing_signing_provider_error(
+            &provider.bucket,
+        )));
+    }
+    Ok(DefaultStorageProviderTarget {
+        provider_id: provider.id,
+        bucket: provider.bucket,
+        storage_root_prefix: default_storage_root_prefix(tenant_id, Some(space_id)),
+    })
+}
+
 pub(crate) async fn resolve_default_provider_target(
     pool: &PgPool,
     tenant_id: &str,
@@ -388,9 +442,10 @@ pub(crate) async fn initiate_storage_multipart_upload(
     };
     let provider =
         require_active_storage_provider(provider, &target.bucket).map_err(map_service_error)?;
-    let Some(object_store) = build_s3_object_store_for_provider(&provider)
-        .await
-        .map_err(map_service_error)?
+    let Some(object_store) =
+        build_s3_object_store_for_provider(state, &provider.to_domain_provider())
+            .await
+            .map_err(map_service_error)?
     else {
         return Err(map_service_error(unsupported_signing_provider_error(
             &target.bucket,
@@ -427,9 +482,10 @@ pub(crate) async fn complete_storage_multipart_upload(
     };
     let provider = require_active_storage_provider(provider, &upload_session.bucket)
         .map_err(map_service_error)?;
-    let Some(object_store) = build_s3_object_store_for_provider(&provider)
-        .await
-        .map_err(map_service_error)?
+    let Some(object_store) =
+        build_s3_object_store_for_provider(state, &provider.to_domain_provider())
+            .await
+            .map_err(map_service_error)?
     else {
         return Err(map_service_error(unsupported_signing_provider_error(
             &upload_session.bucket,
@@ -532,9 +588,10 @@ async fn abort_storage_multipart_upload_by_locator(
         return Err(map_service_error(missing_signing_provider_error(bucket)));
     };
     let provider = require_active_storage_provider(provider, bucket).map_err(map_service_error)?;
-    let Some(object_store) = build_s3_object_store_for_provider(&provider)
-        .await
-        .map_err(map_service_error)?
+    let Some(object_store) =
+        build_s3_object_store_for_provider(state, &provider.to_domain_provider())
+            .await
+            .map_err(map_service_error)?
     else {
         return Err(map_service_error(unsupported_signing_provider_error(
             bucket,
@@ -953,41 +1010,45 @@ pub(crate) async fn recover_upload_completion_after_db_failure(
         find_storage_provider_by_id(pool, &upload_session.storage_provider_id).await
     {
         match require_active_storage_provider(provider, &upload_session.bucket) {
-            Ok(provider) => match build_s3_object_store_for_provider(&provider).await {
-                Ok(Some(object_store)) => {
-                    if let Err(error) = object_store
-                        .delete_object(DeleteObjectRequest {
-                            locator: DriveObjectLocator {
-                                bucket: upload_session.bucket.clone(),
-                                object_key: upload_session.object_key.clone(),
-                            },
-                        })
-                        .await
-                    {
-                        tracing::warn!(
-                            event = "drive.upload.completion_db_failure_orphan_delete_failed",
-                            tenant_id = %tenant_id,
-                            upload_session_id = %upload_session.id,
-                            object_key = %upload_session.object_key,
-                            error = ?error,
-                            "failed to delete orphaned storage object after DB completion failure"
-                        );
+            Ok(provider) => {
+                match build_s3_object_store_for_provider(state, &provider.to_domain_provider())
+                    .await
+                {
+                    Ok(Some(object_store)) => {
+                        if let Err(error) = object_store
+                            .delete_object(DeleteObjectRequest {
+                                locator: DriveObjectLocator {
+                                    bucket: upload_session.bucket.clone(),
+                                    object_key: upload_session.object_key.clone(),
+                                },
+                            })
+                            .await
+                        {
+                            tracing::warn!(
+                                event = "drive.upload.completion_db_failure_orphan_delete_failed",
+                                tenant_id = %tenant_id,
+                                upload_session_id = %upload_session.id,
+                                object_key = %upload_session.object_key,
+                                error = ?error,
+                                "failed to delete orphaned storage object after DB completion failure"
+                            );
+                        }
                     }
+                    Ok(None) => tracing::warn!(
+                        event = "drive.upload.completion_db_failure_orphan_delete_skipped",
+                        tenant_id = %tenant_id,
+                        upload_session_id = %upload_session.id,
+                        "storage provider does not support object delete"
+                    ),
+                    Err(error) => tracing::warn!(
+                        event = "drive.upload.completion_db_failure_orphan_delete_skipped",
+                        tenant_id = %tenant_id,
+                        upload_session_id = %upload_session.id,
+                        error = ?error,
+                        "object store unavailable; orphan object delete skipped"
+                    ),
                 }
-                Ok(None) => tracing::warn!(
-                    event = "drive.upload.completion_db_failure_orphan_delete_skipped",
-                    tenant_id = %tenant_id,
-                    upload_session_id = %upload_session.id,
-                    "storage provider does not support object delete"
-                ),
-                Err(error) => tracing::warn!(
-                    event = "drive.upload.completion_db_failure_orphan_delete_skipped",
-                    tenant_id = %tenant_id,
-                    upload_session_id = %upload_session.id,
-                    error = ?error,
-                    "object store unavailable; orphan object delete skipped"
-                ),
-            },
+            }
             Err(error) => tracing::warn!(
                 event = "drive.upload.completion_db_failure_orphan_delete_skipped",
                 tenant_id = %tenant_id,
@@ -1173,7 +1234,7 @@ pub(crate) async fn record_uploader_upload_completed_operation(
         &operation.storage_object.id,
     ))
     .bind(operation.tenant_id)
-    .bind(&operation.upload_item.organization_id)
+    .bind(operation.upload_item.organization_id.as_deref().unwrap_or("0"))
     .bind(&operation.upload_item.user_id)
     .bind(&operation.upload_item.space_id)
     .bind(&operation.upload_item.node_id)

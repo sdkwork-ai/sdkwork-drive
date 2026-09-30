@@ -16,6 +16,7 @@ pub mod sandbox_service;
 pub mod space_lifecycle_service;
 pub mod space_service;
 pub mod storage_key_service;
+pub mod storage_migration_service;
 pub mod storage_provider_kind_service;
 pub mod storage_provider_service;
 pub mod upload_content_policy;

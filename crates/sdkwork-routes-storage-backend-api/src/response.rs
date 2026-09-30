@@ -1,10 +1,13 @@
 use axum::Json;
-use sdkwork_utils_rust::{PageInfo, PageMode, SdkWorkApiResponse, SdkWorkPageData};
+use sdkwork_utils_rust::{
+    PageInfo, PageMode, SdkWorkApiResponse, SdkWorkPageData, SdkWorkResourceData,
+};
 use serde::Serialize;
 
 use crate::dto::OffsetPage;
 
 pub(crate) type StorageListHttpResponse<T> = Json<SdkWorkApiResponse<SdkWorkPageData<T>>>;
+pub(crate) type StorageItemHttpResponse<T> = Json<SdkWorkApiResponse<SdkWorkResourceData<T>>>;
 
 pub(crate) fn current_trace_id() -> String {
     sdkwork_drive_http::problem_correlation::current_problem_correlation().trace_id
@@ -12,6 +15,19 @@ pub(crate) fn current_trace_id() -> String {
 
 pub(crate) fn no_content() -> axum::http::StatusCode {
     axum::http::StatusCode::NO_CONTENT
+}
+
+/// Wrap a single resource in the canonical `data.item` envelope (`API_SPEC.md`
+/// §15.1.1).
+///
+/// Every 2xx JSON response on these surfaces is an `SdkWorkApiResponse`; for a
+/// single resource the payload is always `{ "item": ... }` rather than the bare
+/// object, so clients can unwrap uniformly instead of guessing per endpoint.
+pub(crate) fn success_item<T: Serialize>(item: T) -> StorageItemHttpResponse<T> {
+    Json(SdkWorkApiResponse::success(
+        SdkWorkResourceData { item },
+        current_trace_id(),
+    ))
 }
 
 pub(crate) fn page_info_from_offset_token(

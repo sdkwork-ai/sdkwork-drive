@@ -20,6 +20,7 @@ pub mod sandbox_store;
 pub mod space_lifecycle_store;
 pub mod space_store;
 pub mod sql_error;
+pub mod storage_migration_store;
 pub mod storage_object_store;
 pub mod storage_provider_kind_store;
 pub mod storage_provider_store;

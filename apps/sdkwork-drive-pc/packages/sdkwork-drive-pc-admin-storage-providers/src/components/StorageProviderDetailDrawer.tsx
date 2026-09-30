@@ -5,7 +5,7 @@ import type { DriveAdminStorageSdkClient } from 'sdkwork-drive-pc-admin-core';
 import type { StorageProviderAdminService } from '../services/storageProviderAdminService';
 import type { StorageProviderBindingView, StorageProviderBucketListItemView, StorageProviderBucketView, StorageProviderCapabilitiesView, StorageProviderView } from '../types/storageProviderAdminTypes';
 import { formatDriveBytes } from 'sdkwork-drive-pc-commons';
-import { getProviderKindMeta, HEALTH_STATUS_CONFIG } from '../utils/providerKindConfig';
+import { getProviderKindMeta, HEALTH_STATUS_CONFIG, providerKindLabel } from '../utils/providerKindConfig';
 import { formatMutationError } from '../utils/mutationError';
 import { SECONDARY_BUTTON_CLASS, PRIMARY_BUTTON_CLASS, BADGE_BASE_CLASS } from '../utils/uiPrimitives';
 import { useTranslation } from '../hooks/useTranslation';
@@ -14,11 +14,18 @@ type DrawerTab = 'overview' | 'buckets' | 'files';
 
 interface Props {
   provider: StorageProviderView; providers: StorageProviderView[]; adminStorageSdkClient: DriveAdminStorageSdkClient; service: StorageProviderAdminService; pending: boolean;
+  /**
+   * True when the option set behind the default-binding switch continues past
+   * what is loaded. The switch then offers an explicit continuation instead of
+   * presenting a partial list as if it were all of it.
+   */
+  providerOptionsHasMore?: boolean;
+  onLoadMoreProviderOptions?: () => Promise<unknown>;
   onClose: () => void; onTestProvider: (id: string) => void; onActivateProvider: (id: string) => void; onDeactivateProvider: (id: string) => void;
   onSetDefaultBinding: (providerId: string, spaceId?: string) => void; onDeleteDefaultBinding: (spaceId?: string) => void; onRotateCredential: (providerId: string, credentialRef: string) => void;
 }
 
-export function StorageProviderDetailDrawer({ provider, providers, service, pending, onClose, onTestProvider, onActivateProvider, onDeactivateProvider, onSetDefaultBinding, onDeleteDefaultBinding }: Props) {
+export function StorageProviderDetailDrawer({ provider, providers, providerOptionsHasMore, onLoadMoreProviderOptions, adminStorageSdkClient, service, pending, onClose, onTestProvider, onActivateProvider, onDeactivateProvider, onSetDefaultBinding, onDeleteDefaultBinding }: Props) {
   const { t } = useTranslation();
   const [tab, setTab] = useState<DrawerTab>('overview');
   const meta = getProviderKindMeta(provider.providerKind);
@@ -96,7 +103,7 @@ export function StorageProviderDetailDrawer({ provider, providers, service, pend
   }, [provider.id, tab, runDiagnostics]);
 
   const loadBuckets = useCallback(async () => { setLoading(true); try { setBuckets(await service.listBuckets(provider.id)); } catch (e) { setError(formatMutationError(e, t('errorLoadBuckets'))); } finally { setLoading(false); } }, [provider.id, service, t]);
-  const createBucket = useCallback(async () => { setLoading(true); try { await service.createBucket(provider.id); setBucketExists(true); await loadBuckets(); } catch (e) { setError(formatMutationError(e, t('errorCreateBucket'))); } finally { setLoading(false); } }, [provider.id, service, loadBuckets, t]);
+  const initializeBucket = useCallback(async () => { setLoading(true); try { await service.initializeBucket(provider.id); setBucketExists(true); await loadBuckets(); } catch (e) { setError(formatMutationError(e, t('errorInitializeBucket'))); } finally { setLoading(false); } }, [provider.id, service, loadBuckets, t]);
   const deleteBucket = useCallback(async () => { setDeleteTarget(null); setLoading(true); try { await service.deleteBucket(provider.id); setBucketExists(false); setBuckets([]); } catch (e) { setError(formatMutationError(e, t('errorDeleteBucket'))); } finally { setLoading(false); } }, [provider.id, service, t]);
   const loadObjects = useCallback(async (prefix: string, token?: string) => { setLoading(true); try { const result = await service.listObjects(provider.id, { prefix, pageToken: token }); if (token) setObjects((prev) => [...prev, ...result.items]); else setObjects(result.items); setPageToken(result.nextPageToken || null); setHasMore(result.hasMore); setCurrentPrefix(prefix); } catch (e) { setError(formatMutationError(e, t('errorLoadObjects'))); } finally { setLoading(false); } }, [provider.id, service, t]);
   const deleteObject = useCallback(async (key: string) => { setDeleteTarget(null); setLoading(true); try { await service.deleteObject(provider.id, key); await loadObjects(currentPrefix); } catch (e) { setError(formatMutationError(e, t('errorDeleteObject'))); } finally { setLoading(false); } }, [provider.id, currentPrefix, service, loadObjects, t]);
@@ -191,7 +198,7 @@ export function StorageProviderDetailDrawer({ provider, providers, service, pend
                 <InfoCard label={t('endpoint')} value={provider.endpointUrl} mono wide />
                 <InfoCard label={t('bucket')} value={provider.bucket} />
                 {provider.region && <InfoCard label={t('region')} value={provider.region} />}
-                <InfoCard label={t('kind')} value={meta.label} />
+                <InfoCard label={t('kind')} value={providerKindLabel(t, meta)} />
                 <InfoCard label={t('pathStyleLabel')} value={provider.pathStyle ? t('yes') : t('no')} />
                 <InfoCard label={t('strictTlsLabel')} value={provider.strictTls ? t('yes') : t('no')} />
                 <InfoCard
@@ -213,6 +220,16 @@ export function StorageProviderDetailDrawer({ provider, providers, service, pend
                 <div className="mt-2 text-xs text-neutral-600 dark:text-neutral-300">{t('currentBinding')} {binding?.providerId ? `${binding.providerId}${binding.spaceId ? ` → ${binding.spaceId}` : ` (${t('tenantDefault')})`}` : t('notConfigured')}</div>
                 <div className="mt-2 flex gap-2">
                   <select value={bindingProviderId} onChange={(e) => setBindingProviderId(e.target.value)} className="h-8 rounded-md border border-neutral-300 px-2 text-xs dark:border-neutral-600 dark:bg-neutral-800"><option value="">{t('selectProvider')}</option>{providers.filter((p) => p.status === 'active').map((p) => <option key={p.id} value={p.id}>{p.displayName}</option>)}</select>
+                  {providerOptionsHasMore && onLoadMoreProviderOptions && (
+                    <button
+                      type="button"
+                      className={SECONDARY_BUTTON_CLASS}
+                      disabled={pending}
+                      onClick={() => void onLoadMoreProviderOptions()}
+                    >
+                      {t('providerOptionsLoadMore')}
+                    </button>
+                  )}
                   <input value={bindingSpaceId} onChange={(e) => setBindingSpaceId(e.target.value)} className="h-8 flex-1 rounded-md border border-neutral-300 px-2 text-xs dark:border-neutral-600 dark:bg-neutral-800" placeholder={t('spaceIdOptional')} />
                   <button type="button" className={PRIMARY_BUTTON_CLASS} disabled={!bindingProviderId || pending} onClick={() => onSetDefaultBinding(bindingProviderId, bindingSpaceId || undefined)}>{t('set')}</button>
                   {binding && <button type="button" className="text-xs text-red-600" onClick={() => onDeleteDefaultBinding()}>{t('clear')}</button>}
@@ -242,7 +259,7 @@ export function StorageProviderDetailDrawer({ provider, providers, service, pend
               <div className="rounded-md bg-neutral-50 p-3 dark:bg-neutral-800"><div className="text-xs text-neutral-500">{t('configuredBucket')}</div><div className="text-sm font-medium">{provider.bucket}</div>{bucketExists !== null && <div className={`mt-1 text-xs ${bucketExists ? 'text-emerald-600' : 'text-red-600'}`}>{bucketExists ? `✓ ${t('exists')}` : `✕ ${t('doesNotExist')}`}</div>}</div>
               <div className="flex flex-wrap gap-2">
                 <button onClick={headBucket} disabled={loading} className={SECONDARY_BUTTON_CLASS}>{t('checkExists')}</button>
-                <button onClick={createBucket} disabled={loading} className="rounded-md bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-emerald-700 disabled:opacity-50">{t('createBucket')}</button>
+                <button onClick={initializeBucket} disabled={loading} className="rounded-md bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-emerald-700 disabled:opacity-50">{t('initializeBucket')}</button>
                 <button onClick={() => setDeleteTarget({ kind: 'bucket' })} disabled={loading} className="rounded-md bg-red-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-red-700 disabled:opacity-50">{t('deleteBucket')}</button>
                 <button onClick={loadBuckets} disabled={loading} className={SECONDARY_BUTTON_CLASS}>{t('listAll')}</button>
               </div>

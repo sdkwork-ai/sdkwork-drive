@@ -6,8 +6,8 @@ use sdkwork_drive_workspace_service::application::space_service::{
     CreateSpaceCommand, DriveSpaceService,
 };
 use sdkwork_drive_workspace_service::application::uploader_service::{
-    CompleteStoredUploaderUploadCommand, DriveUploaderService, PrepareUploaderUploadCommand,
-    UploaderActor, UploaderRetention, UploaderTarget,
+    CompleteStoredUploaderUploadCommand, DriveUploaderService, MarkUploaderPartUploadedCommand,
+    PrepareUploaderUploadCommand, UploaderActor, UploaderRetention, UploaderTarget,
 };
 use sdkwork_drive_workspace_service::application::website_sync_service::{
     AbortWebsiteSyncCommand, ActivateWebsiteGenerationCommand, CreateWebsiteSyncCommand,
@@ -646,6 +646,14 @@ async fn uploader_writes_only_to_writable_website_sync_staging() {
         return;
     };
     create_website_space(&pool).await;
+    // The uploader resolves an active provider through the binding chain, so the
+    // tenant needs a seeded provider+binding before `prepare_upload` can succeed.
+    sdkwork_drive_test_support::seed_storage_provider_and_binding(
+        &pool,
+        &sdkwork_drive_test_support::StorageProviderSeed::new("provider-sync", "tenant-sync")
+            .with_actor_id("user-sync"),
+    )
+    .await;
     let root_uuid: String = sqlx::query_scalar(
         "SELECT uuid FROM dr_drive_website_root
          WHERE tenant_id='tenant-sync' AND space_id='space-sync' AND root_key='default'",
@@ -669,6 +677,27 @@ async fn uploader_writes_only_to_writable_website_sync_staging() {
         ))
         .await
         .expect("uploader prepare should be allowed for created staging");
+
+    // Completion is validated against the parts the client actually reported, so
+    // the declared single part must be recorded before finalizing.
+    uploader
+        .mark_part_uploaded(MarkUploaderPartUploadedCommand {
+            id: "website-upload-part-1".to_string(),
+            tenant_id: "tenant-sync".to_string(),
+            upload_item_id: prepared.id.clone(),
+            upload_session_id: prepared
+                .upload_session_id
+                .clone()
+                .expect("prepared upload should have a session"),
+            part_no: 1,
+            offset_bytes: 0,
+            size_bytes: 5,
+            etag: "website-etag-1".to_string(),
+            checksum_sha256_hex: None,
+            uploaded_at_epoch_ms: 1_800_000_001_000,
+        })
+        .await
+        .expect("declared staging part should be recorded before completion");
 
     sqlx::query("UPDATE dr_drive_website_sync SET sync_status='validating' WHERE id=$1")
         .bind(&created.sync.id)
@@ -787,7 +816,7 @@ async fn low_level_stores_cannot_mutate_activated_or_retained_atomic_generations
             post_process_status, created_by, updated_by
          ) VALUES (
             'retained-temporary-upload', 'retained-temporary-task', 'tenant-sync',
-            NULL, 'user-sync', 'user', 'user-sync',
+            '0', 'user-sync', 'user', 'user-sync',
             'drive-pc', 'website-sync', 'website-root', 'generic',
             'retained-fingerprint', 'space-sync', 'retained-file', NULL,
             'provider-sync', NULL, 'legacy.html', 'html',
@@ -1041,8 +1070,7 @@ async fn seed_storage_provider(pool: &PgPool) {
             default_storage_class, status, version, created_by, updated_by
          ) VALUES (
             'provider-sync', 's3_compatible', 'Sync Provider',
-            'https://s3.example.com', 'us-east-1', 'bucket-sync', 1,
-            1, 'plain:test-access-key:test-secret-key', 'AES256',
+            'https://s3.example.com', 'us-east-1', 'bucket-sync', TRUE, TRUE, 'plain:test-access-key:test-secret-key', 'AES256',
             'STANDARD', 'active', 1, 'test', 'test'
          )",
     )

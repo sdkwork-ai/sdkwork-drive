@@ -23,7 +23,11 @@ async fn initialize_kind_catalog_is_idempotent_and_seeds_builtin_kinds() {
         .initialize_storage_provider_kinds()
         .await
         .expect("first initialization should seed the catalog");
-    assert_eq!(first.len(), 7);
+    assert_eq!(
+        first.len(),
+        sdkwork_drive_workspace_service::application::storage_provider_kind_service::BUILTIN_STORAGE_PROVIDER_KIND_CATALOG.len(),
+        "the catalog must expose exactly the built-in kinds"
+    );
     assert!(first.iter().all(|kind| kind.enabled));
     let kinds = first
         .iter()
@@ -38,7 +42,7 @@ async fn initialize_kind_catalog_is_idempotent_and_seeds_builtin_kinds() {
         .initialize_storage_provider_kinds()
         .await
         .expect("second initialization should be idempotent");
-    assert_eq!(second.len(), 7);
+    assert_eq!(second.len(), first.len());
     assert!(second.iter().all(|kind| kind.enabled));
 }
 
@@ -141,12 +145,125 @@ async fn kind_availability_requires_registered_catalog() {
         return;
     };
 
-    // Never initialize the catalog: built-in kinds must be reported as
-    // not initialized rather than silently accepted.
+    // The baseline DDL seeds the built-in catalog, so a kind that is absent from
+    // the table can only be one that is *not* built-in. A `custom:` kind is
+    // operator-defined and always available; an unrecognised built-in-shaped key
+    // is rejected at parse time. Both paths must be honest about the catalog
+    // rather than silently accepting an unregistered kind.
     let service = kind_service(pool);
-    let not_found = service
+    service
+        .ensure_storage_provider_kind_available(&DriveStorageProviderKind::Custom(
+            "custom:not-a-vendor".to_string(),
+        ))
+        .await
+        .expect("custom kinds are always available");
+}
+
+/// A provider configuration may only be created against a registered kind.
+///
+/// This is the regression guard for the fixture bug where truncating
+/// `dr_drive_storage_provider_kind` left the catalog empty and turned every
+/// `POST /storage/providers` into a bogus 404.
+#[tokio::test]
+async fn every_builtin_kind_is_registered_by_the_baseline_schema() {
+    let Some((pool, _database_guard)) = sdkwork_drive_test_support::postgres_test_database().await
+    else {
+        return;
+    };
+
+    let service = kind_service(pool);
+    let registered = service
+        .list_storage_provider_kinds(None)
+        .await
+        .expect("catalog should be readable");
+    let registered_keys = registered
+        .iter()
+        .map(|summary| summary.kind.provider_kind.as_str())
+        .collect::<Vec<_>>();
+
+    for (provider_kind, _, _) in
+        sdkwork_drive_workspace_service::application::storage_provider_kind_service::BUILTIN_STORAGE_PROVIDER_KIND_CATALOG
+    {
+        assert!(
+            registered_keys.contains(&provider_kind),
+            "baseline schema must seed {provider_kind}"
+        );
+    }
+
+    // Every catalogued built-in kind resolves through the availability guard
+    // without an initialize call, i.e. the schema alone is sufficient.
+    service
         .ensure_storage_provider_kind_available(&DriveStorageProviderKind::S3Compatible)
         .await
-        .expect_err("unregistered built-in kind must be rejected");
-    assert!(matches!(not_found, DriveServiceError::NotFound(_)));
+        .expect("s3_compatible must be registered and enabled by the baseline schema");
+}
+
+/// Localized reads replace the locale-neutral base display name with the
+/// seeded translation for the requested locale, and a locale without a
+/// seeded translation falls back to the base name (`I18N_SPEC.md` §11,
+/// `DATABASE_SPEC.md` §6.4.1).
+#[tokio::test]
+async fn localized_kind_list_prefers_translation_and_falls_back_to_base_name() {
+    let Some((pool, _database_guard)) = sdkwork_drive_test_support::postgres_test_database().await
+    else {
+        return;
+    };
+
+    let service = kind_service(pool.clone());
+    let base = service
+        .list_storage_provider_kinds(None)
+        .await
+        .expect("catalog should be readable");
+    let base_aliyun = base
+        .iter()
+        .find(|summary| summary.kind.provider_kind == "aliyun_oss")
+        .expect("aliyun_oss kind should exist")
+        .kind
+        .display_name
+        .clone();
+
+    sqlx::query(
+        "INSERT INTO dr_drive_storage_provider_kind_translation
+            (provider_kind, locale, display_name)
+         VALUES ('aliyun_oss', 'zh-CN', '阿里云 OSS'),
+                ('aliyun_oss', 'en-US', 'Alibaba Cloud OSS')
+         ON CONFLICT (provider_kind, locale) DO UPDATE
+         SET display_name = EXCLUDED.display_name",
+    )
+    .execute(&pool)
+    .await
+    .expect("translation rows should upsert");
+
+    let localized = service
+        .list_storage_provider_kinds(Some("zh-CN"))
+        .await
+        .expect("localized catalog should be readable");
+    let zh_aliyun = localized
+        .iter()
+        .find(|summary| summary.kind.provider_kind == "aliyun_oss")
+        .expect("aliyun_oss kind should exist");
+    assert_eq!(zh_aliyun.kind.display_name, "阿里云 OSS");
+    assert_eq!(zh_aliyun.config_count, 0, "counts stay locale-independent");
+
+    let english = service
+        .list_storage_provider_kinds(Some("en-US"))
+        .await
+        .expect("localized catalog should be readable");
+    let en_aliyun = english
+        .iter()
+        .find(|summary| summary.kind.provider_kind == "aliyun_oss")
+        .expect("aliyun_oss kind should exist");
+    assert_eq!(en_aliyun.kind.display_name, "Alibaba Cloud OSS");
+
+    // An unsupported locale tag matches no translation row: every kind keeps
+    // its base (locale-neutral) display name.
+    let fallback = service
+        .list_storage_provider_kinds(Some("ko-KR"))
+        .await
+        .expect("unlocalized catalog should be readable");
+    let ko_aliyun = fallback
+        .iter()
+        .find(|summary| summary.kind.provider_kind == "aliyun_oss")
+        .expect("aliyun_oss kind should exist");
+    assert_eq!(ko_aliyun.kind.display_name, base_aliyun);
 }

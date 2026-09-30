@@ -33,7 +33,9 @@
         "dist/release/STABLE/0.1.0/web.zip",
         ".sdkwork/evidence/web-universal-cloud-browser-zip.sbom.json"
       ],
-      "artifactPath": "dist/release/STABLE/0.1.0/web.zip"
+      "artifactPath": "dist/release/STABLE/0.1.0/web.zip",
+      "targetPlatform": "web",
+      "clientArchitecture": "pc-web"
     },
     {
       "id": "linux-x64-standalone-server-tar-gz",
@@ -66,10 +68,14 @@
       ],
       "runner": "windows-latest",
       "outputGlobs": [
-        "dist/release/STABLE/0.1.0/windows/x64/app.zip",
+        "dist/release/STABLE/0.1.0/windows/x64/app.msi",
+        "dist/release/STABLE/0.1.0/windows/x64/app-setup.exe",
+        "dist/release/STABLE/0.1.0/windows/x64/desktop-package-manifest.json",
         ".sdkwork/evidence/windows-x64-standalone-desktop-zip.sbom.json"
       ],
-      "artifactPath": "dist/release/STABLE/0.1.0/windows/x64/app.zip"
+      "artifactPath": "dist/release/STABLE/0.1.0/windows/x64/app.msi",
+      "targetPlatform": "windows",
+      "clientArchitecture": "electron"
     },
     {
       "id": "macos-universal-standalone-desktop-dmg",
@@ -87,7 +93,9 @@
         "dist/release/STABLE/0.1.0/macos/universal/app.dmg",
         ".sdkwork/evidence/macos-universal-standalone-desktop-dmg.sbom.json"
       ],
-      "artifactPath": "dist/release/STABLE/0.1.0/macos/universal/app.dmg"
+      "artifactPath": "dist/release/STABLE/0.1.0/macos/universal/app.dmg",
+      "targetPlatform": "macos",
+      "clientArchitecture": "electron"
     },
     {
       "id": "linux-x64-standalone-desktop-appimage",
@@ -105,7 +113,9 @@
         "dist/release/STABLE/0.1.0/linux/generic/x64/app.AppImage",
         ".sdkwork/evidence/linux-x64-standalone-desktop-appimage.sbom.json"
       ],
-      "artifactPath": "dist/release/STABLE/0.1.0/linux/generic/x64/app.AppImage"
+      "artifactPath": "dist/release/STABLE/0.1.0/linux/generic/x64/app.AppImage",
+      "targetPlatform": "linux",
+      "clientArchitecture": "electron"
     },
     {
       "id": "container-x64-cloud-container-oci",
@@ -205,6 +215,11 @@
         "name": "Install dependencies",
         "shell": "bash",
         "run": "pnpm install --frozen-lockfile"
+      },
+      {
+        "name": "Install Linux desktop packaging dependencies",
+        "shell": "bash",
+        "run": "if [ \"$(uname -s)\" = \"Linux\" ] && [ \"${SDKWORK_TARGET_PLATFORM:-}\" = \"linux\" ] && [ \"${SDKWORK_RUNTIME_TARGET:-}\" = \"desktop\" ]; then sudo apt-get update && sudo apt-get install -y --no-install-recommends libarchive-tools rpm fakeroot dpkg && sudo snap install snapcraft --classic || true; fi"
       },
       {
         "name": "Install Rust toolchain",

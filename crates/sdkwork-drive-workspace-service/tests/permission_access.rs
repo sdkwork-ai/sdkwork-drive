@@ -21,10 +21,9 @@ async fn inherited_folder_writer_allows_child_upload_permission_check() {
     sqlx::query(
         "INSERT INTO dr_drive_node (
             id, tenant_id, space_id, parent_node_id, node_type, node_name,
-            lifecycle_status, content_state, version, created_by, updated_by
+            lifecycle_status, content_state, head_content_type, head_content_type_group, head_content_length, head_version_no, version, created_by, updated_by
          ) VALUES
-         ('folder-1', '100001', 'space-1', NULL, 'folder', 'Root', 'active', 'ready', 1, 'owner-1', 'owner-1'),
-         ('file-1', '100001', 'space-1', 'folder-1', 'file', 'Doc', 'active', 'ready', 1, 'owner-1', 'owner-1')",
+         ('folder-1', '100001', 'space-1', NULL, 'folder', 'Root', 'active', 'ready', NULL, NULL, NULL, NULL, 1, 'owner-1', 'owner-1'),('file-1', '100001', 'space-1', 'folder-1', 'file', 'Doc', 'active', 'ready', 'application/octet-stream', 'binary', 0, 1, 1, 'owner-1', 'owner-1')",
     )
     .execute(&pool)
     .await
@@ -80,8 +79,8 @@ async fn unrelated_subject_has_no_effective_access() {
     sqlx::query(
         "INSERT INTO dr_drive_node (
             id, tenant_id, space_id, parent_node_id, node_type, node_name,
-            lifecycle_status, content_state, version, created_by, updated_by
-         ) VALUES ('file-1', '100001', 'space-1', NULL, 'file', 'Doc', 'active', 'ready', 1, 'owner-1', 'owner-1')",
+            lifecycle_status, content_state, head_content_type, head_content_type_group, head_content_length, head_version_no, version, created_by, updated_by
+         ) VALUES ('file-1', '100001', 'space-1', NULL, 'file', 'Doc', 'active', 'ready', 'application/octet-stream', 'binary', 0, 1, 1, 'owner-1', 'owner-1')",
     )
     .execute(&pool)
     .await
@@ -121,8 +120,8 @@ async fn commenter_role_does_not_grant_writer_access() {
     sqlx::query(
         "INSERT INTO dr_drive_node (
             id, tenant_id, space_id, parent_node_id, node_type, node_name,
-            lifecycle_status, content_state, version, created_by, updated_by
-         ) VALUES ('file-1', '100001', 'space-1', NULL, 'file', 'Doc', 'active', 'ready', 1, 'owner-1', 'owner-1')",
+            lifecycle_status, content_state, head_content_type, head_content_type_group, head_content_length, head_version_no, version, created_by, updated_by
+         ) VALUES ('file-1', '100001', 'space-1', NULL, 'file', 'Doc', 'active', 'ready', 'application/octet-stream', 'binary', 0, 1, 1, 'owner-1', 'owner-1')",
     )
     .execute(&pool)
     .await
@@ -175,8 +174,8 @@ async fn trashed_node_direct_reader_permission_resolves_for_acl_checks() {
     sqlx::query(
         "INSERT INTO dr_drive_node (
             id, tenant_id, space_id, parent_node_id, node_type, node_name,
-            lifecycle_status, content_state, version, created_by, updated_by
-         ) VALUES ('file-trashed', '100001', 'space-1', NULL, 'file', 'Trashed', 'trashed', 'ready', 1, 'owner-1', 'owner-1')",
+            lifecycle_status, content_state, head_content_type, head_content_type_group, head_content_length, head_version_no, version, created_by, updated_by
+         ) VALUES ('file-trashed', '100001', 'space-1', NULL, 'file', 'Trashed', 'trashed', 'ready', 'application/octet-stream', 'binary', 0, 1, 1, 'owner-1', 'owner-1')",
     )
     .execute(&pool)
     .await

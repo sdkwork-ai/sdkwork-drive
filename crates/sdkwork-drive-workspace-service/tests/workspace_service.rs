@@ -461,7 +461,7 @@ async fn seed_storage_provider(pool: &sqlx::PgPool, provider_id: &str, bucket: &
             status, version, created_by, updated_by
         ) VALUES (
             $1, 's3_compatible', $1, 'https://s3.example.com', 'us-east-1',
-            $2, 1, 1, 'plain:test-access:test-secret', NULL, NULL,
+            $2, TRUE, TRUE, 'plain:test-access:test-secret', NULL, NULL,
             'active', 1, 'test', 'test'
         )",
     )

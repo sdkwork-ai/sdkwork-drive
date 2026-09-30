@@ -117,7 +117,7 @@ async fn insert_website_resource(pool: &PgPool, temp: &TempDir) -> String {
             id, provider_kind, name, endpoint_url, region, bucket, path_style,
             strict_tls, credential_ref, status, version, created_by, updated_by
          ) VALUES ('provider-local', 'local_filesystem', 'Local', $1, NULL,
-                   'website-bucket', 1, 0, NULL, 'active', 1, 'test', 'test')",
+                   'website-bucket', TRUE, FALSE, NULL, 'active', 1, 'test', 'test')",
     )
     .bind(endpoint)
     .execute(pool)

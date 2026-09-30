@@ -3,7 +3,7 @@ mod config;
 use config::{
     load_gateway_config, resolve_config_path, resolve_gateway_config, web_framework_env_projection,
 };
-use sdkwork_web_bootstrap::{infra_public_path_prefixes, ApiModuleRegistry, ComposedApiAssembly};
+use sdkwork_web_bootstrap::{infra_public_path_prefixes, ApiModuleRegistry};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {

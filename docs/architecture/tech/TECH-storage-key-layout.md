@@ -88,7 +88,7 @@ content
 
 ## Reserved Prefixes
 
-These prefixes are reserved for future workflows:
+These prefixes are namespaced by this layout and MUST NOT be used for content objects:
 
 ```text
 sdkwork-drive/v1/t/{tenantShard}/tenants/{tenantId}/spaces/{spaceId}/derived/
@@ -99,5 +99,22 @@ sdkwork-drive/v1/t/{tenantShard}/tenants/{tenantId}/system/repair/
 sdkwork-drive/v1/t/{tenantShard}/tenants/{tenantId}/system/export/
 ```
 
-`derived` data is rebuildable. `quarantine` is not user-visible. `system` prefixes are for maintenance, repair, migration, export, and audit manifests.
+## Provider Location And History
+
+The key layout is provider-neutral. The same `{storageRootPrefix}/{standardContentKey}` shape is
+produced whether the target is a local store or any S3-compatible provider.
+
+- Switching the tenant or space binding changes the root prefix and the physical provider for
+  newly written objects only. It never rewrites, moves, or re-addresses an existing key.
+- `dr_drive_storage_object` records the provider id and the `DriveProviderLocation`
+  (`endpoint_url`, `bucket`, `path_style`) alongside the key, so a read resolves to the same
+  physical location it was written to even after the active provider changes.
+- Because the key is stable and provider-neutral, a provider migration is a byte copy plus a
+  location metadata update, not an application-level rewrite.
+- Bindings are resolved on the write path through explicit provider, explicit bucket, space
+  binding, space-type binding, then tenant binding. The read path prefers the object's recorded
+  location.
+
+Object-key generation stays in the Drive storage key service. Adapters receive a finished key and
+never compose one.
 

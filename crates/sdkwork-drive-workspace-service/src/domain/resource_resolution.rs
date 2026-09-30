@@ -13,10 +13,17 @@ impl DriveResourceScopeKind {
     }
 }
 
+/// Physical location a resolved Drive resource lives at.
+///
+/// Deliberately *not* pinned to `dr_drive_storage_provider.version`: that column
+/// moves on every operational edit (rename, disable, storage-class change), and
+/// pinning it would make a harmless rename unreadable for every object the
+/// provider already holds. The fields here are the ones that actually decide
+/// where the bytes are, and they are what the read path validates against the
+/// live provider row before serving a historical object.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DriveResourceContentLocator {
     pub storage_provider_id: String,
-    pub storage_provider_version: i64,
     pub bucket: String,
     pub object_key: String,
 }

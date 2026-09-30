@@ -10,14 +10,17 @@ use crate::error::{
 };
 use crate::provider_lookup::get_provider;
 use crate::provider_mappers::map_storage_provider;
-use crate::response::{no_content, success_list_page_simple, StorageListHttpResponse};
+use crate::response::{
+    no_content, success_item, success_list_page_simple, StorageItemHttpResponse,
+    StorageListHttpResponse,
+};
 use crate::state::AdminStorageState;
 use crate::validators::{
     default_storage_provider_binding_id, next_page_token, normalize_optional_text,
     normalize_storage_root_prefix, parse_offset_page, require_non_empty_text,
     resolve_storage_provider_binding_target, storage_provider_binding_purpose,
     storage_provider_binding_scope, validate_storage_binding_lifecycle_status,
-    StorageProviderBindingTarget,
+    validate_storage_binding_scope, StorageProviderBindingTarget,
 };
 use axum::extract::rejection::JsonRejection;
 use axum::extract::{Query, State};
@@ -33,13 +36,16 @@ pub(crate) async fn get_default_storage_provider_binding(
     State(state): State<AdminStorageState>,
     Extension(ctx): Extension<DriveRequestContext>,
     Query(query): Query<DefaultStorageProviderBindingQuery>,
-) -> Result<Json<StorageProviderBindingResponse>, (StatusCode, Json<ProblemDetail>)> {
+) -> Result<
+    StorageItemHttpResponse<StorageProviderBindingResponse>,
+    (StatusCode, Json<ProblemDetail>),
+> {
     let tenant_id = ctx.resolve_tenant_id()?;
     let target = resolve_storage_provider_binding_target(query.space_id, query.space_type)?;
     let binding = find_storage_provider_binding(&state, &tenant_id, &target)
         .await?
         .ok_or_else(not_found_binding_problem)?;
-    Ok(Json(binding))
+    Ok(success_item(binding))
 }
 
 pub(crate) async fn list_storage_provider_bindings(
@@ -57,6 +63,10 @@ pub(crate) async fn list_storage_provider_bindings(
     let lifecycle_status =
         normalize_optional_text(query.lifecycle_status).unwrap_or_else(|| "active".to_string());
     validate_storage_binding_lifecycle_status(&lifecycle_status)?;
+    let binding_scope = normalize_optional_text(query.binding_scope);
+    if let Some(scope) = binding_scope.as_deref() {
+        validate_storage_binding_scope(scope)?;
+    }
 
     let rows = sqlx::query(
         "SELECT id, tenant_id, space_id, provider_id, binding_scope, purpose,
@@ -66,6 +76,7 @@ pub(crate) async fn list_storage_provider_bindings(
            AND lifecycle_status=$2
            AND ($3 IS NULL OR space_id=$3)
            AND ($4 IS NULL OR provider_id=$4)
+           AND ($5 IS NULL OR binding_scope=$5)
          ORDER BY
            CASE binding_scope
              WHEN 'space' THEN 0
@@ -74,12 +85,13 @@ pub(crate) async fn list_storage_provider_bindings(
            END ASC,
            COALESCE(space_id, purpose, '') ASC,
            id ASC
-         LIMIT $5 OFFSET $6",
+         LIMIT $6 OFFSET $7",
     )
     .bind(&tenant_id)
     .bind(&lifecycle_status)
     .bind(space_id.as_deref())
     .bind(provider_id.as_deref())
+    .bind(binding_scope.as_deref())
     .bind(page.limit + 1)
     .bind(page.offset)
     .fetch_all(&state.pool)
@@ -92,7 +104,7 @@ pub(crate) async fn list_storage_provider_bindings(
 
     let mut items = Vec::with_capacity(rows.len());
     for row in rows {
-        items.push(map_storage_provider_binding_row(&state, &row).await?);
+        items.push(map_storage_provider_binding_row(&state, &tenant_id, &row).await?);
     }
     let next_page_token = next_page_token(&mut items, page);
     Ok(success_list_page_simple(items, page, next_page_token))
@@ -102,7 +114,10 @@ pub(crate) async fn set_default_storage_provider_binding(
     State(state): State<AdminStorageState>,
     Extension(ctx): Extension<DriveRequestContext>,
     payload: Result<Json<SetDefaultStorageProviderBindingRequest>, JsonRejection>,
-) -> Result<Json<StorageProviderBindingResponse>, (StatusCode, Json<ProblemDetail>)> {
+) -> Result<
+    StorageItemHttpResponse<StorageProviderBindingResponse>,
+    (StatusCode, Json<ProblemDetail>),
+> {
     let Json(payload) = payload.map_err(invalid_json_problem)?;
     let tenant_id = ctx.resolve_tenant_id()?;
     let provider_id = require_non_empty_text(payload.provider_id, "providerId")?;
@@ -112,7 +127,7 @@ pub(crate) async fn set_default_storage_provider_binding(
         normalize_storage_root_prefix(payload.storage_root_prefix, &tenant_id, &target)?;
     let binding_scope = storage_provider_binding_scope(&target);
     let purpose = storage_provider_binding_purpose(&target);
-    let provider = get_provider(&state, &provider_id).await?;
+    let provider = get_provider(&state, &tenant_id, &provider_id).await?;
     if provider.status != "active" {
         return Err(map_service_error(DriveServiceError::Conflict(
             "default storage provider must be active".to_string(),
@@ -166,9 +181,10 @@ pub(crate) async fn set_default_storage_provider_binding(
         "storage_provider_binding",
         audit_resource_id.as_str(),
         &operator_id,
+        &tenant_id,
     )
     .await?;
-    Ok(Json(binding))
+    Ok(success_item(binding))
 }
 
 pub(crate) async fn delete_default_storage_provider_binding(
@@ -212,6 +228,7 @@ pub(crate) async fn delete_default_storage_provider_binding(
             "storage_provider_binding",
             audit_resource_id.as_str(),
             &operator_id,
+        &tenant_id,
         )
         .await?;
     }
@@ -283,7 +300,7 @@ async fn find_storage_provider_binding(
         return Ok(None);
     };
     let provider_id: String = row.get("provider_id");
-    let provider = get_provider(state, &provider_id).await?;
+    let provider = get_provider(state, &tenant_id, &provider_id).await?;
     Ok(Some(map_storage_provider_binding_row_with_provider(
         row, provider,
     )))
@@ -291,10 +308,11 @@ async fn find_storage_provider_binding(
 
 pub(crate) async fn map_storage_provider_binding_row(
     state: &AdminStorageState,
+    tenant_id: &str,
     row: &sqlx::postgres::PgRow,
 ) -> Result<StorageProviderBindingResponse, (StatusCode, Json<ProblemDetail>)> {
     let provider_id: String = row.get("provider_id");
-    let provider = get_provider(state, &provider_id).await?;
+    let provider = get_provider(state, &tenant_id, &provider_id).await?;
     Ok(map_storage_provider_binding_row_with_provider(
         row, provider,
     ))

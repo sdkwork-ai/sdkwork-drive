@@ -1,10 +1,32 @@
 import type { LocalFilesystemEntry } from '../types';
 import type { NativeLocalUploadDescriptor } from './nativeLocalUploadFile';
+import {
+  HOST_BRIDGE_METHODS,
+  type ClipboardCapability,
+  type ClipboardCutRequest,
+  type ClipboardCutResult,
+  type DesktopHostCapability,
+  type HostErrorCode,
+  type HostResult,
+  type ShortcutBinding,
+  type ShortcutCapability,
+  type ShortcutRegistrationOutcome,
+  type TrayCapability,
+  type TraySetMenuRequest,
+} from './hostCapabilities';
 
 export type WindowControlAction = 'minimize' | 'maximize' | 'unmaximize' | 'close' | 'show';
 
 export interface HostAdapter {
   isNativeHost: boolean;
+  /** Which native host is active; `browser` when no native host is present. */
+  hostId: 'tauri' | 'electron' | 'browser';
+  /** Declared capability set; empty for the browser fallback. */
+  capabilities: ReadonlySet<DesktopHostCapability>;
+  hasCapability(capability: DesktopHostCapability): boolean;
+  tray: TrayCapability;
+  shortcuts: ShortcutCapability;
+  clipboard: ClipboardCapability;
   windowControl(action: WindowControlAction): Promise<void>;
   openExternal(url: string): Promise<void>;
   writeTextToClipboard(text: string): Promise<void>;
@@ -31,10 +53,290 @@ interface TauriGlobal {
   clipboard?: {
     writeText(text: string): Promise<void>;
   };
+  event?: {
+    listen<T>(event: string, handler: (event: { payload: T }) => void): Promise<() => void>;
+  };
+}
+
+/**
+ * Electron preload bridge shape.
+ *
+ * The Electron host exposes exactly this surface through
+ * `contextBridge.exposeInMainWorld('sdkworkDesktop', ...)`; the preload allowlist
+ * is generated from `HOST_BRIDGE_METHODS`, so unknown channels are rejected
+ * rather than forwarded (DESKTOP_APP_ARCHITECTURE_SPEC section 5.6).
+ */
+interface ElectronDesktopBridge {
+  meta?: {
+    id?: string;
+    capabilities?: string[];
+  };
+  invoke<T>(method: string, params?: Record<string, unknown>): Promise<T>;
+  on(event: string, listener: (payload: unknown) => void): () => void;
 }
 
 function getTauriGlobal(): TauriGlobal | undefined {
   return (globalThis as typeof globalThis & { __TAURI__?: TauriGlobal }).__TAURI__;
+}
+
+function getElectronBridge(): ElectronDesktopBridge | undefined {
+  return (
+    globalThis as typeof globalThis & { sdkworkDesktop?: ElectronDesktopBridge }
+  ).sdkworkDesktop;
+}
+
+function resolveHostId(): 'tauri' | 'electron' | 'browser' {
+  if (getTauriGlobal()?.core?.invoke) {
+    return 'tauri';
+  }
+  if (getElectronBridge()?.invoke) {
+    return 'electron';
+  }
+  return 'browser';
+}
+
+const TAURI_CAPABILITIES: DesktopHostCapability[] = [
+  'window',
+  'tray',
+  'shortcuts',
+  'clipboard',
+  'filePicker',
+  'filesystemSandbox',
+  'shellOpen',
+  'secureStorage',
+];
+
+const ELECTRON_CAPABILITIES: DesktopHostCapability[] = [
+  'window',
+  'tray',
+  'shortcuts',
+  'clipboard',
+  'filePicker',
+  'filesystemSandbox',
+  'shellOpen',
+  'secureStorage',
+];
+
+function resolveCapabilities(
+  hostId: 'tauri' | 'electron' | 'browser',
+): ReadonlySet<DesktopHostCapability> {
+  if (hostId === 'tauri') {
+    return new Set(TAURI_CAPABILITIES);
+  }
+  if (hostId === 'electron') {
+    const declared = getElectronBridge()?.meta?.capabilities;
+    return new Set(
+      (declared as DesktopHostCapability[] | undefined) ?? ELECTRON_CAPABILITIES,
+    );
+  }
+  return new Set<DesktopHostCapability>();
+}
+
+export function hostOk<T>(value: T): HostResult<T> {
+  return { ok: true, value };
+}
+
+export function hostErr<T = never>(code: HostErrorCode, message: string): HostResult<T> {
+  return { ok: false, error: { code, message } };
+}
+
+function hostUnsupported<T>(capability: string): HostResult<T> {
+  return hostErr('unsupported', `${capability} is only available in the desktop app.`);
+}
+
+/**
+ * Subscribes to a Tauri-host event, returning a synchronous unsubscribe.
+ *
+ * Tauri resolves listeners asynchronously, so the returned function defers the
+ * real teardown until the listener handle exists. This keeps the capability
+ * contract (`() => void`) stable across hosts.
+ */
+function listenTauriEvent<T>(event: string, listener: (payload: T) => void): () => void {
+  const tauri = getTauriGlobal();
+  if (!tauri?.event?.listen) {
+    return () => {};
+  }
+  let disposed = false;
+  let unlisten: (() => void) | undefined;
+
+  void tauri.event
+    .listen<T>(event, (incoming) => {
+      if (!disposed) {
+        listener(incoming.payload);
+      }
+    })
+    .then((off) => {
+      if (disposed) {
+        off();
+        return;
+      }
+      unlisten = off;
+    })
+    .catch(() => {
+      // Listener registration is best-effort: a missing host event bus must not
+      // break renderer boot.
+    });
+
+  return () => {
+    disposed = true;
+    unlisten?.();
+  };
+}
+
+function createTrayCapability(): TrayCapability {
+  return {
+    async setVisible(visible) {
+      const tauri = getTauriGlobal();
+      if (!tauri?.core?.invoke) {
+        return hostUnsupported('System tray');
+      }
+      try {
+        await tauri.core.invoke('tray_set_visible', { request: { visible } });
+        return hostOk(undefined);
+      } catch (error) {
+        return hostErr('internal', toMessage(error));
+      }
+    },
+    async setMenu(request: TraySetMenuRequest) {
+      const tauri = getTauriGlobal();
+      if (!tauri?.core?.invoke) {
+        return hostUnsupported('System tray');
+      }
+      try {
+        await tauri.core.invoke('tray_set_menu', {
+          request: {
+            items: request.items.map((item) => ({
+              id: item.id,
+              label: item.label,
+              enabled: item.enabled,
+            })),
+            tooltip: request.tooltip ?? null,
+          },
+        });
+        return hostOk(undefined);
+      } catch (error) {
+        return hostErr('internal', toMessage(error));
+      }
+    },
+    async restoreWindow() {
+      const tauri = getTauriGlobal();
+      if (!tauri?.core?.invoke) {
+        return hostUnsupported('System tray');
+      }
+      try {
+        await tauri.core.invoke('tray_restore_window');
+        return hostOk(undefined);
+      } catch (error) {
+        return hostErr('internal', toMessage(error));
+      }
+    },
+    onMenuActivated(listener) {
+      return listenTauriEvent<string>(HOST_BRIDGE_METHODS.trayMenuActivated, listener);
+    },
+  };
+}
+
+function createShortcutCapability(): ShortcutCapability {
+  return {
+    async registerAll(bindings: ShortcutBinding[]) {
+      const tauri = getTauriGlobal();
+      if (!tauri?.core?.invoke) {
+        return hostUnsupported('Global shortcuts');
+      }
+      try {
+        const outcomes = await tauri.core.invoke<ShortcutRegistrationOutcome[]>(
+          'shortcut_register_all',
+          {
+            request: {
+              bindings: bindings.map((binding) => ({
+                id: binding.id,
+                accelerator: binding.accelerator,
+              })),
+            },
+          },
+        );
+        return hostOk(outcomes);
+      } catch (error) {
+        return hostErr('internal', toMessage(error));
+      }
+    },
+    async unregister(binding: ShortcutBinding) {
+      const tauri = getTauriGlobal();
+      if (!tauri?.core?.invoke) {
+        return hostUnsupported('Global shortcuts');
+      }
+      try {
+        await tauri.core.invoke('shortcut_unregister', {
+          request: { id: binding.id, accelerator: binding.accelerator },
+        });
+        return hostOk(undefined);
+      } catch (error) {
+        return hostErr('internal', toMessage(error));
+      }
+    },
+    async unregisterAll() {
+      const tauri = getTauriGlobal();
+      if (!tauri?.core?.invoke) {
+        return hostUnsupported('Global shortcuts');
+      }
+      try {
+        await tauri.core.invoke('shortcut_unregister_all');
+        return hostOk(undefined);
+      } catch (error) {
+        return hostErr('internal', toMessage(error));
+      }
+    },
+    onTriggered(listener) {
+      return listenTauriEvent<string>(HOST_BRIDGE_METHODS.shortcutTriggered, listener);
+    },
+  };
+}
+
+function createClipboardCapability(): ClipboardCapability {
+  return {
+    async cutPaths(request: ClipboardCutRequest) {
+      const tauri = getTauriGlobal();
+      if (!tauri?.core?.invoke) {
+        return hostUnsupported('Clipboard cut');
+      }
+      try {
+        const result = await tauri.core.invoke<ClipboardCutResult>('clipboard_cut_paths', {
+          request: { paths: request.paths },
+        });
+        return hostOk(result);
+      } catch (error) {
+        return hostErr('internal', toMessage(error));
+      }
+    },
+    async readPaths() {
+      const tauri = getTauriGlobal();
+      if (!tauri?.core?.invoke) {
+        return hostUnsupported('Clipboard');
+      }
+      try {
+        const paths = await tauri.core.invoke<string[]>('clipboard_read_paths');
+        return hostOk(paths);
+      } catch (error) {
+        return hostErr('internal', toMessage(error));
+      }
+    },
+    async writeText(text: string) {
+      const tauri = getTauriGlobal();
+      if (!tauri?.core?.invoke) {
+        return hostUnsupported('Clipboard');
+      }
+      try {
+        await tauri.core.invoke('clipboard_write_text', { request: { text } });
+        return hostOk(undefined);
+      } catch (error) {
+        return hostErr('internal', toMessage(error));
+      }
+    },
+  };
+}
+
+function toMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
 }
 
 function assertSafeExternalUrl(url: string): void {
@@ -53,9 +355,20 @@ function unsupportedNativeDownloadOperation(operation: string): never {
 }
 
 export function createHostAdapter(): HostAdapter {
+  const hostId = resolveHostId();
+  const capabilities = resolveCapabilities(hostId);
+
   return {
+    hostId,
+    capabilities,
+    hasCapability(capability) {
+      return capabilities.has(capability);
+    },
+    tray: createTrayCapability(),
+    shortcuts: createShortcutCapability(),
+    clipboard: createClipboardCapability(),
     get isNativeHost() {
-      return Boolean(getTauriGlobal());
+      return resolveHostId() !== 'browser';
     },
     async windowControl(action) {
       const tauri = getTauriGlobal();

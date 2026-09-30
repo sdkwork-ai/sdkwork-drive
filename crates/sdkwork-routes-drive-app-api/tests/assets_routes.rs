@@ -15,17 +15,20 @@ async fn seed_asset_fixture(pool: &PgPool) {
     .execute(pool)
     .await
     .expect("asset test space should be seeded");
-    sqlx::query(
-        "INSERT INTO dr_drive_node (
-            id, tenant_id, space_id, parent_node_id, node_type, node_name,
-            scene, source, content_state, head_content_type, head_content_type_group,
-            head_content_length, lifecycle_status, version, created_by, updated_by
-        ) VALUES (
-            'file-asset-001', 'tenant-assets', 'space-assets', NULL, 'file', 'photo.png',
-            'media', 'upload:web', 'ready', 'image/png', 'image', 1024, 'active', 1, 'user-assets', 'user-assets'
-        )",
+    sdkwork_drive_test_support::insert_ready_file_node(
+        pool,
+        &sdkwork_drive_test_support::ReadyFileNodeSeed::new(
+            "file-asset-001",
+            "tenant-assets",
+            "space-assets",
+            "photo.png",
+            "user-assets",
+        )
+        .with_scene("media")
+        .with_source("upload:web")
+        .with_content_type("image/png")
+        .with_content_length(1024),
     )
-    .execute(pool)
     .await
     .expect("asset test node should be seeded");
 }

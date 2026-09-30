@@ -12,6 +12,8 @@ export interface GeneratedSdkRequestOptions {
   params?: Record<string, string | number | boolean | undefined>;
   body?: unknown;
   contentType?: string;
+  /** Extra request headers, e.g. the standard `Accept-Language` locale header. */
+  headers?: Record<string, string>;
   signal?: AbortSignal;
 }
 

@@ -26,6 +26,12 @@ pub struct CreateStorageProviderCommand {
 
 #[derive(Debug, Clone)]
 pub struct ListStorageProvidersCommand {
+    /// Mandatory tenant predicate: the console list is tenant-scoped, never a
+    /// cross-tenant inventory.
+    pub tenant_id: String,
+    /// Stored provider kind to filter by, or `custom` for the whole
+    /// `custom:<vendor>` family. `None` lists every kind.
+    pub provider_kind: Option<String>,
     pub status: Option<String>,
     pub offset: i64,
     pub limit: i64,
@@ -126,50 +132,18 @@ where
         "deleted storage provider cannot be reactivated; create a new provider";
     const DELETED_PROVIDER_MODIFICATION_CONFLICT: &'static str =
         "deleted storage provider cannot be modified; create a new provider";
-
+    /// Whether a new configuration of this kind should default to path-style
+    /// bucket addressing.
+    ///
+    /// Delegates to the storage contract's own vendor table so the console's
+    /// default and the object store's default cannot drift: whichever side adds
+    /// a vendor, the other follows. `LocalFilesystem` is not an S3 store at all,
+    /// so the value is inert; `true` keeps the historic answer for it.
     fn default_path_style_for_provider(kind: &DriveStorageProviderKind) -> bool {
-        match kind {
-            DriveStorageProviderKind::AliyunOss
-            | DriveStorageProviderKind::TencentCos
-            | DriveStorageProviderKind::HuaweiObs
-            | DriveStorageProviderKind::VolcengineTos
-            | DriveStorageProviderKind::GoogleCloudStorage => false,
-            DriveStorageProviderKind::Custom(value) => {
-                let suffix = value
-                    .trim()
-                    .to_ascii_lowercase()
-                    .strip_prefix(DriveStorageProviderKind::CUSTOM_PREFIX)
-                    .map(str::to_string);
-                !matches!(
-                    suffix.as_deref(),
-                    Some("aws")
-                        | Some("aws_s3")
-                        | Some("amazon_s3")
-                        | Some("oss")
-                        | Some("aliyun")
-                        | Some("aliyun_oss")
-                        | Some("cos")
-                        | Some("tencent")
-                        | Some("tencent_cos")
-                        | Some("obs")
-                        | Some("huawei")
-                        | Some("huawei_obs")
-                        | Some("tos")
-                        | Some("volc")
-                        | Some("volcengine")
-                        | Some("volcengine_tos")
-                        | Some("volcano")
-                        | Some("volcano_tos")
-                        | Some("gcs")
-                        | Some("google_cloud_storage")
-                        | Some("google_storage")
-                        | Some("b2")
-                        | Some("backblaze")
-                        | Some("backblaze_b2")
-                )
-            }
-            _ => true,
+        if matches!(kind, DriveStorageProviderKind::LocalFilesystem) {
+            return true;
         }
+        kind.default_force_path_style()
     }
 
     fn default_strict_tls_for_endpoint(endpoint_url: &str) -> bool {
@@ -197,6 +171,8 @@ where
         if current_status == "deleted" || target_status != "deleted" {
             return Ok(());
         }
+        self.ensure_provider_holds_no_live_objects(provider_id, "delete")
+            .await?;
         if self
             .store
             .has_active_storage_provider_bindings(provider_id)
@@ -207,6 +183,31 @@ where
             ));
         }
         Ok(())
+    }
+
+    /// Refuse to retire a provider that is still the physical home of live
+    /// objects.
+    ///
+    /// Both a `disabled` transition and a soft delete take the provider out of
+    /// the write path, so both have to be guarded - otherwise an operator can
+    /// quietly strand every object the provider holds by disabling it. The
+    /// message names the count so the operator knows whether the provider is
+    /// truly cold before reaching for it again.
+    async fn ensure_provider_holds_no_live_objects(
+        &self,
+        provider_id: &str,
+        action: &str,
+    ) -> Result<(), DriveServiceError> {
+        let live_objects = self
+            .store
+            .count_active_storage_provider_objects(provider_id)
+            .await?;
+        if live_objects == 0 {
+            return Ok(());
+        }
+        Err(DriveServiceError::Conflict(format!(
+            "storage provider still holds {live_objects} active object(s); migrate or delete them before you {action} it"
+        )))
     }
 
     fn ensure_deleted_provider_is_not_modified(
@@ -358,12 +359,19 @@ where
         &self,
         command: ListStorageProvidersCommand,
     ) -> Result<Vec<DriveStorageProvider>, DriveServiceError> {
+        let provider_kind = normalize_provider_kind_filter(command.provider_kind.as_deref());
         let status = match command.status.as_deref() {
             Some(status) if !status.trim().is_empty() => Some(normalize_status(status)?),
             _ => None,
         };
         self.store
-            .list_storage_providers(status.as_deref(), command.offset, command.limit)
+            .list_storage_providers(
+                &command.tenant_id,
+                provider_kind.as_deref(),
+                status.as_deref(),
+                command.offset,
+                command.limit,
+            )
             .await
     }
 
@@ -568,6 +576,15 @@ where
             &status,
         )
         .await?;
+        // Disabling is a write-path retirement: new content stops landing here
+        // while existing objects stay readable. That makes it the second half of
+        // the same promise the delete path guards, so the same "no live objects"
+        // rule applies. Re-enabling (`disabled` -> `active`) is always allowed
+        // and is the supported recovery path out of a mistaken disable.
+        if status == "disabled" && current.status != "disabled" {
+            self.ensure_provider_holds_no_live_objects(provider_id, "disable")
+                .await?;
+        }
         self.store
             .update_storage_provider(
                 provider_id,
@@ -723,6 +740,23 @@ fn normalize_status(raw: &str) -> Result<String, DriveServiceError> {
             "status is invalid; allowed: active, disabled, deleted".to_string(),
         )),
     }
+}
+
+/// Normalize a provider-kind list filter.
+///
+/// Deliberately *not* validated against the catalog: the column accepts
+/// `custom:<vendor_key>` for any vendor key an operator invents, so a strict
+/// catalog check would reject legitimate custom kinds. An unknown value is a
+/// filter that selects nothing, which is the honest answer for a list.
+///
+/// Lower-casing mirrors storage: every kind is persisted lower-case (the create
+/// path goes through `DriveStorageProviderKind::try_from_str`, which lower-cases
+/// before resolving), so an operator-typed `Tencent_COS` has to mean the same
+/// row as the console's `tencent_cos` option.
+fn normalize_provider_kind_filter(raw: Option<&str>) -> Option<String> {
+    raw.map(str::trim)
+        .filter(|value| !value.is_empty())
+        .map(str::to_ascii_lowercase)
 }
 
 /// Sentinel tenant used by pre-account rows; a create without a tenant falls
@@ -978,45 +1012,50 @@ fn validate_credential_ref(raw: &str) -> Result<(), DriveServiceError> {
 }
 
 fn capabilities_for_provider(provider: &DriveStorageProvider) -> StorageProviderCapabilities {
-    match &provider.provider_kind {
-        DriveStorageProviderKind::S3Compatible
-        | DriveStorageProviderKind::AliyunOss
-        | DriveStorageProviderKind::TencentCos
-        | DriveStorageProviderKind::HuaweiObs
-        | DriveStorageProviderKind::VolcengineTos
-        | DriveStorageProviderKind::GoogleCloudStorage
-        | DriveStorageProviderKind::Custom(_) => StorageProviderCapabilities {
+    // Branch on "is this an S3-compatible store at all" rather than listing
+    // every vendor: the capability answer is a property of the protocol, not of
+    // the vendor, so a newly catalogued vendor inherits it automatically
+    // instead of silently reporting itself incapable.
+    if provider.provider_kind.is_s3_compatible() {
+        // The *lists*, though, are a vendor property: each store names its own
+        // encryption tokens and tiers, so they come from the contract's vendor
+        // table. One shared generic list here is what used to put Aliyun's
+        // `KMS`/`Standard` out of reach and offer Tencent AWS's `aws:kms`.
+        let sse_modes = provider
+            .provider_kind
+            .supported_sse_modes()
+            .iter()
+            .map(|mode| (*mode).to_string())
+            .collect::<Vec<_>>();
+        let storage_classes = provider
+            .provider_kind
+            .supported_storage_classes()
+            .iter()
+            .map(|class| (*class).to_string())
+            .collect::<Vec<_>>();
+        return StorageProviderCapabilities {
             provider_id: provider.id.clone(),
             provider_kind: provider.provider_kind.as_str().to_string(),
             supports_multipart_upload: true,
             supports_presigned_upload_part: true,
             supports_presigned_download: true,
-            supports_server_side_encryption: true,
-            supports_storage_class: true,
+            supports_server_side_encryption: !sse_modes.is_empty(),
+            supports_storage_class: !storage_classes.is_empty(),
             supports_credential_rotation: true,
-            supported_server_side_encryption_modes: vec![
-                "AES256".to_string(),
-                "aws:kms".to_string(),
-                "none".to_string(),
-            ],
-            supported_storage_classes: vec![
-                "STANDARD".to_string(),
-                "STANDARD_IA".to_string(),
-                "INTELLIGENT_TIERING".to_string(),
-                "GLACIER_IR".to_string(),
-            ],
-        },
-        DriveStorageProviderKind::LocalFilesystem => StorageProviderCapabilities {
-            provider_id: provider.id.clone(),
-            provider_kind: provider.provider_kind.as_str().to_string(),
-            supports_multipart_upload: false,
-            supports_presigned_upload_part: false,
-            supports_presigned_download: false,
-            supports_server_side_encryption: false,
-            supports_storage_class: false,
-            supports_credential_rotation: false,
-            supported_server_side_encryption_modes: Vec::new(),
-            supported_storage_classes: Vec::new(),
-        },
+            supported_server_side_encryption_modes: sse_modes,
+            supported_storage_classes: storage_classes,
+        };
+    }
+    StorageProviderCapabilities {
+        provider_id: provider.id.clone(),
+        provider_kind: provider.provider_kind.as_str().to_string(),
+        supports_multipart_upload: false,
+        supports_presigned_upload_part: false,
+        supports_presigned_download: false,
+        supports_server_side_encryption: false,
+        supports_storage_class: false,
+        supports_credential_rotation: false,
+        supported_server_side_encryption_modes: Vec::new(),
+        supported_storage_classes: Vec::new(),
     }
 }

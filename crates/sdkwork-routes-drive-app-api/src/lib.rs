@@ -5,6 +5,7 @@ pub mod acl_sql;
 pub mod app_context;
 mod archive;
 mod archive_storage;
+mod assets;
 mod change_handlers;
 mod collaboration_repository;
 mod comment_handlers;

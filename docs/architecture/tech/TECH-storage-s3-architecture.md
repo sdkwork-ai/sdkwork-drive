@@ -87,6 +87,11 @@ The app upload session response also includes `objectKey` for diagnostics and lo
 - `POST /backend/v3/api/drive/storage/providers/{providerId}/objects/copy`
 - `GET /backend/v3/api/drive/storage/bindings`
 - `GET|PUT|DELETE /backend/v3/api/drive/storage/bindings/default`
+- `GET|POST /backend/v3/api/drive/storage/migrations`
+- `GET /backend/v3/api/drive/storage/migrations/{migrationId}`
+- `POST /backend/v3/api/drive/storage/migrations/{migrationId}/run`
+- `GET /backend/v3/api/drive/storage/migrations/{migrationId}/items`
+- `POST /backend/v3/api/drive/storage/migrations/{migrationId}/cancel`
 
 It is a standalone runtime service in the local Drive launch plan and binds `127.0.0.1:18083` by default. The same crate also exposes router builders so a host application can embed the admin-storage module without duplicating Drive storage logic. Compatibility alias `/admin/v3/api/drive/storage/*` mirrors the canonical `/backend/v3/api/drive/storage/*` handlers for legacy hosts; new clients must use the canonical prefix and `@sdkwork/drive-admin-storage-sdk`.
 
@@ -98,6 +103,8 @@ fixtures rather than forged context headers.
 `GET /storage/providers/{providerId}/buckets` lists the buckets visible to the configured S3 account and marks the currently configured provider bucket, which lets administrators discover and choose the correct bucket before mounting a provider to tenant or space storage. `GET /storage/bindings` requires `tenantId` and can filter by `spaceId`, `providerId`, and `lifecycleStatus` so administrators can inspect which provider account is mounted to each tenant or space. `PUT /storage/bindings/default` accepts optional `storageRootPrefix`; when omitted, Drive derives the tenant or space default root. `DELETE /storage/bindings/default` soft-deletes the tenant or space primary binding and records `storage_provider_binding.default_deleted`.
 
 All admin-storage mutation routes must receive a real non-empty `operatorId` and record a Drive audit event. Provider and binding mutations carry `operatorId` in the JSON body except provider deletion, bucket create/delete, object delete, and default binding deletion, which use the required `operatorId` query parameter. Object copy carries `operatorId` in the request body. Low-level bucket and object audit events use the storage provider id as the audit resource id; object keys remain operational parameters, not audit resource identifiers.
+
+Migration routes resolve the operator from the verified request context instead of the body: `POST /storage/migrations` carries the run definition, `POST /storage/migrations/{migrationId}/run` takes only an optional `batchSize`, and `POST /storage/migrations/{migrationId}/cancel` takes no body at all. Because the operator is a request-context field, it is rejected as a client-supplied body property by the schema gate, so a caller cannot file an audit row under another principal's name.
 
 Future backend-admin route modules must follow the `crates/sdkwork-routes-<capability>-backend-api` naming pattern, where `<capability>` is a bounded business capability such as `storage`, `audit`, `workspace`, `policy`, or `repair`. Each module must expose only its own backend-admin surface and reuse Drive service crates/contracts instead of duplicating Drive business logic.
 
@@ -159,6 +166,97 @@ Rules:
 - Bucket administration remains on the AWS SDK S3 adapter unless an explicit future plugin capability is added and tested. This includes `HeadBucket`, `ListBuckets`, `CreateBucket`, `DeleteBucket`, and provider test health checks.
 - The OpenDAL operator is bound to one bucket/root. Cross-bucket administrative operations should use one provider per bucket or the AWS SDK S3 adapter.
 
+## Provider Switching And History Access
+
+Storage providers can be switched without invalidating historical objects. The rules below are
+normative and are enforced by the workspace service, not by convention.
+
+1. Provider lifecycle is a three-state machine, not a boolean.
+   - `active`: admits both write and read intents.
+   - `disabled`: retired from the write path but still admits read intent, so existing objects
+     resolved through a retired provider stay readable.
+   - `deleted`: admits neither intent. Deletion is rejected while live objects still reference
+     the provider, so `deleted` can only be reached after the object set is truly empty.
+
+2. Every object records its physical provider location.
+   - `dr_drive_storage_object` stores the provider id plus a `DriveProviderLocation` fingerprint
+     built from `endpoint_url`, `bucket`, and `path_style`.
+   - Only immutable location fields participate. Mutable metadata such as the provider display
+     name, region, or credential reference never does, so renaming a provider cannot change the
+     address of an already-written object.
+   - Reads resolve through the recorded location, not through the tenant's current default
+     binding. Switching the default binding therefore never orphans historical bytes.
+
+3. Provider resolution is layered and deterministic.
+   - Write-path resolution order is: explicit business-specified provider, explicit request
+     bucket, space binding, space-type binding, tenant binding.
+   - Read-path resolution uses the location recorded on the object, falling back to the binding
+     chain only for objects that predate location recording.
+
+4. Bucket lookup is tenant-scoped and ambiguity-aware.
+   - A bucket is a storage-account-level namespace, so the same bucket name can legitimately be
+     addressed by providers of different tenants. Every bucket lookup is therefore filtered by
+     `tenant_id`.
+   - Lookups return a three-state result — `Found`, `Missing`, or `Ambiguous` — rather than an
+     `Option`. `Ambiguous` reports the competing provider ids and fails the request loudly
+     instead of silently picking a winner.
+
+5. Business workloads can name a provider explicitly.
+   - `CreateUploadSessionRequest.storageProviderId` and `CreateFileRequest.storageProviderId` are
+     optional and take highest priority when present.
+   - The provider must belong to the caller's tenant and must be `active`. A provider owned by
+     another tenant is reported as `404 not found`, not `403 forbidden`, so the API does not
+     confirm the existence of foreign tenant resources.
+
+Providers may be switched at any time by repointing a binding or by passing an explicit
+`storageProviderId`. Existing objects remain readable through their recorded location, and
+`disabled` is the intended state for a provider that should accept no new writes while its
+history stays online.
+
+## Cross-Provider Migration
+
+Repointing a binding changes where *new* writes land; it does not move bytes that are already
+written. Migrating those bytes is a separate, explicitly-driven operation, exposed under
+`/backend/v3/api/drive/storage/migrations` on the Admin Storage API.
+
+The design follows from one fact: `DriveObjectStore::copy_object` copies **within a single storage
+account**. It is not a cross-provider transfer, so a migration cannot delegate to it and must
+instead read from the source store and write to the target store through two independently
+constructed adapters.
+
+1. A migration is a resumable queue, not a single transaction.
+   - `POST /migrations` validates both providers and materializes one `dr_drive_storage_migration_item`
+     row per object that currently resolves to the source provider. The source may be `active` or
+     `disabled` — draining a retired provider is the primary reason to migrate — while the target
+     must be `active`, so the copy loop only ever fails per object rather than per direction.
+   - `POST /migrations/{id}/run` copies one bounded batch and returns what that call did
+     (`copiedThisBatch`, `failedThisBatch`, `completed`). It is idempotent per object and safe to
+     retry, so an operator or scheduler simply keeps calling it until `completed` is `true`. There
+     is no separate "resume" verb because a run that stopped being called is the only way to pause.
+
+2. A migration verifies bytes before it trusts them.
+   - Each object is read from the source, written to the target, and then re-read from the target
+     and checked against the recorded checksum. A mismatch is recorded as a failed item.
+   - The registry is only re-pointed for objects whose checksum matched. A failed object keeps
+     reading from its original provider, so a partially-migrated run is always readable.
+
+3. Failed items are retried rather than abandoned.
+   - A `failed` item is resumable: a later `run` re-drives it within the batch, and a successful
+     retry decrements `objects_failed` and increments `objects_copied`.
+   - `completed` is true only when no item is outstanding *and* none is failed, so a run with a
+     single stubborn object cannot report success.
+
+4. Cancellation is safe by construction.
+   - `POST /migrations/{id}/cancel` takes no request body. The operator is resolved from the
+     verified request context, never from a client-supplied field, so the audit row cannot be
+     filed under another principal's name.
+   - Cancelling never un-copies and never re-points. Verified bytes stay on the target and every
+     object keeps reading from its original provider.
+
+Every run, drive call, and cancel emits an audit event (`storage_migration` resource type) with an
+action derived from the run's *resulting* status rather than a caller-supplied intent, so the log
+cannot claim a completion that did not happen.
+
 ## Directory Responsibilities
 
 The storage code should remain organized as follows:
@@ -180,13 +278,18 @@ crates/
 crates/
   sdkwork-drive-workspace-service/
     src/domain/storage_provider.rs
+    src/domain/storage_migration.rs
     src/domain/upload.rs
     src/application/storage_provider_service.rs
     src/application/storage_key_service.rs
+    src/application/storage_migration_service.rs
     src/application/upload_service.rs
     src/ports/storage_provider_store.rs
+    src/ports/storage_migration_store.rs
+    src/ports/storage_migration_copier.rs
     src/ports/storage_object_store.rs
     src/infrastructure/sql/storage_provider_store.rs
+    src/infrastructure/sql/storage_migration_store.rs
     src/infrastructure/sql/upload_session_store.rs
     src/infrastructure/sql/storage_object_store.rs
   sdkwork-routes-drive-app-api/
@@ -195,6 +298,8 @@ crates/
     src/lib.rs
   sdkwork-routes-storage-backend-api/
     src/lib.rs
+    src/migration_handlers.rs
+    src/migration_copier.rs
     src/main.rs
   sdkwork-routes-<capability>-backend-api/
     src/lib.rs
@@ -248,15 +353,56 @@ Rules:
 
 - Local storage supports local bucket and object management for development, but still does not support multipart presign semantics.
 
+- Cross-provider migration is driven through `/storage/migrations`. Because `DriveObjectStore::copy_object` is account-scoped rather than cross-provider, the copier constructs the source and target stores independently and re-verifies each object's checksum against the target before the registry is re-pointed.
+
 - App upload, file creation, and archive extraction now generate physical object keys with the binding root plus the standard content suffix:
   `{storageRootPrefix}/sdkwork-drive/v1/t/{tenantShard}/tenants/{tenantId}/spaces/{spaceId}/nodes/n/{nodeShard}/{nodeId}/versions/{versionNo}/{objectId}/content`.
   User file names and folder paths are not embedded in object keys.
 
-## Future Work
+## Verification
 
-Recommended next steps:
+Storage changes are verified with the narrowest gate that covers the changed boundary, then
+broadened when the change crosses contracts.
 
-1. Expand MinIO integration tests for bucket lifecycle, list/head/delete/copy object, multipart upload, presign upload part, presign download, and range read.
-2. Add object-store copy and server-side encryption options to Drive business workflows only where a user-facing workflow needs them.
-3. Add derived-object, quarantine, export, and repair manifests as their workflows are implemented.
+```bash
+cargo check --workspace --all-targets
+cargo test -p sdkwork-drive-workspace-service --test storage_provider_service
+```
+
+Provider switching, history access, and bucket lookup changes additionally require:
+
+```bash
+pnpm api:envelope:check
+pnpm api:check
+pnpm api:schema:check
+node tools/drive_sdk_generate.mjs
+```
+
+Migration changes are covered by two suites that split the concern deliberately:
+
+```bash
+# Bookkeeping: resumability, checksum verification, repointing, tenant isolation.
+cargo test -p sdkwork-drive-workspace-service --test storage_migration_service
+
+# Surface: the mounted paths, the `data.item` / `data.items` envelope, and problem statuses.
+cargo test -p sdkwork-routes-storage-backend-api --test admin_storage_migration_routes
+```
+
+The HTTP suite exists because the manifest and the mounted router are generated from different
+sources, so nothing else compares them: `manifest_advertises_every_migration_route` fails if a
+route is registered without being advertised, and the envelope assertions fail if a handler
+returns a bare DTO instead of `SdkWorkApiResponse`.
+
+Any change to a request field on the app write path must be regenerated into all six language
+SDK families under `sdks/sdkwork-drive-app-sdk-*` and into
+`apis/app-api/drive/drive-app-api.openapi.json` in the same change, because the OpenAPI document
+is the SDK generation input and a stale document silently drops the new field.
+
+### Known Harness Limit
+
+`cargo test` may run one fixture per test binary only. Fixtures in the same process share the
+process-wide Postgres pool, and that pool is constructed once on first use with the first
+caller's configuration; a binary that chains several fixtures can therefore exhaust every pool
+handle and report `PoolTimedOut` in a later fixture. This is a test-harness constraint, not a
+product defect. Run one fixture per binary, or split multi-fixture binaries.
 

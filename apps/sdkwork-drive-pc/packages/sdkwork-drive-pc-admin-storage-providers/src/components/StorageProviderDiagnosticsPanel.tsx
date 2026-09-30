@@ -4,8 +4,21 @@ import type {
   StorageProviderCapabilitiesView,
   StorageProviderView,
 } from '../types/storageProviderAdminTypes';
-import { getProviderKindMeta, HEALTH_STATUS_CONFIG } from '../utils/providerKindConfig';
+import {
+  getProviderKindMeta,
+  HEALTH_STATUS_CONFIG,
+} from '../utils/providerKindConfig';
+import { useTranslation } from '../hooks/useTranslation';
 import { SECONDARY_BUTTON_CLASS, CARD_CLASS } from '../utils/uiPrimitives';
+
+// Health labels resolve through the shared dictionary, mirroring the table
+// and detail drawer; `HEALTH_STATUS_CONFIG` keeps only the non-copy styling.
+const HEALTH_LABELS = {
+  unknown: 'healthUnknown',
+  healthy: 'healthHealthy',
+  degraded: 'healthDegraded',
+  unreachable: 'healthUnreachable',
+} as const;
 
 interface StorageProviderDiagnosticsPanelProps {
   provider?: StorageProviderView;
@@ -24,17 +37,20 @@ export function StorageProviderDiagnosticsPanel({
   onHeadBucket,
   pending,
 }: StorageProviderDiagnosticsPanelProps) {
+  const { t } = useTranslation();
+
   if (!provider) {
     return (
       <div className={CARD_CLASS}>
         <div className="px-5 py-6 text-center text-sm text-neutral-500 dark:text-neutral-400">
-          Select a provider to view diagnostics.
+          {t('diagnosticsEmpty')}
         </div>
       </div>
     );
   }
 
   const meta = getProviderKindMeta(provider.providerKind);
+  const healthStatus = provider.healthStatus ?? 'unknown';
 
   return (
     <div className={CARD_CLASS}>
@@ -45,9 +61,9 @@ export function StorageProviderDiagnosticsPanel({
               {meta.icon}
             </div>
             <div>
-              <h3 className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">Diagnostics</h3>
+              <h3 className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">{t('diagnostics')}</h3>
               <p className="text-[11px] text-neutral-500 dark:text-neutral-400">
-                Connectivity and capability checks
+                {t('diagnosticsDesc')}
               </p>
             </div>
           </div>
@@ -61,7 +77,7 @@ export function StorageProviderDiagnosticsPanel({
               <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
-              Capabilities
+              {t('capabilities')}
             </button>
             <button
               type="button"
@@ -72,7 +88,7 @@ export function StorageProviderDiagnosticsPanel({
               <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
               </svg>
-              Bucket check
+              {t('bucketCheck')}
             </button>
           </div>
         </div>
@@ -82,13 +98,13 @@ export function StorageProviderDiagnosticsPanel({
         {/* Health status */}
         <div className="mb-4 flex items-center gap-3 rounded-md border border-neutral-100 p-3 dark:border-neutral-800">
           <div className={`flex h-8 w-8 items-center justify-center rounded-full ${
-            HEALTH_STATUS_CONFIG[provider.healthStatus ?? 'unknown'].bgClass
+            HEALTH_STATUS_CONFIG[healthStatus].bgClass
           }`}>
-            <span className={`h-3 w-3 rounded-full ${HEALTH_STATUS_CONFIG[provider.healthStatus ?? 'unknown'].dotClass}`} />
+            <span className={`h-3 w-3 rounded-full ${HEALTH_STATUS_CONFIG[healthStatus].dotClass}`} />
           </div>
           <div>
             <div className="text-sm font-medium text-neutral-900 dark:text-neutral-100">
-              Provider health: {HEALTH_STATUS_CONFIG[provider.healthStatus ?? 'unknown'].label}
+              {t('providerHealth', { status: t(HEALTH_LABELS[healthStatus]) })}
             </div>
             <div className="font-mono text-[11px] leading-relaxed break-all text-neutral-500 dark:text-neutral-400">
               {provider.endpointUrl} · {provider.bucket}
@@ -99,7 +115,7 @@ export function StorageProviderDiagnosticsPanel({
         {/* Bucket reachability */}
         {bucket && (
           <div className="mb-4">
-            <div className="text-xs font-semibold text-neutral-500 dark:text-neutral-400 mb-2">Bucket reachability</div>
+            <div className="text-xs font-semibold text-neutral-500 dark:text-neutral-400 mb-2">{t('bucketReachabilitySection')}</div>
             <div className={`flex items-center gap-2 rounded-md p-2 text-xs ${
               bucket.exists
                 ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-300'
@@ -114,7 +130,9 @@ export function StorageProviderDiagnosticsPanel({
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               )}
-              {bucket.exists ? `Bucket "${bucket.bucket}" is reachable` : `Bucket "${bucket.bucket}" does not exist or is unreachable`}
+              {bucket.exists
+                ? t('bucketReachableWithName', { bucket: bucket.bucket })
+                : t('bucketUnreachableWithName', { bucket: bucket.bucket })}
             </div>
           </div>
         )}
@@ -122,37 +140,41 @@ export function StorageProviderDiagnosticsPanel({
         {/* Capabilities grid */}
         {capabilities && (
           <div>
-            <div className="text-xs font-semibold text-neutral-500 dark:text-neutral-400 mb-2">Capabilities</div>
+            <div className="text-xs font-semibold text-neutral-500 dark:text-neutral-400 mb-2">{t('capabilities')}</div>
             <div className="grid grid-cols-2 gap-2">
               <CapabilityCard
-                label="Multipart upload"
+                label={t('capMultipart')}
                 supported={capabilities.supportsMultipartUpload}
-                description="Large file upload support"
+                description={t('capLargeFile')}
               />
               <CapabilityCard
-                label="Presigned upload"
+                label={t('capPresignedUpload')}
                 supported={capabilities.supportsPresignedUploadPart}
-                description="Direct client upload"
+                description={t('capDirectUpload')}
               />
               <CapabilityCard
-                label="Presigned download"
+                label={t('capPresignedDownload')}
                 supported={capabilities.supportsPresignedDownload}
-                description="Direct client download"
+                description={t('capDirectDownload')}
               />
               <CapabilityCard
-                label="Server-side encryption"
+                label={t('capSse')}
                 supported={capabilities.supportsServerSideEncryption}
-                description={capabilities.supportedServerSideEncryptionModes.join(', ') || 'Not available'}
+                description={
+                  capabilities.supportedServerSideEncryptionModes.join(', ') || t('capNotAvailable')
+                }
               />
               <CapabilityCard
-                label="Storage classes"
+                label={t('capStorageClasses')}
                 supported={capabilities.supportsStorageClass}
-                description={capabilities.supportedStorageClasses.slice(0, 3).join(', ') || 'Not available'}
+                description={
+                  capabilities.supportedStorageClasses.slice(0, 3).join(', ') || t('capNotAvailable')
+                }
               />
               <CapabilityCard
-                label="Credential rotation"
+                label={t('capCredentialRotation')}
                 supported={capabilities.supportsCredentialRotation}
-                description="Live credential update"
+                description={t('capLiveUpdate')}
               />
             </div>
           </div>

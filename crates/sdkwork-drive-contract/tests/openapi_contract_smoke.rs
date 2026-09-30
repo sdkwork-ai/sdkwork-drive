@@ -840,9 +840,27 @@ fn openapi_paths_follow_sdkwork_v3_prefixes() {
         "tencent_cos",
         "huawei_obs",
         "volcengine_tos",
+        "baidu_bos",
+        "kingsoft_ks3",
+        "qiniu_kodo",
+        "china_mobile_ecloud",
+        "china_telecom_eos",
+        "china_unicom_wo",
+        "minio",
+        "cloudflare_r2",
+        "backblaze_b2",
+        "wasabi",
+        "digitalocean_spaces",
+        "linode_object_storage",
+        "vultr_object_storage",
+        "scaleway_object_storage",
+        "oracle_cloud_storage",
+        "ibm_cos",
+        "alibaba_cloud_international",
+        "tencent_cloud_international",
     ];
     let provider_kind_pattern =
-        "^(local_filesystem|s3_compatible|google_cloud_storage|aliyun_oss|tencent_cos|huawei_obs|volcengine_tos|custom:[a-z0-9_-]{2,32})$";
+        "^(local_filesystem|s3_compatible|google_cloud_storage|aliyun_oss|tencent_cos|huawei_obs|volcengine_tos|baidu_bos|kingsoft_ks3|qiniu_kodo|china_mobile_ecloud|china_telecom_eos|china_unicom_wo|minio|cloudflare_r2|backblaze_b2|wasabi|digitalocean_spaces|linode_object_storage|vultr_object_storage|scaleway_object_storage|oracle_cloud_storage|ibm_cos|alibaba_cloud_international|tencent_cloud_international|custom:[a-z0-9_-]{2,32})$";
     let object_key_pattern = "^(?!/)(?!.*//)(?!.*(?:^|/)\\.{1,2}(?:/|$))(?!.*\\u0000).*(?:[^/])$";
     let object_list_entry_key_pattern =
         "^(?!/)(?!.*//)(?!.*(?:^|/)\\.{1,2}(?:/|$))(?!.*\\u0000).+$";

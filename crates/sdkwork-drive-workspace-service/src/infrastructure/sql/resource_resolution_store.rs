@@ -229,7 +229,6 @@ impl SqlResourceResolutionStore {
                         version.content_length,
                         CAST(version.updated_at AS TEXT) AS last_modified,
                         object.storage_provider_id,
-                        provider.version AS storage_provider_version,
                         object.bucket,
                         object.object_key
                  FROM dr_drive_node node
@@ -270,7 +269,6 @@ impl SqlResourceResolutionStore {
                         version.content_length,
                         CAST(version.updated_at AS TEXT) AS last_modified,
                         object.storage_provider_id,
-                        provider.version AS storage_provider_version,
                         object.bucket,
                         object.object_key
                  FROM dr_drive_node node
@@ -347,7 +345,6 @@ fn map_resource(
         eligibility: "ELIGIBLE".to_string(),
         content_locator: DriveResourceContentLocator {
             storage_provider_id: row.get("storage_provider_id"),
-            storage_provider_version: row.get("storage_provider_version"),
             bucket: row.get("bucket"),
             object_key: row.get("object_key"),
         },

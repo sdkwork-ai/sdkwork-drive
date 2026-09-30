@@ -1,8 +1,74 @@
 import { customApiPath } from './paths';
 import type { ApiRequestOptions, HttpClient } from '../http/client';
 
-import type { CopyProviderObjectRequest, CreateStorageProviderAccountRequest, CreateStorageProviderRequest, RotateStorageProviderCredentialRequest, SetDefaultStorageProviderBindingRequest, SetStorageProviderKindEnabledRequest, StorageOverviewRetrieveResponse, StorageProviderAccountDefaultsCreateResponse201, StorageProviderAccountsCreateResponse201, StorageProviderAccountsListResponse, StorageProviderBindingsDefaultRetrieveResponse, StorageProviderBindingsDefaultUpdateResponse, StorageProviderBindingsListResponse, StorageProviderKindsCreateResponse201, StorageProviderKindsListResponse, StorageProviderKindsUpdateResponse, StorageProvidersActivateResponse, StorageProvidersBucketRetrieveResponse, StorageProvidersBucketsListResponse, StorageProvidersBucketUpdateResponse, StorageProvidersCapabilitiesListResponse, StorageProvidersCreateResponse201, StorageProvidersCredentialsRotateResponse, StorageProvidersDeactivateResponse, StorageProvidersListResponse, StorageProvidersObjectsContentRetrieveResponse, StorageProvidersObjectsContentUpdateResponse, StorageProvidersObjectsCopyResponse, StorageProvidersObjectsListResponse, StorageProvidersObjectsRetrieveResponse, StorageProvidersRetrieveResponse, StorageProvidersTestResponse, StorageProvidersUpdateResponse, UpdateProviderObjectContent, UpdateStorageProviderRequest } from '../types';
+import type { CopyProviderObjectRequest, CreateStorageMigrationRequest, CreateStorageProviderAccountRequest, CreateStorageProviderRequest, RotateStorageProviderCredentialRequest, RunStorageMigrationRequest, SetDefaultStorageProviderBindingRequest, SetStorageProviderKindEnabledRequest, StorageMigrationsCancelResponse, StorageMigrationsCreateResponse, StorageMigrationsItemsListResponse, StorageMigrationsListResponse, StorageMigrationsRetrieveResponse, StorageMigrationsRunResponse, StorageOverviewRetrieveResponse, StorageProviderAccountDefaultsCreateResponse201, StorageProviderAccountsCreateResponse201, StorageProviderAccountsListResponse, StorageProviderBindingsDefaultRetrieveResponse, StorageProviderBindingsDefaultUpdateResponse, StorageProviderBindingsListResponse, StorageProviderKindsCreateResponse201, StorageProviderKindsListResponse, StorageProviderKindsUpdateResponse, StorageProvidersActivateResponse, StorageProvidersBucketRetrieveResponse, StorageProvidersBucketsListResponse, StorageProvidersBucketUpdateResponse, StorageProvidersCapabilitiesListResponse, StorageProvidersCreateResponse201, StorageProvidersCredentialsRotateResponse, StorageProvidersDeactivateResponse, StorageProvidersListResponse, StorageProvidersObjectsContentRetrieveResponse, StorageProvidersObjectsContentUpdateResponse, StorageProvidersObjectsCopyResponse, StorageProvidersObjectsListResponse, StorageProvidersObjectsRetrieveResponse, StorageProvidersRetrieveResponse, StorageProvidersTestResponse, StorageProvidersUpdateResponse, UpdateProviderObjectContent, UpdateStorageProviderRequest } from '../types';
 
+
+export interface DriveStorageMigrationsItemsListParams {
+  status?: string;
+  pageSize?: number;
+  pageToken?: string;
+}
+
+export class DriveStorageMigrationsItemsApi {
+  private client: HttpClient;
+
+  constructor(client: HttpClient) {
+    this.client = client;
+  }
+
+
+async list(migrationId: string, params?: DriveStorageMigrationsItemsListParams, requestOptions?: ApiRequestOptions): Promise<StorageMigrationsItemsListResponse> {
+    const query = buildQueryString([
+      { name: 'status', value: params?.status, style: 'form', explode: true, allowReserved: false },
+      { name: 'pageSize', value: params?.pageSize, style: 'form', explode: true, allowReserved: false },
+      { name: 'pageToken', value: params?.pageToken, style: 'form', explode: true, allowReserved: false },
+    ]);
+    return this.client.request<StorageMigrationsItemsListResponse>(appendQueryString(customApiPath(`/drive/storage/migrations/${serializePathParameter(migrationId, { name: 'migrationId', style: 'simple', explode: false })}/items`), query), { ...(requestOptions?.signal !== undefined ? { signal: requestOptions.signal } : {}), ...(requestOptions?.timeout !== undefined ? { timeout: requestOptions.timeout } : {}), method: 'GET' as any });
+  }
+}
+
+export interface DriveStorageMigrationsListParams {
+  status?: string;
+  pageSize?: number;
+  pageToken?: string;
+}
+
+export class DriveStorageMigrationsApi {
+  private client: HttpClient;
+  public readonly items: DriveStorageMigrationsItemsApi;
+
+  constructor(client: HttpClient) {
+    this.client = client;
+    this.items = new DriveStorageMigrationsItemsApi(client);
+  }
+
+
+async list(params?: DriveStorageMigrationsListParams, requestOptions?: ApiRequestOptions): Promise<StorageMigrationsListResponse> {
+    const query = buildQueryString([
+      { name: 'status', value: params?.status, style: 'form', explode: true, allowReserved: false },
+      { name: 'pageSize', value: params?.pageSize, style: 'form', explode: true, allowReserved: false },
+      { name: 'pageToken', value: params?.pageToken, style: 'form', explode: true, allowReserved: false },
+    ]);
+    return this.client.request<StorageMigrationsListResponse>(appendQueryString(customApiPath(`/drive/storage/migrations`), query), { ...(requestOptions?.signal !== undefined ? { signal: requestOptions.signal } : {}), ...(requestOptions?.timeout !== undefined ? { timeout: requestOptions.timeout } : {}), method: 'GET' as any });
+  }
+
+async create(body: CreateStorageMigrationRequest, requestOptions?: ApiRequestOptions): Promise<StorageMigrationsCreateResponse> {
+    return this.client.request<StorageMigrationsCreateResponse>(customApiPath(`/drive/storage/migrations`), { ...(requestOptions?.signal !== undefined ? { signal: requestOptions.signal } : {}), ...(requestOptions?.timeout !== undefined ? { timeout: requestOptions.timeout } : {}), method: 'POST' as any, body, contentType: 'application/json' });
+  }
+
+async retrieve(migrationId: string, requestOptions?: ApiRequestOptions): Promise<StorageMigrationsRetrieveResponse> {
+    return this.client.request<StorageMigrationsRetrieveResponse>(customApiPath(`/drive/storage/migrations/${serializePathParameter(migrationId, { name: 'migrationId', style: 'simple', explode: false })}`), { ...(requestOptions?.signal !== undefined ? { signal: requestOptions.signal } : {}), ...(requestOptions?.timeout !== undefined ? { timeout: requestOptions.timeout } : {}), method: 'GET' as any });
+  }
+
+async run(migrationId: string, body?: RunStorageMigrationRequest, requestOptions?: ApiRequestOptions): Promise<StorageMigrationsRunResponse> {
+    return this.client.request<StorageMigrationsRunResponse>(customApiPath(`/drive/storage/migrations/${serializePathParameter(migrationId, { name: 'migrationId', style: 'simple', explode: false })}/run`), { ...(requestOptions?.signal !== undefined ? { signal: requestOptions.signal } : {}), ...(requestOptions?.timeout !== undefined ? { timeout: requestOptions.timeout } : {}), method: 'POST' as any, ...(body !== undefined ? { body, contentType: 'application/json' } : {}) });
+  }
+
+async cancel(migrationId: string, requestOptions?: ApiRequestOptions): Promise<StorageMigrationsCancelResponse> {
+    return this.client.request<StorageMigrationsCancelResponse>(customApiPath(`/drive/storage/migrations/${serializePathParameter(migrationId, { name: 'migrationId', style: 'simple', explode: false })}/cancel`), { ...(requestOptions?.signal !== undefined ? { signal: requestOptions.signal } : {}), ...(requestOptions?.timeout !== undefined ? { timeout: requestOptions.timeout } : {}), method: 'POST' as any });
+  }
+}
 
 export interface DriveStorageOverviewRetrieveParams {
   trendMonths?: string;
@@ -173,7 +239,8 @@ async retrieve(providerId: string, requestOptions?: ApiRequestOptions): Promise<
     return this.client.request<StorageProvidersBucketRetrieveResponse>(customApiPath(`/drive/storage/providers/${serializePathParameter(providerId, { name: 'providerId', style: 'simple', explode: false })}/bucket`), { ...(requestOptions?.signal !== undefined ? { signal: requestOptions.signal } : {}), ...(requestOptions?.timeout !== undefined ? { timeout: requestOptions.timeout } : {}), method: 'GET' as any });
   }
 
-async update(providerId: string, requestOptions?: ApiRequestOptions): Promise<StorageProvidersBucketUpdateResponse> {
+/** Initialize storage bucket */
+  async update(providerId: string, requestOptions?: ApiRequestOptions): Promise<StorageProvidersBucketUpdateResponse> {
     return this.client.request<StorageProvidersBucketUpdateResponse>(customApiPath(`/drive/storage/providers/${serializePathParameter(providerId, { name: 'providerId', style: 'simple', explode: false })}/bucket`), { ...(requestOptions?.signal !== undefined ? { signal: requestOptions.signal } : {}), ...(requestOptions?.timeout !== undefined ? { timeout: requestOptions.timeout } : {}), method: 'PUT' as any });
   }
 
@@ -218,6 +285,7 @@ async list(providerId: string, requestOptions?: ApiRequestOptions): Promise<Stor
 }
 
 export interface DriveStorageProvidersListParams {
+  providerKind?: string;
   status?: string;
 }
 
@@ -239,6 +307,7 @@ export class DriveStorageProvidersApi {
 
 async list(params?: DriveStorageProvidersListParams, requestOptions?: ApiRequestOptions): Promise<StorageProvidersListResponse> {
     const query = buildQueryString([
+      { name: 'provider_kind', value: params?.providerKind, style: 'form', explode: true, allowReserved: false },
       { name: 'status', value: params?.status, style: 'form', explode: true, allowReserved: false },
     ]);
     return this.client.request<StorageProvidersListResponse>(appendQueryString(customApiPath(`/drive/storage/providers`), query), { ...(requestOptions?.signal !== undefined ? { signal: requestOptions.signal } : {}), ...(requestOptions?.timeout !== undefined ? { timeout: requestOptions.timeout } : {}), method: 'GET' as any });
@@ -314,6 +383,7 @@ async update(body: SetDefaultStorageProviderBindingRequest, requestOptions?: Api
 }
 
 export interface DriveStorageProviderBindingsListParams {
+  bindingScope?: 'tenant' | 'space' | 'space_type';
   spaceId?: string;
   providerId?: string;
   lifecycleStatus?: 'active' | 'disabled' | 'deleted';
@@ -332,6 +402,7 @@ export class DriveStorageProviderBindingsApi {
 /** List Drive storage provider bindings */
   async list(params?: DriveStorageProviderBindingsListParams, requestOptions?: ApiRequestOptions): Promise<StorageProviderBindingsListResponse> {
     const query = buildQueryString([
+      { name: 'binding_scope', value: params?.bindingScope, style: 'form', explode: true, allowReserved: false },
       { name: 'spaceId', value: params?.spaceId, style: 'form', explode: true, allowReserved: false },
       { name: 'providerId', value: params?.providerId, style: 'form', explode: true, allowReserved: false },
       { name: 'lifecycleStatus', value: params?.lifecycleStatus, style: 'form', explode: true, allowReserved: false },
@@ -347,6 +418,7 @@ export class DriveApi {
   public readonly storageProviderAccounts: DriveStorageProviderAccountsApi;
   public readonly storageProviderAccountDefaults: DriveStorageProviderAccountDefaultsApi;
   public readonly storageOverview: DriveStorageOverviewApi;
+  public readonly storageMigrations: DriveStorageMigrationsApi;
 
   constructor(client: HttpClient) {
     this.storageProviderBindings = new DriveStorageProviderBindingsApi(client);
@@ -355,6 +427,7 @@ export class DriveApi {
     this.storageProviderAccounts = new DriveStorageProviderAccountsApi(client);
     this.storageProviderAccountDefaults = new DriveStorageProviderAccountDefaultsApi(client);
     this.storageOverview = new DriveStorageOverviewApi(client);
+    this.storageMigrations = new DriveStorageMigrationsApi(client);
   }
 
 }

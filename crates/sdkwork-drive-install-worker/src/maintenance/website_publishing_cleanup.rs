@@ -48,7 +48,7 @@ pub async fn cleanup_website_publishing(
             if !objects.is_empty() {
                 for object in objects {
                     let object_store = object_runtime
-                        .resolve(&object.storage_provider_id, object.storage_provider_version)
+                        .resolve_locator(&object.storage_provider_id, &object.bucket)
                         .await
                         .map_err(|error| {
                             format!(

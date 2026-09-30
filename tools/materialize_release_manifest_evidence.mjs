@@ -26,6 +26,14 @@ function resolveWorkspaceRoot() {
   return scriptRepoRoot;
 }
 
+/**
+ * Artifact discovery globs per install-package id.
+ *
+ * These must mirror what `scripts/release-desktop-bundle.mjs` actually stages;
+ * the previous entries pointed at `app.zip` / Tauri `bundle/**` outputs that the
+ * Electron packaging no longer produces, so checksum materialization silently
+ * found nothing and the packages were reported as "no local build artifact".
+ */
 const PACKAGE_ARTIFACT_GLOBS = {
   'web-universal-cloud-browser-zip': [
     'dist/release/**/web.zip',
@@ -33,20 +41,16 @@ const PACKAGE_ARTIFACT_GLOBS = {
     'apps/sdkwork-drive-pc/dist/**/*.zip',
   ],
   'windows-x64-standalone-desktop-zip': [
-    'dist/release/**/windows/**/app.zip',
-    'dist/desktop/**/windows/**/app.zip',
-    'apps/sdkwork-drive-pc/src-tauri/target/release/bundle/**/*.zip',
-    'apps/sdkwork-drive-pc/packages/sdkwork-drive-pc-desktop/src-tauri/target/release/bundle/**/*.zip',
+    'dist/release/**/windows/**/app.msi',
+    'apps/sdkwork-drive-pc/dist-electron/**/*.msi',
   ],
   'macos-universal-standalone-desktop-dmg': [
     'dist/release/**/macos/**/app.dmg',
-    'dist/desktop/**/macos/**/app.dmg',
-    'apps/sdkwork-drive-pc/src-tauri/target/release/bundle/**/*.dmg',
+    'apps/sdkwork-drive-pc/dist-electron/**/*.dmg',
   ],
   'linux-x64-standalone-desktop-appimage': [
     'dist/release/**/linux/**/app.AppImage',
-    'dist/desktop/**/linux/**/app.AppImage',
-    'apps/sdkwork-drive-pc/src-tauri/target/release/bundle/**/*.AppImage',
+    'apps/sdkwork-drive-pc/dist-electron/**/*.AppImage',
   ],
 };
 

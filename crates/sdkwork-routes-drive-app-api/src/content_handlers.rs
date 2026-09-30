@@ -36,6 +36,7 @@ use axum::Json;
 use sdkwork_drive_storage_contract::{DriveByteRange, DriveObjectStore, ReadObjectRangeRequest};
 use sdkwork_drive_workspace_service::DriveServiceError;
 use sqlx::Row;
+use std::sync::Arc;
 
 use crate::acl;
 use crate::app_context::DriveRequestContext;
@@ -114,7 +115,7 @@ pub(crate) struct DriveNodeContentResponse {
 }
 
 struct ResolvedContent {
-    object_store: Box<dyn DriveObjectStore>,
+    object_store: Arc<dyn DriveObjectStore>,
     bucket: String,
     object_key: String,
     content_type: Option<String>,
@@ -270,7 +271,7 @@ async fn resolve_content(
             )))
         })?;
     let provider = require_active_storage_provider(provider, &bucket).map_err(map_service_error)?;
-    let object_store = build_s3_object_store_for_provider(&provider)
+    let object_store = build_s3_object_store_for_provider(state, &provider.to_domain_provider())
         .await
         .map_err(map_service_error)?
         .ok_or_else(|| {
@@ -280,7 +281,7 @@ async fn resolve_content(
         })?;
 
     Ok(ResolvedContent {
-        object_store: Box::new(object_store),
+        object_store,
         bucket,
         object_key,
         content_type: content_type.filter(|value| !value.trim().is_empty()),

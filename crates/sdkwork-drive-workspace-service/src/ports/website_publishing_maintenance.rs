@@ -30,7 +30,6 @@ pub struct WebsiteTreeCleanupCandidate {
 pub struct WebsiteTreeStorageObject {
     pub id: String,
     pub storage_provider_id: String,
-    pub storage_provider_version: i64,
     pub bucket: String,
     pub object_key: String,
 }

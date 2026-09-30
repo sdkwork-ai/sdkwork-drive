@@ -21,6 +21,7 @@ sdkwork-drive-security.workspace = true
 sdkwork-drive-sandbox-local.workspace = true
 sdkwork-drive-uploader-service.workspace = true
 sdkwork-drive-workspace-service.workspace = true
+sdkwork-drive-object-runtime.workspace = true
 sdkwork-drive-storage-contract.workspace = true
 sdkwork-drive-storage-s3.workspace = true
 sdkwork-web-axum.workspace = true

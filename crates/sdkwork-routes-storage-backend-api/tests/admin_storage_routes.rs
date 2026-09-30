@@ -75,6 +75,27 @@ async fn mock_s3_endpoint(
     if method == Method::HEAD && uri.path() == "/bucket-admin/missing.txt" {
         return StatusCode::NOT_FOUND.into_response();
     }
+    if uri.path().trim_end_matches('/') == "/init-bucket"
+        && (method == Method::HEAD || method == Method::PUT)
+    {
+        // Stateful stand-in for vendor re-create semantics: the bucket only
+        // exists once a CreateBucket (PUT) has reached this mock.
+        if method == Method::PUT {
+            return (StatusCode::OK, [("content-length", "0")], Body::empty()).into_response();
+        }
+        let created = requests
+            .lock()
+            .expect("captured s3 requests mutex should not be poisoned")
+            .iter()
+            .any(|request| {
+                request.method == "PUT" && request.path.trim_end_matches('/') == "/init-bucket"
+            });
+        return if created {
+            (StatusCode::OK, [("content-length", "0")], Body::empty()).into_response()
+        } else {
+            StatusCode::NOT_FOUND.into_response()
+        };
+    }
     if method == Method::HEAD && uri.path() == "/bucket-admin/oversized.bin" {
         return (
             StatusCode::OK,
@@ -607,13 +628,9 @@ async fn admin_storage_binding_rejects_invalid_storage_root_prefix() {
 
     sqlx::query(
         "INSERT INTO dr_drive_storage_provider (
-            id, provider_kind, name, endpoint_url, region, bucket, path_style,
+            id, tenant_id, provider_kind, name, endpoint_url, region, bucket, path_style,
             credential_ref, status, version, created_by, updated_by
-        ) VALUES (
-            'provider-root-prefix', 's3_compatible', 'Root Prefix S3', 'https://s3.amazonaws.com',
-            'us-east-1', 'root-prefix-bucket', 0, 'plain:access-key:secret-key',
-            'active', 1, 'admin-storage', 'admin-storage'
-        )",
+        ) VALUES ('provider-root-prefix', 'tenant-storage', 's3_compatible', 'Root Prefix S3', 'https://s3.amazonaws.com', 'us-east-1', 'root-prefix-bucket', false, 'plain:access-key:secret-key', 'active', 1, 'admin-storage', 'admin-storage')",
     )
     .execute(&pool)
     .await
@@ -676,17 +693,12 @@ async fn admin_storage_binding_routes_list_and_delete_space_mounts_with_audit() 
 
     sqlx::query(
         "INSERT INTO dr_drive_storage_provider (
-            id, provider_kind, name, endpoint_url, region, bucket, path_style,
+            id, tenant_id, provider_kind, name, endpoint_url, region, bucket, path_style,
             credential_ref, status, version, created_by, updated_by
-        ) VALUES
-            (
-                'provider-tenant-default', 's3_compatible', 'Tenant Default', 'https://s3.amazonaws.com',
-                'us-east-1', 'tenant-bucket', 0, 'plain:access-key:secret-key',
-                'active', 1, 'admin-storage', 'admin-storage'
-            ),
+        ) VALUES ('provider-tenant-default', 'tenant-storage', 's3_compatible', 'Tenant Default', 'https://s3.amazonaws.com', 'us-east-1', 'tenant-bucket', false, 'plain:access-key:secret-key', 'active', 1, 'admin-storage', 'admin-storage'),
             (
                 'provider-space-default', 'aliyun_oss', 'Space Default', 'https://oss-cn-hangzhou.aliyuncs.com',
-                'cn-hangzhou', 'space-bucket', 0, 'plain:access-key:secret-key',
+                'cn-hangzhou', 'space-bucket', false, 'plain:access-key:secret-key',
                 'active', 1, 'admin-storage', 'admin-storage'
             )",
     )
@@ -826,6 +838,204 @@ async fn admin_storage_binding_routes_list_and_delete_space_mounts_with_audit() 
     );
 }
 
+/// Read one binding-list page as JSON.
+async fn list_bindings_payload(app: Router, uri: &str) -> serde_json::Value {
+    let response = app
+        .oneshot(
+            Request::builder()
+                .method(Method::GET)
+                .uri(uri)
+                .body(Body::empty())
+                .expect("list bindings request should be built"),
+        )
+        .await
+        .expect("list bindings request should be handled");
+    assert_eq!(response.status(), StatusCode::OK);
+    serde_json::from_slice(
+        &to_bytes(response.into_body(), usize::MAX)
+            .await
+            .expect("list bindings response body should be read"),
+    )
+    .expect("list bindings response should be json")
+}
+
+/// The binding list can be narrowed to one resolution step.
+///
+/// The console renders a section per step, and the unfiltered list is one page
+/// window ordered space → space type → tenant: without the filter, a tenant with
+/// enough space-scoped bindings makes the space-type section render every row as
+/// unbound. The filter therefore has to select server-side, and an unknown step
+/// has to fail loudly rather than answer an empty page.
+#[tokio::test]
+async fn admin_storage_binding_list_filters_by_resolution_step() {
+    let Some((pool, _database_guard)) = sdkwork_drive_test_support::postgres_test_database().await
+    else {
+        return;
+    };
+
+    sqlx::query(
+        "INSERT INTO dr_drive_space (
+            id, tenant_id, owner_subject_type, owner_subject_id, display_name,
+            space_type, lifecycle_status, version, created_by, updated_by
+        ) VALUES (
+            'space-scope-a', 'tenant-scope', 'user', 'user-scope',
+            'Scoped Space', 'personal', 'active', 1, 'admin-storage', 'admin-storage'
+        )",
+    )
+    .execute(&pool)
+    .await
+    .expect("space should be seeded");
+
+    sqlx::query(
+        "INSERT INTO dr_drive_storage_provider (
+            id, tenant_id, provider_kind, name, endpoint_url, region, bucket, path_style,
+            credential_ref, status, version, created_by, updated_by
+        ) VALUES ('provider-scope', 'tenant-storage', 's3_compatible', 'Scoped Provider', 'https://s3.amazonaws.com', 'us-east-1', 'scoped-bucket', false, 'plain:access-key:secret-key', 'active', 1, 'admin-storage', 'admin-storage')",
+    )
+    .execute(&pool)
+    .await
+    .expect("provider should be seeded");
+
+    sqlx::query(
+        "INSERT INTO dr_drive_storage_provider_binding (
+            id, tenant_id, space_id, provider_id, binding_scope, purpose,
+            storage_root_prefix, lifecycle_status, version, created_by, updated_by
+        ) VALUES
+            (
+                'default:tenant:tenant-scope', 'tenant-scope', NULL, 'provider-scope',
+                'tenant', 'primary', 'sdkwork-drive/v1/tenants/tenant-scope', 'active', 1,
+                'admin-storage', 'admin-storage'
+            ),
+            (
+                'default:space:tenant-scope:space-scope-a', 'tenant-scope', 'space-scope-a',
+                'provider-scope', 'space', 'primary',
+                'sdkwork-drive/v1/tenants/tenant-scope/spaces/space-scope-a', 'active', 1,
+                'admin-storage', 'admin-storage'
+            ),
+            (
+                'default:space_type:tenant-scope:website', 'tenant-scope', NULL, 'provider-scope',
+                'space_type', 'website',
+                'sdkwork-drive/v1/tenants/tenant-scope/space-types/website', 'active', 1,
+                'admin-storage', 'admin-storage'
+            )",
+    )
+    .execute(&pool)
+    .await
+    .expect("bindings should be seeded");
+
+    let app = build_router_with_pool_without_iam_and_test_tenant(pool, "tenant-scope");
+
+    let space_type_page = list_bindings_payload(
+        app.clone(),
+        "/backend/v3/api/drive/storage/bindings?binding_scope=space_type",
+    )
+    .await;
+    let space_type_items = space_type_page["data"]["items"].as_array().unwrap();
+    assert_eq!(space_type_items.len(), 1);
+    assert_eq!(space_type_items[0]["purpose"], "website");
+    assert_eq!(space_type_items[0]["bindingScope"], "space_type");
+
+    let space_page = list_bindings_payload(
+        app.clone(),
+        "/backend/v3/api/drive/storage/bindings?binding_scope=space",
+    )
+    .await;
+    let space_items = space_page["data"]["items"].as_array().unwrap();
+    assert_eq!(space_items.len(), 1);
+    assert_eq!(space_items[0]["spaceId"], "space-scope-a");
+
+    let tenant_page = list_bindings_payload(
+        app.clone(),
+        "/backend/v3/api/drive/storage/bindings?binding_scope=tenant",
+    )
+    .await;
+    let tenant_items = tenant_page["data"]["items"].as_array().unwrap();
+    assert_eq!(tenant_items.len(), 1);
+    assert_eq!(tenant_items[0]["purpose"], "primary");
+
+    // A step that does not exist is a client defect, not an empty list.
+    let invalid_response = app
+        .oneshot(
+            Request::builder()
+                .method(Method::GET)
+                .uri("/backend/v3/api/drive/storage/bindings?binding_scope=spaces")
+                .body(Body::empty())
+                .expect("invalid scope request should be built"),
+        )
+        .await
+        .expect("invalid scope request should be handled");
+    assert_eq!(invalid_response.status(), StatusCode::BAD_REQUEST);
+}
+
+/// A `website` space type can carry its own storage target.
+///
+/// `dr_drive_space.space_type` has always accepted `website` and the route
+/// validator accepted it too, while the binding table's purpose check did not: the
+/// bind succeeded through validation and then failed the table check, so
+/// published-site content could never be given its own bucket (a public,
+/// CDN-fronted one, separated from the tenant's private storage).
+#[tokio::test]
+async fn admin_storage_binding_accepts_website_space_type() {
+    let Some((pool, _database_guard)) = sdkwork_drive_test_support::postgres_test_database().await
+    else {
+        return;
+    };
+
+    sqlx::query(
+        "INSERT INTO dr_drive_storage_provider (
+            id, tenant_id, provider_kind, name, endpoint_url, region, bucket, path_style,
+            credential_ref, status, version, created_by, updated_by
+        ) VALUES ('provider-website', 'tenant-storage', 's3_compatible', 'Website Bucket', 'https://s3.amazonaws.com', 'us-east-1', 'sdkwork-website', false, 'plain:access-key:secret-key', 'active', 1, 'admin-storage', 'admin-storage')",
+    )
+    .execute(&pool)
+    .await
+    .expect("website provider should be seeded");
+
+    let app = build_router_with_pool_without_iam_and_test_tenant(pool, "tenant-website");
+
+    let set_response = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method(Method::PUT)
+                .uri("/backend/v3/api/drive/storage/bindings/default")
+                .header("content-type", "application/json")
+                .body(Body::from(
+                    r#"{
+                        "spaceType":"website",
+                        "providerId":"provider-website"
+                    }"#,
+                ))
+                .expect("website binding request should be built"),
+        )
+        .await
+        .expect("website binding request should be handled");
+    assert_eq!(set_response.status(), StatusCode::OK);
+    let set_payload: serde_json::Value = serde_json::from_slice(
+        &to_bytes(set_response.into_body(), usize::MAX)
+            .await
+            .expect("website binding response body should be read"),
+    )
+    .expect("website binding response should be json");
+    assert_eq!(set_payload["data"]["item"]["bindingScope"], "space_type");
+    assert_eq!(set_payload["data"]["item"]["purpose"], "website");
+    // The bucket a `website` binding writes into comes from the provider
+    // configuration the binding points at, which is what the console shows.
+    assert_eq!(
+        set_payload["data"]["item"]["storageProvider"]["bucket"],
+        "sdkwork-website"
+    );
+
+    let filtered = list_bindings_payload(
+        app,
+        "/backend/v3/api/drive/storage/bindings?binding_scope=space_type",
+    )
+    .await;
+    let items = filtered["data"]["items"].as_array().unwrap();
+    assert_eq!(items.len(), 1);
+    assert_eq!(items[0]["purpose"], "website");
+}
+
 #[tokio::test]
 async fn admin_storage_provider_bucket_routes_list_account_buckets() {
     let (s3_endpoint, captured_requests) = start_s3_mock_server().await;
@@ -836,13 +1046,9 @@ async fn admin_storage_provider_bucket_routes_list_account_buckets() {
 
     sqlx::query(
         "INSERT INTO dr_drive_storage_provider (
-            id, provider_kind, name, endpoint_url, region, bucket, path_style,
+            id, tenant_id, provider_kind, name, endpoint_url, region, bucket, path_style,
             strict_tls, credential_ref, status, version, created_by, updated_by
-        ) VALUES (
-            'provider-bucket-list-s3', 's3_compatible', 'Bucket List S3', $1, 'us-east-1',
-            'bucket-admin', 1, 0, 'plain:test-access-key:test-secret-key',
-            'active', 1, 'admin-storage', 'admin-storage'
-        )",
+        ) VALUES ('provider-bucket-list-s3', 'tenant-storage', 's3_compatible', 'Bucket List S3', $1, 'us-east-1', 'bucket-admin', true, false, 'plain:test-access-key:test-secret-key', 'active', 1, 'admin-storage', 'admin-storage')",
     )
     .bind(&s3_endpoint)
     .execute(&pool)
@@ -905,14 +1111,10 @@ async fn admin_storage_bucket_and_object_routes_use_configured_s3_store() {
 
     sqlx::query(
         "INSERT INTO dr_drive_storage_provider (
-            id, provider_kind, name, endpoint_url, region, bucket, path_style,
+            id, tenant_id, provider_kind, name, endpoint_url, region, bucket, path_style,
             strict_tls, credential_ref, server_side_encryption_mode, default_storage_class,
             status, version, created_by, updated_by
-        ) VALUES (
-            'provider-admin-s3', 's3_compatible', 'Admin S3', $1, 'us-east-1',
-            'bucket-admin', 1, 0, 'plain:test-access-key:test-secret-key',
-            'AES256', 'STANDARD', 'active', 1, 'admin-storage', 'admin-storage'
-        )",
+        ) VALUES ('provider-admin-s3', 'tenant-storage', 's3_compatible', 'Admin S3', $1, 'us-east-1', 'bucket-admin', true, false, 'plain:test-access-key:test-secret-key', 'AES256', 'STANDARD', 'active', 1, 'admin-storage', 'admin-storage')",
     )
     .bind(&s3_endpoint)
     .execute(&pool)
@@ -1013,6 +1215,101 @@ async fn admin_storage_bucket_and_object_routes_use_configured_s3_store() {
 }
 
 #[tokio::test]
+async fn admin_storage_bucket_initialization_is_idempotent() {
+    let (s3_endpoint, captured_requests) = start_s3_mock_server().await;
+    let Some((pool, _database_guard)) = sdkwork_drive_test_support::postgres_test_database().await
+    else {
+        return;
+    };
+
+    sqlx::query(
+        "INSERT INTO dr_drive_storage_provider (
+            id, tenant_id, provider_kind, name, endpoint_url, region, bucket, path_style,
+            strict_tls, credential_ref, server_side_encryption_mode, default_storage_class,
+            status, version, created_by, updated_by
+        ) VALUES ('provider-admin-init', 'tenant-storage', 's3_compatible', 'Admin Init', $1, 'us-east-1', 'init-bucket', true, false, 'plain:init-access-key:init-secret-key', 'AES256', 'STANDARD', 'active', 1, 'admin-storage', 'admin-storage')",
+    )
+    .bind(&s3_endpoint)
+    .execute(&pool)
+    .await
+    .expect("storage provider should be seeded");
+
+    let app = build_router_with_pool_without_iam(pool.clone());
+
+    let first_response = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method(Method::PUT)
+                .uri("/backend/v3/api/drive/storage/providers/provider-admin-init/bucket")
+                .body(Body::empty())
+                .expect("bucket initialize request should be built"),
+        )
+        .await
+        .expect("bucket initialize request should be handled");
+    assert_eq!(first_response.status(), StatusCode::OK);
+    let first_payload: serde_json::Value = serde_json::from_slice(
+        &to_bytes(first_response.into_body(), usize::MAX)
+            .await
+            .expect("bucket initialize response body should be read"),
+    )
+    .expect("bucket initialize response should be json");
+    assert_eq!(first_payload["code"], 0);
+    assert_eq!(first_payload["data"]["changed"], true);
+
+    let second_response = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method(Method::PUT)
+                .uri("/backend/v3/api/drive/storage/providers/provider-admin-init/bucket")
+                .body(Body::empty())
+                .expect("second bucket initialize request should be built"),
+        )
+        .await
+        .expect("second bucket initialize request should be handled");
+    assert_eq!(second_response.status(), StatusCode::OK);
+    let second_payload: serde_json::Value = serde_json::from_slice(
+        &to_bytes(second_response.into_body(), usize::MAX)
+            .await
+            .expect("second bucket initialize response body should be read"),
+    )
+    .expect("second bucket initialize response should be json");
+    assert_eq!(second_payload["code"], 0);
+    assert_eq!(second_payload["data"]["changed"], false);
+
+    let requests = captured_requests
+        .lock()
+        .expect("captured s3 requests mutex should not be poisoned")
+        .clone();
+    assert_eq!(
+        requests
+            .iter()
+            .filter(|request| request.method == "PUT"
+                && request.path.trim_end_matches('/') == "/init-bucket")
+            .count(),
+        1,
+        "re-running initialization must not repeat the vendor CreateBucket call"
+    );
+
+    let audit_actions: Vec<String> = sqlx::query_scalar(
+        "SELECT action
+         FROM dr_drive_audit_event
+         WHERE resource_type='storage_provider'
+           AND resource_id='provider-admin-init'
+         ORDER BY id ASC",
+    )
+    .fetch_all(&pool)
+    .await
+    .expect("bucket audit events should be queryable");
+    assert_eq!(
+        audit_actions,
+        vec!["drive.storage_provider.bucket_created"],
+        "audit must record exactly one creation even across repeated initializations"
+    );
+}
+
+#[tokio::test]
 async fn admin_storage_object_routes_reject_leading_slash_object_keys_before_calling_s3() {
     let (s3_endpoint, captured_requests) = start_s3_mock_server().await;
     let Some((pool, _database_guard)) = sdkwork_drive_test_support::postgres_test_database().await
@@ -1022,14 +1319,10 @@ async fn admin_storage_object_routes_reject_leading_slash_object_keys_before_cal
 
     sqlx::query(
         "INSERT INTO dr_drive_storage_provider (
-            id, provider_kind, name, endpoint_url, region, bucket, path_style,
+            id, tenant_id, provider_kind, name, endpoint_url, region, bucket, path_style,
             strict_tls, credential_ref, server_side_encryption_mode, default_storage_class,
             status, version, created_by, updated_by
-        ) VALUES (
-            'provider-admin-object-key', 's3_compatible', 'Admin Object Key S3', $1, 'us-east-1',
-            'bucket-admin', 1, 0, 'plain:test-access-key:test-secret-key',
-            'AES256', 'STANDARD', 'active', 1, 'admin-storage', 'admin-storage'
-        )",
+        ) VALUES ('provider-admin-object-key', 'tenant-storage', 's3_compatible', 'Admin Object Key S3', $1, 'us-east-1', 'bucket-admin', true, false, 'plain:test-access-key:test-secret-key', 'AES256', 'STANDARD', 'active', 1, 'admin-storage', 'admin-storage')",
     )
     .bind(&s3_endpoint)
     .execute(&pool)
@@ -1067,14 +1360,10 @@ async fn admin_storage_copy_object_rejects_invalid_destination_bucket_before_cal
 
     sqlx::query(
         "INSERT INTO dr_drive_storage_provider (
-            id, provider_kind, name, endpoint_url, region, bucket, path_style,
+            id, tenant_id, provider_kind, name, endpoint_url, region, bucket, path_style,
             strict_tls, credential_ref, server_side_encryption_mode, default_storage_class,
             status, version, created_by, updated_by
-        ) VALUES (
-            'provider-copy-bucket-validation', 's3_compatible', 'Copy Bucket Validation S3',
-            $1, 'us-east-1', 'bucket-admin', 1, 0, 'plain:test-access-key:test-secret-key',
-            'AES256', 'STANDARD', 'active', 1, 'admin-storage', 'admin-storage'
-        )",
+        ) VALUES ('provider-copy-bucket-validation', 'tenant-storage', 's3_compatible', 'Copy Bucket Validation S3', $1, 'us-east-1', 'bucket-admin', true, false, 'plain:test-access-key:test-secret-key', 'AES256', 'STANDARD', 'active', 1, 'admin-storage', 'admin-storage')",
     )
     .bind(&s3_endpoint)
     .execute(&pool)
@@ -1131,14 +1420,10 @@ async fn admin_storage_object_content_routes_write_then_read_through_configured_
 
     sqlx::query(
         "INSERT INTO dr_drive_storage_provider (
-            id, provider_kind, name, endpoint_url, region, bucket, path_style,
+            id, tenant_id, provider_kind, name, endpoint_url, region, bucket, path_style,
             strict_tls, credential_ref, server_side_encryption_mode, default_storage_class,
             status, version, created_by, updated_by
-        ) VALUES (
-            'provider-content-routes', 's3_compatible', 'Content Routes S3', $1, 'us-east-1',
-            'bucket-admin', 1, 0, 'plain:test-access-key:test-secret-key',
-            'AES256', 'STANDARD', 'active', 1, 'admin-storage', 'admin-storage'
-        )",
+        ) VALUES ('provider-content-routes', 'tenant-storage', 's3_compatible', 'Content Routes S3', $1, 'us-east-1', 'bucket-admin', true, false, 'plain:test-access-key:test-secret-key', 'AES256', 'STANDARD', 'active', 1, 'admin-storage', 'admin-storage')",
     )
     .bind(&s3_endpoint)
     .execute(&pool)
@@ -1286,14 +1571,10 @@ async fn admin_storage_object_content_routes_reject_invalid_keys_and_encodings()
 
     sqlx::query(
         "INSERT INTO dr_drive_storage_provider (
-            id, provider_kind, name, endpoint_url, region, bucket, path_style,
+            id, tenant_id, provider_kind, name, endpoint_url, region, bucket, path_style,
             strict_tls, credential_ref, server_side_encryption_mode, default_storage_class,
             status, version, created_by, updated_by
-        ) VALUES (
-            'provider-content-validation', 's3_compatible', 'Content Validation S3', $1, 'us-east-1',
-            'bucket-admin', 1, 0, 'plain:test-access-key:test-secret-key',
-            'AES256', 'STANDARD', 'active', 1, 'admin-storage', 'admin-storage'
-        )",
+        ) VALUES ('provider-content-validation', 'tenant-storage', 's3_compatible', 'Content Validation S3', $1, 'us-east-1', 'bucket-admin', true, false, 'plain:test-access-key:test-secret-key', 'AES256', 'STANDARD', 'active', 1, 'admin-storage', 'admin-storage')",
     )
     .bind(&s3_endpoint)
     .execute(&pool)
@@ -1376,14 +1657,10 @@ async fn admin_storage_opendal_plugin_adapter_is_default_disabled_without_featur
 
     sqlx::query(
         "INSERT INTO dr_drive_storage_provider (
-            id, provider_kind, name, endpoint_url, region, bucket, path_style,
+            id, tenant_id, provider_kind, name, endpoint_url, region, bucket, path_style,
             strict_tls, credential_ref, server_side_encryption_mode, default_storage_class,
             status, version, created_by, updated_by
-        ) VALUES (
-            'provider-admin-opendal-disabled', 's3_compatible', 'Admin OpenDAL S3', $1, 'us-east-1',
-            'bucket-admin', 1, 0, 'plain:test-access-key:test-secret-key',
-            'AES256', 'STANDARD', 'active', 1, 'admin-storage', 'admin-storage'
-        )",
+        ) VALUES ('provider-admin-opendal-disabled', 'tenant-storage', 's3_compatible', 'Admin OpenDAL S3', $1, 'us-east-1', 'bucket-admin', true, false, 'plain:test-access-key:test-secret-key', 'AES256', 'STANDARD', 'active', 1, 'admin-storage', 'admin-storage')",
     )
     .bind(&s3_endpoint)
     .execute(&pool)
@@ -1439,14 +1716,10 @@ async fn admin_storage_bucket_admin_uses_full_s3_adapter_even_when_object_plugin
 
     sqlx::query(
         "INSERT INTO dr_drive_storage_provider (
-            id, provider_kind, name, endpoint_url, region, bucket, path_style,
+            id, tenant_id, provider_kind, name, endpoint_url, region, bucket, path_style,
             strict_tls, credential_ref, server_side_encryption_mode, default_storage_class,
             status, version, created_by, updated_by
-        ) VALUES (
-            'provider-admin-bucket-plugin-selected', 's3_compatible', 'Admin Bucket S3', $1, 'us-east-1',
-            'bucket-admin', 1, 0, 'plain:test-access-key:test-secret-key',
-            'AES256', 'STANDARD', 'active', 1, 'admin-storage', 'admin-storage'
-        )",
+        ) VALUES ('provider-admin-bucket-plugin-selected', 'tenant-storage', 's3_compatible', 'Admin Bucket S3', $1, 'us-east-1', 'bucket-admin', true, false, 'plain:test-access-key:test-secret-key', 'AES256', 'STANDARD', 'active', 1, 'admin-storage', 'admin-storage')",
     )
     .bind(&s3_endpoint)
     .execute(&pool)
@@ -1523,8 +1796,8 @@ fn admin_storage_config_reads_object_store_adapter_from_env() {
 
 #[tokio::test]
 async fn admin_storage_database_router_can_receive_explicit_plugin_config() {
-    // 服务端只支持 PostgreSQL（sqlite 被 admin_storage_database_url_router_rejects_sqlite
-    // 显式拒绝）：用测试库 URL 验证显式 DatabaseConfig + AdminStorageConfig 可构建路由。
+    // 服务端只支持 PostgreSQL：sqlite 由 admin_storage_database_url_router_rejects_sqlite 显式拒绝。
+    // 用测试库 URL 验证显式 DatabaseConfig + AdminStorageConfig 可构建路由。
     let Ok(database_url) = std::env::var("SDKWORK_DATABASE_URL") else {
         eprintln!("skip PostgreSQL integration test: SDKWORK_DATABASE_URL is not set");
         return;
@@ -1577,13 +1850,9 @@ async fn admin_storage_provider_test_route_checks_configured_s3_bucket() {
 
     sqlx::query(
         "INSERT INTO dr_drive_storage_provider (
-            id, provider_kind, name, endpoint_url, region, bucket, path_style,
+            id, tenant_id, provider_kind, name, endpoint_url, region, bucket, path_style,
             strict_tls, credential_ref, status, version, created_by, updated_by
-        ) VALUES (
-            'provider-test-s3', 's3_compatible', 'Admin S3', $1, 'us-east-1',
-            'bucket-admin', 1, 0, 'plain:test-access-key:test-secret-key',
-            'active', 1, 'admin-storage', 'admin-storage'
-        )",
+        ) VALUES ('provider-test-s3', 'tenant-storage', 's3_compatible', 'Admin S3', $1, 'us-east-1', 'bucket-admin', true, false, 'plain:test-access-key:test-secret-key', 'active', 1, 'admin-storage', 'admin-storage')",
     )
     .bind(&s3_endpoint)
     .execute(&pool)
@@ -1632,13 +1901,9 @@ async fn admin_storage_provider_test_route_checks_disabled_s3_provider_bucket() 
 
     sqlx::query(
         "INSERT INTO dr_drive_storage_provider (
-            id, provider_kind, name, endpoint_url, region, bucket, path_style,
+            id, tenant_id, provider_kind, name, endpoint_url, region, bucket, path_style,
             strict_tls, credential_ref, status, version, created_by, updated_by
-        ) VALUES (
-            'provider-test-disabled-s3', 's3_compatible', 'Disabled S3', $1, 'us-east-1',
-            'bucket-admin', 1, 0, 'plain:test-access-key:test-secret-key',
-            'disabled', 1, 'admin-storage', 'admin-storage'
-        )",
+        ) VALUES ('provider-test-disabled-s3', 'tenant-storage', 's3_compatible', 'Disabled S3', $1, 'us-east-1', 'bucket-admin', true, false, 'plain:test-access-key:test-secret-key', 'disabled', 1, 'admin-storage', 'admin-storage')",
     )
     .bind(&s3_endpoint)
     .execute(&pool)
@@ -1874,13 +2139,9 @@ async fn admin_storage_bucket_and_object_mutations_audit_authenticated_actor() {
 
     sqlx::query(
         "INSERT INTO dr_drive_storage_provider (
-            id, provider_kind, name, endpoint_url, region, bucket, path_style,
+            id, tenant_id, provider_kind, name, endpoint_url, region, bucket, path_style,
             strict_tls, credential_ref, status, version, created_by, updated_by
-        ) VALUES (
-            'provider-mutation-s3', 's3_compatible', 'Mutation S3', $1, 'us-east-1',
-            'bucket-admin', 1, 0, 'plain:test-access-key:test-secret-key',
-            'active', 1, 'admin-storage', 'admin-storage'
-        )",
+        ) VALUES ('provider-mutation-s3', 'tenant-storage', 's3_compatible', 'Mutation S3', $1, 'us-east-1', 'bucket-admin', true, false, 'plain:test-access-key:test-secret-key', 'active', 1, 'admin-storage', 'admin-storage')",
     )
     .bind(&s3_endpoint)
     .execute(&pool)
@@ -2027,6 +2288,158 @@ async fn admin_storage_legacy_admin_prefix_remains_compatible() {
     assert!(payload["data"]["items"].is_array());
 }
 
+/// Read one provider-list page as JSON.
+async fn list_providers_payload(app: Router, uri: &str) -> serde_json::Value {
+    let response = app
+        .oneshot(
+            Request::builder()
+                .method(Method::GET)
+                .uri(uri)
+                .body(Body::empty())
+                .expect("list providers request should be built"),
+        )
+        .await
+        .expect("list providers request should be handled");
+    assert_eq!(response.status(), StatusCode::OK);
+    serde_json::from_slice(
+        &to_bytes(response.into_body(), usize::MAX)
+            .await
+            .expect("list providers response body should be read"),
+    )
+    .expect("list providers response should be json")
+}
+
+/// Provider ids of one list page, in response order.
+fn provider_ids(payload: &serde_json::Value) -> Vec<String> {
+    payload["data"]["items"]
+        .as_array()
+        .expect("provider list items should be an array")
+        .iter()
+        .map(|item| {
+            item["id"]
+                .as_str()
+                .expect("provider id should be a string")
+                .to_string()
+        })
+        .collect()
+}
+
+/// A provider-kind filter has to be applied *before* the cursor window.
+///
+/// Seeded so the filtered row (`tencent_cos`) sorts last: an implementation that
+/// pages first and filters the fetched page second answers "no rows" for
+/// `provider_kind=tencent_cos` on page 1 while the row sits on page 2 — the
+/// operator-visible defect this test pins down ("select Tencent COS: empty;
+/// page forward: there it is"). The unfiltered first page is asserted too, so
+/// the test fails loudly if seeding ever stops reproducing that shape.
+#[tokio::test]
+async fn admin_storage_provider_list_filters_by_kind_before_paging() {
+    let Some((pool, _database_guard)) = sdkwork_drive_test_support::postgres_test_database().await
+    else {
+        return;
+    };
+
+    let app = build_router_with_pool_without_iam(pool);
+    for (id, provider_kind) in [
+        ("provider-a-s3", "s3_compatible"),
+        ("provider-b-s3", "s3_compatible"),
+        ("provider-c-custom", "custom:acme"),
+        ("provider-z-tencent-cos", "tencent_cos"),
+    ] {
+        let create_response = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method(Method::POST)
+                    .uri("/backend/v3/api/drive/storage/providers")
+                    .header("content-type", "application/json")
+                    .body(Body::from(format!(
+                        r#"{{
+                            "id":"{id}",
+                            "providerKind":"{provider_kind}",
+                            "name":"{id}",
+                            "endpointUrl":"https://s3.example.com",
+                            "bucket":"bucket-{id}"
+                        }}"#
+                    )))
+                    .expect("create provider request should be built"),
+            )
+            .await
+            .expect("create provider request should be handled");
+        assert_eq!(
+            create_response.status(),
+            StatusCode::CREATED,
+            "provider {id} should be created"
+        );
+    }
+
+    let unfiltered = list_providers_payload(
+        app.clone(),
+        "/backend/v3/api/drive/storage/providers?page_size=2",
+    )
+    .await;
+    assert_eq!(
+        provider_ids(&unfiltered),
+        vec!["provider-a-s3".to_string(), "provider-b-s3".to_string()]
+    );
+    assert_eq!(unfiltered["data"]["pageInfo"]["hasMore"], true);
+
+    // Same page size, one kind filter: the COS row is the *first* page of the
+    // filtered set, and there is nothing after it.
+    let filtered = list_providers_payload(
+        app.clone(),
+        "/backend/v3/api/drive/storage/providers?page_size=2&provider_kind=tencent_cos",
+    )
+    .await;
+    assert_eq!(
+        provider_ids(&filtered),
+        vec!["provider-z-tencent-cos".to_string()]
+    );
+    assert_eq!(filtered["data"]["pageInfo"]["hasMore"], false);
+
+    // Case-insensitive, because the console's catalog value and an
+    // operator-typed value have to mean the same row.
+    let mixed_case = list_providers_payload(
+        app.clone(),
+        "/backend/v3/api/drive/storage/providers?provider_kind=tencent_cos",
+    )
+    .await;
+    assert_eq!(
+        provider_ids(&mixed_case),
+        vec!["provider-z-tencent-cos".to_string()]
+    );
+
+    // `custom` is the family the console's "custom" option stands for.
+    let custom = list_providers_payload(
+        app.clone(),
+        "/backend/v3/api/drive/storage/providers?provider_kind=custom",
+    )
+    .await;
+    assert_eq!(
+        provider_ids(&custom),
+        vec!["provider-c-custom".to_string()]
+    );
+
+    // An unknown kind selects nothing instead of failing: `custom:<vendor>` is
+    // open-ended, so the filter value space cannot be closed.
+    let unknown = list_providers_payload(
+        app.clone(),
+        "/backend/v3/api/drive/storage/providers?provider_kind=not-a-kind",
+    )
+    .await;
+    assert!(provider_ids(&unknown).is_empty());
+    assert_eq!(unknown["data"]["pageInfo"]["hasMore"], false);
+
+    // The kind filter and the status filter are independent predicates that
+    // compose rather than override each other.
+    let kind_and_status = list_providers_payload(
+        app,
+        "/backend/v3/api/drive/storage/providers?provider_kind=s3_compatible&status=disabled",
+    )
+    .await;
+    assert!(provider_ids(&kind_and_status).is_empty());
+}
+
 #[tokio::test]
 async fn admin_storage_provider_kinds_list_and_initialize() {
     let Some((pool, _database_guard)) = sdkwork_drive_test_support::postgres_test_database().await
@@ -2057,7 +2470,11 @@ async fn admin_storage_provider_kinds_list_and_initialize() {
     let items = list_payload["data"]["items"]
         .as_array()
         .expect("provider kinds items should be an array");
-    assert_eq!(items.len(), 7);
+    assert_eq!(
+        items.len(),
+        sdkwork_drive_workspace_service::application::storage_provider_kind_service::BUILTIN_STORAGE_PROVIDER_KIND_CATALOG.len(),
+        "the list endpoint must expose the full built-in catalog"
+    );
     assert!(items.iter().all(|item| item["enabled"] == true));
     assert!(items.iter().all(|item| item["configCount"] == 0));
     let kinds = items
@@ -2078,11 +2495,14 @@ async fn admin_storage_provider_kinds_list_and_initialize() {
         )
         .await
         .expect("initialize provider kinds request should be handled");
-    assert_eq!(init_response.status(), StatusCode::OK);
+    let init_status = init_response.status();
+    let init_body_bytes = to_bytes(init_response.into_body(), usize::MAX)
+        .await
+        .expect("initialize provider kinds response body should be read");
+    eprintln!("INIT DEBUG status={init_status} body={}", String::from_utf8_lossy(&init_body_bytes));
+    assert_eq!(init_status, StatusCode::OK);
     let init_payload: serde_json::Value = serde_json::from_slice(
-        &to_bytes(init_response.into_body(), usize::MAX)
-            .await
-            .expect("initialize provider kinds response body should be read"),
+        &init_body_bytes,
     )
     .expect("initialize provider kinds response should be json");
     assert_eq!(
@@ -2090,7 +2510,8 @@ async fn admin_storage_provider_kinds_list_and_initialize() {
             .as_array()
             .expect("initialized provider kinds items should be an array")
             .len(),
-        7
+        sdkwork_drive_workspace_service::application::storage_provider_kind_service::BUILTIN_STORAGE_PROVIDER_KIND_CATALOG.len(),
+        "initialize must expose the full built-in catalog"
     );
 }
 
@@ -2121,8 +2542,10 @@ async fn admin_storage_provider_kind_disable_blocks_new_configurations() {
             .expect("disable provider kind response body should be read"),
     )
     .expect("disable provider kind response should be json");
-    assert_eq!(disable_payload["enabled"], false);
-    assert_eq!(disable_payload["providerKind"], "aliyun_oss");
+    assert_eq!(disable_payload["code"], 0);
+    let disabled_item = &disable_payload["data"]["item"];
+    assert_eq!(disabled_item["enabled"], false);
+    assert_eq!(disabled_item["providerKind"], "aliyun_oss");
 
     // Creating a configuration for a disabled kind is rejected with 409.
     let create_response = app
@@ -2321,14 +2744,10 @@ async fn admin_storage_object_content_routes_handle_literal_percent_keys_and_dir
 
     sqlx::query(
         "INSERT INTO dr_drive_storage_provider (
-            id, provider_kind, name, endpoint_url, region, bucket, path_style,
+            id, tenant_id, provider_kind, name, endpoint_url, region, bucket, path_style,
             strict_tls, credential_ref, server_side_encryption_mode, default_storage_class,
             status, version, created_by, updated_by
-        ) VALUES (
-            'provider-percent-keys', 's3_compatible', 'Percent Key S3', $1, 'us-east-1',
-            'bucket-admin', 1, 0, 'plain:test-access-key:test-secret-key',
-            'AES256', 'STANDARD', 'active', 1, 'admin-storage', 'admin-storage'
-        )",
+        ) VALUES ('provider-percent-keys', 'tenant-storage', 's3_compatible', 'Percent Key S3', $1, 'us-east-1', 'bucket-admin', true, false, 'plain:test-access-key:test-secret-key', 'AES256', 'STANDARD', 'active', 1, 'admin-storage', 'admin-storage')",
     )
     .bind(&s3_endpoint)
     .execute(&pool)
@@ -2337,7 +2756,7 @@ async fn admin_storage_object_content_routes_handle_literal_percent_keys_and_dir
 
     let app = build_router_with_pool_without_iam(pool);
 
-    // 字面 % 字符的 key：客户端 encodeURIComponent 后 axum 解码一次，
+    // 字面 % 字符的 key：客户端 encodeURIComponent 与 axum 解码一次，
     // 服务端不得二次解码（50%20off.txt 必须保持字面，不能变成 50 off.txt）。
     let put_response = app
         .clone()
@@ -2363,7 +2782,7 @@ async fn admin_storage_object_content_routes_handle_literal_percent_keys_and_dir
         "literal percent signs must survive exactly one decode"
     );
 
-    // 非法尾序列（100%.txt）必须保持字面并成功，而不是被二次解码报 400。
+    // 非法尾序列（100%.txt）必须保持字面并成功，而不是被二次解码成 400。
     let trailing_percent = app
         .clone()
         .oneshot(
@@ -2455,14 +2874,10 @@ async fn admin_storage_object_content_routes_map_missing_and_empty_objects() {
 
     sqlx::query(
         "INSERT INTO dr_drive_storage_provider (
-            id, provider_kind, name, endpoint_url, region, bucket, path_style,
+            id, tenant_id, provider_kind, name, endpoint_url, region, bucket, path_style,
             strict_tls, credential_ref, server_side_encryption_mode, default_storage_class,
             status, version, created_by, updated_by
-        ) VALUES (
-            'provider-empty-missing', 's3_compatible', 'Empty Missing S3', $1, 'us-east-1',
-            'bucket-admin', 1, 0, 'plain:test-access-key:test-secret-key',
-            'AES256', 'STANDARD', 'active', 1, 'admin-storage', 'admin-storage'
-        )",
+        ) VALUES ('provider-empty-missing', 'tenant-storage', 's3_compatible', 'Empty Missing S3', $1, 'us-east-1', 'bucket-admin', true, false, 'plain:test-access-key:test-secret-key', 'AES256', 'STANDARD', 'active', 1, 'admin-storage', 'admin-storage')",
     )
     .bind(&s3_endpoint)
     .execute(&pool)
@@ -2517,14 +2932,10 @@ async fn admin_storage_object_content_routes_reject_oversized_reads() {
 
     sqlx::query(
         "INSERT INTO dr_drive_storage_provider (
-            id, provider_kind, name, endpoint_url, region, bucket, path_style,
+            id, tenant_id, provider_kind, name, endpoint_url, region, bucket, path_style,
             strict_tls, credential_ref, server_side_encryption_mode, default_storage_class,
             status, version, created_by, updated_by
-        ) VALUES (
-            'provider-oversized', 's3_compatible', 'Oversized S3', $1, 'us-east-1',
-            'bucket-admin', 1, 0, 'plain:test-access-key:test-secret-key',
-            'AES256', 'STANDARD', 'active', 1, 'admin-storage', 'admin-storage'
-        )",
+        ) VALUES ('provider-oversized', 'tenant-storage', 's3_compatible', 'Oversized S3', $1, 'us-east-1', 'bucket-admin', true, false, 'plain:test-access-key:test-secret-key', 'AES256', 'STANDARD', 'active', 1, 'admin-storage', 'admin-storage')",
     )
     .bind(&s3_endpoint)
     .execute(&pool)
@@ -2556,4 +2967,96 @@ async fn admin_storage_object_content_routes_reject_oversized_reads() {
             .is_some_and(|detail| detail.contains("8 MiB") || detail.contains("8388608")),
         "oversized read should name the limit: {payload}"
     );
+}
+
+
+#[tokio::test]
+async fn admin_storage_provider_routes_reject_cross_tenant_access() {
+    let Some((pool, _database_guard)) = sdkwork_drive_test_support::postgres_test_database().await
+    else {
+        return;
+    };
+
+    sqlx::query(
+        "INSERT INTO dr_drive_storage_provider (
+            id, tenant_id, provider_kind, name, endpoint_url, region, bucket, path_style,
+            strict_tls, credential_ref, status, version, created_by, updated_by
+        ) VALUES (
+            'provider-foreign', 'tenant-storage', 's3_compatible', 'Foreign Seed',
+            'http://127.0.0.1:9', 'us-east-1', 'foreign-bucket', true, false,
+            'plain:k:s', 'active', 1, 'admin-storage', 'admin-storage'
+        )",
+    )
+    .execute(&pool)
+    .await
+    .expect("foreign-tenant provider should be seeded");
+
+    // A router acting for a different tenant must see the row as missing on
+    // reads and bucket mutations alike — 404, never 403, so the row's
+    // existence does not leak across tenants.
+    let app = build_router_with_pool_without_iam_and_test_tenant(pool.clone(), "tenant-other");
+
+    let get = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method(Method::GET)
+                .uri("/backend/v3/api/drive/storage/providers/provider-foreign")
+                .body(Body::empty())
+                .expect("get request should be built"),
+        )
+        .await
+        .expect("get request should be handled");
+    assert_eq!(get.status(), StatusCode::NOT_FOUND);
+
+    let put = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method(Method::PUT)
+                .uri("/backend/v3/api/drive/storage/providers/provider-foreign/bucket")
+                .body(Body::empty())
+                .expect("bucket initialize request should be built"),
+        )
+        .await
+        .expect("bucket initialize request should be handled");
+    assert_eq!(put.status(), StatusCode::NOT_FOUND);
+
+    let list = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method(Method::GET)
+                .uri("/backend/v3/api/drive/storage/providers")
+                .body(Body::empty())
+                .expect("list request should be built"),
+        )
+        .await
+        .expect("list request should be handled");
+    assert_eq!(list.status(), StatusCode::OK);
+    let payload: serde_json::Value = serde_json::from_slice(
+        &to_bytes(list.into_body(), usize::MAX)
+            .await
+            .expect("list response body should be read"),
+    )
+    .expect("list response should be json");
+    assert_eq!(
+        payload["data"]["items"].as_array().expect("items").len(),
+        0,
+        "provider list must be tenant-scoped"
+    );
+
+    // The owning tenant still sees the row.
+    let owning = build_router_with_pool_without_iam(pool);
+    let get = owning
+        .oneshot(
+            Request::builder()
+                .method(Method::GET)
+                .uri("/backend/v3/api/drive/storage/providers/provider-foreign")
+                .body(Body::empty())
+                .expect("owning get request should be built"),
+        )
+        .await
+        .expect("owning get request should be handled");
+    assert_eq!(get.status(), StatusCode::OK);
 }

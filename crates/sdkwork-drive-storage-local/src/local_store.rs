@@ -647,6 +647,7 @@ impl DriveObjectStore for LocalDriveObjectStore {
         request: CreateBucketRequest,
     ) -> Result<CreateBucketResponse, DriveObjectStoreError> {
         let bucket_path = self.bucket_path(&request.bucket)?;
+        let created = !bucket_path.exists();
         fs::create_dir_all(&bucket_path).map_err(|error| {
             DriveObjectStoreError::new(
                 DriveObjectStoreErrorKind::Internal,
@@ -655,7 +656,7 @@ impl DriveObjectStore for LocalDriveObjectStore {
         })?;
         Ok(CreateBucketResponse {
             bucket: request.bucket,
-            created: true,
+            created,
         })
     }
 

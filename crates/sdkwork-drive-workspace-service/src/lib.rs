@@ -98,6 +98,24 @@ pub enum DriveServiceError {
     Internal(String),
 }
 
+impl DriveServiceError {
+    /// The human-readable message this error carries.
+    ///
+    /// A plain accessor rather than a `Display` implementation: the message is
+    /// already the operator-facing text, and `Display` is what HTTP mapping
+    /// layers use to decide the wire shape. Keeping the two separate stops a
+    /// future `Display` from silently changing every error's status mapping.
+    pub fn message(&self) -> &str {
+        match self {
+            Self::Validation(message)
+            | Self::Conflict(message)
+            | Self::NotFound(message)
+            | Self::PermissionDenied(message)
+            | Self::Internal(message) => message,
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::drive_share_token_hash;

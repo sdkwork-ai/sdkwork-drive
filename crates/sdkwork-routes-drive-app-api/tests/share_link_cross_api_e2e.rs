@@ -26,8 +26,8 @@ async fn share_link_create_via_app_api_and_resolve_via_open_api_with_access_code
     sqlx::query(
         "INSERT INTO dr_drive_node (
             id, tenant_id, space_id, parent_node_id, node_type, node_name,
-            content_state, lifecycle_status, version, created_by, updated_by
-        ) VALUES ('node-cross-api', 'tenant-cross-api', 'space-cross-api', NULL, 'file', 'handoff.txt', 'ready', 'active', 1, 'user-owner', 'user-owner')",
+            content_state, head_content_type, head_content_type_group, head_content_length, head_version_no, lifecycle_status, version, created_by, updated_by
+        ) VALUES ('node-cross-api', 'tenant-cross-api', 'space-cross-api', NULL, 'file', 'handoff.txt', 'ready', 'application/octet-stream', 'binary', 0, 1, 'active', 1, 'user-owner', 'user-owner')",
     )
     .execute(&pool)
     .await

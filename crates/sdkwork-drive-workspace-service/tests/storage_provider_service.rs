@@ -6,6 +6,9 @@ use sdkwork_drive_workspace_service::application::storage_provider_service::{
 };
 use sdkwork_drive_workspace_service::domain::storage_provider::DriveStorageProviderKind;
 use sdkwork_drive_workspace_service::infrastructure::sql::storage_provider_store::SqlStorageProviderStore;
+use sdkwork_drive_workspace_service::ports::storage_provider_store::{
+    DriveStorageProviderLookup, DriveStorageProviderStore,
+};
 use sdkwork_drive_workspace_service::DriveServiceError;
 
 #[tokio::test]
@@ -60,6 +63,8 @@ async fn create_and_list_storage_providers_with_status_filter() {
 
     let all_items = service
         .list_storage_providers(ListStorageProvidersCommand {
+            tenant_id: "tenant-storage".to_string(),
+            provider_kind: None,
             status: None,
             offset: 0,
             limit: 201,
@@ -70,6 +75,8 @@ async fn create_and_list_storage_providers_with_status_filter() {
 
     let active_items = service
         .list_storage_providers(ListStorageProvidersCommand {
+            tenant_id: "tenant-storage".to_string(),
+            provider_kind: None,
             status: Some("active".to_string()),
             offset: 0,
             limit: 201,
@@ -78,6 +85,162 @@ async fn create_and_list_storage_providers_with_status_filter() {
         .expect("list active providers should succeed");
     assert_eq!(active_items.len(), 1);
     assert_eq!(active_items[0].id, "provider-001");
+}
+
+/// The provider-kind filter is a store predicate, so the window is selected
+/// from the filtered set instead of the filter being applied to one window.
+///
+/// The regression this pins down: the console's "Tencent COS" option returned an
+/// empty page because the row was on the next page of an *unfiltered* list.
+#[tokio::test]
+async fn list_storage_providers_filters_by_kind_inside_the_window() {
+    let Some((pool, _database_guard)) = sdkwork_drive_test_support::postgres_test_database().await
+    else {
+        return;
+    };
+
+    let service = DriveStorageProviderService::new(SqlStorageProviderStore::new(pool));
+    for (id, provider_kind, status) in [
+        ("provider-001", DriveStorageProviderKind::S3Compatible, "active"),
+        ("provider-002", DriveStorageProviderKind::S3Compatible, "disabled"),
+        ("provider-003", DriveStorageProviderKind::TencentCos, "active"),
+        (
+            "provider-004",
+            DriveStorageProviderKind::Custom("custom:acme".to_string()),
+            "active",
+        ),
+    ] {
+        service
+            .create_storage_provider(CreateStorageProviderCommand {
+                id: id.to_string(),
+                tenant_id: "tenant-storage-kind".to_string(),
+                provider_account_id: None,
+                provider_kind,
+                name: format!("Provider {id}"),
+                endpoint_url: "https://s3.example.com".to_string(),
+                region: Some("us-east-1".to_string()),
+                bucket: format!("bucket-{id}"),
+                path_style: Some(true),
+                strict_tls: None,
+                credential_ref: None,
+                server_side_encryption_mode: None,
+                default_storage_class: None,
+                status: Some(status.to_string()),
+                operator_id: "admin-001".to_string(),
+            })
+            .await
+            .expect("provider should be created");
+    }
+
+    let cos_items = service
+        .list_storage_providers(ListStorageProvidersCommand {
+            tenant_id: "tenant-storage".to_string(),
+            provider_kind: Some("tencent_cos".to_string()),
+            status: None,
+            offset: 0,
+            limit: 201,
+        })
+        .await
+        .expect("list by kind should succeed");
+    assert_eq!(cos_items.len(), 1);
+    assert_eq!(cos_items[0].id, "provider-003");
+
+    // Storage lower-cases every kind, so the filter has to answer the same way
+    // for an operator-typed value.
+    let mixed_case_items = service
+        .list_storage_providers(ListStorageProvidersCommand {
+            tenant_id: "tenant-storage".to_string(),
+            provider_kind: Some("Tencent_COS".to_string()),
+            status: None,
+            offset: 0,
+            limit: 201,
+        })
+        .await
+        .expect("list by mixed-case kind should succeed");
+    assert_eq!(mixed_case_items.len(), 1);
+    assert_eq!(mixed_case_items[0].id, "provider-003");
+
+    // `custom` is the family: it covers every `custom:<vendor>` row.
+    let custom_items = service
+        .list_storage_providers(ListStorageProvidersCommand {
+            tenant_id: "tenant-storage".to_string(),
+            provider_kind: Some("custom".to_string()),
+            status: None,
+            offset: 0,
+            limit: 201,
+        })
+        .await
+        .expect("list by custom family should succeed");
+    assert_eq!(custom_items.len(), 1);
+    assert_eq!(custom_items[0].id, "provider-004");
+
+    // The window is taken from the filtered set: two S3 rows exist, and each
+    // half of the window holds one of them.
+    let first_s3 = service
+        .list_storage_providers(ListStorageProvidersCommand {
+            tenant_id: "tenant-storage".to_string(),
+            provider_kind: Some("s3_compatible".to_string()),
+            status: None,
+            offset: 0,
+            limit: 1,
+        })
+        .await
+        .expect("first filtered window should succeed");
+    assert_eq!(first_s3.len(), 1);
+    assert_eq!(first_s3[0].id, "provider-001");
+
+    let second_s3 = service
+        .list_storage_providers(ListStorageProvidersCommand {
+            tenant_id: "tenant-storage".to_string(),
+            provider_kind: Some("s3_compatible".to_string()),
+            status: None,
+            offset: 1,
+            limit: 1,
+        })
+        .await
+        .expect("second filtered window should succeed");
+    assert_eq!(second_s3.len(), 1);
+    assert_eq!(second_s3[0].id, "provider-002");
+
+    // Kind and status are independent predicates.
+    let active_s3 = service
+        .list_storage_providers(ListStorageProvidersCommand {
+            tenant_id: "tenant-storage".to_string(),
+            provider_kind: Some("s3_compatible".to_string()),
+            status: Some("active".to_string()),
+            offset: 0,
+            limit: 201,
+        })
+        .await
+        .expect("kind and status filter should succeed");
+    assert_eq!(active_s3.len(), 1);
+    assert_eq!(active_s3[0].id, "provider-001");
+
+    // An unknown kind selects nothing rather than failing.
+    let unknown = service
+        .list_storage_providers(ListStorageProvidersCommand {
+            tenant_id: "tenant-storage".to_string(),
+            provider_kind: Some("not-a-kind".to_string()),
+            status: None,
+            offset: 0,
+            limit: 201,
+        })
+        .await
+        .expect("unknown kind should list nothing");
+    assert!(unknown.is_empty());
+
+    // A blank filter is not a filter.
+    let blank = service
+        .list_storage_providers(ListStorageProvidersCommand {
+            tenant_id: "tenant-storage".to_string(),
+            provider_kind: Some("   ".to_string()),
+            status: None,
+            offset: 0,
+            limit: 201,
+        })
+        .await
+        .expect("blank kind filter should list everything");
+    assert_eq!(blank.len(), 4);
 }
 
 #[tokio::test]
@@ -202,6 +365,8 @@ async fn update_test_and_delete_storage_provider_flow() {
 
     let all_items = service
         .list_storage_providers(ListStorageProvidersCommand {
+            tenant_id: "tenant-storage".to_string(),
+            provider_kind: None,
             status: None,
             offset: 0,
             limit: 201,
@@ -213,6 +378,8 @@ async fn update_test_and_delete_storage_provider_flow() {
 
     let deleted_items = service
         .list_storage_providers(ListStorageProvidersCommand {
+            tenant_id: "tenant-storage".to_string(),
+            provider_kind: None,
             status: Some("deleted".to_string()),
             offset: 0,
             limit: 201,
@@ -1478,4 +1645,394 @@ async fn storage_provider_rotation_is_rejected_for_account_backed_providers() {
         .expect_err("rotation belongs to the account center for account-backed providers");
     assert!(matches!(error, DriveServiceError::Conflict(message)
             if message.contains("provider account center")));
+}
+
+/// Minimal valid create command, so retirement-guard tests focus on the guard
+/// rather than repeating twenty provider fields at every call site.
+fn create_command(id: &str, name: &str) -> CreateStorageProviderCommand {
+    CreateStorageProviderCommand {
+        id: id.to_string(),
+        tenant_id: "tenant-retire".to_string(),
+        provider_account_id: None,
+        provider_kind: DriveStorageProviderKind::S3Compatible,
+        name: name.to_string(),
+        endpoint_url: "https://s3.example.com".to_string(),
+        region: Some("us-east-1".to_string()),
+        bucket: "drive-bucket".to_string(),
+        path_style: Some(true),
+        strict_tls: None,
+        credential_ref: None,
+        server_side_encryption_mode: None,
+        default_storage_class: None,
+        status: Some("active".to_string()),
+        operator_id: "admin-001".to_string(),
+    }
+}
+
+/// Seat one live object on a provider so the retirement guards have something
+/// to trip on.
+///
+/// The FK on `node_id` is enforced, so a real node is seeded first: the guard
+/// counts `dr_drive_storage_object` rows, and those rows only exist for nodes
+/// that actually hold bytes.
+async fn seed_active_storage_object(pool: &sqlx::PgPool, provider_id: &str, object_id: &str) {
+    let node_id = format!("{object_id}-node");
+    sqlx::query(
+        "INSERT INTO dr_drive_space (
+            id, tenant_id, owner_subject_type, owner_subject_id, space_type,
+            display_name, lifecycle_status, version, created_by, updated_by
+         ) VALUES ('space-retire', 'tenant-retire', 'user', 'owner-retire', 'personal',
+                   'Retire', 'active', 1, 'test', 'test')
+         ON CONFLICT (id) DO NOTHING",
+    )
+    .execute(pool)
+    .await
+    .expect("retirement Space should be seeded");
+    sqlx::query(
+        "INSERT INTO dr_drive_node (
+            id, tenant_id, space_id, space_type, parent_node_id, node_type, node_name,
+            content_state, head_content_type, head_content_type_group, head_content_length,
+            head_version_no, head_checksum_sha256_hex, lifecycle_status, version,
+            created_by, updated_by
+         ) VALUES ($1, 'tenant-retire', 'space-retire', 'personal', NULL, 'file', $2,
+                   'ready', 'text/plain', 'document', 4,
+                   1, $3, 'active', 1, 'test', 'test')",
+    )
+    .bind(&node_id)
+    .bind(format!("{object_id}.txt"))
+    .bind(format!("sha256:{}", "c".repeat(64)))
+    .execute(pool)
+    .await
+    .expect("retirement node should be seeded");
+
+    sqlx::query(
+        "INSERT INTO dr_drive_storage_object (
+            id, tenant_id, node_id, version_no, storage_provider_id, bucket, object_key,
+            content_type, content_length, checksum_sha256_hex, lifecycle_status,
+            created_by, updated_by
+         ) VALUES ($1, 'tenant-retire', $2, 1, $3, 'drive-bucket', $4,
+                   'text/plain', 4, $5, 'active', 'test', 'test')",
+    )
+    .bind(object_id)
+    .bind(&node_id)
+    .bind(provider_id)
+    .bind(format!("tenant-retire/{object_id}.txt"))
+    .bind(format!("sha256:{}", "c".repeat(64)))
+    .execute(pool)
+    .await
+    .expect("active storage object should be seeded");
+}
+
+#[tokio::test]
+async fn disabling_storage_provider_is_rejected_while_live_objects_remain() {
+    let Some((pool, _database_guard)) = sdkwork_drive_test_support::postgres_test_database().await
+    else {
+        return;
+    };
+
+    let service = DriveStorageProviderService::new(SqlStorageProviderStore::new(pool.clone()));
+    service
+        .create_storage_provider(create_command(
+            "provider-with-objects",
+            "Provider With Objects",
+        ))
+        .await
+        .expect("provider should be created");
+    seed_active_storage_object(&pool, "provider-with-objects", "object-live-1").await;
+
+    let disable_error = service
+        .set_storage_provider_status(SetStorageProviderStatusCommand {
+            provider_id: "provider-with-objects".to_string(),
+            status: "disabled".to_string(),
+            operator_id: "admin-002".to_string(),
+        })
+        .await
+        .expect_err("a provider that still holds live objects must not be disabled");
+    assert!(
+        matches!(&disable_error, DriveServiceError::Conflict(message)
+            if message.contains("1 active object") && message.contains("migrate or delete")),
+        "unexpected error: {disable_error:?}"
+    );
+
+    let provider = service
+        .get_storage_provider(GetStorageProviderCommand {
+            provider_id: "provider-with-objects".to_string(),
+        })
+        .await
+        .expect("provider should still be readable");
+    assert_eq!(provider.status, "active");
+
+    // Retiring the last object must clear the guard, so the check tracks live
+    // references rather than latching on the first conflict.
+    sqlx::query(
+        "UPDATE dr_drive_storage_object
+         SET lifecycle_status='deleted'
+         WHERE id='object-live-1'",
+    )
+    .execute(&pool)
+    .await
+    .expect("object should be retired");
+
+    let disabled = service
+        .set_storage_provider_status(SetStorageProviderStatusCommand {
+            provider_id: "provider-with-objects".to_string(),
+            status: "disabled".to_string(),
+            operator_id: "admin-002".to_string(),
+        })
+        .await
+        .expect("an empty provider may be disabled");
+    assert_eq!(disabled.status, "disabled");
+}
+
+#[tokio::test]
+async fn deleting_storage_provider_is_rejected_while_live_objects_remain() {
+    let Some((pool, _database_guard)) = sdkwork_drive_test_support::postgres_test_database().await
+    else {
+        return;
+    };
+
+    let service = DriveStorageProviderService::new(SqlStorageProviderStore::new(pool.clone()));
+    service
+        .create_storage_provider(create_command("provider-delete-guard", "Delete Guard"))
+        .await
+        .expect("provider should be created");
+    seed_active_storage_object(&pool, "provider-delete-guard", "object-live-2").await;
+
+    let delete_error = service
+        .delete_storage_provider(DeleteStorageProviderCommand {
+            provider_id: "provider-delete-guard".to_string(),
+            operator_id: "admin-002".to_string(),
+        })
+        .await
+        .expect_err("a provider that still holds live objects must not be deleted");
+    assert!(
+        matches!(&delete_error, DriveServiceError::Conflict(message)
+            if message.contains("1 active object")),
+        "unexpected error: {delete_error:?}"
+    );
+    assert_eq!(
+        service
+            .get_storage_provider(GetStorageProviderCommand {
+                provider_id: "provider-delete-guard".to_string(),
+            })
+            .await
+            .expect("provider should still be readable")
+            .status,
+        "active"
+    );
+
+    sqlx::query("DELETE FROM dr_drive_storage_object WHERE id='object-live-2'")
+        .execute(&pool)
+        .await
+        .expect("object should be removed");
+
+    assert_eq!(
+        service
+            .delete_storage_provider(DeleteStorageProviderCommand {
+                provider_id: "provider-delete-guard".to_string(),
+                operator_id: "admin-002".to_string(),
+            })
+            .await
+            .expect("an empty provider may be deleted")
+            .deleted,
+        true
+    );
+}
+
+#[tokio::test]
+async fn reactivating_storage_provider_is_allowed_with_live_objects() {
+    let Some((pool, _database_guard)) = sdkwork_drive_test_support::postgres_test_database().await
+    else {
+        return;
+    };
+
+    let service = DriveStorageProviderService::new(SqlStorageProviderStore::new(pool.clone()));
+    service
+        .create_storage_provider(create_command("provider-reactivate", "Reactivate"))
+        .await
+        .expect("provider should be created");
+
+    // Re-enabling is the recovery path out of a mistaken disable, so a live
+    // object must never block it, even though the same object blocks disabling.
+    seed_active_storage_object(&pool, "provider-reactivate", "object-live-3").await;
+
+    let reactivated = service
+        .set_storage_provider_status(SetStorageProviderStatusCommand {
+            provider_id: "provider-reactivate".to_string(),
+            status: "active".to_string(),
+            operator_id: "admin-002".to_string(),
+        })
+        .await
+        .expect("re-activation must not be blocked by live objects");
+    assert_eq!(reactivated.status, "active");
+}
+
+fn bucket_lookup_command(id: &str, tenant_id: &str, bucket: &str) -> CreateStorageProviderCommand {
+    CreateStorageProviderCommand {
+        id: id.to_string(),
+        tenant_id: tenant_id.to_string(),
+        provider_account_id: None,
+        provider_kind: DriveStorageProviderKind::S3Compatible,
+        name: format!("Provider {id}"),
+        endpoint_url: "https://s3.example.com".to_string(),
+        region: Some("us-east-1".to_string()),
+        bucket: bucket.to_string(),
+        path_style: Some(true),
+        strict_tls: None,
+        credential_ref: Some("plain:access:secret".to_string()),
+        server_side_encryption_mode: None,
+        default_storage_class: None,
+        status: Some("active".to_string()),
+        operator_id: "admin-001".to_string(),
+    }
+}
+
+/// Two tenants may legitimately use the same bucket name on their own object
+/// store accounts, so a bucket lookup has to stay inside the asking tenant.
+/// The old query filtered on `bucket` alone, which meant one tenant could be
+/// routed to another tenant's endpoint and credentials.
+#[tokio::test]
+async fn bucket_lookup_is_scoped_to_the_asking_tenant() {
+    let Some((pool, _database_guard)) = sdkwork_drive_test_support::postgres_test_database().await
+    else {
+        return;
+    };
+
+    let store = SqlStorageProviderStore::new(pool);
+    let service = DriveStorageProviderService::new(store.clone());
+    service
+        .create_storage_provider(bucket_lookup_command(
+            "provider-tenant-a",
+            "tenant-a",
+            "shared-bucket",
+        ))
+        .await
+        .expect("tenant A provider should be created");
+    service
+        .create_storage_provider(bucket_lookup_command(
+            "provider-tenant-b",
+            "tenant-b",
+            "shared-bucket",
+        ))
+        .await
+        .expect("tenant B provider should be created");
+
+    let lookup = store
+        .find_active_storage_provider_by_bucket("tenant-a", "shared-bucket")
+        .await
+        .expect("tenant-scoped lookup should succeed");
+    match lookup {
+        DriveStorageProviderLookup::Found(provider) => {
+            assert_eq!(provider.id, "provider-tenant-a");
+            assert_eq!(provider.tenant_id, "tenant-a");
+        }
+        other => panic!("expected exactly one tenant-A provider, got {other:?}"),
+    }
+
+    // A tenant with no provider on that bucket must not inherit a neighbour's.
+    let missing = store
+        .find_active_storage_provider_by_bucket("tenant-c", "shared-bucket")
+        .await
+        .expect("tenant-scoped lookup should succeed");
+    assert!(
+        matches!(missing, DriveStorageProviderLookup::Missing),
+        "a tenant without a provider on the bucket must resolve to Missing"
+    );
+}
+
+/// Within one tenant, one bucket must map to one provider. Two active
+/// providers on the same bucket used to be resolved by `updated_at DESC`, so a
+/// rename could silently move subsequent writes to the other provider.
+#[tokio::test]
+async fn bucket_lookup_reports_ambiguity_instead_of_picking_a_winner() {
+    let Some((pool, _database_guard)) = sdkwork_drive_test_support::postgres_test_database().await
+    else {
+        return;
+    };
+
+    let store = SqlStorageProviderStore::new(pool);
+    let service = DriveStorageProviderService::new(store.clone());
+    service
+        .create_storage_provider(bucket_lookup_command(
+            "provider-ambig-1",
+            "tenant-ambig",
+            "ambig-bucket",
+        ))
+        .await
+        .expect("first ambiguous provider should be created");
+    service
+        .create_storage_provider(bucket_lookup_command(
+            "provider-ambig-2",
+            "tenant-ambig",
+            "ambig-bucket",
+        ))
+        .await
+        .expect("second ambiguous provider should be created");
+
+    let lookup = store
+        .find_active_storage_provider_by_bucket("tenant-ambig", "ambig-bucket")
+        .await
+        .expect("lookup should return a verdict rather than an error");
+    match lookup {
+        DriveStorageProviderLookup::Ambiguous(mut provider_ids) => {
+            provider_ids.sort();
+            assert_eq!(
+                provider_ids,
+                vec![
+                    "provider-ambig-1".to_string(),
+                    "provider-ambig-2".to_string()
+                ]
+            );
+        }
+        other => panic!("expected an ambiguous verdict, got {other:?}"),
+    }
+
+    // Disabling one of them has to make the resolution defined again.
+    service
+        .set_storage_provider_status(SetStorageProviderStatusCommand {
+            provider_id: "provider-ambig-2".to_string(),
+            status: "disabled".to_string(),
+            operator_id: "admin-002".to_string(),
+        })
+        .await
+        .expect("an empty provider may be disabled");
+
+    let resolved = store
+        .find_active_storage_provider_by_bucket("tenant-ambig", "ambig-bucket")
+        .await
+        .expect("lookup should succeed once the conflict is cleared");
+    match resolved {
+        DriveStorageProviderLookup::Found(provider) => {
+            assert_eq!(provider.id, "provider-ambig-1");
+        }
+        other => panic!("expected the surviving provider, got {other:?}"),
+    }
+}
+
+/// A disabled provider is not a write target, so it must not be returned as the
+/// answer to "which provider owns this bucket".
+#[tokio::test]
+async fn bucket_lookup_ignores_non_active_providers() {
+    let Some((pool, _database_guard)) = sdkwork_drive_test_support::postgres_test_database().await
+    else {
+        return;
+    };
+
+    let store = SqlStorageProviderStore::new(pool);
+    let service = DriveStorageProviderService::new(store.clone());
+    let mut command = bucket_lookup_command("provider-inactive", "tenant-inactive", "idle-bucket");
+    command.status = Some("disabled".to_string());
+    service
+        .create_storage_provider(command)
+        .await
+        .expect("disabled provider should be created");
+
+    let lookup = store
+        .find_active_storage_provider_by_bucket("tenant-inactive", "idle-bucket")
+        .await
+        .expect("lookup should succeed");
+    assert!(
+        matches!(lookup, DriveStorageProviderLookup::Missing),
+        "a disabled provider must not answer a bucket lookup"
+    );
 }

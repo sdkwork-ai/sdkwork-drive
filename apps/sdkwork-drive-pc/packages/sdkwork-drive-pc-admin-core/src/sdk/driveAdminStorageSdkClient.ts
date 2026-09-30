@@ -37,6 +37,8 @@ export interface DriveAdminStorageSdkClientOptions {
   config: DriveRuntimeConfig;
   sdkClient?: TokenManagerAwareGeneratedSdkClient;
   tokenManager: DriveSessionTokenManager;
+  /** BCP 47 locale sent as `Accept-Language` on every request. */
+  locale?: string;
 }
 
 /**
@@ -56,6 +58,12 @@ export interface DriveAdminStorageHostClientOptions {
    */
   baseUrl: string;
   tokenManager: DriveSessionTokenManager;
+  /**
+   * Host page locale, sent as the standard `Accept-Language` request header so
+   * locale-sensitive fields (provider-kind display names) come back in the
+   * operator's language (`I18N_SPEC.md` §4, §10).
+   */
+  locale?: string;
 }
 
 export class DriveAdminStorageSdkError extends Error {
@@ -111,14 +119,16 @@ export function createDriveAdminStorageSdkClient({
   config,
   sdkClient,
   tokenManager,
+  locale,
 }: DriveAdminStorageSdkClientOptions): DriveAdminStorageSdkClient {
   if (sdkClient) {
     sdkClient.setTokenManager(tokenManager);
-    return buildDriveAdminStorageSdkClient(sdkClient, config.adminStorageApiBaseUrl);
+    return buildDriveAdminStorageSdkClient(sdkClient, config.adminStorageApiBaseUrl, locale);
   }
   return createDriveAdminStorageHostClient({
     baseUrl: config.adminStorageApiBaseUrl,
     tokenManager,
+    locale,
   });
 }
 
@@ -131,6 +141,7 @@ export function createDriveAdminStorageSdkClient({
 export function createDriveAdminStorageHostClient({
   baseUrl,
   tokenManager,
+  locale,
 }: DriveAdminStorageHostClientOptions): DriveAdminStorageSdkClient {
   const generatedClient = createGeneratedDriveAdminStorageClient({
     authMode: 'dual-token',
@@ -138,13 +149,15 @@ export function createDriveAdminStorageHostClient({
     tokenManager,
   }) as TokenManagerAwareGeneratedSdkClient;
   generatedClient.setTokenManager(tokenManager);
-  return buildDriveAdminStorageSdkClient(generatedClient, baseUrl);
+  return buildDriveAdminStorageSdkClient(generatedClient, baseUrl, locale);
 }
 
 function buildDriveAdminStorageSdkClient(
   generatedClient: TokenManagerAwareGeneratedSdkClient,
   baseUrl: string,
+  locale?: string,
 ): DriveAdminStorageSdkClient {
+  const localeHeaders = locale ? { 'Accept-Language': locale } : undefined;
   return {
     metadata: {
       ...sdkMetadata,
@@ -167,6 +180,9 @@ function buildDriveAdminStorageSdkClient(
             params: compactQuery(assertStandardSdkWorkPaginationQuery(omitAuthProjectionQuery(query))),
             body: omitAuthProjectionBody(body),
             contentType: body === undefined ? undefined : 'application/json',
+            // Only present when the host supplies a locale, so transports that
+            // treat an explicit-undefined header as settable stay untouched.
+            ...(localeHeaders ? { headers: localeHeaders } : {}),
             signal,
           },
         );

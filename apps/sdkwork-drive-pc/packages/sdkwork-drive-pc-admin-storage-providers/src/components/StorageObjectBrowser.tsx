@@ -1,11 +1,25 @@
-import React, { useCallback, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import {
+  ArrowLeft,
+  CircleAlert,
+  FolderOpen,
+  FolderPlus,
+  LoaderCircle,
+  RefreshCw,
+  Upload,
+} from 'lucide-react';
 import type { StorageProviderAdminService } from '../services/storageProviderAdminService';
 import type { StorageProviderObjectView, StorageProviderView } from '../types/storageProviderAdminTypes';
 import { formatDriveBytes } from 'sdkwork-drive-pc-commons';
 import { formatMutationError } from '../utils/mutationError';
 import { useTranslation } from '../hooks/useTranslation';
 import { ConfirmDialog } from './ConfirmDialog';
-import { PRIMARY_BUTTON_CLASS, SECONDARY_BUTTON_CLASS, INPUT_CLASS } from '../utils/uiPrimitives';
+import {
+  GHOST_BUTTON_CLASS,
+  INPUT_CLASS,
+  PRIMARY_BUTTON_CLASS,
+  SECONDARY_BUTTON_CLASS,
+} from '../utils/uiPrimitives';
 
 /** 上传大小上限（与服务端对象内容写入上限一致）。 */
 const MAX_UPLOAD_BYTES = 8 * 1024 * 1024;
@@ -13,6 +27,14 @@ const MAX_UPLOAD_BYTES = 8 * 1024 * 1024;
 interface StorageObjectBrowserProps {
   provider: StorageProviderView;
   service: StorageProviderAdminService;
+  /**
+   * 打开时定位的前缀（默认为存储桶根）。
+   *
+   * 绑定管理把它设为该绑定的 `storageRootPrefix`，弹窗一打开就是该空间类型的子树，
+   * 而不是整个存储桶；面包屑仍然从存储桶根算起，所以「根目录」始终是退出的出口。
+   * 挂载后再改变该值会重新定位，调用方也可以换 `key` 强制重挂载。
+   */
+  initialPrefix?: string;
 }
 
 type PromptKind = 'newFolder' | 'rename';
@@ -34,12 +56,12 @@ function parentPrefixOf(key: string): string {
   return segments.length > 0 ? `${segments.join('/')}/` : '';
 }
 
-export function StorageObjectBrowser({ provider, service }: StorageObjectBrowserProps) {
+export function StorageObjectBrowser({ provider, service, initialPrefix = '' }: StorageObjectBrowserProps) {
   const { t } = useTranslation();
   const [objects, setObjects] = useState<StorageProviderObjectView[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [currentPrefix, setCurrentPrefix] = useState('');
+  const [currentPrefix, setCurrentPrefix] = useState(initialPrefix);
   const [pageToken, setPageToken] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
@@ -50,6 +72,8 @@ export function StorageObjectBrowser({ provider, service }: StorageObjectBrowser
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   /** 请求序号：loadMore 与导航并发时丢弃过期响应（防止旧前缀分页混入新列表）。 */
   const loadSeqRef = useRef(0);
+  /** 已拉取过的目标（provider + 前缀），用于挂载后只自动加载一次。 */
+  const loadedTargetRef = useRef<string | null>(null);
 
   const formatSize = formatDriveBytes;
 
@@ -84,6 +108,22 @@ export function StorageObjectBrowser({ provider, service }: StorageObjectBrowser
       }
     }
   }, [provider.id, service, t]);
+
+  /**
+   * 挂载即显示 `initialPrefix` 的内容。
+   *
+   * 守卫按「已拉取的目标」而不是回调标识去重：`t` 在宿主语言 Provider 每次重渲染时
+   * 都会换新标识，`loadObjects` 随之换新，按标识做依赖会重复请求。同一 provider 同一
+   * 前缀只自动加载一次，之后交给刷新按钮或换 `key` 重挂载。
+   */
+  useEffect(() => {
+    const target = `${provider.id}\u0000${initialPrefix}`;
+    if (loadedTargetRef.current === target) {
+      return;
+    }
+    loadedTargetRef.current = target;
+    void loadObjects(initialPrefix);
+  }, [initialPrefix, loadObjects, provider.id]);
 
   const navigateToFolder = (prefix: string) => {
     loadObjects(prefix);
@@ -197,127 +237,188 @@ export function StorageObjectBrowser({ provider, service }: StorageObjectBrowser
 
   return (
     <>
-    <div className="border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-[#171717]">
-      <div className="mb-3 flex flex-wrap items-center gap-2">
-        <button type="button" onClick={() => loadObjects('')} disabled={loading || uploading} className="rounded border px-2 py-1 text-xs">
-          {t('root')}
-        </button>
-        {currentPrefix && (
-          <button type="button" onClick={navigateUp} disabled={loading || uploading} className="rounded border px-2 py-1 text-xs">
-            {t('up')}
+    <section className="rounded-lg border border-neutral-200 bg-white shadow-sm dark:border-neutral-700 dark:bg-neutral-900">
+      <div className="flex flex-wrap items-center gap-2 border-b border-neutral-100 px-5 py-3 dark:border-neutral-800">
+        <FolderOpen aria-hidden="true" className="shrink-0 text-neutral-400" size={15} />
+        <h3 className="shrink-0 text-sm font-semibold">{t('files')}</h3>
+
+        <span className="mx-1 hidden h-5 w-px shrink-0 bg-neutral-200 dark:bg-neutral-700 sm:block" />
+
+        <nav aria-label={t('files')} className="flex min-w-0 flex-1 flex-wrap items-center gap-0.5 text-xs">
+          <button
+            type="button"
+            onClick={() => loadObjects('')}
+            disabled={loading || uploading}
+            className="rounded px-1.5 py-1 font-medium text-neutral-600 transition-colors hover:bg-neutral-100 hover:text-neutral-900 disabled:cursor-not-allowed disabled:opacity-50 dark:text-neutral-300 dark:hover:bg-neutral-800 dark:hover:text-white"
+          >
+            {t('root')}
           </button>
-        )}
-        <span className="font-mono text-xs text-neutral-500">
           {breadcrumbSegments.map((segment, index) => (
             <React.Fragment key={`${segment}-${index}`}>
+              <span aria-hidden="true" className="text-neutral-400">/</span>
               <button
                 type="button"
-                className="text-blue-600 hover:underline"
+                className="max-w-[12rem] truncate rounded px-1.5 py-1 font-mono text-blue-600 transition-colors hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-50 dark:text-blue-400 dark:hover:bg-blue-950/30"
                 disabled={loading}
                 onClick={() => loadObjects(breadcrumbSegments.slice(0, index + 1).join('/') + '/')}
               >
                 {segment}
               </button>
-              {index < breadcrumbSegments.length - 1 ? <span className="text-neutral-400">/</span> : null}
             </React.Fragment>
           ))}
-        </span>
-        <span className="flex-1" />
-        <button type="button" onClick={() => loadObjects(currentPrefix)} disabled={loading || uploading} className="rounded border px-2 py-1 text-xs">
-          {t('refresh')}
-        </button>
-        <button
-          type="button"
-          onClick={() => openPrompt({ kind: 'newFolder', initialValue: '' })}
-          disabled={loading || uploading}
-          className="rounded border px-2 py-1 text-xs"
-        >
-          {t('newFolder')}
-        </button>
-        <label className="cursor-pointer rounded border px-2 py-1 text-xs disabled:opacity-60" aria-disabled={uploading}>
-          {uploading ? t('uploading') : t('upload')}
-          <input
-            ref={fileInputRef}
-            className="hidden"
-            type="file"
-            disabled={uploading}
-            onChange={(event) => {
-              const file = event.target.files?.[0];
-              if (file) void uploadFile(file);
-            }}
-          />
-        </label>
+        </nav>
+
+        <div className="flex shrink-0 flex-wrap items-center gap-2">
+          {currentPrefix ? (
+            <button type="button" onClick={navigateUp} disabled={loading || uploading} className={GHOST_BUTTON_CLASS}>
+              <ArrowLeft aria-hidden="true" size={14} />
+              {t('up')}
+            </button>
+          ) : null}
+          <button
+            type="button"
+            onClick={() => openPrompt({ kind: 'newFolder', initialValue: '' })}
+            disabled={loading || uploading}
+            className={SECONDARY_BUTTON_CLASS}
+          >
+            <FolderPlus aria-hidden="true" size={14} />
+            {t('newFolder')}
+          </button>
+          <label className={`${PRIMARY_BUTTON_CLASS} cursor-pointer`} aria-disabled={uploading}>
+            {uploading ? (
+              <LoaderCircle aria-hidden="true" className="animate-spin" size={14} />
+            ) : (
+              <Upload aria-hidden="true" size={14} />
+            )}
+            {uploading ? t('uploading') : t('upload')}
+            <input
+              ref={fileInputRef}
+              className="hidden"
+              type="file"
+              disabled={uploading}
+              onChange={(event) => {
+                const file = event.target.files?.[0];
+                if (file) void uploadFile(file);
+              }}
+            />
+          </label>
+          <button
+            type="button"
+            onClick={() => loadObjects(currentPrefix)}
+            disabled={loading || uploading}
+            className={GHOST_BUTTON_CLASS}
+            aria-label={t('refresh')}
+            title={t('refresh')}
+          >
+            <RefreshCw aria-hidden="true" className={loading ? 'animate-spin' : undefined} size={14} />
+          </button>
+        </div>
       </div>
 
-      {error && <div className="mb-3 rounded bg-red-50 px-3 py-2 text-xs text-red-700 dark:bg-red-950/20 dark:text-red-300">{error}</div>}
+      <div className="px-5 py-4">
+        {error && (
+          <div className="mb-3 flex items-start gap-2 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700 dark:border-red-900 dark:bg-red-950/20 dark:text-red-300">
+            <CircleAlert aria-hidden="true" className="mt-0.5 shrink-0" size={14} />
+            <span className="flex-1">{error}</span>
+          </div>
+        )}
 
-      {objects.length === 0 && !loading ? (
-        <div className="py-8 text-center text-xs text-neutral-400">{t('empty')}</div>
-      ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full text-xs">
-            <thead>
-              <tr className="border-b text-left text-neutral-500">
-                <th className="py-2 pr-4">{t('nameHeader')}</th>
-                <th className="py-2 pr-4">{t('sizeHeader')}</th>
-                <th className="py-2 pr-4">{t('modifiedHeader')}</th>
-                <th className="py-2">{t('actHeader')}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {objects.map((obj) => (
-                <tr key={obj.key} className="border-b border-neutral-100 dark:border-neutral-800">
-                  <td className="py-2 pr-4 font-mono">
-                    {obj.isFolder ? (
-                      <button type="button" onClick={() => navigateToFolder(obj.key)} className="text-blue-600 hover:underline">
-                        {fileNameOf(obj.key)}/
-                      </button>
-                    ) : (
-                      fileNameOf(obj.key)
-                    )}
-                  </td>
-                  <td className="py-2 pr-4">{obj.isFolder ? '-' : formatSize(obj.sizeBytes)}</td>
-                  <td className="py-2 pr-4 text-neutral-400">{obj.lastModified ?? '-'}</td>
-                  <td className="py-2">
-                    {!obj.isFolder && obj.sizeBytes > MAX_UPLOAD_BYTES && (
-                      <span className="mr-2 text-xs text-neutral-400" title={t('fileTooLarge')}>
-                        {t('fileTooLarge')}
-                      </span>
-                    )}
-                    {!obj.isFolder && obj.sizeBytes <= MAX_UPLOAD_BYTES && (
-                      <button type="button" onClick={() => void downloadObject(obj)} disabled={loading} className="mr-2 text-blue-600 hover:underline">
-                        {t('download')}
-                      </button>
-                    )}
-                    {!obj.isFolder && (
-                      <button
-                        type="button"
-                        onClick={() => openPrompt({ kind: 'rename', objectKey: obj.key, initialValue: fileNameOf(obj.key) })}
-                        disabled={loading}
-                        className="mr-2 text-neutral-600 hover:underline dark:text-neutral-300"
-                      >
-                        {t('rename')}
-                      </button>
-                    )}
-                    {!obj.isFolder && (
-                      <button type="button" onClick={() => setDeleteTarget(obj.key)} disabled={loading} className="text-red-600 hover:underline">
-                        {t('del')}
-                      </button>
-                    )}
-                  </td>
+        {objects.length === 0 && !loading ? (
+          <div className="flex flex-col items-center justify-center gap-1.5 rounded-md border border-dashed border-neutral-200 py-10 text-center dark:border-neutral-700">
+            <FolderOpen aria-hidden="true" className="text-neutral-300 dark:text-neutral-600" size={26} />
+            <p className="text-xs text-neutral-500">{t('empty')}</p>
+            <p className="text-[11px] text-neutral-400">{t('emptyFolderHint')}</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="border-b border-neutral-200 text-left text-neutral-500 dark:border-neutral-700">
+                  <th className="py-2 pr-4 font-medium">{t('nameHeader')}</th>
+                  <th className="py-2 pr-4 font-medium">{t('sizeHeader')}</th>
+                  <th className="py-2 pr-4 font-medium">{t('modifiedHeader')}</th>
+                  <th className="py-2 text-right font-medium">{t('actHeader')}</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+              </thead>
+              <tbody>
+                {objects.map((obj) => (
+                  <tr key={obj.key} className="border-b border-neutral-100 transition-colors last:border-0 hover:bg-neutral-50 dark:border-neutral-800 dark:hover:bg-neutral-800/50">
+                    <td className="py-2 pr-4 font-mono">
+                      {obj.isFolder ? (
+                        <button
+                          type="button"
+                          onClick={() => navigateToFolder(obj.key)}
+                          className="inline-flex max-w-full items-center gap-1.5 text-blue-600 hover:underline dark:text-blue-400"
+                        >
+                          <FolderOpen aria-hidden="true" className="shrink-0" size={13} />
+                          <span className="truncate">{fileNameOf(obj.key)}/</span>
+                        </button>
+                      ) : (
+                        <span className="truncate">{fileNameOf(obj.key)}</span>
+                      )}
+                    </td>
+                    <td className="py-2 pr-4 tabular-nums text-neutral-600 dark:text-neutral-300">
+                      {obj.isFolder ? '—' : formatSize(obj.sizeBytes)}
+                    </td>
+                    <td className="py-2 pr-4 text-neutral-400">{obj.lastModified ?? '—'}</td>
+                    <td className="py-2">
+                      <div className="flex items-center justify-end gap-3">
+                        {!obj.isFolder && obj.sizeBytes > MAX_UPLOAD_BYTES && (
+                          <span className="text-[11px] text-neutral-400" title={t('fileTooLarge')}>
+                            {t('fileTooLarge')}
+                          </span>
+                        )}
+                        {!obj.isFolder && obj.sizeBytes <= MAX_UPLOAD_BYTES && (
+                          <button
+                            type="button"
+                            onClick={() => void downloadObject(obj)}
+                            disabled={loading}
+                            className="text-blue-600 hover:underline disabled:opacity-50 dark:text-blue-400"
+                          >
+                            {t('download')}
+                          </button>
+                        )}
+                        {!obj.isFolder && (
+                          <button
+                            type="button"
+                            onClick={() => openPrompt({ kind: 'rename', objectKey: obj.key, initialValue: fileNameOf(obj.key) })}
+                            disabled={loading}
+                            className="text-neutral-600 hover:underline disabled:opacity-50 dark:text-neutral-300"
+                          >
+                            {t('rename')}
+                          </button>
+                        )}
+                        {!obj.isFolder && (
+                          <button
+                            type="button"
+                            onClick={() => setDeleteTarget(obj.key)}
+                            disabled={loading}
+                            className="text-red-600 hover:underline disabled:opacity-50 dark:text-red-400"
+                          >
+                            {t('del')}
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
 
-      {hasMore && (
-        <button type="button" onClick={() => loadObjects(currentPrefix, pageToken ?? undefined)} disabled={loading} className="mt-3 text-xs text-blue-600 hover:underline">
-          {t('loadMore')}
-        </button>
-      )}
-    </div>
+        {hasMore && (
+          <button
+            type="button"
+            onClick={() => loadObjects(currentPrefix, pageToken ?? undefined)}
+            disabled={loading}
+            className="mt-3 text-xs font-medium text-blue-600 hover:underline disabled:opacity-50 dark:text-blue-400"
+          >
+            {t('loadMore')}
+          </button>
+        )}
+      </div>
+    </section>
     {prompt ? (
       <div
         className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"

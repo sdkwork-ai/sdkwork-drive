@@ -146,22 +146,47 @@ fn core_registry_matches_runtime_dr_drive_space_and_node_columns() {
 
 #[test]
 fn governed_database_migrations_exist_for_postgres() {
-    for path in [
-        "database/migrations/postgres/0002_drive_outbox_pending_dispatch_index.up.sql",
-        "database/migrations/postgres/0002_drive_outbox_pending_dispatch_index.down.sql",
-        "database/migrations/postgres/0003_drive_tenant_quota.up.sql",
-        "database/migrations/postgres/0003_drive_tenant_quota.down.sql",
-        "database/migrations/postgres/0004_drive_maintenance_leader.up.sql",
-        "database/migrations/postgres/0004_drive_maintenance_leader.down.sql",
-        "database/migrations/postgres/0005_drive_outbox_channel_delivery.up.sql",
-        "database/migrations/postgres/0005_drive_outbox_channel_delivery.down.sql",
-        "database/migrations/postgres/0006_drive_node_name_active_only.up.sql",
-        "database/migrations/postgres/0006_drive_node_name_active_only.down.sql",
-        "database/migrations/postgres/0007_drive_sandbox_workspace.up.sql",
-        "database/migrations/postgres/0007_drive_sandbox_workspace.down.sql",
-    ] {
-        read_workspace_file(path);
+    // Ground this in the files that actually ship rather than a frozen list:
+    // a hand-maintained list rots silently the moment a migration is added or
+    // renamed, and then fails for the wrong reason. Assert the invariant the
+    // list was standing in for — every numbered migration declares its engine
+    // header and, except the initial baseline, ships its down-migration.
+    let migrations_dir = workspace_root().join("database/migrations/postgres");
+    let mut seen = BTreeSet::new();
+    for entry in std::fs::read_dir(&migrations_dir)
+        .unwrap_or_else(|error| panic!("failed to list {}: {error}", migrations_dir.display()))
+    {
+        let path = entry.expect("directory entry").path();
+        let Some(name) = path.file_name().and_then(|value| value.to_str()) else {
+            continue;
+        };
+        let Some(stem) = name.strip_suffix(".up.sql") else {
+            continue;
+        };
+        seen.insert(stem.to_string());
+
+        let source = std::fs::read_to_string(&path)
+            .unwrap_or_else(|error| panic!("failed to read {}: {error}", path.display()));
+        assert!(
+            source.contains("-- sdkwork:migration") && source.contains("-- engine: postgres"),
+            "{name} must carry the governed migration header for postgres"
+        );
+
+        // The first migration predates the up/down pairing convention.
+        if stem.starts_with("0001_") {
+            continue;
+        }
+        let down = migrations_dir.join(format!("{stem}.down.sql"));
+        assert!(
+            down.is_file(),
+            "{stem} must ship a matching .down.sql migration"
+        );
     }
+
+    assert!(
+        !seen.is_empty(),
+        "database/migrations/postgres must contain at least one governed migration"
+    );
 
     let manifest = read_workspace_file("database/database.manifest.json");
     assert!(

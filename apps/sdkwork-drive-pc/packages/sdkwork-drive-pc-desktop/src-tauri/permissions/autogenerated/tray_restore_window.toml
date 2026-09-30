@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-tray-restore-window"
+description = "Enables the tray_restore_window command without any pre-configured scope."
+commands.allow = ["tray_restore_window"]
+
+[[permission]]
+identifier = "deny-tray-restore-window"
+description = "Denies the tray_restore_window command without any pre-configured scope."
+commands.deny = ["tray_restore_window"]

@@ -55,8 +55,8 @@ async fn open_share_link_resolves_and_creates_download_url_without_exposing_toke
     sqlx::query(
         "INSERT INTO dr_drive_node (
             id, tenant_id, space_id, parent_node_id, node_type, node_name,
-            content_state, lifecycle_status, version, created_by, updated_by
-        ) VALUES ('node-open', 'tenant-open', 'space-open', NULL, 'file', 'public.pdf', 'ready', 'active', 1, 'user-open', 'user-open')",
+            content_state, head_content_type, head_content_type_group, head_content_length, head_version_no, lifecycle_status, version, created_by, updated_by
+        ) VALUES ('node-open', 'tenant-open', 'space-open', NULL, 'file', 'public.pdf', 'ready', 'application/octet-stream', 'binary', 0, 1, 'active', 1, 'user-open', 'user-open')",
     )
     .execute(&pool)
     .await
@@ -211,11 +211,11 @@ async fn open_share_link_download_reads_object_from_its_bound_provider_when_buck
     sqlx::query(
         "INSERT INTO dr_drive_node (
             id, tenant_id, space_id, parent_node_id, node_type, node_name,
-            content_state, lifecycle_status, version, created_by, updated_by
+            content_state, head_content_type, head_content_type_group, head_content_length, head_version_no, lifecycle_status, version, created_by, updated_by
         ) VALUES (
             'node-open-shared-provider', 'tenant-open-shared-provider',
             'space-open-shared-provider', NULL, 'file', 'shared.pdf',
-            'ready', 'active', 1, 'user-open-shared-provider',
+            'ready', 'application/octet-stream', 'binary', 0, 1, 'active', 1, 'user-open-shared-provider',
             'user-open-shared-provider'
         )",
     )
@@ -391,9 +391,9 @@ async fn open_share_link_download_uses_explicit_cloud_s3_provider_kinds_with_s3_
         sqlx::query(
             "INSERT INTO dr_drive_node (
                 id, tenant_id, space_id, parent_node_id, node_type, node_name,
-                content_state, lifecycle_status, version, created_by, updated_by
+                content_state, head_content_type, head_content_type_group, head_content_length, head_version_no, lifecycle_status, version, created_by, updated_by
             ) VALUES ($1, $2, $3, NULL, 'file', 'public.pdf',
-                'ready', 'active', 1, 'user-open-cloud', 'user-open-cloud')",
+                'ready', 'application/octet-stream', 'binary', 0, 1, 'active', 1, 'user-open-cloud', 'user-open-cloud')",
         )
         .bind(node_id)
         .bind(&tenant_id)
@@ -509,8 +509,8 @@ async fn open_share_link_download_requires_active_object_store_provider() {
     sqlx::query(
         "INSERT INTO dr_drive_node (
             id, tenant_id, space_id, parent_node_id, node_type, node_name,
-            content_state, lifecycle_status, version, created_by, updated_by
-        ) VALUES ('node-open-no-provider', 'tenant-open-no-provider', 'space-open-no-provider', NULL, 'file', 'public.pdf', 'ready', 'active', 1, 'user-open-no-provider', 'user-open-no-provider')",
+            content_state, head_content_type, head_content_type_group, head_content_length, head_version_no, lifecycle_status, version, created_by, updated_by
+        ) VALUES ('node-open-no-provider', 'tenant-open-no-provider', 'space-open-no-provider', NULL, 'file', 'public.pdf', 'ready', 'application/octet-stream', 'binary', 0, 1, 'active', 1, 'user-open-no-provider', 'user-open-no-provider')",
     )
     .execute(&pool)
     .await
@@ -719,10 +719,10 @@ async fn open_share_link_download_limit_is_consumed_atomically() {
     sqlx::query(
         "INSERT INTO dr_drive_node (
             id, tenant_id, space_id, parent_node_id, node_type, node_name,
-            content_state, lifecycle_status, version, created_by, updated_by
+            content_state, head_content_type, head_content_type_group, head_content_length, head_version_no, lifecycle_status, version, created_by, updated_by
         ) VALUES (
             'node-open-limit', 'tenant-open-limit', 'space-open-limit', NULL,
-            'file', 'limited.pdf', 'ready', 'active', 1, 'user-open-limit',
+            'file', 'limited.pdf', 'ready', 'application/octet-stream', 'binary', 0, 1, 'active', 1, 'user-open-limit',
             'user-open-limit'
         )",
     )
@@ -850,10 +850,10 @@ async fn open_share_link_download_rejects_ttl_outside_contract_before_consuming_
     sqlx::query(
         "INSERT INTO dr_drive_node (
             id, tenant_id, space_id, parent_node_id, node_type, node_name,
-            content_state, lifecycle_status, version, created_by, updated_by
+            content_state, head_content_type, head_content_type_group, head_content_length, head_version_no, lifecycle_status, version, created_by, updated_by
         ) VALUES (
             'node-open-ttl', 'tenant-open-ttl', 'space-open-ttl', NULL,
-            'file', 'ttl.pdf', 'ready', 'active', 1, 'user-open-ttl',
+            'file', 'ttl.pdf', 'ready', 'application/octet-stream', 'binary', 0, 1, 'active', 1, 'user-open-ttl',
             'user-open-ttl'
         )",
     )
@@ -972,10 +972,10 @@ async fn open_share_link_download_treats_subsecond_remaining_share_ttl_as_expire
     sqlx::query(
         "INSERT INTO dr_drive_node (
             id, tenant_id, space_id, parent_node_id, node_type, node_name,
-            content_state, lifecycle_status, version, created_by, updated_by
+            content_state, head_content_type, head_content_type_group, head_content_length, head_version_no, lifecycle_status, version, created_by, updated_by
         ) VALUES (
             'node-open-short-ttl', 'tenant-open-short-ttl', 'space-open-short-ttl', NULL,
-            'file', 'short-ttl.pdf', 'ready', 'active', 1, 'user-open-short-ttl',
+            'file', 'short-ttl.pdf', 'ready', 'application/octet-stream', 'binary', 0, 1, 'active', 1, 'user-open-short-ttl',
             'user-open-short-ttl'
         )",
     )
@@ -1093,8 +1093,8 @@ async fn open_share_link_requires_valid_access_code_when_configured() {
     sqlx::query(
         "INSERT INTO dr_drive_node (
             id, tenant_id, space_id, parent_node_id, node_type, node_name,
-            content_state, lifecycle_status, version, created_by, updated_by
-        ) VALUES ('node-open-access-code', 'tenant-open-access-code', 'space-open-access-code', NULL, 'file', 'protected.pdf', 'ready', 'active', 1, 'user-open-access-code', 'user-open-access-code')",
+            content_state, head_content_type, head_content_type_group, head_content_length, head_version_no, lifecycle_status, version, created_by, updated_by
+        ) VALUES ('node-open-access-code', 'tenant-open-access-code', 'space-open-access-code', NULL, 'file', 'protected.pdf', 'ready', 'application/octet-stream', 'binary', 0, 1, 'active', 1, 'user-open-access-code', 'user-open-access-code')",
     )
     .execute(&pool)
     .await

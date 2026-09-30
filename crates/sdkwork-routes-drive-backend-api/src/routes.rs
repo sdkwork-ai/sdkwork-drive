@@ -67,7 +67,7 @@ pub async fn build_router_with_database_config(
 ) -> Result<Router, Box<dyn std::error::Error + Send + Sync>> {
     let pool = connect_postgres_database_and_install_schema(config)
         .await
-        .map_err(|error| Box::new(error) as Box<dyn std::error::Error + Send + Sync>)?;
+        .map_err(|error| -> Box<dyn std::error::Error + Send + Sync> { Box::new(error) })?;
     Ok(build_protected_router_with_pool(pool).await)
 }
 

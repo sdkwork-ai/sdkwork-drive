@@ -11,6 +11,7 @@ workspace = true
 sdkwork-database-config.workspace = true
 sdkwork-database-sqlx.workspace = true
 sdkwork-drive-database-host.workspace = true
+sdkwork-drive-workspace-service.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 sqlx.workspace = true

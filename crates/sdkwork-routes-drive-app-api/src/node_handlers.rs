@@ -448,6 +448,7 @@ pub(crate) async fn create_file(
         &state.pool,
         &tenant_id,
         &payload.space_id,
+        payload.storage_provider_id.as_deref(),
         payload.bucket.as_deref(),
         &payload.id,
         payload.upload_session_id.trim(),

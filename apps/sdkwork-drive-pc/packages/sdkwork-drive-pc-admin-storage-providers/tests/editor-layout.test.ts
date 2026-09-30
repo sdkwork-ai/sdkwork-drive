@@ -1,8 +1,13 @@
 import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
-const componentRoot = resolve(process.cwd(), 'packages/sdkwork-drive-pc-admin-storage-providers/src/components');
+// Resolve from this file, not `process.cwd()`: vitest can be launched from either
+// the app root or this package root, and the old `cwd()` + `packages/...` join
+// doubled the package segment when run from the package itself.
+const testDir = dirname(fileURLToPath(import.meta.url));
+const componentRoot = resolve(testDir, '../src/components');
 
 function readComponent(name: string) {
   return readFileSync(resolve(componentRoot, name), 'utf8');

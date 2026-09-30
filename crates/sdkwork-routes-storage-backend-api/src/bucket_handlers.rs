@@ -5,9 +5,12 @@ use crate::dto::{
     ProviderBucketResponse,
 };
 use crate::error::{map_object_store_route_error, ProblemDetail};
-use crate::object_store::build_full_s3_object_store_for_provider;
+use crate::object_store::build_object_store_for_provider;
 use crate::provider_lookup::get_active_provider;
-use crate::response::{no_content, success_list_page_simple, StorageListHttpResponse};
+use crate::response::{
+    no_content, success_item, success_list_page_simple, StorageItemHttpResponse,
+    StorageListHttpResponse,
+};
 use crate::state::AdminStorageState;
 use crate::validators::{next_page_token, parse_offset_page};
 use axum::extract::{Path, Query, State};
@@ -15,8 +18,7 @@ use axum::http::StatusCode;
 use axum::{Extension, Json};
 use sdkwork_drive_contract::drive::domain_events::admin_audit;
 use sdkwork_drive_storage_contract::{
-    CreateBucketRequest, DeleteBucketRequest, DriveObjectStore, HeadBucketRequest,
-    ListBucketsRequest,
+    CreateBucketRequest, DeleteBucketRequest, HeadBucketRequest, ListBucketsRequest,
 };
 
 /// S3 ListBuckets returns the full account inventory in one call.
@@ -26,17 +28,19 @@ const MAX_ADMIN_BUCKET_LIST_ITEMS: usize = 200;
 
 pub(crate) async fn head_storage_provider_bucket(
     State(state): State<AdminStorageState>,
+    Extension(ctx): Extension<DriveRequestContext>,
     Path(provider_id): Path<String>,
-) -> Result<Json<ProviderBucketResponse>, (StatusCode, Json<ProblemDetail>)> {
-    let provider = get_active_provider(&state, &provider_id).await?;
-    let object_store = build_full_s3_object_store_for_provider(&state, &provider).await?;
+) -> Result<StorageItemHttpResponse<ProviderBucketResponse>, (StatusCode, Json<ProblemDetail>)> {
+    let tenant_id = ctx.resolve_tenant_id()?;
+    let provider = get_active_provider(&state, &tenant_id, &provider_id).await?;
+    let object_store = build_object_store_for_provider(&state, &provider).await?;
     let result = object_store
         .head_bucket(HeadBucketRequest {
             bucket: provider.bucket.clone(),
         })
         .await
         .map_err(map_object_store_route_error)?;
-    Ok(Json(ProviderBucketResponse {
+    Ok(success_item(ProviderBucketResponse {
         provider_id,
         bucket: result.bucket,
         exists: result.exists,
@@ -45,6 +49,7 @@ pub(crate) async fn head_storage_provider_bucket(
 
 pub(crate) async fn list_storage_provider_buckets(
     State(state): State<AdminStorageState>,
+    Extension(ctx): Extension<DriveRequestContext>,
     Path(provider_id): Path<String>,
     Query(query): Query<ListProviderBucketsQuery>,
 ) -> Result<
@@ -52,9 +57,11 @@ pub(crate) async fn list_storage_provider_buckets(
     (StatusCode, Json<ProblemDetail>),
 > {
     let page = parse_offset_page(query.page_size, query.page_token)?;
-    let provider = get_active_provider(&state, &provider_id).await?;
+    let tenant_id = ctx.resolve_tenant_id()?;
+
+    let provider = get_active_provider(&state, &tenant_id, &provider_id).await?;
     let configured_bucket = provider.bucket.clone();
-    let object_store = build_full_s3_object_store_for_provider(&state, &provider).await?;
+    let object_store = build_object_store_for_provider(&state, &provider).await?;
     let result = object_store
         .list_buckets(ListBucketsRequest)
         .await
@@ -91,28 +98,39 @@ pub(crate) async fn list_storage_provider_buckets(
     Ok(success_list_page_simple(items, page, next_page_token))
 }
 
+/// Idempotent bucket initialization: ensures the provider's configured bucket
+/// exists on its vendor. Re-running converges (`changed: false`) instead of
+/// surfacing vendor-specific "already exists" errors.
 pub(crate) async fn create_storage_provider_bucket(
     State(state): State<AdminStorageState>,
     Extension(ctx): Extension<DriveRequestContext>,
     Path(provider_id): Path<String>,
-) -> Result<Json<ProviderBucketMutationResponse>, (StatusCode, Json<ProblemDetail>)> {
+) -> Result<
+    StorageItemHttpResponse<ProviderBucketMutationResponse>,
+    (StatusCode, Json<ProblemDetail>),
+> {
     let operator_id = ctx.resolve_operator_id()?;
-    let provider = get_active_provider(&state, &provider_id).await?;
-    let object_store = build_full_s3_object_store_for_provider(&state, &provider).await?;
+    let tenant_id = ctx.resolve_tenant_id()?;
+
+    let provider = get_active_provider(&state, &tenant_id, &provider_id).await?;
+    let object_store = build_object_store_for_provider(&state, &provider).await?;
     let result = object_store
         .create_bucket(CreateBucketRequest {
             bucket: provider.bucket.clone(),
         })
         .await
         .map_err(map_object_store_route_error)?;
-    record_storage_provider_audit(
-        &state,
-        admin_audit::storage_provider::BUCKET_CREATED,
-        &provider_id,
-        &operator_id,
-    )
-    .await?;
-    Ok(Json(ProviderBucketMutationResponse {
+    if result.created {
+        record_storage_provider_audit(
+            &state,
+            admin_audit::storage_provider::BUCKET_CREATED,
+            &provider_id,
+            &operator_id,
+        &tenant_id,
+        )
+        .await?;
+    }
+    Ok(success_item(ProviderBucketMutationResponse {
         provider_id,
         bucket: result.bucket,
         changed: result.created,
@@ -125,8 +143,10 @@ pub(crate) async fn delete_storage_provider_bucket(
     Path(provider_id): Path<String>,
 ) -> Result<StatusCode, (StatusCode, Json<ProblemDetail>)> {
     let operator_id = ctx.resolve_operator_id()?;
-    let provider = get_active_provider(&state, &provider_id).await?;
-    let object_store = build_full_s3_object_store_for_provider(&state, &provider).await?;
+    let tenant_id = ctx.resolve_tenant_id()?;
+
+    let provider = get_active_provider(&state, &tenant_id, &provider_id).await?;
+    let object_store = build_object_store_for_provider(&state, &provider).await?;
     let result = object_store
         .delete_bucket(DeleteBucketRequest {
             bucket: provider.bucket.clone(),
@@ -138,6 +158,7 @@ pub(crate) async fn delete_storage_provider_bucket(
         admin_audit::storage_provider::BUCKET_DELETED,
         &provider_id,
         &operator_id,
+        &tenant_id,
     )
     .await?;
     let _deleted = result.deleted;

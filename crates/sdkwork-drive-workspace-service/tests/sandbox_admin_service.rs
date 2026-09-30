@@ -533,13 +533,26 @@ async fn audit_failure_rolls_back_volume_and_initial_grant_atomically() {
     else {
         return;
     };
+    // Failure injection must use Postgres PL/pgSQL: SQLite-style `RAISE(ABORT, ..)`
+    // triggers are rejected by the Postgres parser (42601).
+    sqlx::query(
+        "CREATE OR REPLACE FUNCTION reject_sandbox_grant_audit() RETURNS trigger
+         LANGUAGE plpgsql AS $$
+         BEGIN
+           IF NEW.action = 'drive.sandbox_grant.created' THEN
+             RAISE EXCEPTION 'sandbox audit unavailable' USING ERRCODE = 'P0001';
+           END IF;
+           RETURN NEW;
+         END
+         $$",
+    )
+    .execute(&pool)
+    .await
+    .expect("audit failure function should be installed");
     sqlx::query(
         "CREATE TRIGGER reject_sandbox_grant_audit
          BEFORE INSERT ON dr_drive_audit_event
-         WHEN NEW.action = 'drive.sandbox_grant.created'
-         BEGIN
-           SELECT RAISE(ABORT, 'sandbox audit unavailable');
-         END",
+         FOR EACH ROW EXECUTE FUNCTION reject_sandbox_grant_audit()",
     )
     .execute(&pool)
     .await
@@ -576,6 +589,17 @@ async fn audit_failure_rolls_back_volume_and_initial_grant_atomically() {
         .await
         .expect("audit count should be readable");
     assert_eq!((volume_count, grant_count, audit_count), (0, 0, 0));
+
+    // The trigger lives on a shared baseline table, so it must be torn down
+    // explicitly: leaving it installed would poison every later test in the run.
+    sqlx::query("DROP TRIGGER IF EXISTS reject_sandbox_grant_audit ON dr_drive_audit_event")
+        .execute(&pool)
+        .await
+        .expect("audit failure trigger should be dropped");
+    sqlx::query("DROP FUNCTION IF EXISTS reject_sandbox_grant_audit()")
+        .execute(&pool)
+        .await
+        .expect("audit failure function should be dropped");
 }
 
 fn admin_context(tenant_id: &str, organization_id: &str, user_id: &str) -> DriveAppContext {

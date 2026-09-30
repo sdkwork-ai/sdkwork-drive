@@ -7,6 +7,8 @@ import type {
   ListStorageProviderAccountsInput,
   StorageProviderAccountView,
   StorageProviderKind,
+  StorageProviderVendorCapabilityDefaults,
+  StorageProviderVendorCredentialFields,
   StorageProviderView,
   UpdateStorageProviderInput,
 } from '../types/storageProviderAdminTypes';
@@ -14,6 +16,10 @@ import {
   buildProviderEndpointUrl,
   getAllProviderKindMeta,
   getProviderKindMeta,
+  providerBucketHint,
+  providerCredentialLabel,
+  providerKindLabel,
+  providerRegionLabel,
   providerVendorCodeForKind,
   resolveProviderKindMeta,
 } from '../utils/providerKindConfig';
@@ -21,7 +27,6 @@ import { isCredentialRefMasked } from '../utils/credentialRefUtils';
 import { buildProviderIdWithUuid, createProviderUuidSuffix, resolveProviderKindSlug } from '../utils/providerIdUtils';
 import { CHECKBOX_CLASS, INPUT_CLASS, PRIMARY_BUTTON_CLASS, SECONDARY_BUTTON_CLASS, SELECT_CLASS } from '../utils/uiPrimitives';
 import { StorageProviderCredentialFields } from './StorageProviderCredentialFields';
-import type { AccountScopeFilter } from './StorageProviderCredentialFields';
 import { FormNoticeBanner } from './FormNoticeBanner';
 import { formatMutationError } from '../utils/mutationError';
 import { useTranslation } from '../hooks/useTranslation';
@@ -32,6 +37,32 @@ interface StorageProviderEditorProps {
   provider?: StorageProviderView;
   /** Already-taken provider ids; the editor only reads them to avoid a clash. */
   existingProviderIds?: readonly string[];
+  /**
+   * Vendor credential vocabulary the server returned for each built-in kind
+   * when the plane was bootstrapped.
+   *
+   * Optional and keyed by kind: when present it is the authority for the two
+   * field labels and the env-name defaults, because the server is what minted
+   * the placeholder account the operator is about to replace. The console's own
+   * static catalog (`providerKindConfig.ts`) stays as the fallback for a kind
+   * that was never bootstrapped, so the editor never renders an unlabelled form.
+   */
+  vendorCredentialFields?: Readonly<
+    Record<string, StorageProviderVendorCredentialFields | undefined>
+  >;
+  /**
+   * The encryption-mode and storage-class lists the server's contract layer
+   * says each built-in kind accepts, keyed by kind.
+   *
+   * Optional and per-kind: when present, the advanced-controls dropdowns offer
+   * exactly these values, which is what stops the console from putting Tencent's
+   * editor in front of AWS's `aws:kms` token. The static catalog stays the
+   * fallback for a kind the bootstrap never settled, so the controls are never
+   * empty merely because the plane was not initialized.
+   */
+  vendorCapabilities?: Readonly<
+    Record<string, StorageProviderVendorCapabilityDefaults | undefined>
+  >;
   onClose: () => void;
   onCreateProvider: (input: CreateStorageProviderInput) => Promise<StorageProviderView>;
   onUpdateProvider: (providerId: string, input: UpdateStorageProviderInput) => Promise<StorageProviderView>;
@@ -68,6 +99,8 @@ function applyKindDefaults(
 export function StorageProviderEditor({
   provider,
   existingProviderIds = [],
+  vendorCredentialFields,
+  vendorCapabilities,
   onClose,
   onCreateProvider,
   onUpdateProvider,
@@ -90,9 +123,6 @@ export function StorageProviderEditor({
   const [credentialRef, setCredentialRef] = useState('');
   const [providerAccountId, setProviderAccountId] = useState('');
   const [providerAccounts, setProviderAccounts] = useState<StorageProviderAccountView[]>();
-  // Which slice of the account centre the picker lists. `all` is the default so
-  // a tenant sees the platform-wide account it is meant to reuse.
-  const [accountScopeFilter, setAccountScopeFilter] = useState<AccountScopeFilter>('all');
   const [accountsLoading, setAccountsLoading] = useState(false);
   const [accountsError, setAccountsError] = useState<string | undefined>();
   const [showCredential, setShowCredential] = useState(false);
@@ -106,7 +136,19 @@ export function StorageProviderEditor({
   const [modalNotice, setModalNotice] = useState<ModalNotice | undefined>();
 
   const meta = useMemo(() => resolveProviderKindMeta(providerKind), [providerKind]);
-  const usesStructuredCredentials = meta.features.structuredCredentials && Boolean(meta.credentialFields);
+  // The server's vocabulary wins where it exists: it is what named the account
+  // the bootstrap already minted. Merged rather than replaced so the console's
+  // own placeholders / console link / bucket hint survive — the server only
+  // ships the two labels and the two env defaults.
+  const credentialFields = useMemo(() => {
+    const base = meta.credentialFields;
+    if (!base) {
+      return undefined;
+    }
+    const serverFields = vendorCredentialFields?.[String(providerKind)];
+    return serverFields ? { ...base, ...serverFields } : base;
+  }, [meta.credentialFields, providerKind, vendorCredentialFields]);
+  const usesStructuredCredentials = meta.features.structuredCredentials && Boolean(credentialFields);
   // The credential section is account-aware only when the host injected the
   // account-center callbacks; otherwise the panel falls back to manual refs.
   const accountSourceAvailable = Boolean(onListProviderAccounts && onCreateProviderAccount);
@@ -119,34 +161,28 @@ export function StorageProviderEditor({
     if (!onListProviderAccounts) {
       return;
     }
-    // `all` keeps the server's own defaults (includePlatform on, every visible
-    // scope), so the wide query stays a plain call with no extra parameters.
-    const scopeQuery: ListStorageProviderAccountsInput =
-      accountScopeFilter === 'all'
-        ? {}
-        : accountScopeFilter === 'mine'
-          ? { mine: true }
-          : { scopeType: accountScopeFilter };
+    // The admin plane publishes platform-wide credentials: the picker lists the
+    // platform slice only, which is also the scope the dialog's inline create
+    // form registers, so a freshly created account always lands in this list.
     setAccountsLoading(true);
     setAccountsError(undefined);
-    onListProviderAccounts({ status: 'active', ...scopeQuery })
+    onListProviderAccounts({ status: 'active', scopeType: 'platform' })
       .then((items) => setProviderAccounts(items))
       .catch(() => setAccountsError(t('accountLoadFailed')))
       .finally(() => setAccountsLoading(false));
-  }, [onListProviderAccounts, t, accountScopeFilter]);
+  }, [onListProviderAccounts, t]);
 
-  const accountsLoadStartedRef = useRef<AccountScopeFilter | undefined>(undefined);
+  const accountsLoadStartedRef = useRef(false);
   useEffect(() => {
     if (!accountSourceAvailable) {
       return;
     }
-    // Re-query whenever the operator switches scope slice; the guard only
-    // suppresses the duplicate initial fetch under React strict mode.
-    if (accountsLoadStartedRef.current !== accountScopeFilter) {
-      accountsLoadStartedRef.current = accountScopeFilter;
+    // The guard only suppresses the duplicate initial fetch under React strict mode.
+    if (!accountsLoadStartedRef.current) {
+      accountsLoadStartedRef.current = true;
       reloadProviderAccounts();
     }
-  }, [accountSourceAvailable, accountScopeFilter, reloadProviderAccounts]);
+  }, [accountSourceAvailable, reloadProviderAccounts]);
 
   const existingIdSet = useMemo(() => new Set(existingProviderIds), [existingProviderIds]);
 
@@ -387,18 +423,41 @@ export function StorageProviderEditor({
 
   const isLocalFs = meta.features.isLocal;
   const hasRegions = meta.regions.length > 0;
-  const sseModes = meta.features.hasSse ? (providerKind === 'custom' ? ['AES256'] : meta.sseModes) : [];
-  const storageClasses = meta.features.hasStorageClass ? (providerKind === 'custom' ? ['STANDARD'] : meta.storageClasses) : [];
+  // The server's contract table wins where the bootstrap settled this kind: it
+  // is the same source `capabilities_for_provider` reports, so the dropdown can
+  // no longer offer a token the vendor rejects (the "Tencent's editor shows
+  // aws:kms" drift). The console's own catalog stays the fallback for a kind
+  // whose capabilities were never fetched — a narrower list is always safe,
+  // because every value in it is one the server would accept.
+  const serverCapabilities = vendorCapabilities?.[String(providerKind)];
+  const sseModes = !meta.features.hasSse
+    ? []
+    : serverCapabilities
+      ? serverCapabilities.serverSideEncryptionModes
+      : providerKind === 'custom'
+        ? ['AES256']
+        : meta.sseModes;
+  const storageClasses = !meta.features.hasStorageClass
+    ? []
+    : serverCapabilities
+      ? serverCapabilities.storageClasses
+      : providerKind === 'custom'
+        ? ['STANDARD']
+        : meta.storageClasses;
   const allKinds = getAllProviderKindMeta();
 
   return (
     <OperationDrawer
-      description={isEditing ? `${meta.label} / ${provider?.id ?? ''}` : t('stepType')}
+      description={
+        isEditing
+          ? `${providerKindLabel(t, meta)} / ${provider?.id ?? ''}`
+          : t('stepType')
+      }
       footer={(
         <div className="flex w-full flex-wrap items-center justify-between gap-3">
           <div className="flex min-w-0 items-center gap-2">
             <div className={`flex h-6 w-6 items-center justify-center rounded text-[9px] font-bold ${meta.bgClass} ${meta.textClass}`}>{meta.icon}</div>
-            <span className="truncate text-xs text-neutral-500">{meta.label}</span>
+            <span className="truncate text-xs text-neutral-500">{providerKindLabel(t, meta)}</span>
           </div>
           <div className="ml-auto flex shrink-0 gap-2">
             <button type="button" className={SECONDARY_BUTTON_CLASS} disabled={submitting} onClick={onClose}>{t('cancel')}</button>
@@ -463,7 +522,7 @@ export function StorageProviderEditor({
                 <div className="mb-4 flex items-center gap-2.5">
                   <div className={`flex h-9 w-9 items-center justify-center rounded-lg text-xs font-bold ${meta.bgClass} ${meta.textClass}`}>{meta.icon}</div>
                   <div>
-                    <div className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">{meta.label}</div>
+                    <div className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">{providerKindLabel(t, meta)}</div>
                     <div className="font-mono text-[11px] text-neutral-500">{provider?.id}</div>
                   </div>
                 </div>
@@ -494,7 +553,7 @@ export function StorageProviderEditor({
                       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                         <Field label={t('region')}>
                           <select value={region} onChange={(e) => handleRegionChange(e.target.value)} className={SELECT_CLASS}>
-                            {meta.regions.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
+                            {meta.regions.map((r) => <option key={r.value} value={r.value}>{providerRegionLabel(t, String(meta.value), r)}</option>)}
                           </select>
                         </Field>
                       </div>
@@ -533,16 +592,16 @@ export function StorageProviderEditor({
                     <input value={bucket} onChange={(e) => setBucket(e.target.value)} className={INPUT_CLASS} placeholder={t('bucketPlaceholder')} />
                     {meta.credentialFields?.bucketHint && (
                       <span className="mt-0.5 text-[10px] text-neutral-400">
-                        {t('bucketNamingHint')}: {meta.credentialFields.bucketHint}
+                        {t('bucketNamingHint')}: {providerBucketHint(t, meta.credentialFields)}
                       </span>
                     )}
                   </Field>
                 </div>
 
-                {!isLocalFs && usesStructuredCredentials && meta.credentialFields && (
+                {!isLocalFs && usesStructuredCredentials && credentialFields && (
                   <div className="mt-4">
                     <StorageProviderCredentialFields
-                      credentialFields={meta.credentialFields}
+                      credentialFields={credentialFields}
                       credentialRef={credentialRef}
                       isEditing={isEditing}
                       credentialConfigured={provider?.credentialConfigured}
@@ -555,14 +614,17 @@ export function StorageProviderEditor({
                       accountsLoading={accountsLoading}
                       accountsError={accountsError}
                       onReloadProviderAccounts={reloadProviderAccounts}
-                      accountScopeFilter={accountScopeFilter}
-                      onAccountScopeFilterChange={setAccountScopeFilter}
                       onCreateProviderAccount={(input) => {
                         if (!onCreateProviderAccount) {
                           return Promise.reject(new Error(t('accountLoadFailed')));
                         }
                         return onCreateProviderAccount(input);
                       }}
+                      // Kind ↔ vendor linkage: the picker only lists (and its
+                      // create form only registers) accounts of the vendor this
+                      // provider kind maps to, e.g. an Aliyun OSS provider sees
+                      // Aliyun accounts only.
+                      allowedVendorCodes={[defaultVendorCode]}
                       defaultVendorCode={defaultVendorCode}
                     />
                   </div>
@@ -570,7 +632,7 @@ export function StorageProviderEditor({
 
                 {!isLocalFs && !usesStructuredCredentials && (
                   <div className="mt-3">
-                    <Field label={meta.credentialLabel || t('credentialRef')} error={errors.credentialRef}>
+                    <Field label={providerCredentialLabel(t, meta) || t('credentialRef')} error={errors.credentialRef}>
                       <div className="relative">
                         <input
                           value={credentialRef}

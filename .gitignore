@@ -155,3 +155,9 @@ sdks/**/*-typescript/composed/**/*.d.ts
 
 # Dart build artifacts
 .dart_tool/
+
+# Electron desktop packaging build output (compiled main/preload, never committed)
+apps/sdkwork-drive-pc/packages/sdkwork-drive-pc-electron/dist-electron/
+
+# One-off local diagnostic app-config experiment dump (never committed)
+sdkwork-space.tmp-diagappconfig-*.json

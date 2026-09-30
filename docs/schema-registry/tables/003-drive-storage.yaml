@@ -12,8 +12,8 @@ tables:
       - name: provider_kind
         type: varchar(64)
         constraints:
-          - "enum: [local_filesystem, s3_compatible, google_cloud_storage, aliyun_oss, tencent_cos, huawei_obs, volcengine_tos]"
-          - "extensible_pattern: ^(local_filesystem|s3_compatible|google_cloud_storage|aliyun_oss|tencent_cos|huawei_obs|volcengine_tos|custom:[a-z0-9_-]{2,32})$"
+          - "enum: [local_filesystem, s3_compatible, google_cloud_storage, aliyun_oss, tencent_cos, huawei_obs, volcengine_tos, baidu_bos, kingsoft_ks3, qiniu_kodo, china_mobile_ecloud, china_telecom_eos, china_unicom_wo, minio, cloudflare_r2, backblaze_b2, wasabi, digitalocean_spaces, linode_object_storage, vultr_object_storage, scaleway_object_storage, oracle_cloud_storage, ibm_cos, alibaba_cloud_international, tencent_cloud_international]"
+          - "extensible_pattern: ^(local_filesystem|s3_compatible|google_cloud_storage|aliyun_oss|tencent_cos|huawei_obs|volcengine_tos|baidu_bos|kingsoft_ks3|qiniu_kodo|china_mobile_ecloud|china_telecom_eos|china_unicom_wo|minio|cloudflare_r2|backblaze_b2|wasabi|digitalocean_spaces|linode_object_storage|vultr_object_storage|scaleway_object_storage|oracle_cloud_storage|ibm_cos|alibaba_cloud_international|tencent_cloud_international|custom:[a-z0-9_-]{2,32})$"
       - name: name
         type: varchar(128)
       - name: endpoint_url
@@ -71,9 +71,39 @@ tables:
       - name: ix_dr_drive_storage_provider_status
         columns: [status, updated_at]
 
+  - table: dr_drive_storage_provider_kind
+    domain: drive
+    description: Catalog of storage provider kinds the console offers, with display name, enablement and ordering.
+    columns:
+      - name: provider_kind
+        type: varchar(64)
+        constraints:
+          - primary_key
+          - "enum: [local_filesystem, s3_compatible, google_cloud_storage, aliyun_oss, tencent_cos, huawei_obs, volcengine_tos, baidu_bos, kingsoft_ks3, qiniu_kodo, china_mobile_ecloud, china_telecom_eos, china_unicom_wo, minio, cloudflare_r2, backblaze_b2, wasabi, digitalocean_spaces, linode_object_storage, vultr_object_storage, scaleway_object_storage, oracle_cloud_storage, ibm_cos, alibaba_cloud_international, tencent_cloud_international]"
+      - name: display_name
+        type: varchar(128)
+        constraints:
+          - "must equal btrim(display_name); length between 1 and 128"
+      - name: enabled
+        type: boolean
+        constraints:
+          - "default: true"
+      - name: sort_order
+        type: integer
+        constraints:
+          - "default: 0"
+      - name: version
+        type: bigint
+        constraints:
+          - "min: 1"
+      - name: created_at
+        type: timestamp
+      - name: updated_at
+        type: timestamp
+
   - table: dr_drive_storage_provider_binding
     domain: drive
-    description: Tenant or space default binding to a configured storage provider.
+    description: Storage target for a tenant, a space, or a space type. The writer resolves a target in that order (space, then space type, then tenant), and the bound provider configuration carries the endpoint, credential, and bucket the objects land in.
     columns:
       - name: id
         type: varchar(192)
@@ -86,6 +116,7 @@ tables:
         nullable: true
         references: dr_drive_space.id
         on_delete: cascade
+        description: Set only for a space-scoped binding, the highest-priority rule in the resolution chain.
       - name: provider_id
         type: varchar(64)
         references: dr_drive_storage_provider.id
@@ -93,11 +124,12 @@ tables:
       - name: binding_scope
         type: varchar(32)
         constraints:
-          - "enum: [tenant, space]"
+          - "enum: [tenant, space, space_type]"
       - name: purpose
         type: varchar(32)
         constraints:
-          - "enum: [primary]"
+          - "tenant/space scope: primary"
+          - "space_type scope: the space type itself, one of [personal, team, knowledge_base, ai_generated, git_repository, deployment, app_upload, im, rtc, notary, website] — the same eleven values dr_drive_space.space_type accepts"
       - name: storage_root_prefix
         type: text
         constraints:

@@ -17,7 +17,7 @@ use crate::storage_keys::*;
 use axum::http::StatusCode;
 use axum::Json;
 use sdkwork_drive_contract::drive::domain_events as drive_events;
-use sdkwork_drive_storage_contract::{DriveObjectLocator, DriveObjectStore, PutObjectRequest};
+use sdkwork_drive_storage_contract::{DriveObjectLocator, PutObjectRequest};
 use sdkwork_drive_workspace_service::domain::uploader::content_type_group_for;
 use sdkwork_drive_workspace_service::infrastructure::sql::begin_transaction_sql;
 use sdkwork_drive_workspace_service::infrastructure::sql::managed_website_tree_guard::ensure_managed_website_parent_mutation_allowed;
@@ -299,6 +299,7 @@ pub(crate) async fn create_extracted_archive_file(
         tenant_id,
         space_id,
         None,
+        None,
         &node_id,
         &storage_object_id,
         1,
@@ -334,7 +335,7 @@ pub(crate) async fn create_extracted_archive_file(
         .ok_or_else(|| map_service_error(missing_signing_provider_error(&target.bucket)))?;
     let provider =
         require_active_storage_provider(provider, &target.bucket).map_err(map_service_error)?;
-    let object_store = build_s3_object_store_for_provider(&provider)
+    let object_store = build_s3_object_store_for_provider(state, &provider.to_domain_provider())
         .await
         .map_err(map_service_error)?
         .ok_or_else(|| map_service_error(unsupported_signing_provider_error(&target.bucket)))?;

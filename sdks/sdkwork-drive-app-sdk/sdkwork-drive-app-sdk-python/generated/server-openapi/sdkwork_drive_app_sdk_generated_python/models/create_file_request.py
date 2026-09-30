@@ -12,5 +12,6 @@ class CreateFileRequest:
     idempotency_key: str
     expires_at_epoch_ms: str
     parent_node_id: Optional[str] = None
+    storage_provider_id: Optional[str] = None
     bucket: Optional[str] = None
     object_key: Optional[str] = None

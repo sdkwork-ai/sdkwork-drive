@@ -18,10 +18,9 @@ export { StorageBucketsAdminPage } from './pages/StorageBucketsAdminPage';
 // to its raw key.
 export { StorageProviderEditor } from './components/StorageProviderEditor';
 export { StorageProviderCredentialFields } from './components/StorageProviderCredentialFields';
-export type {
-  AccountScopeFilter,
-  CredentialSource,
-} from './components/StorageProviderCredentialFields';
+export { StorageProviderAccountPickerDialog } from './components/StorageProviderAccountPickerDialog';
+export { StorageProviderAccountBadges } from './components/StorageProviderAccountBadges';
+export type { CredentialSource } from './components/StorageProviderCredentialFields';
 export {
   getProviderKindMeta,
   providerVendorCodeForKind,
@@ -46,6 +45,9 @@ export type {
   StorageProviderView,
   StorageProviderKindView,
   StorageProviderBindingView,
+  StorageBindingScope,
+  ListStorageProviderBindingsInput,
+  ListStorageProviderBindingsPageResult,
   StorageProviderBucketView,
   StorageProviderBucketListItemView,
   StorageProviderCapabilitiesView,

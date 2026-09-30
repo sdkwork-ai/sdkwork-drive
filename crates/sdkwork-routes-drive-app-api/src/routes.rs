@@ -7,7 +7,7 @@ use crate::sandbox_handlers::{
 };
 use crate::state::AppState;
 use axum::middleware;
-use axum::routing::{get, post, put};
+use axum::routing::{delete, get, post, put};
 use axum::Router;
 use sdkwork_drive_config::DatabaseConfig;
 use sdkwork_drive_http::infra::{drive_service_router_config, mount_drive_infra_routes};
@@ -51,7 +51,7 @@ pub async fn build_router_with_database_config(
 ) -> Result<Router, Box<dyn std::error::Error + Send + Sync>> {
     let pool = connect_postgres_database_and_install_schema(config)
         .await
-        .map_err(|error| Box::new(error) as Box<dyn std::error::Error + Send + Sync>)?;
+        .map_err(|error| -> Box<dyn std::error::Error + Send + Sync> { Box::new(error) })?;
     ensure_domain_outbox_dispatcher(pool.clone());
     Ok(build_protected_router_with_pool(pool).await)
 }
@@ -316,9 +316,58 @@ fn build_business_router_layers(state: AppState) -> Router {
             get(resolve_download_token),
         );
 
+    // Global assets. Drive nodes are the canonical asset source of truth, so the
+    // asset surface reuses `dr_drive_node` instead of a second asset entity.
+    // The retired upload/presign endpoints stay mounted as explicit `410 Gone`
+    // responses so clients get a diagnosable contract error rather than a 404.
+    let asset_routes = Router::new()
+        .route("/app/v3/api/assets", get(list_assets).post(create_asset))
+        .route(
+            "/app/v3/api/assets/{asset_id}",
+            get(get_asset).patch(update_asset),
+        )
+        .route("/app/v3/api/assets/{asset_id}/archive", post(archive_asset))
+        .route("/app/v3/api/assets/{asset_id}/restore", post(restore_asset))
+        .route(
+            "/app/v3/api/assets/collections",
+            get(list_asset_collections).post(create_asset_collection),
+        )
+        .route(
+            "/app/v3/api/assets/collections/{collection_id}/items",
+            post(add_asset_collection_item),
+        )
+        .route(
+            "/app/v3/api/assets/collections/{collection_id}/items/{item_id}",
+            delete(delete_asset_collection_item),
+        )
+        .route(
+            "/app/v3/api/assets/{asset_id}/relations",
+            post(create_asset_relation),
+        )
+        .route(
+            "/app/v3/api/assets/{asset_id}/relations/{relation_id}",
+            delete(delete_asset_relation),
+        )
+        .route(
+            "/app/v3/api/assets/upload",
+            get(legacy_asset_upload_route_gone).post(legacy_asset_upload_route_gone),
+        )
+        .route(
+            "/app/v3/api/assets/presign",
+            get(legacy_asset_upload_route_gone).post(legacy_asset_upload_route_gone),
+        )
+        .fallback(asset_method_not_allowed);
+
     Router::new()
         .merge(
             drive_routes
+                .route_layer(middleware::from_fn(
+                    crate::pagination_guard::reject_legacy_pagination_query,
+                ))
+                .route_layer(middleware::from_fn(crate::rate_limit::app_api_rate_limit)),
+        )
+        .merge(
+            asset_routes
                 .route_layer(middleware::from_fn(
                     crate::pagination_guard::reject_legacy_pagination_query,
                 ))

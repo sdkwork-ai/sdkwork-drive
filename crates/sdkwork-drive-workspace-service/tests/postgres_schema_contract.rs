@@ -28,7 +28,7 @@ async fn postgres_installer_uses_drive_nodes_for_global_assets() {
             "SELECT EXISTS (
                 SELECT 1
                 FROM information_schema.tables
-                WHERE table_schema='public' AND table_name=$1
+                WHERE table_schema=current_schema() AND table_name=$1
             )",
         )
         .bind(table_name)
@@ -51,7 +51,7 @@ async fn postgres_installer_uses_drive_nodes_for_global_assets() {
             "SELECT EXISTS (
                 SELECT 1
                 FROM pg_indexes
-                WHERE schemaname='public' AND indexname=$1
+                WHERE schemaname=current_schema() AND indexname=$1
             )",
         )
         .bind(index_name)
@@ -111,7 +111,7 @@ async fn postgres_installer_creates_special_space_profile_tables() {
             "SELECT EXISTS (
                 SELECT 1
                 FROM information_schema.tables
-                WHERE table_schema='public' AND table_name=$1
+                WHERE table_schema=current_schema() AND table_name=$1
             )",
         )
         .bind(table_name)
@@ -197,7 +197,7 @@ async fn postgres_installer_creates_special_space_profile_tables() {
             "SELECT EXISTS (
                 SELECT 1
                 FROM pg_indexes
-                WHERE schemaname='public' AND indexname=$1
+                WHERE schemaname=current_schema() AND indexname=$1
             )",
         )
         .bind(index_name)
@@ -211,7 +211,7 @@ async fn postgres_installer_creates_special_space_profile_tables() {
         "SELECT EXISTS (
             SELECT 1
             FROM information_schema.columns
-            WHERE table_schema='public'
+            WHERE table_schema=current_schema()
               AND table_name='dr_drive_node'
               AND column_name='shortcut_target_node_id'
         )",
@@ -229,7 +229,7 @@ async fn postgres_installer_creates_special_space_profile_tables() {
             "SELECT EXISTS (
                 SELECT 1
                 FROM information_schema.columns
-                WHERE table_schema='public'
+                WHERE table_schema=current_schema()
                   AND table_name='dr_drive_upload_item'
                   AND column_name=$1
             )",
@@ -250,7 +250,7 @@ async fn postgres_installer_creates_special_space_profile_tables() {
                 "SELECT EXISTS (
                     SELECT 1
                     FROM information_schema.columns
-                    WHERE table_schema='public'
+                    WHERE table_schema=current_schema()
                       AND table_name=$1
                       AND column_name=$2
                 )",
@@ -277,7 +277,7 @@ async fn postgres_installer_creates_special_space_profile_tables() {
             "SELECT EXISTS (
                 SELECT 1
                 FROM information_schema.columns
-                WHERE table_schema='public'
+                WHERE table_schema=current_schema()
                   AND table_name='dr_drive_node'
                   AND column_name=$1
             )",

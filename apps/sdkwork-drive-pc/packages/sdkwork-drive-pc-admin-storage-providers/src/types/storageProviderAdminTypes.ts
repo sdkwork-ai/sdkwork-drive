@@ -1,3 +1,12 @@
+/**
+ * Every provider kind the console can offer.
+ *
+ * Must stay in agreement with the backend's
+ * `DriveStorageProviderKind::BUILTIN` list and the OpenAPI `providerKind`
+ * enum — an entry here that the server rejects produces a 422 on submit, and a
+ * server kind missing here is unreachable from the picker. `custom` and
+ * `custom:<vendor>` stay the escape hatch for anything not named below.
+ */
 export type StorageProviderKind =
   | 'local_filesystem'
   | 's3_compatible'
@@ -6,6 +15,26 @@ export type StorageProviderKind =
   | 'tencent_cos'
   | 'huawei_obs'
   | 'volcengine_tos'
+  // --- Mainland China vendors ---------------------------------------------
+  | 'baidu_bos'
+  | 'kingsoft_ks3'
+  | 'qiniu_kodo'
+  | 'china_mobile_ecloud'
+  | 'china_telecom_eos'
+  | 'china_unicom_wo'
+  // --- Rest-of-world vendors ----------------------------------------------
+  | 'minio'
+  | 'cloudflare_r2'
+  | 'backblaze_b2'
+  | 'wasabi'
+  | 'digitalocean_spaces'
+  | 'linode_object_storage'
+  | 'vultr_object_storage'
+  | 'scaleway_object_storage'
+  | 'oracle_cloud_storage'
+  | 'ibm_cos'
+  | 'alibaba_cloud_international'
+  | 'tencent_cloud_international'
   | 'custom'
   | `custom:${string}`;
 
@@ -70,10 +99,43 @@ export interface StorageProviderBindingView {
   storageProvider?: StorageProviderView;
 }
 
+/**
+ * One step of the storage resolution chain.
+ *
+ * The writer resolves a target in this order, so the console shows one section
+ * per step and can narrow the list to exactly that step.
+ */
+export type StorageBindingScope = 'space' | 'space_type' | 'tenant';
+
+export interface ListStorageProviderBindingsInput {
+  /** Restrict the list to one resolution step. */
+  bindingScope?: StorageBindingScope;
+  spaceId?: string;
+  providerId?: string;
+  lifecycleStatus?: string;
+  pageSize?: number;
+  pageToken?: string;
+  signal?: AbortSignal;
+}
+
+export interface ListStorageProviderBindingsPageResult {
+  items: StorageProviderBindingView[];
+  nextPageToken?: string;
+  hasMore: boolean;
+}
+
 export interface StorageProviderBucketView {
   providerId: string;
   bucket: string;
   exists: boolean;
+}
+
+/** Result of the idempotent bucket initialization (storageProviders.bucket.update). */
+export interface StorageProviderBucketInitializeView {
+  providerId: string;
+  bucket: string;
+  /** True when this call created the bucket; false when it already existed. */
+  changed: boolean;
 }
 
 export interface CreateStorageProviderInput {
@@ -107,6 +169,15 @@ export interface UpdateStorageProviderInput {
 }
 
 export interface ListStorageProvidersInput {
+  /**
+   * Restrict the list to one provider kind, matched by the server *inside* the
+   * cursor window.
+   *
+   * The value is a catalogued kind (`tencent_cos`, `aliyun_oss`, ...) or the
+   * single word `custom`, which the server expands to the whole
+   * `custom:<vendor>` family.
+   */
+  providerKind?: string;
   status?: string;
   pageSize?: number;
   pageToken?: string;
@@ -235,6 +306,37 @@ export type StorageProviderAccountScope = 'user' | 'tenant' | 'platform';
  * is the visible proof that the run did **not** replace keys an operator had
  * already entered.
  */
+/**
+ * The vendor's own credential-field vocabulary, as returned by the bootstrap.
+ *
+ * The bootstrap writes the placeholder key pair itself, so it also knows how
+ * that vendor names the two halves. Carrying it back with the response keeps the
+ * console from maintaining a second copy of the same table — the copy is what
+ * drifts.
+ */
+export interface StorageProviderVendorCredentialFields {
+  accessKeyLabel: string;
+  secretKeyLabel: string;
+  defaultEnvAccessKey: string;
+  defaultEnvSecretKey: string;
+  consoleUrl: string;
+}
+
+/**
+ * The encryption modes and storage classes a vendor accepts, as returned by the
+ * bootstrap.
+ *
+ * Same "one table, not two" rule as `StorageProviderVendorCredentialFields`: the
+ * server's contract layer is the authority for what a vendor accepts, so the
+ * editor's dropdowns render these values instead of a second hand-maintained
+ * list in the console. `[0]` is the vendor's default, matching what the
+ * bootstrap writes into a freshly created provider.
+ */
+export interface StorageProviderVendorCapabilityDefaults {
+  serverSideEncryptionModes: string[];
+  storageClasses: string[];
+}
+
 export interface StorageProviderAccountDefaultView {
   providerKind: string;
   providerId: string;
@@ -245,6 +347,10 @@ export interface StorageProviderAccountDefaultView {
   accountCode?: string;
   accountCreated: boolean;
   credentialSeeded: boolean;
+  /** Absent for a credential-free kind, which has no key pair to label. */
+  credentialFields?: StorageProviderVendorCredentialFields;
+  /** Absent for a credential-free kind, which exposes neither control. */
+  vendorCapabilities?: StorageProviderVendorCapabilityDefaults;
 }
 
 export interface ListStorageProviderAccountsInput {

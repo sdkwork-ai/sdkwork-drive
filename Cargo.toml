@@ -61,7 +61,7 @@ serde_json = "1.0"
 jsonwebtoken = { version = "9", default-features = false, features = ["use_pem"] }
 sqlx = { version = "0.9", default-features = false, features = ["runtime-tokio", "tls-rustls", "postgres", "chrono"] }
 tempfile = "3.12"
-tokio = { version = "1.48", features = ["macros", "rt-multi-thread"] }
+tokio = { version = "1.53", features = ["fs", "macros", "rt-multi-thread"] }
 toml = "1"
 tower = { version = "0.5", features = ["util"] }
 tracing = "0.1"
@@ -81,10 +81,10 @@ zip = { version = "8.6.0", default-features = false, features = ["deflate-flate2
 # the build resolves exactly one rustls stack. aws-config and the sso/ssooidc/sts
 # crates already declare `default-features = false` upstream, so aws-sdk-s3 is
 # the only entry point for the legacy connector.
-aws-config = "1.8"
-aws-credential-types = "1.2"
-aws-sdk-s3 = { version = "1.79", default-features = false, features = ["sigv4a", "http-1x", "default-https-client", "rt-tokio"] }
-aws-types = "1.3"
+aws-config = "1.12"
+aws-credential-types = "1.3"
+aws-sdk-s3 = { version = "1.150", default-features = false, features = ["sigv4a", "http-1x", "default-https-client", "rt-tokio"] }
+aws-types = "1.6"
 
 # SDKWork workspace members - declared once at workspace root
 sdkwork-drive-contract = { path = "crates/sdkwork-drive-contract" }

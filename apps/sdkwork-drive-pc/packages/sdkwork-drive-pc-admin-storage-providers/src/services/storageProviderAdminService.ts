@@ -9,6 +9,8 @@ import type {
   CreateStorageProviderInput,
   GetStorageOverviewInput,
   ListStorageProviderAccountsInput,
+  ListStorageProviderBindingsInput,
+  ListStorageProviderBindingsPageResult,
   ListStorageProvidersInput,
   ListStorageProvidersPageResult,
   ListStorageProviderObjectsInput,
@@ -19,6 +21,7 @@ import type {
   StorageProviderAccountScope,
   StorageProviderAccountView,
   StorageProviderBindingView,
+  StorageProviderBucketInitializeView,
   StorageProviderBucketListItemView,
   StorageProviderBucketView,
   StorageProviderCapabilitiesView,
@@ -27,6 +30,8 @@ import type {
   StorageProviderObjectContentView,
   StorageProviderObjectMutationResult,
   StorageProviderObjectView,
+  StorageProviderVendorCapabilityDefaults,
+  StorageProviderVendorCredentialFields,
   StorageProviderView,
   UpdateStorageProviderInput,
   WriteStorageProviderObjectContentInput,
@@ -98,10 +103,25 @@ export interface StorageProviderAdminService {
   setSpaceTypeBinding(input: SetDefaultStorageProviderBindingInput & { spaceType: string }): Promise<StorageProviderBindingView>;
   deleteSpaceTypeBinding(spaceType: string, options?: StorageProviderMutationOptions): Promise<boolean>;
   listBindings(
-    input?: { providerId?: string; spaceId?: string; lifecycleStatus?: string; signal?: AbortSignal },
+    input?: ListStorageProviderBindingsInput,
   ): Promise<StorageProviderBindingView[]>;
+  /**
+   * One page of bindings, with the continuation the caller needs to read the
+   * rest.
+   *
+   * The console renders one section per resolution step, and steps are ranked
+   * (`space` → `space_type` → `tenant`), so a caller that reads the unfiltered
+   * list as "this step's rows" is reading one page of every step: enough
+   * space-scoped bindings push the space-type rows out of the window and the
+   * section then renders them as unbound. Pass `bindingScope` and follow
+   * `nextPageToken`.
+   */
+  listBindingsPage(
+    input?: ListStorageProviderBindingsInput,
+  ): Promise<ListStorageProviderBindingsPageResult>;
   listBuckets(providerId: string, options?: StorageProviderMutationOptions): Promise<StorageProviderBucketListItemView[]>;
-  createBucket(providerId: string, options?: StorageProviderMutationOptions): Promise<StorageProviderBucketView>;
+  /** Idempotent initialization: ensures the configured bucket exists on the vendor. */
+  initializeBucket(providerId: string, options?: StorageProviderMutationOptions): Promise<StorageProviderBucketInitializeView>;
   deleteBucket(providerId: string, options?: StorageProviderMutationOptions): Promise<boolean>;
   listObjects(
     providerId: string,
@@ -205,6 +225,15 @@ export function createStorageProviderAdminService({
         operationId: 'storageProviders.list',
         signal: input.signal,
         query: {
+          // The kind filter travels to the server so it is applied *before* the
+          // cursor window. Filtering the returned page instead made the
+          // console's provider switch report "no rows" for a kind whose row sat
+          // on the next page — see `StorageProvidersAdminPage`.
+          //
+          // `provider_kind` is the canonical lower_snake_case wire name for a
+          // multi-word query parameter (`API_SPEC.md` §13), matching `page_size`
+          // and `cursor` on this same request.
+          provider_kind: input.providerKind,
           status: input.status,
           page_size: input.pageSize ?? 20,
           cursor: input.pageToken,
@@ -264,7 +293,7 @@ export function createStorageProviderAdminService({
       });
       // 契约返回 204 无内容：请求成功即视为已删除。
       return response === undefined || response === null
-        || booleanField(recordOf(response), 'deleted') === true;
+        || booleanField(resourceRecord(response), 'deleted') === true;
     },
     async testProvider(providerId, options) {
       assertAdminWriteSession(getSession);
@@ -274,7 +303,9 @@ export function createStorageProviderAdminService({
         pathParams: { providerId },
         body: {},
       });
-      return booleanField(recordOf(response), 'reachable') ?? false;
+      // `storageProviders.test` answers the resource envelope too, so a flat
+      // read would report every provider as unreachable.
+      return booleanField(resourceRecord(response), 'reachable') ?? false;
     },
     async activateProvider(providerId, options) {
       assertAdminWriteSession(getSession);
@@ -322,7 +353,7 @@ export function createStorageProviderAdminService({
         signal: options?.signal,
         pathParams: { providerId },
       });
-      const record = recordOf(response);
+      const record = resourceRecord(response);
       return {
         providerId: stringField(record, 'providerId') ?? providerId,
         bucket: stringField(record, 'bucket') ?? '',
@@ -391,16 +422,33 @@ export function createStorageProviderAdminService({
       return service.deleteDefaultBinding(spaceType, { ...options, spaceType: true });
     },
     async listBindings(input = {}) {
+      const page = await service.listBindingsPage(input);
+      return page.items;
+    },
+    async listBindingsPage(input = {}) {
       const response = await adminStorageSdkClient.request<unknown>({
         operationId: 'storageProviderBindings.list',
         signal: input.signal,
         query: {
+          // `binding_scope` is the canonical lower_snake_case wire name for a
+          // multi-word query parameter (`API_SPEC.md` §13), matching `page_size`
+          // and `cursor` on this same request.
+          binding_scope: input.bindingScope,
           providerId: input.providerId,
           spaceId: input.spaceId,
           lifecycleStatus: input.lifecycleStatus,
+          page_size: input.pageSize ?? 20,
+          cursor: input.pageToken,
         },
       });
-      return extractItems(response).map(responseToBinding);
+      const record = recordOf(response);
+      const pageInfo = isRecord(record.pageInfo) ? record.pageInfo : {};
+      const nextPageToken = stringField(pageInfo, 'nextCursor');
+      return {
+        items: extractItems(response).map(responseToBinding),
+        nextPageToken,
+        hasMore: booleanField(pageInfo, 'hasMore') ?? Boolean(nextPageToken),
+      };
     },
     async listBuckets(providerId, options) {
       const response = await adminStorageSdkClient.request<unknown>({
@@ -420,18 +468,21 @@ export function createStorageProviderAdminService({
         } satisfies StorageProviderBucketListItemView;
       });
     },
-    async createBucket(providerId, options) {
+    async initializeBucket(providerId, options) {
+      // storageProviders.bucket.update is an idempotent ensure on the backend:
+      // it creates the configured bucket only when missing and reports
+      // changed=false when it already exists, so re-running stays safe.
       const response = await adminStorageSdkClient.request<unknown>({
         operationId: 'storageProviders.bucket.update',
         signal: options?.signal,
         pathParams: { providerId },
       });
-      const record = recordOf(response);
+      const record = resourceRecord(response);
       return {
         providerId: stringField(record, 'providerId') ?? providerId,
         bucket: stringField(record, 'bucket') ?? '',
-        exists: booleanField(record, 'exists') ?? true,
-      };
+        changed: booleanField(record, 'changed') ?? false,
+      } satisfies StorageProviderBucketInitializeView;
     },
     async deleteBucket(providerId, options) {
       const response = await adminStorageSdkClient.request<unknown>({
@@ -439,7 +490,7 @@ export function createStorageProviderAdminService({
         signal: options?.signal,
         pathParams: { providerId },
       });
-      return booleanField(recordOf(response), 'changed') ?? false;
+      return booleanField(resourceRecord(response), 'changed') ?? false;
     },
     async listObjects(providerId, input = {}) {
       const response = await adminStorageSdkClient.request<unknown>({
@@ -471,7 +522,7 @@ export function createStorageProviderAdminService({
       });
       // 契约返回 204 无内容：请求成功即视为已删除。
       return response === undefined || response === null
-        || booleanField(recordOf(response), 'deleted') === true;
+        || booleanField(resourceRecord(response), 'deleted') === true;
     },
     async readObjectContent(providerId, objectKey, options) {
       const response = await adminStorageSdkClient.request<unknown>({
@@ -479,7 +530,7 @@ export function createStorageProviderAdminService({
         signal: options?.signal,
         pathParams: { providerId, objectKey },
       });
-      const record = recordOf(response);
+      const record = resourceRecord(response);
       return {
         providerId: stringField(record, 'providerId') ?? providerId,
         bucket: stringField(record, 'bucket') ?? '',
@@ -502,7 +553,7 @@ export function createStorageProviderAdminService({
           ...(input.contentType !== undefined ? { contentType: input.contentType } : {}),
         },
       });
-      return objectRecordToView(recordOf(response));
+      return objectRecordToView(resourceRecord(response));
     },
     async copyObject(providerId, input, options) {
       const response = await adminStorageSdkClient.request<unknown>({
@@ -514,7 +565,7 @@ export function createStorageProviderAdminService({
           destinationObjectKey: input.destinationObjectKey,
         },
       });
-      const record = recordOf(response);
+      const record = resourceRecord(response);
       return {
         providerId: stringField(record, 'providerId') ?? providerId,
         bucket: stringField(record, 'bucket') ?? '',
@@ -617,7 +668,7 @@ function providerCreateBody(input: CreateStorageProviderInput): JsonRecord {
 }
 
 function responseToStorageProvider(response: unknown): StorageProviderView {
-  const record = recordOf(response);
+  const record = resourceRecord(response);
   const name = stringField(record, 'name', 'displayName') ?? '';
   return {
     id: stringField(record, 'id', 'providerId') ?? '',
@@ -696,11 +747,71 @@ function responseToStorageProviderAccountDefault(
     accountCode: stringField(record, 'accountCode', 'account_code'),
     accountCreated: booleanField(record, 'accountCreated', 'account_created') ?? false,
     credentialSeeded: booleanField(record, 'credentialSeeded', 'credential_seeded') ?? false,
+    credentialFields: responseToVendorCredentialFields(record.credentialFields),
+    vendorCapabilities: responseToVendorCapabilityDefaults(record.vendorCapabilities),
+  };
+}
+
+/**
+ * The vendor credential vocabulary the server wrote alongside the placeholder
+ * key pair.
+ *
+ * Read with a tolerant shape check rather than a blind cast: the field is
+ * optional in the response (a credential-free kind has none), and a version
+ * skew that dropped it must degrade to `undefined` — the console then falls
+ * back to its own static catalog — instead of handing the editor a half-built
+ * object with empty labels.
+ */
+function responseToVendorCredentialFields(
+  value: unknown,
+): StorageProviderVendorCredentialFields | undefined {
+  const record = recordOf(value);
+  const accessKeyLabel = stringField(record, 'accessKeyLabel', 'access_key_label');
+  const secretKeyLabel = stringField(record, 'secretKeyLabel', 'secret_key_label');
+  const defaultEnvAccessKey = stringField(record, 'defaultEnvAccessKey', 'default_env_access_key');
+  const defaultEnvSecretKey = stringField(record, 'defaultEnvSecretKey', 'default_env_secret_key');
+  const consoleUrl = stringField(record, 'consoleUrl', 'console_url');
+  if (
+    !accessKeyLabel ||
+    !secretKeyLabel ||
+    !defaultEnvAccessKey ||
+    !defaultEnvSecretKey ||
+    !consoleUrl
+  ) {
+    return undefined;
+  }
+  return { accessKeyLabel, secretKeyLabel, defaultEnvAccessKey, defaultEnvSecretKey, consoleUrl };
+}
+
+/**
+ * The vendor's encryption-mode / storage-class vocabulary, as returned by the
+ * bootstrap.
+ *
+ * Unlike the credential labels these two lists may legitimately be empty (a
+ * vendor that exposes no tier choice), so an absent field and an empty list are
+ * different answers: absent means "no opinion, keep the console's own list",
+ * empty means "this vendor offers nothing". Both are preserved rather than
+ * collapsed, so the editor's `has*` flags stay honest.
+ */
+function responseToVendorCapabilityDefaults(
+  value: unknown,
+): StorageProviderVendorCapabilityDefaults | undefined {
+  const record = recordOf(value);
+  if (Object.keys(record).length === 0) {
+    return undefined;
+  }
+  return {
+    serverSideEncryptionModes: stringArrayField(
+      record,
+      'serverSideEncryptionModes',
+      'server_side_encryption_modes',
+    ),
+    storageClasses: stringArrayField(record, 'storageClasses', 'storage_classes'),
   };
 }
 
 function responseToProviderKind(response: unknown): StorageProviderKindView {
-  const record = recordOf(response);
+  const record = resourceRecord(response);
   return {
     providerKind: stringField(record, 'providerKind', 'provider_kind') ?? '',
     displayName: stringField(record, 'displayName', 'display_name') ?? '',
@@ -792,7 +903,7 @@ function responseToStorageOverview(response: unknown): StorageOverviewView {
 }
 
 function responseToCapabilities(response: unknown): StorageProviderCapabilitiesView {
-  const record = recordOf(response);
+  const record = resourceRecord(response);
   return {
     providerId: stringField(record, 'providerId') ?? '',
     providerKind: stringField(record, 'providerKind') ?? '',
@@ -808,7 +919,9 @@ function responseToCapabilities(response: unknown): StorageProviderCapabilitiesV
 }
 
 function responseToBinding(response: unknown): StorageProviderBindingView {
-  const record = recordOf(response);
+  // A single binding arrives as `{ item }` (retrieve/upsert); a listed binding is
+  // a bare object inside `items`. Both shapes project through the same reader.
+  const record = resourceRecord(response);
   const storageProvider = record.storageProvider;
   return {
     id: stringField(record, 'id') ?? '',
@@ -852,6 +965,21 @@ function extractItems(response: unknown): unknown[] {
 
 function recordOf(value: unknown): JsonRecord {
   return isRecord(value) ? value : {};
+}
+
+/**
+ * Unwrap a single-resource response body.
+ *
+ * The SDKWork envelope is `{ data: ... }` and the transport already returns
+ * `data`, so every 2xx body for one resource is `{ item: {...} }`
+ * (`API_SPEC.md` §15.1.1). A projection that reads the fields off the outer
+ * object therefore reads `undefined` for all of them — silently, because the
+ * types are structural. This helper accepts the item envelope and a bare object,
+ * which is what nested projections (a provider inside a binding) already are.
+ */
+function resourceRecord(value: unknown): JsonRecord {
+  const record = recordOf(value);
+  return isRecord(record.item) ? record.item : record;
 }
 
 function isRecord(value: unknown): value is JsonRecord {

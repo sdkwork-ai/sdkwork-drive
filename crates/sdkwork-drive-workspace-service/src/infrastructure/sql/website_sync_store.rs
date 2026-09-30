@@ -931,7 +931,9 @@ async fn expire_excess_retained_generations(
     website_root_uuid: &str,
     operator_id: &str,
 ) -> Result<(), DriveServiceError> {
-    let retained_generation_count: i64 = sqlx::query_scalar(
+    // `retained_generation_count` is declared `INT` (int4); decode as `i32`
+    // then widen, matching the store-wide `i32` -> `i64::from` convention.
+    let retained_generation_count: i64 = sqlx::query_scalar::<_, i32>(
         "SELECT retained_generation_count
          FROM dr_drive_space_website_profile
          WHERE tenant_id=$1 AND space_id=$2 AND profile_status='active'",
@@ -943,7 +945,8 @@ async fn expire_excess_retained_generations(
     .map_err(|error| internal("read Website Space retained generation policy", error))?
     .ok_or_else(|| {
         DriveServiceError::Conflict("Website Space publishing profile is not active".to_string())
-    })?;
+    })?
+    .into();
     let expired = sqlx::query(
         "UPDATE dr_drive_website_root_generation
          SET generation_status='expired'
@@ -1033,20 +1036,24 @@ async fn ensure_active_folder(
     space_id: &str,
     node_id: &str,
 ) -> Result<(), DriveServiceError> {
-    let found: Option<i64> = sqlx::query_scalar(
-        "SELECT 1
-         FROM dr_drive_node
-         WHERE tenant_id=$1 AND space_id=$2 AND id=$3
-           AND space_type='website' AND node_type='folder'
-           AND lifecycle_status='active'",
+    // `SELECT 1` yields an `int4` literal that cannot be decoded as `i64`;
+    // `EXISTS` returns a real `boolean` and matches the store-wide convention.
+    let found: bool = sqlx::query_scalar(
+        "SELECT EXISTS(
+             SELECT 1
+             FROM dr_drive_node
+             WHERE tenant_id=$1 AND space_id=$2 AND id=$3
+               AND space_type='website' AND node_type='folder'
+               AND lifecycle_status='active'
+         )",
     )
     .bind(tenant_id)
     .bind(space_id)
     .bind(node_id)
-    .fetch_optional(&mut *connection)
+    .fetch_one(&mut *connection)
     .await
     .map_err(|error| internal("validate WebsiteSync folder", error))?;
-    if found.is_none() {
+    if !found {
         return Err(DriveServiceError::Validation(
             "WebsiteSync root folder is not active".to_string(),
         ));
@@ -1209,7 +1216,7 @@ where
             content_state, head_content_length, head_checksum_sha256_hex,
             shortcut_target_node_id
          ) AS (
-            SELECT id, parent_node_id, node_name, CAST(node_name AS TEXT), 1, node_type,
+            SELECT id, parent_node_id, node_name, CAST(node_name AS TEXT), CAST(1 AS BIGINT), node_type,
                    content_state, head_content_length, head_checksum_sha256_hex,
                    shortcut_target_node_id
             FROM dr_drive_node
@@ -1316,7 +1323,73 @@ fn sync_matches_create(sync: &DriveWebsiteSync, command: &CreateDriveWebsiteSync
         && sync.manifest_sha256 == command.manifest_sha256
         && sync.manifest_file_count == command.manifest_file_count
         && sync.manifest_total_bytes == command.manifest_total_bytes
-        && sync.expires_at == command.expires_at
+        && instants_match(&sync.expires_at, &command.expires_at)
+}
+
+/// Compares two timestamps for the same instant, tolerating differing formats.
+///
+/// `expires_at` is persisted as `TIMESTAMPTZ` and read back through
+/// `CAST(... AS TEXT)`, so Postgres renders it in its own session style and
+/// timezone (`2026-09-29 16:12:52.42+08`) while the command carries RFC 3339
+/// (`2026-09-29T08:12:52.420Z`). The two denote the same instant but never
+/// compare equal as strings, which would reject every legitimate replay.
+///
+/// Both sides are therefore reduced to a comparable epoch value. Values that
+/// cannot be interpreted as a timestamp fall back to exact string equality, so
+/// a genuinely different request is still rejected.
+fn instants_match(left: &str, right: &str) -> bool {
+    if left == right {
+        return true;
+    }
+    normalize_instant_text(left)
+        .zip(normalize_instant_text(right))
+        .is_some_and(|(left, right)| left == right)
+}
+
+/// Reduces a timestamp string to its epoch milliseconds.
+///
+/// Only the instant is compared; the source offset is deliberately discarded,
+/// since the same moment written in UTC and in a session's local timezone must
+/// compare equal.
+fn normalize_instant_text(value: &str) -> Option<i64> {
+    parse_instant(value).map(|instant| instant.timestamp_millis())
+}
+
+/// Parses either an RFC 3339 timestamp or Postgres' default `TIMESTAMPTZ`
+/// rendering, e.g. `2026-09-29 16:12:52.42+08` or `2026-09-29 08:12:52+00`.
+fn parse_instant(value: &str) -> Option<chrono::DateTime<chrono::FixedOffset>> {
+    if let Ok(parsed) = chrono::DateTime::parse_from_rfc3339(value) {
+        return Some(parsed);
+    }
+    let normalized = normalize_postgres_offset(value);
+    // The fractional-second specifier is mandatory: Postgres always renders
+    // `TIMESTAMPTZ` with sub-second precision.
+    const FORMATS: [&str; 2] = ["%Y-%m-%d %H:%M:%S%.f%:z", "%Y-%m-%d %H:%M:%S%.f%z"];
+    FORMATS
+        .iter()
+        .find_map(|format| chrono::DateTime::parse_from_str(normalized.as_ref(), format).ok())
+}
+
+/// Rewrites a bare numeric offset such as `+08` / `-05` into the `+08:00`
+/// / `-05:00` form chrono's offset specifiers accept, leaving longer offsets
+/// (already `+0800` or `+08:00`) untouched.
+fn normalize_postgres_offset(value: &str) -> std::borrow::Cow<'_, str> {
+    use std::borrow::Cow;
+
+    let Some(sign_index) = value
+        .as_bytes()
+        .iter()
+        .rposition(|byte| matches!(byte, b'+' | b'-'))
+    else {
+        return Cow::Borrowed(value);
+    };
+    // Only a trailing `+HH`/`-HH` is rewritten, never a leading date separator.
+    let offset = &value[sign_index..];
+    if offset.len() != 3 || !offset[1..].bytes().all(|byte| byte.is_ascii_digit()) {
+        return Cow::Borrowed(value);
+    }
+    let (sign, digits) = offset.split_at(1);
+    Cow::Owned(format!("{}{sign}{digits}:00", &value[..sign_index]))
 }
 
 async fn get_root_on_connection(
@@ -1551,4 +1624,61 @@ fn internal(operation: &str, error: sqlx::Error) -> DriveServiceError {
         ""
     };
     DriveServiceError::Internal(format!("{prefix}{operation} failed: {error}"))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn instants_match_accepts_postgres_rendering_of_the_same_instant() {
+        // Postgres renders TIMESTAMPTZ in its session timezone and DateStyle
+        // (Asia/Shanghai, ISO): a space separator, a bare `+08` offset, and
+        // trailing-zero-stripped fractional seconds. The command side carries
+        // RFC 3339 in UTC. Both denote the same instant.
+        assert!(instants_match(
+            "2026-09-29 16:13:51.157+08",
+            "2026-09-29T08:13:51.157Z"
+        ));
+        // Fractional seconds with a different number of shown digits.
+        assert!(instants_match(
+            "2026-09-29 16:13:51.42+08",
+            "2026-09-29T08:13:51.420Z"
+        ));
+        // A UTC-offset rendering still compares equal.
+        assert!(instants_match(
+            "2026-09-29 08:13:51.157+00",
+            "2026-09-29T08:13:51.157Z"
+        ));
+    }
+
+    #[test]
+    fn instants_match_rejects_genuinely_different_instants() {
+        assert!(!instants_match(
+            "2026-09-29 16:13:51.157+08",
+            "2026-09-29T09:13:51.157Z"
+        ));
+    }
+
+    #[test]
+    fn instants_match_rejects_unparseable_values() {
+        assert!(!instants_match("not-a-timestamp", "2026-09-29T08:13:51.157Z"));
+        assert!(!instants_match(
+            "2026-09-29T08:13:51.157Z",
+            "also-not-a-timestamp"
+        ));
+    }
+
+    #[test]
+    fn normalize_instant_text_parses_postgres_default_rendering() {
+        assert_eq!(
+            normalize_instant_text("2026-09-29 16:13:51.157+08"),
+            normalize_instant_text("2026-09-29T08:13:51.157Z")
+        );
+        assert_eq!(
+            normalize_instant_text("2026-09-29 08:13:51.157+00"),
+            normalize_instant_text("2026-09-29T08:13:51.157Z")
+        );
+        assert_eq!(normalize_instant_text("not-a-timestamp"), None);
+    }
 }

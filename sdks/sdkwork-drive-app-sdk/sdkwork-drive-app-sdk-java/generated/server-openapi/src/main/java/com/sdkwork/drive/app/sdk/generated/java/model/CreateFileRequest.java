@@ -9,6 +9,7 @@ public class CreateFileRequest {
     private String uploadSessionId;
     private String idempotencyKey;
     private String expiresAtEpochMs;
+    private String storageProviderId;
     private String bucket;
     private String objectKey;
 
@@ -66,6 +67,14 @@ public class CreateFileRequest {
 
     public void setExpiresAtEpochMs(String expiresAtEpochMs) {
         this.expiresAtEpochMs = expiresAtEpochMs;
+    }
+
+    public String getStorageProviderId() {
+        return this.storageProviderId;
+    }
+
+    public void setStorageProviderId(String storageProviderId) {
+        this.storageProviderId = storageProviderId;
     }
 
     public String getBucket() {

@@ -456,6 +456,221 @@ describe('desktop architecture contract', () => {
     expect(offenders.map((file) => path.relative(appRoot, file))).toEqual([]);
   });
 
+  it('grants Tauri capabilities for every registered tray, shortcut, and clipboard command', () => {
+    const desktopMain = read('packages/sdkwork-drive-pc-desktop/src-tauri/src/main.rs');
+    const permissionsToml = read('packages/sdkwork-drive-pc-desktop/src-tauri/permissions/default.toml');
+    const capabilities = JSON.parse(
+      read('packages/sdkwork-drive-pc-desktop/src-tauri/capabilities/default.json'),
+    ) as { permissions: string[] };
+    const tauriConfig = JSON.parse(
+      read('packages/sdkwork-drive-pc-desktop/src-tauri/tauri.conf.json'),
+    ) as { app: { trayIcon?: { id?: string; iconPath?: string } } };
+    const cargoToml = read('packages/sdkwork-drive-pc-desktop/src-tauri/Cargo.toml');
+    const buildRs = read('packages/sdkwork-drive-pc-desktop/src-tauri/build.rs');
+
+    const capabilityCommands = [
+      'tray_set_visible',
+      'tray_set_menu',
+      'tray_emit_menu',
+      'tray_restore_window',
+      'shortcut_register_all',
+      'shortcut_unregister',
+      'shortcut_unregister_all',
+      'clipboard_cut_paths',
+      'clipboard_read_paths',
+      'clipboard_write_text',
+    ];
+
+    for (const command of capabilityCommands) {
+      expect(desktopMain, `${command} should be registered`).toContain(command);
+      expect(permissionsToml, `${command} should be allowed`).toContain(`"${command}"`);
+      expect(capabilities.permissions, command).toContain(`allow-${command.replaceAll('_', '-')}`);
+      // build.rs drives Tauri's permission autogeneration; a command missing here
+      // silently produces no `allow-*` permission at build time.
+      expect(buildRs, `${command} should be declared to tauri_build`).toContain(command);
+    }
+
+    // Tray + global shortcut plugins back the host implementations, and the
+    // tray-icon/image-png features gate the tray builder APIs.
+    expect(cargoToml).toContain('tauri-plugin-clipboard-manager');
+    expect(cargoToml).toContain('tauri-plugin-global-shortcut');
+    expect(cargoToml).toContain('tray-icon');
+    expect(cargoToml).toContain('image-png');
+    expect(desktopMain).toContain('tauri_plugin_clipboard_manager::init()');
+    expect(desktopMain).toContain('tauri_plugin_global_shortcut::Builder');
+
+    // The tray icon must be declared in config or the tray never materializes.
+    expect(tauriConfig.app.trayIcon?.id).toBe('sdkwork-drive-tray');
+    expect(tauriConfig.app.trayIcon?.iconPath).toBe('icons/icon.ico');
+  });
+
+  it('keeps the Electron host a separate security-baselined package with an allowlisted bridge', () => {
+    const electronRoot = path.join(appRoot, 'packages', 'sdkwork-drive-pc-electron');
+
+    for (const relativePath of [
+      'package.json',
+      'specs/component.spec.json',
+      'electron-builder.config.mjs',
+      'src/index.ts',
+      'src/host/electronDesktopHost.ts',
+      'src-electron/main/index.ts',
+      'src-electron/main/tray.ts',
+      'src-electron/main/shortcuts.ts',
+      'src-electron/main/clipboard.ts',
+      'src-electron/main/window.ts',
+      'src-electron/main/ipc.ts',
+      'src-electron/preload/index.ts',
+      'src-electron/shared/ipc-channels.ts',
+      'resources/icons/icon.png',
+    ]) {
+      expect(
+        existsSync(path.join(electronRoot, relativePath)),
+        `sdkwork-drive-pc-electron/${relativePath} should exist`,
+      ).toBe(true);
+    }
+
+    const electronPackage = JSON.parse(readFileSync(path.join(electronRoot, 'package.json'), 'utf8'));
+    const electronSpec = JSON.parse(
+      readFileSync(path.join(electronRoot, 'specs', 'component.spec.json'), 'utf8'),
+    ) as { component: { name: string }; contracts: { publicExports: string[]; events: string[] } };
+
+    expect(electronPackage.name).toBe('sdkwork-drive-pc-electron');
+    expect(electronSpec.component.name).toBe('sdkwork-drive-pc-electron');
+    expect(electronSpec.contracts.publicExports).toEqual(
+      expect.arrayContaining(['.', './host']),
+    );
+    expect(electronSpec.contracts.events).toEqual(
+      expect.arrayContaining(['sdkwork:tray:menu', 'sdkwork:shortcut:triggered']),
+    );
+
+    // §5.3 security baseline: every BrowserWindow must opt in explicitly.
+    const windowSource = read('packages/sdkwork-drive-pc-electron/src-electron/main/window.ts');
+    for (const baseline of [
+      'contextIsolation: true',
+      'nodeIntegration: false',
+      'sandbox: true',
+      'webSecurity: true',
+    ]) {
+      expect(windowSource, baseline).toContain(baseline);
+    }
+    expect(windowSource).toContain('setWindowOpenHandler');
+    expect(windowSource).toContain('will-navigate');
+
+    // The preload is the only bridge surface and must not widen the boundary.
+    const preloadSource = read('packages/sdkwork-drive-pc-electron/src-electron/preload/index.ts');
+    expect(preloadSource).toContain('contextBridge.exposeInMainWorld');
+    expect(preloadSource).toContain("'sdkworkDesktop'");
+    expect(preloadSource).toContain('isAllowedMethod');
+    expect(preloadSource).toContain('isAllowedEvent');
+    expect(preloadSource).not.toContain('nodeIntegration');
+
+    // IPC registration refuses anything outside the shared allowlist.
+    const ipcSource = read('packages/sdkwork-drive-pc-electron/src-electron/main/ipc.ts');
+    expect(ipcSource).toContain('ipcMain.handle');
+    expect(ipcSource).toContain('isAllowedMethod');
+    expect(ipcSource).toContain('ok: true');
+    expect(ipcSource).toContain('ok: false');
+
+    // The renderer-side adapter must consume the bridge, never Tauri globals.
+    const adapterSource = read('packages/sdkwork-drive-pc-electron/src/host/electronDesktopHost.ts');
+    expect(adapterSource).toContain('sdkworkDesktop');
+    expect(adapterSource).not.toMatch(/window\.__TAURI__|@tauri-apps\/api/);
+
+    // The app-level tsconfig must not compile the Electron main/preload tree,
+    // which is a separate build target with its own tsconfig and Node libs.
+    const appTsconfig = JSON.parse(read('tsconfig.json')) as { exclude: string[] };
+    expect(appTsconfig.exclude).toEqual(
+      expect.arrayContaining(['packages/sdkwork-drive-pc-electron/src-electron/**']),
+    );
+
+    // Both host architectures are declared in the app runtime contract.
+    const appConfig = JSON.parse(
+      readFileSync(path.join(repoRoot, 'sdkwork.app.config.json'), 'utf8'),
+    ) as {
+      runtime: { runtimes: string[] };
+      artifacts: {
+        installConfig: {
+          metadata: { defaultHostArchitecture?: string; hostArchitectures?: string[] };
+        };
+      };
+    };
+    expect(appConfig.runtime.runtimes).toEqual(
+      expect.arrayContaining(['WEB', 'TAURI', 'ELECTRON']),
+    );
+    const installMetadata = appConfig.artifacts.installConfig.metadata;
+    expect(installMetadata.defaultHostArchitecture).toBe('tauri');
+    expect(installMetadata.hostArchitectures).toEqual(
+      expect.arrayContaining(['tauri', 'electron']),
+    );
+  });
+
+  it('keeps tray menu actions and shortcut bindings on one shared command vocabulary', () => {
+    const hostCommands = read('packages/sdkwork-drive-pc-core/src/host/hostCommands.ts');
+    const hostCapabilities = read('packages/sdkwork-drive-pc-core/src/host/hostCapabilities.ts');
+    const preferences = read(
+      'packages/sdkwork-drive-pc-commons/src/components/drivePcPreferences.tsx',
+    );
+    const settingsModal = read('packages/sdkwork-drive-pc-commons/src/components/SettingsModal.tsx');
+    const settingsEn = read(
+      'packages/sdkwork-drive-pc-commons/src/i18n/en-US/drive/commons/settings.ts',
+    );
+    const settingsZh = read(
+      'packages/sdkwork-drive-pc-commons/src/i18n/zh-CN/drive/commons/settings.ts',
+    );
+    const fileBrowser = read('packages/sdkwork-drive-pc-file/src/components/FileBrowser.tsx');
+    const app = read('src/App.tsx');
+
+    // One command id plane drives tray clicks and keyboard shortcuts alike.
+    expect(hostCommands).toContain('buildTrayMenuItems');
+    expect(hostCommands).toContain('dispatchHostCommand');
+    expect(hostCommands).toContain('bindHostShortcuts');
+    expect(hostCommands).toContain('bindTrayMenu');
+    expect(hostCommands).toContain('TRAY_MENU_ORDER');
+
+    // Bridge method names follow `sdkwork:<capability>:<action>`.
+    for (const method of [
+      'sdkwork:tray:setVisible',
+      'sdkwork:tray:setMenu',
+      'sdkwork:tray:restoreWindow',
+      'sdkwork:shortcut:registerAll',
+      'sdkwork:shortcut:unregister',
+      'sdkwork:shortcut:unregisterAll',
+      'sdkwork:clipboard:cutPaths',
+      'sdkwork:clipboard:readPaths',
+      'sdkwork:clipboard:writeText',
+    ]) {
+      expect(hostCapabilities, method).toContain(method);
+    }
+
+    // Settings Center exposes a shortcuts tab with persisted bindings.
+    expect(preferences).toContain('DEFAULT_SHORTCUT_BINDINGS');
+    expect(preferences).toContain('applyShortcutBinding');
+    expect(preferences).toContain('resetShortcutBindings');
+    expect(preferences).toContain('globalShortcutsEnabled');
+    expect(preferences).toContain('minimizeToTrayOnClose');
+    expect(settingsModal).toContain("'shortcuts'");
+    expect(settingsModal).toContain('ShortcutRecorder');
+    expect(settingsModal).toContain('resetShortcutBindings');
+
+    for (const [label, source] of [
+      ['en-US', settingsEn],
+      ['zh-CN', settingsZh],
+    ] as const) {
+      expect(source, label).toContain('shortcuts');
+      expect(source, label).toContain('shortcutBindingsTitle');
+      expect(source, label).toContain('resetShortcuts');
+      expect(source, label).toContain('trayEnabled');
+    }
+
+    // Cut is wired through the pending-selection store and the host clipboard.
+    expect(fileBrowser).toContain('handleBatchCut');
+    expect(fileBrowser).toContain('handlePasteCut');
+    expect(fileBrowser).toContain('hasCapability("clipboard")');
+    expect(app).toContain('useDriveHostEffects');
+    expect(app).toContain('cutSelection');
+    expect(app).toContain('runDriveFileBrowserCommand');
+  });
+
   it('keeps shared UI preference storage injected by the PC shell', () => {
     const commonsSource = readAll(
       path.join(appRoot, 'packages', 'sdkwork-drive-pc-commons', 'src'),

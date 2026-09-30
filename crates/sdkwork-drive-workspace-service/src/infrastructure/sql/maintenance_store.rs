@@ -343,7 +343,7 @@ impl DriveMaintenanceStore for SqlMaintenanceStore {
                     "fso-expired-upload-{operation_type}-{upload_item_id}"
                 ))
                 .bind(&tenant_id)
-                .bind(row.get::<Option<String>, _>("organization_id"))
+                .bind(row.get::<Option<String>, _>("organization_id").as_deref().unwrap_or("0"))
                 .bind(row.get::<Option<String>, _>("user_id"))
                 .bind(row.get::<String, _>("space_id"))
                 .bind(&node_id)

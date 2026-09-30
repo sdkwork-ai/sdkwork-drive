@@ -9,11 +9,26 @@ pub enum S3ProviderProfile {
     Minio,
     CloudflareR2,
     AliyunOss,
+    AliyunOssInternational,
     TencentCos,
+    TencentCosInternational,
     HuaweiObs,
     VolcengineTos,
+    BaiduBos,
+    KingsoftKs3,
+    QiniuKodo,
+    ChinaMobileEcloud,
+    ChinaTelecomEos,
+    ChinaUnicomWo,
     GoogleCloudStorage,
     BackblazeB2,
+    Wasabi,
+    DigitalOceanSpaces,
+    LinodeObjectStorage,
+    VultrObjectStorage,
+    ScalewayObjectStorage,
+    OracleCloudStorage,
+    IbmCos,
     GenericCompatible,
 }
 
@@ -26,15 +41,36 @@ impl S3ProviderProfile {
             Self::Minio => "minio",
             Self::CloudflareR2 => "cloudflare_r2",
             Self::AliyunOss => "aliyun_oss",
+            Self::AliyunOssInternational => "alibaba_cloud_international",
             Self::TencentCos => "tencent_cos",
+            Self::TencentCosInternational => "tencent_cloud_international",
             Self::HuaweiObs => "huawei_obs",
             Self::VolcengineTos => "volcengine_tos",
+            Self::BaiduBos => "baidu_bos",
+            Self::KingsoftKs3 => "kingsoft_ks3",
+            Self::QiniuKodo => "qiniu_kodo",
+            Self::ChinaMobileEcloud => "china_mobile_ecloud",
+            Self::ChinaTelecomEos => "china_telecom_eos",
+            Self::ChinaUnicomWo => "china_unicom_wo",
             Self::GoogleCloudStorage => "google_cloud_storage",
             Self::BackblazeB2 => "backblaze_b2",
+            Self::Wasabi => "wasabi",
+            Self::DigitalOceanSpaces => "digitalocean_spaces",
+            Self::LinodeObjectStorage => "linode_object_storage",
+            Self::VultrObjectStorage => "vultr_object_storage",
+            Self::ScalewayObjectStorage => "scaleway_object_storage",
+            Self::OracleCloudStorage => "oracle_cloud_storage",
+            Self::IbmCos => "ibm_cos",
             Self::GenericCompatible => "generic_s3_compatible",
         }
     }
 
+    /// Region assumed when a configuration leaves `region` empty.
+    ///
+    /// `auto` on Cloudflare R2 and `us-east-1` elsewhere: R2 rejects any other
+    /// literal, while the remaining vendors accept either `us-east-1` as their
+    /// own default or ignore the field because the endpoint carries the real
+    /// region.
     pub fn default_region(self) -> &'static str {
         match self {
             Self::CloudflareR2 => "auto",
@@ -42,22 +78,31 @@ impl S3ProviderProfile {
         }
     }
 
+    /// Whether the vendor serves bucket-in-path (`true`) or bucket-in-host
+    /// (`false`) addressing by default.
+    ///
+    /// Self-hosted and generic endpoints default to path style; the named cloud
+    /// vendors all publish virtual-hosted-style endpoints.
     pub fn default_force_path_style(self) -> bool {
         match self {
-            Self::AwsS3 => false,
-            Self::GoogleCloudStorage => false,
-            Self::AliyunOss => false,
-            Self::TencentCos => false,
-            Self::HuaweiObs => false,
-            Self::VolcengineTos => false,
-            Self::BackblazeB2 => false,
-            Self::CloudflareR2 => true,
-            Self::Minio => true,
-            Self::GenericCompatible => true,
+            Self::Minio
+            | Self::CloudflareR2
+            | Self::GenericCompatible
+            | Self::ChinaMobileEcloud
+            | Self::ChinaTelecomEos
+            | Self::ChinaUnicomWo
+            | Self::LinodeObjectStorage
+            | Self::VultrObjectStorage
+            | Self::IbmCos => true,
+            _ => false,
         }
     }
 
     pub fn from_provider_kind(provider_kind: &str, endpoint: Option<&str>) -> Self {
+        // `s3_compatible` is the "any S3 vendor" key: it intentionally does not
+        // resolve to a named profile on its own, so the endpoint decides (or
+        // falls back to the generic profile). Every other catalog key maps
+        // straight to its profile.
         let normalized = provider_kind.trim().to_ascii_lowercase();
         if normalized == "s3_compatible" {
             if let Some(endpoint_value) = endpoint {
@@ -67,20 +112,8 @@ impl S3ProviderProfile {
             }
             return Self::GenericCompatible;
         }
-        if normalized == "aliyun_oss" {
-            return Self::AliyunOss;
-        }
-        if normalized == "tencent_cos" {
-            return Self::TencentCos;
-        }
-        if normalized == "huawei_obs" {
-            return Self::HuaweiObs;
-        }
-        if normalized == "volcengine_tos" {
-            return Self::VolcengineTos;
-        }
-        if normalized == "google_cloud_storage" {
-            return Self::GoogleCloudStorage;
+        if let Some(profile) = Self::from_vendor_key(&normalized) {
+            return profile;
         }
         if let Some(suffix) = normalized.strip_prefix(Self::CUSTOM_PREFIX) {
             if let Some(profile) = Self::from_vendor_key(suffix) {
@@ -102,15 +135,42 @@ impl S3ProviderProfile {
             "minio" => Some(Self::Minio),
             "r2" | "cloudflare" | "cloudflare_r2" => Some(Self::CloudflareR2),
             "oss" | "aliyun" | "aliyun_oss" | "alibaba_oss" => Some(Self::AliyunOss),
+            "aliyun_intl"
+            | "aliyun_international"
+            | "alibaba_cloud_international"
+            | "alibabacloud_intl" => Some(Self::AliyunOssInternational),
             "cos" | "tencent" | "tencent_cos" => Some(Self::TencentCos),
+            "tencent_intl"
+            | "tencent_international"
+            | "tencent_cloud_international"
+            | "cos_intl" => Some(Self::TencentCosInternational),
             "obs" | "huawei" | "huawei_obs" => Some(Self::HuaweiObs),
             "tos" | "volc" | "volcengine" | "volcengine_tos" | "volcano" | "volcano_tos"
             | "bytedance_tos" => Some(Self::VolcengineTos),
+            "bos" | "baidu" | "baidu_bos" => Some(Self::BaiduBos),
+            "ks3" | "kingsoft" | "kingsoft_ks3" | "ksyun" => Some(Self::KingsoftKs3),
+            "kodo" | "qiniu" | "qiniu_kodo" => Some(Self::QiniuKodo),
+            "ecloud" | "china_mobile" | "china_mobile_ecloud" | "cmecloud" | "cmss" => {
+                Some(Self::ChinaMobileEcloud)
+            }
+            "eos" | "china_telecom" | "china_telecom_eos" | "ctyun" | "ctyun_eos" => {
+                Some(Self::ChinaTelecomEos)
+            }
+            "unicom_wo" | "china_unicom" | "china_unicom_wo" | "wocloud" | "wo" => {
+                Some(Self::ChinaUnicomWo)
+            }
             "gcs" | "google_cloud_storage" | "google_storage" => Some(Self::GoogleCloudStorage),
             "b2" | "backblaze" | "backblaze_b2" => Some(Self::BackblazeB2),
-            "s3_compatible" | "generic_s3" | "generic_s3_compatible" => {
-                Some(Self::GenericCompatible)
+            "wasabi" => Some(Self::Wasabi),
+            "spaces" | "digitalocean" | "digitalocean_spaces" | "do_spaces" => {
+                Some(Self::DigitalOceanSpaces)
             }
+            "linode" | "linode_object_storage" | "akamai" => Some(Self::LinodeObjectStorage),
+            "vultr" | "vultr_object_storage" => Some(Self::VultrObjectStorage),
+            "scaleway" | "scaleway_object_storage" | "scw" => Some(Self::ScalewayObjectStorage),
+            "oci" | "oracle" | "oracle_cloud_storage" => Some(Self::OracleCloudStorage),
+            "ibm" | "ibm_cos" | "cos_ibm" => Some(Self::IbmCos),
+            "generic_s3" | "generic_s3_compatible" => Some(Self::GenericCompatible),
             _ => None,
         }
     }
@@ -123,10 +183,21 @@ impl S3ProviderProfile {
         if normalized.contains(".r2.cloudflarestorage.com") {
             return Some(Self::CloudflareR2);
         }
+        // Cloudflare R2 also answers on the account-scoped `<account>.r2.cloudflarestorage.com`
+        // form the console shows, which the suffix check above already covers;
+        // the bare `r2.dev` public host is deliberately not a storage endpoint.
         if normalized.contains("aliyuncs.com") {
+            // Both the mainland (`oss-cn-*`) and international (`oss-*-intl`)
+            // hosts live under the same domain, so the region segment decides.
+            if normalized.contains("-intl") {
+                return Some(Self::AliyunOssInternational);
+            }
             return Some(Self::AliyunOss);
         }
-        if normalized.contains(".myqcloud.com") {
+        if normalized.contains(".myqcloud.com") || normalized.contains(".cos.tencentcos") {
+            if normalized.contains("intl") || normalized.contains("cos-intl") {
+                return Some(Self::TencentCosInternational);
+            }
             return Some(Self::TencentCos);
         }
         if normalized.contains(".myhuaweicloud.com") {
@@ -135,11 +206,50 @@ impl S3ProviderProfile {
         if normalized.contains(".volces.com") || normalized.contains("volcengine") {
             return Some(Self::VolcengineTos);
         }
+        if normalized.contains("bcebos.com") {
+            return Some(Self::BaiduBos);
+        }
+        if normalized.contains("ks3-cn") || normalized.contains("ksyuncs.com") {
+            return Some(Self::KingsoftKs3);
+        }
+        if normalized.contains("qiniucs.com") || normalized.contains("kodo") {
+            return Some(Self::QiniuKodo);
+        }
+        if normalized.contains("cmecloud.cn") {
+            return Some(Self::ChinaMobileEcloud);
+        }
+        if normalized.contains("ctyun.cn") || normalized.contains("ooscn.ctyunapi.cn") {
+            return Some(Self::ChinaTelecomEos);
+        }
+        if normalized.contains("wocloud.com") || normalized.contains("wos.com.cn") {
+            return Some(Self::ChinaUnicomWo);
+        }
         if normalized.contains("storage.googleapis.com") {
             return Some(Self::GoogleCloudStorage);
         }
         if normalized.contains("backblazeb2.com") {
             return Some(Self::BackblazeB2);
+        }
+        if normalized.contains("wasabisys.com") {
+            return Some(Self::Wasabi);
+        }
+        if normalized.contains("digitaloceanspaces.com") {
+            return Some(Self::DigitalOceanSpaces);
+        }
+        if normalized.contains("linodeobjects.com") {
+            return Some(Self::LinodeObjectStorage);
+        }
+        if normalized.contains("vultrobjects.com") {
+            return Some(Self::VultrObjectStorage);
+        }
+        if normalized.contains("scw.cloud") {
+            return Some(Self::ScalewayObjectStorage);
+        }
+        if normalized.contains("oraclecloud.com") {
+            return Some(Self::OracleCloudStorage);
+        }
+        if normalized.contains("cloud-object-storage") || normalized.contains(".ibm.com") {
+            return Some(Self::IbmCos);
         }
         if normalized.contains("amazonaws.com") {
             return Some(Self::AwsS3);

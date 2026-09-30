@@ -1,0 +1,24 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "jsx": "react-jsx",
+    "strict": true,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "types": ["node"],
+    "paths": {
+      "sdkwork-drive-pc-core": ["../sdkwork-drive-pc-core/src/index.ts"],
+      "sdkwork-drive-pc-core/host": ["../sdkwork-drive-pc-core/src/host/index.ts"],
+      "sdkwork-drive-pc-commons": ["../sdkwork-drive-pc-commons/src/index.ts"],
+      "sdkwork-drive-pc-types": ["../sdkwork-drive-pc-types/src/index.ts"]
+    }
+  },
+  "include": ["src/**/*.ts", "src/**/*.tsx", "src-electron/**/*.ts"],
+  "exclude": ["node_modules", "dist"]
+}

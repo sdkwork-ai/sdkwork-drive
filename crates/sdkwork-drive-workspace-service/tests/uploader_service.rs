@@ -15,6 +15,14 @@ async fn prepare_upload_creates_logged_in_user_upload_space_and_task() {
     else {
         return;
     };
+
+    sdkwork_drive_test_support::seed_storage_provider_and_binding(
+        &pool,
+        &sdkwork_drive_test_support::StorageProviderSeed::new("provider-tenant-user", "tenant-user")
+            .with_bucket("bucket-uploader")
+            .with_actor_id("user-001"),
+    )
+    .await;
     let service = DriveUploaderService::new(SqlUploaderStore::new(pool.clone()));
 
     let prepared = service
@@ -120,6 +128,14 @@ async fn prepare_upload_allocates_unique_name_when_file_already_exists() {
     else {
         return;
     };
+
+    sdkwork_drive_test_support::seed_storage_provider_and_binding(
+        &pool,
+        &sdkwork_drive_test_support::StorageProviderSeed::new("provider-tenant-user", "tenant-user")
+            .with_bucket("bucket-uploader")
+            .with_actor_id("user-001"),
+    )
+    .await;
     let service = DriveUploaderService::new(SqlUploaderStore::new(pool.clone()));
     let base_command = |id: &str, task_id: &str| PrepareUploaderUploadCommand {
         id: id.to_string(),
@@ -180,6 +196,14 @@ async fn prepare_upload_allocates_unique_name_for_stale_uploading_node() {
     else {
         return;
     };
+
+    sdkwork_drive_test_support::seed_storage_provider_and_binding(
+        &pool,
+        &sdkwork_drive_test_support::StorageProviderSeed::new("provider-tenant-stale", "tenant-stale")
+            .with_bucket("bucket-uploader")
+            .with_actor_id("user-001"),
+    )
+    .await;
     let service = DriveUploaderService::new(SqlUploaderStore::new(pool.clone()));
 
     let first = service
@@ -251,6 +275,14 @@ async fn prepare_anonymous_upload_uses_app_owned_upload_space() {
     else {
         return;
     };
+
+    sdkwork_drive_test_support::seed_storage_provider_and_binding(
+        &pool,
+        &sdkwork_drive_test_support::StorageProviderSeed::new("provider-tenant-anon", "tenant-anon")
+            .with_bucket("bucket-uploader")
+            .with_actor_id("app-001"),
+    )
+    .await;
     let service = DriveUploaderService::new(SqlUploaderStore::new(pool.clone()));
 
     let prepared = service
@@ -362,6 +394,14 @@ async fn prepare_im_upload_uses_im_space_type_for_auto_upload_space() {
     else {
         return;
     };
+
+    sdkwork_drive_test_support::seed_storage_provider_and_binding(
+        &pool,
+        &sdkwork_drive_test_support::StorageProviderSeed::new("provider-tenant-im", "tenant-im")
+            .with_bucket("bucket-uploader")
+            .with_actor_id("app-001"),
+    )
+    .await;
     let service = DriveUploaderService::new(SqlUploaderStore::new(pool.clone()));
 
     let prepared = service
@@ -438,6 +478,14 @@ async fn prepare_rtc_upload_uses_rtc_space_type_for_auto_upload_space() {
     else {
         return;
     };
+
+    sdkwork_drive_test_support::seed_storage_provider_and_binding(
+        &pool,
+        &sdkwork_drive_test_support::StorageProviderSeed::new("provider-tenant-rtc", "tenant-rtc")
+            .with_bucket("bucket-uploader")
+            .with_actor_id("app-001"),
+    )
+    .await;
     let service = DriveUploaderService::new(SqlUploaderStore::new(pool.clone()));
 
     let prepared = service
@@ -514,6 +562,14 @@ async fn prepare_upload_to_target_space_requires_owner_or_writer_permission() {
     else {
         return;
     };
+
+    sdkwork_drive_test_support::seed_storage_provider_and_binding(
+        &pool,
+        &sdkwork_drive_test_support::StorageProviderSeed::new("provider-tenant-target-permission", "tenant-target-permission")
+            .with_bucket("bucket-uploader")
+            .with_actor_id("user-owner"),
+    )
+    .await;
     seed_space(
         &pool,
         "space-owned-by-user",
@@ -636,6 +692,14 @@ async fn prepare_anonymous_upload_to_explicit_space_requires_public_writer_share
     else {
         return;
     };
+
+    sdkwork_drive_test_support::seed_storage_provider_and_binding(
+        &pool,
+        &sdkwork_drive_test_support::StorageProviderSeed::new("provider-tenant-public-upload", "tenant-public-upload")
+            .with_bucket("bucket-uploader")
+            .with_actor_id("app-001"),
+    )
+    .await;
     seed_space(
         &pool,
         "space-public-upload",
@@ -754,6 +818,14 @@ async fn prepare_video_upload_selects_video_profile_and_temporary_retention() {
     else {
         return;
     };
+
+    sdkwork_drive_test_support::seed_storage_provider_and_binding(
+        &pool,
+        &sdkwork_drive_test_support::StorageProviderSeed::new("provider-tenant-video", "tenant-video")
+            .with_bucket("bucket-uploader")
+            .with_actor_id("user-001"),
+    )
+    .await;
     let service = DriveUploaderService::new(SqlUploaderStore::new(pool));
 
     let prepared = service
@@ -807,6 +879,14 @@ async fn prepare_ai_generated_upload_targets_ai_generated_space_for_user_and_ano
     else {
         return;
     };
+
+    sdkwork_drive_test_support::seed_storage_provider_and_binding(
+        &pool,
+        &sdkwork_drive_test_support::StorageProviderSeed::new("provider-tenant-ai", "tenant-ai")
+            .with_bucket("bucket-uploader")
+            .with_actor_id("user-001"),
+    )
+    .await;
     let service = DriveUploaderService::new(SqlUploaderStore::new(pool.clone()));
 
     let user_prepared = service
@@ -912,6 +992,14 @@ async fn mark_part_uploaded_is_idempotent_and_updates_upload_item_counters() {
     else {
         return;
     };
+
+    sdkwork_drive_test_support::seed_storage_provider_and_binding(
+        &pool,
+        &sdkwork_drive_test_support::StorageProviderSeed::new("provider-tenant-part", "tenant-part")
+            .with_bucket("bucket-uploader")
+            .with_actor_id("user-001"),
+    )
+    .await;
     let service = DriveUploaderService::new(SqlUploaderStore::new(pool.clone()));
     let prepared = service
         .prepare_upload(PrepareUploaderUploadCommand {
@@ -971,7 +1059,9 @@ async fn mark_part_uploaded_is_idempotent_and_updates_upload_item_counters() {
     assert_eq!(first.id, second.id);
     assert_eq!(first.etag, second.etag);
 
-    let counters: (i64, i64) = sqlx::query_as(
+    // `uploaded_parts_count` is `INTEGER` (int4) while `uploaded_bytes` is
+    // `BIGINT` (int8); a single `(i64, i64)` tuple cannot decode both.
+    let counters: (i32, i64) = sqlx::query_as(
         "SELECT uploaded_parts_count, uploaded_bytes
          FROM dr_drive_upload_item
          WHERE id=$1",
@@ -980,7 +1070,7 @@ async fn mark_part_uploaded_is_idempotent_and_updates_upload_item_counters() {
     .fetch_one(&pool)
     .await
     .expect("upload item counters should be queryable");
-    assert_eq!(counters, (1, 4));
+    assert_eq!((i64::from(counters.0), counters.1), (1, 4));
 }
 
 #[tokio::test]
@@ -989,6 +1079,14 @@ async fn complete_stored_upload_marks_generated_object_ready_and_is_idempotent()
     else {
         return;
     };
+
+    sdkwork_drive_test_support::seed_storage_provider_and_binding(
+        &pool,
+        &sdkwork_drive_test_support::StorageProviderSeed::new("provider-tenant-ai-complete", "tenant-ai-complete")
+            .with_bucket("bucket-uploader")
+            .with_actor_id("user-001"),
+    )
+    .await;
     let service = DriveUploaderService::new(SqlUploaderStore::new(pool.clone()));
     let prepared = service
         .prepare_upload(PrepareUploaderUploadCommand {
@@ -1021,6 +1119,27 @@ async fn complete_stored_upload_marks_generated_object_ready_and_is_idempotent()
         })
         .await
         .expect("AI generated upload should be prepared");
+
+    // Completion is validated against the parts the client actually reported, so
+    // the declared single part must be recorded before finalizing.
+    service
+        .mark_part_uploaded(MarkUploaderPartUploadedCommand {
+            id: "upload-part-ai-complete-001".to_string(),
+            tenant_id: "tenant-ai-complete".to_string(),
+            upload_item_id: prepared.id.clone(),
+            upload_session_id: prepared
+                .upload_session_id
+                .clone()
+                .expect("prepare should create an upload session"),
+            part_no: 1,
+            offset_bytes: 0,
+            size_bytes: 13,
+            etag: "etag-ai-complete-1".to_string(),
+            checksum_sha256_hex: None,
+            uploaded_at_epoch_ms: 1_800_000_001_000,
+        })
+        .await
+        .expect("declared upload part should be recorded before completion");
 
     let completed = service
         .complete_stored_upload(CompleteStoredUploaderUploadCommand {
@@ -1174,6 +1293,14 @@ async fn upload_bytes_writes_object_and_completes_ai_generated_upload() {
     else {
         return;
     };
+
+    sdkwork_drive_test_support::seed_storage_provider_and_binding(
+        &pool,
+        &sdkwork_drive_test_support::StorageProviderSeed::new("provider-tenant-ai-bytes", "tenant-ai-bytes")
+            .with_bucket("bucket-uploader")
+            .with_actor_id("user-001"),
+    )
+    .await;
     let service = DriveUploaderService::new(SqlUploaderStore::new(pool.clone()));
     let object_store =
         LocalDriveObjectStore::new(unique_temp_storage_root("drive-uploader-upload-bytes"));
@@ -1270,6 +1397,14 @@ async fn complete_stored_upload_quarantine_trashes_node_records_sensitive_operat
     else {
         return;
     };
+
+    sdkwork_drive_test_support::seed_storage_provider_and_binding(
+        &pool,
+        &sdkwork_drive_test_support::StorageProviderSeed::new("provider-tenant-quarantine", "tenant-quarantine")
+            .with_bucket("bucket-uploader")
+            .with_actor_id("user-001"),
+    )
+    .await;
     let service = DriveUploaderService::new(SqlUploaderStore::new(pool.clone()));
     let prepared = service
         .prepare_upload(PrepareUploaderUploadCommand {
@@ -1530,7 +1665,7 @@ async fn seed_permission(
         "INSERT INTO dr_drive_node_permission (
             id, tenant_id, node_id, subject_type, subject_id, role,
             inherited, lifecycle_status, version, created_by, updated_by
-        ) VALUES ($1, $2, $3, $4, $5, $6, 0, 'active', 1, $5, $5)",
+        ) VALUES ($1, $2, $3, $4, $5, $6, FALSE, 'active', 1, $5, $5)",
     )
     .bind(permission_id)
     .bind(tenant_id)

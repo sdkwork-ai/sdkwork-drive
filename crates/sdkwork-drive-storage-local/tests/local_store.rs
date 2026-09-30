@@ -85,6 +85,28 @@ async fn local_store_lists_bucket_directories_in_stable_order() {
 }
 
 #[tokio::test]
+async fn local_store_create_bucket_is_idempotent() {
+    let temp_dir = tempfile::tempdir().expect("temp dir must be created");
+    let store = LocalDriveObjectStore::new(temp_dir.path());
+
+    let first = store
+        .create_bucket(sdkwork_drive_storage_contract::CreateBucketRequest {
+            bucket: "tenant-001".to_string(),
+        })
+        .await
+        .expect("first create should succeed");
+    assert!(first.created);
+
+    let second = store
+        .create_bucket(sdkwork_drive_storage_contract::CreateBucketRequest {
+            bucket: "tenant-001".to_string(),
+        })
+        .await
+        .expect("re-running initialization must not fail");
+    assert!(!second.created);
+}
+
+#[tokio::test]
 async fn local_store_rejects_zero_max_keys_without_silent_clamp() {
     let temp_dir = tempfile::tempdir().expect("temp dir must be created");
     let store = LocalDriveObjectStore::new(temp_dir.path());

@@ -943,7 +943,25 @@ CREATE TABLE IF NOT EXISTS dr_drive_storage_provider (
                 'aliyun_oss',
                 'tencent_cos',
                 'huawei_obs',
-                'volcengine_tos'
+                'volcengine_tos',
+                'baidu_bos',
+                'kingsoft_ks3',
+                'qiniu_kodo',
+                'china_mobile_ecloud',
+                'china_telecom_eos',
+                'china_unicom_wo',
+                'minio',
+                'cloudflare_r2',
+                'backblaze_b2',
+                'wasabi',
+                'digitalocean_spaces',
+                'linode_object_storage',
+                'vultr_object_storage',
+                'scaleway_object_storage',
+                'oracle_cloud_storage',
+                'ibm_cos',
+                'alibaba_cloud_international',
+                'tencent_cloud_international'
             )
             OR provider_kind ~ '^custom:[a-z0-9_-]{2,32}$'
         ),
@@ -1024,7 +1042,7 @@ CREATE TABLE IF NOT EXISTS dr_drive_storage_provider_binding (
                 binding_scope = 'space_type'
                 AND purpose IN (
                     'personal', 'team', 'knowledge_base', 'ai_generated', 'git_repository',
-                    'deployment', 'app_upload', 'im', 'rtc', 'notary'
+                    'deployment', 'app_upload', 'im', 'rtc', 'notary', 'website'
                 )
             )
         ),
@@ -1809,7 +1827,25 @@ CREATE TABLE IF NOT EXISTS dr_drive_storage_provider_kind (
                 'aliyun_oss',
                 'tencent_cos',
                 'huawei_obs',
-                'volcengine_tos'
+                'volcengine_tos',
+                'baidu_bos',
+                'kingsoft_ks3',
+                'qiniu_kodo',
+                'china_mobile_ecloud',
+                'china_telecom_eos',
+                'china_unicom_wo',
+                'minio',
+                'cloudflare_r2',
+                'backblaze_b2',
+                'wasabi',
+                'digitalocean_spaces',
+                'linode_object_storage',
+                'vultr_object_storage',
+                'scaleway_object_storage',
+                'oracle_cloud_storage',
+                'ibm_cos',
+                'alibaba_cloud_international',
+                'tencent_cloud_international'
             )
         ),
     CONSTRAINT ck_dr_drive_storage_provider_kind_display_name
@@ -1822,11 +1858,29 @@ INSERT INTO dr_drive_storage_provider_kind (provider_kind, display_name, enabled
 VALUES
     ('local_filesystem', 'Local Filesystem', TRUE, 1),
     ('s3_compatible', 'Amazon S3 / S3 Compatible', TRUE, 2),
-    ('google_cloud_storage', 'Google Cloud Storage', TRUE, 3),
-    ('aliyun_oss', 'Alibaba Cloud OSS', TRUE, 4),
-    ('tencent_cos', 'Tencent Cloud COS', TRUE, 5),
-    ('huawei_obs', 'Huawei Cloud OBS', TRUE, 6),
-    ('volcengine_tos', 'Volcengine TOS', TRUE, 7)
+    ('aliyun_oss', 'Alibaba Cloud OSS', TRUE, 10),
+    ('tencent_cos', 'Tencent Cloud COS', TRUE, 11),
+    ('huawei_obs', 'Huawei Cloud OBS', TRUE, 12),
+    ('volcengine_tos', 'Volcengine TOS', TRUE, 13),
+    ('baidu_bos', 'Baidu Cloud BOS', TRUE, 14),
+    ('kingsoft_ks3', 'Kingsoft Cloud KS3', TRUE, 15),
+    ('qiniu_kodo', 'Qiniu Kodo', TRUE, 16),
+    ('china_mobile_ecloud', 'China Mobile Ecloud', TRUE, 17),
+    ('china_telecom_eos', 'China Telecom EOS', TRUE, 18),
+    ('china_unicom_wo', 'China Unicom Wo Cloud', TRUE, 19),
+    ('minio', 'MinIO', TRUE, 30),
+    ('cloudflare_r2', 'Cloudflare R2', TRUE, 31),
+    ('backblaze_b2', 'Backblaze B2', TRUE, 32),
+    ('wasabi', 'Wasabi', TRUE, 33),
+    ('digitalocean_spaces', 'DigitalOcean Spaces', TRUE, 34),
+    ('linode_object_storage', 'Akamai / Linode Object Storage', TRUE, 35),
+    ('vultr_object_storage', 'Vultr Object Storage', TRUE, 36),
+    ('scaleway_object_storage', 'Scaleway Object Storage', TRUE, 37),
+    ('oracle_cloud_storage', 'Oracle Cloud Infrastructure Object Storage', TRUE, 38),
+    ('ibm_cos', 'IBM Cloud Object Storage', TRUE, 39),
+    ('alibaba_cloud_international', 'Alibaba Cloud OSS (International)', TRUE, 40),
+    ('tencent_cloud_international', 'Tencent Cloud COS (International)', TRUE, 41),
+    ('google_cloud_storage', 'Google Cloud Storage', TRUE, 50)
 ON CONFLICT (provider_kind) DO NOTHING;
 
 -- folded migration: migrations/postgres/0003_drive_tenant_quota.up.sql
@@ -1921,9 +1975,52 @@ INSERT INTO dr_drive_storage_provider_kind (provider_kind, display_name, enabled
 VALUES
     ('local_filesystem', 'Local Filesystem', TRUE, 1),
     ('s3_compatible', 'Amazon S3 / S3 Compatible', TRUE, 2),
-    ('google_cloud_storage', 'Google Cloud Storage', TRUE, 3),
-    ('aliyun_oss', 'Alibaba Cloud OSS', TRUE, 4),
-    ('tencent_cos', 'Tencent Cloud COS', TRUE, 5),
-    ('huawei_obs', 'Huawei Cloud OBS', TRUE, 6),
-    ('volcengine_tos', 'Volcengine TOS', TRUE, 7)
+    ('aliyun_oss', 'Alibaba Cloud OSS', TRUE, 10),
+    ('tencent_cos', 'Tencent Cloud COS', TRUE, 11),
+    ('huawei_obs', 'Huawei Cloud OBS', TRUE, 12),
+    ('volcengine_tos', 'Volcengine TOS', TRUE, 13),
+    ('baidu_bos', 'Baidu Cloud BOS', TRUE, 14),
+    ('kingsoft_ks3', 'Kingsoft Cloud KS3', TRUE, 15),
+    ('qiniu_kodo', 'Qiniu Kodo', TRUE, 16),
+    ('china_mobile_ecloud', 'China Mobile Ecloud', TRUE, 17),
+    ('china_telecom_eos', 'China Telecom EOS', TRUE, 18),
+    ('china_unicom_wo', 'China Unicom Wo Cloud', TRUE, 19),
+    ('minio', 'MinIO', TRUE, 30),
+    ('cloudflare_r2', 'Cloudflare R2', TRUE, 31),
+    ('backblaze_b2', 'Backblaze B2', TRUE, 32),
+    ('wasabi', 'Wasabi', TRUE, 33),
+    ('digitalocean_spaces', 'DigitalOcean Spaces', TRUE, 34),
+    ('linode_object_storage', 'Akamai / Linode Object Storage', TRUE, 35),
+    ('vultr_object_storage', 'Vultr Object Storage', TRUE, 36),
+    ('scaleway_object_storage', 'Scaleway Object Storage', TRUE, 37),
+    ('oracle_cloud_storage', 'Oracle Cloud Infrastructure Object Storage', TRUE, 38),
+    ('ibm_cos', 'IBM Cloud Object Storage', TRUE, 39),
+    ('alibaba_cloud_international', 'Alibaba Cloud OSS (International)', TRUE, 40),
+    ('tencent_cloud_international', 'Tencent Cloud COS (International)', TRUE, 41),
+    ('google_cloud_storage', 'Google Cloud Storage', TRUE, 50)
 ON CONFLICT (provider_kind) DO NOTHING;
+
+-- folded migration: migrations/postgres/0006_drive_storage_provider_kind_translation.up.sql
+-- Localized display names for the built-in provider-kind catalog
+-- (I18N_SPEC.md §11, DATABASE_SPEC.md §6.4.1). Base rows keep the stable
+-- machine fields plus the locale-neutral fallback display name; translation
+-- rows carry the per-locale operator-facing label keyed by
+-- (provider_kind, locale) and are installed by the idempotent locale seed
+-- scripts under database/seeds/locales/<locale>/.
+CREATE TABLE IF NOT EXISTS dr_drive_storage_provider_kind_translation (
+    provider_kind VARCHAR(64) NOT NULL,
+    locale VARCHAR(16) NOT NULL,
+    display_name VARCHAR(128) NOT NULL,
+    version BIGINT NOT NULL DEFAULT 1,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT pk_dr_drive_storage_provider_kind_translation
+        PRIMARY KEY (provider_kind, locale),
+    CONSTRAINT fk_dr_drive_storage_provider_kind_translation_kind
+        FOREIGN KEY (provider_kind)
+        REFERENCES dr_drive_storage_provider_kind (provider_kind)
+        ON DELETE CASCADE ON UPDATE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS ix_dr_drive_storage_provider_kind_translation_locale
+    ON dr_drive_storage_provider_kind_translation (locale);

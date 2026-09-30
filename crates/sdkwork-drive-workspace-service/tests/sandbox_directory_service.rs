@@ -461,10 +461,8 @@ async fn result_completion_rolls_back_when_atomic_audit_persistence_fails() {
         } => (operation_id, lease_token),
         other => panic!("expected started operation, got {other:?}"),
     };
-    sqlx::query("DROP TABLE dr_drive_audit_event")
-        .execute(&pool)
-        .await
-        .expect("drop audit table for rollback injection");
+    let absent_audit_event =
+        sdkwork_drive_test_support::TableAbsenceGuard::hide(&pool, "dr_drive_audit_event").await;
     let entry = SandboxDirectoryEntry {
         id: "entry-atomic".to_string(),
         sandbox_id: "sandbox-a".to_string(),
@@ -502,6 +500,8 @@ async fn result_completion_rolls_back_when_atomic_audit_persistence_fails() {
     .expect("operation after rollback");
     assert_eq!(row.get::<String, _>("operation_status"), "pending");
     assert_eq!(row.get::<Option<String>, _>("result_entry_id"), None);
+
+    absent_audit_event.restore().await;
 }
 
 fn directory_entry(

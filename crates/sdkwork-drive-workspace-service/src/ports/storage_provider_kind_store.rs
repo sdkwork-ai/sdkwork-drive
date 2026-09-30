@@ -18,8 +18,14 @@ pub struct StorageProviderKindConfigCount {
 
 #[async_trait]
 pub trait DriveStorageProviderKindStore: Send + Sync {
+    /// List the kind catalog. `locale` is a normalized BCP 47 tag from the
+    /// supported set; when present, a translation row for that locale
+    /// (`dr_drive_storage_provider_kind_translation`) replaces the
+    /// locale-neutral base display name, and a missing translation falls back
+    /// to the base name.
     async fn list_storage_provider_kinds(
         &self,
+        locale: Option<&str>,
     ) -> Result<Vec<DriveStorageProviderKindRegistry>, DriveServiceError>;
 
     async fn find_storage_provider_kind(

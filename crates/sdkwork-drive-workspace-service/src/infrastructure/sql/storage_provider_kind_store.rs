@@ -24,12 +24,23 @@ impl SqlStorageProviderKindStore {
 impl DriveStorageProviderKindStore for SqlStorageProviderKindStore {
     async fn list_storage_provider_kinds(
         &self,
+        locale: Option<&str>,
     ) -> Result<Vec<DriveStorageProviderKindRegistry>, DriveServiceError> {
+        // Localized read: a translation row for the requested locale replaces
+        // the locale-neutral base display name; a missing translation falls
+        // back to the base name (`I18N_SPEC.md` §11, `DATABASE_SPEC.md`
+        // §6.4.1).
         let rows = sqlx::query(
-            "SELECT provider_kind, display_name, enabled, sort_order, version
-             FROM dr_drive_storage_provider_kind
-             ORDER BY sort_order ASC, provider_kind ASC",
+            "SELECT kind.provider_kind,
+                    COALESCE(translation.display_name, kind.display_name) AS display_name,
+                    kind.enabled, kind.sort_order, kind.version
+             FROM dr_drive_storage_provider_kind kind
+             LEFT JOIN dr_drive_storage_provider_kind_translation translation
+                 ON translation.provider_kind = kind.provider_kind
+                 AND translation.locale = $1
+             ORDER BY kind.sort_order ASC, kind.provider_kind ASC",
         )
+        .bind(locale.unwrap_or(""))
         .fetch_all(&self.pool)
         .await
         .map_err(|error| {
@@ -85,7 +96,7 @@ impl DriveStorageProviderKindStore for SqlStorageProviderKindStore {
                 )));
             }
         }
-        self.list_storage_provider_kinds().await
+        self.list_storage_provider_kinds(None).await
     }
 
     async fn set_storage_provider_kind_enabled(

@@ -53,8 +53,9 @@ func (a *DriveApi) StorageProviderBindingsDefaultDelete(spaceId *string, spaceTy
     return decodeResult[struct{}](raw)
 }
 
-func (a *DriveApi) StorageProvidersList(status *string) (sdktypes.StorageProvidersListResponse, error) {
+func (a *DriveApi) StorageProvidersList(providerKind *string, status *string) (sdktypes.StorageProvidersListResponse, error) {
     query := BuildQueryString([]QueryParameterSpec{
+        {Name: "provider_kind", Value: func() interface{} { if providerKind == nil { return nil }; return *providerKind }(), Style: "form", Explode: true, AllowReserved: false},
         {Name: "status", Value: func() interface{} { if status == nil { return nil }; return *status }(), Style: "form", Explode: true, AllowReserved: false},
     })
     raw, err := a.client.Get(AppendQueryString(CustomApiPath("/drive/storage/providers"), query), nil, nil)
@@ -155,6 +156,7 @@ func (a *DriveApi) StorageProvidersBucketRetrieve(providerId string) (sdktypes.S
     return decodeResult[sdktypes.StorageProvidersBucketRetrieveResponse](raw)
 }
 
+// Initialize storage bucket
 func (a *DriveApi) StorageProvidersBucketUpdate(providerId string) (sdktypes.StorageProvidersBucketUpdateResponse, error) {
     raw, err := a.client.Put(CustomApiPath(fmt.Sprintf("/drive/storage/providers/%s/bucket", SerializePathParameter(providerId, PathParameterSpec{Name: "providerId", Style: "simple", Explode: false}))), nil, nil, nil, "")
     if err != nil {
@@ -230,8 +232,9 @@ func (a *DriveApi) StorageProvidersBucketsList(providerId string, cursor *string
 }
 
 // List Drive storage provider bindings
-func (a *DriveApi) StorageProviderBindingsList(spaceId *string, providerId *string, lifecycleStatus *string) (sdktypes.StorageProviderBindingsListResponse, error) {
+func (a *DriveApi) StorageProviderBindingsList(bindingScope *string, spaceId *string, providerId *string, lifecycleStatus *string) (sdktypes.StorageProviderBindingsListResponse, error) {
     query := BuildQueryString([]QueryParameterSpec{
+        {Name: "binding_scope", Value: func() interface{} { if bindingScope == nil { return nil }; return *bindingScope }(), Style: "form", Explode: true, AllowReserved: false},
         {Name: "spaceId", Value: func() interface{} { if spaceId == nil { return nil }; return *spaceId }(), Style: "form", Explode: true, AllowReserved: false},
         {Name: "providerId", Value: func() interface{} { if providerId == nil { return nil }; return *providerId }(), Style: "form", Explode: true, AllowReserved: false},
         {Name: "lifecycleStatus", Value: func() interface{} { if lifecycleStatus == nil { return nil }; return *lifecycleStatus }(), Style: "form", Explode: true, AllowReserved: false},
@@ -339,6 +342,70 @@ func (a *DriveApi) StorageOverviewRetrieve(trendMonths *string) (sdktypes.Storag
         return zero, err
     }
     return decodeResult[sdktypes.StorageOverviewRetrieveResponse](raw)
+}
+
+func (a *DriveApi) StorageMigrationsList(status *string, pageSize *int, pageToken *string) (sdktypes.StorageMigrationsListResponse, error) {
+    query := BuildQueryString([]QueryParameterSpec{
+        {Name: "status", Value: func() interface{} { if status == nil { return nil }; return *status }(), Style: "form", Explode: true, AllowReserved: false},
+        {Name: "pageSize", Value: func() interface{} { if pageSize == nil { return nil }; return *pageSize }(), Style: "form", Explode: true, AllowReserved: false},
+        {Name: "pageToken", Value: func() interface{} { if pageToken == nil { return nil }; return *pageToken }(), Style: "form", Explode: true, AllowReserved: false},
+    })
+    raw, err := a.client.Get(AppendQueryString(CustomApiPath("/drive/storage/migrations"), query), nil, nil)
+    if err != nil {
+        var zero sdktypes.StorageMigrationsListResponse
+        return zero, err
+    }
+    return decodeResult[sdktypes.StorageMigrationsListResponse](raw)
+}
+
+func (a *DriveApi) StorageMigrationsCreate(body sdktypes.CreateStorageMigrationRequest) (sdktypes.StorageMigrationsCreateResponse, error) {
+    raw, err := a.client.Post(CustomApiPath("/drive/storage/migrations"), body, nil, nil, "application/json")
+    if err != nil {
+        var zero sdktypes.StorageMigrationsCreateResponse
+        return zero, err
+    }
+    return decodeResult[sdktypes.StorageMigrationsCreateResponse](raw)
+}
+
+func (a *DriveApi) StorageMigrationsRetrieve(migrationId string) (sdktypes.StorageMigrationsRetrieveResponse, error) {
+    raw, err := a.client.Get(CustomApiPath(fmt.Sprintf("/drive/storage/migrations/%s", SerializePathParameter(migrationId, PathParameterSpec{Name: "migrationId", Style: "simple", Explode: false}))), nil, nil)
+    if err != nil {
+        var zero sdktypes.StorageMigrationsRetrieveResponse
+        return zero, err
+    }
+    return decodeResult[sdktypes.StorageMigrationsRetrieveResponse](raw)
+}
+
+func (a *DriveApi) StorageMigrationsRun(migrationId string, body *sdktypes.RunStorageMigrationRequest) (sdktypes.StorageMigrationsRunResponse, error) {
+    raw, err := a.client.Post(CustomApiPath(fmt.Sprintf("/drive/storage/migrations/%s/run", SerializePathParameter(migrationId, PathParameterSpec{Name: "migrationId", Style: "simple", Explode: false}))), body, nil, nil, "application/json")
+    if err != nil {
+        var zero sdktypes.StorageMigrationsRunResponse
+        return zero, err
+    }
+    return decodeResult[sdktypes.StorageMigrationsRunResponse](raw)
+}
+
+func (a *DriveApi) StorageMigrationsItemsList(migrationId string, status *string, pageSize *int, pageToken *string) (sdktypes.StorageMigrationsItemsListResponse, error) {
+    query := BuildQueryString([]QueryParameterSpec{
+        {Name: "status", Value: func() interface{} { if status == nil { return nil }; return *status }(), Style: "form", Explode: true, AllowReserved: false},
+        {Name: "pageSize", Value: func() interface{} { if pageSize == nil { return nil }; return *pageSize }(), Style: "form", Explode: true, AllowReserved: false},
+        {Name: "pageToken", Value: func() interface{} { if pageToken == nil { return nil }; return *pageToken }(), Style: "form", Explode: true, AllowReserved: false},
+    })
+    raw, err := a.client.Get(AppendQueryString(CustomApiPath(fmt.Sprintf("/drive/storage/migrations/%s/items", SerializePathParameter(migrationId, PathParameterSpec{Name: "migrationId", Style: "simple", Explode: false}))), query), nil, nil)
+    if err != nil {
+        var zero sdktypes.StorageMigrationsItemsListResponse
+        return zero, err
+    }
+    return decodeResult[sdktypes.StorageMigrationsItemsListResponse](raw)
+}
+
+func (a *DriveApi) StorageMigrationsCancel(migrationId string) (sdktypes.StorageMigrationsCancelResponse, error) {
+    raw, err := a.client.Post(CustomApiPath(fmt.Sprintf("/drive/storage/migrations/%s/cancel", SerializePathParameter(migrationId, PathParameterSpec{Name: "migrationId", Style: "simple", Explode: false}))), nil, nil, nil, "")
+    if err != nil {
+        var zero sdktypes.StorageMigrationsCancelResponse
+        return zero, err
+    }
+    return decodeResult[sdktypes.StorageMigrationsCancelResponse](raw)
 }
 
 type PathParameterSpec struct {

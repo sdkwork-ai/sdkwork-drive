@@ -707,8 +707,17 @@ async fn list_nodes_route_validates_active_space_and_folder_parent() {
         sqlx::query(
             "INSERT INTO dr_drive_node (
                 id, tenant_id, space_id, parent_node_id, node_type, node_name,
-                content_state, lifecycle_status, version, created_by, updated_by
-            ) VALUES ($1, 'tenant-list-guard', 'space-list-guard', $2, $3, $4, 'ready', 'active', 1, 'user-owner', 'user-owner')",
+                content_state, head_content_type, head_content_type_group,
+                head_content_length, head_version_no,
+                lifecycle_status, version, created_by, updated_by
+            ) VALUES (
+                $1, 'tenant-list-guard', 'space-list-guard', $2, $3, $4, 'ready',
+                CASE WHEN $3 = 'file' THEN 'application/octet-stream' END,
+                CASE WHEN $3 = 'file' THEN 'binary' END,
+                CASE WHEN $3 = 'file' THEN 0 END,
+                CASE WHEN $3 = 'file' THEN 1 END,
+                'active', 1, 'user-owner', 'user-owner'
+            )",
         )
         .bind(id)
         .bind(parent_node_id)
@@ -721,11 +730,11 @@ async fn list_nodes_route_validates_active_space_and_folder_parent() {
     sqlx::query(
         "INSERT INTO dr_drive_node (
             id, tenant_id, space_id, parent_node_id, node_type, node_name,
-            content_state, lifecycle_status, version, created_by, updated_by
+            content_state, head_content_type, head_content_type_group, head_content_length, head_version_no, lifecycle_status, version, created_by, updated_by
         ) VALUES (
             'file-list-trashed-child', 'tenant-list-guard', 'space-list-guard',
             'folder-list-parent', 'file', 'trashed-child.txt',
-            'ready', 'trashed', 1, 'user-owner', 'user-owner'
+            'ready', 'application/octet-stream', 'binary', 0, 1, 'trashed', 1, 'user-owner', 'user-owner'
         )",
     )
     .execute(&pool)
@@ -966,8 +975,8 @@ async fn list_nodes_sort_by_name_desc_orders_active_children() {
         sqlx::query(
             "INSERT INTO dr_drive_node (
                 id, tenant_id, space_id, parent_node_id, node_type, node_name,
-                content_state, lifecycle_status, version, created_by, updated_by
-            ) VALUES ($1, 'tenant-sort-name', 'space-sort-name', 'folder-sort-parent', 'file', $2, 'ready', 'active', 1, 'user-owner', 'user-owner')",
+                content_state, head_content_type, head_content_type_group, head_content_length, head_version_no, lifecycle_status, version, created_by, updated_by
+            ) VALUES ($1, 'tenant-sort-name', 'space-sort-name', 'folder-sort-parent', 'file', $2, 'ready', 'application/octet-stream', 'binary', 0, 1, 'active', 1, 'user-owner', 'user-owner')",
         )
         .bind(id)
         .bind(node_name)
@@ -1228,8 +1237,8 @@ async fn quota_summary_route_counts_active_storage_objects() {
         sqlx::query(
             "INSERT INTO dr_drive_node (
                 id, tenant_id, space_id, parent_node_id, node_type, node_name,
-                content_state, lifecycle_status, version, created_by, updated_by
-            ) VALUES ($1, 'tenant-quota', 'space-quota', NULL, 'file', $2, 'ready', 'active', 1, 'user-001', 'user-001')",
+                content_state, head_content_type, head_content_type_group, head_content_length, head_version_no, lifecycle_status, version, created_by, updated_by
+            ) VALUES ($1, 'tenant-quota', 'space-quota', NULL, 'file', $2, 'ready', 'application/octet-stream', 'binary', 0, 1, 'active', 1, 'user-001', 'user-001')",
         )
         .bind(node_id)
         .bind(format!("{node_id}.bin"))
@@ -1237,7 +1246,7 @@ async fn quota_summary_route_counts_active_storage_objects() {
         .await
         .expect("node should be inserted");
     }
-    seed_storage_metadata_provider_fixture(&pool, "provider-quota", "bucket-quota", "user-001")
+    seed_storage_metadata_provider_fixture(&pool, "tenant-quota", "provider-quota", "bucket-quota", "user-001")
         .await;
 
     for (object_id, node_id, content_length, lifecycle_status, checksum) in [
@@ -1357,8 +1366,17 @@ async fn create_upload_session_route_is_idempotent() {
     sqlx::query(
         "INSERT INTO dr_drive_node (
             id, tenant_id, space_id, parent_node_id, node_type, node_name,
-            content_state, lifecycle_status, version, created_by, updated_by
-        ) VALUES ($1, $2, $3, NULL, $4, $5, 'ready', 'active', 1, $6, $7)",
+            content_state, head_content_type, head_content_type_group,
+            head_content_length, head_version_no,
+            lifecycle_status, version, created_by, updated_by
+        ) VALUES (
+            $1, $2, $3, NULL, $4, $5, 'ready',
+            CASE WHEN $4 = 'file' THEN 'application/octet-stream' END,
+            CASE WHEN $4 = 'file' THEN 'binary' END,
+            CASE WHEN $4 = 'file' THEN 0 END,
+            CASE WHEN $4 = 'file' THEN 1 END,
+            'active', 1, $6, $7
+        )",
     )
     .bind("node-001")
     .bind("tenant-001")
@@ -1377,7 +1395,7 @@ async fn create_upload_session_route_is_idempotent() {
             status, version, created_by, updated_by
         ) VALUES (
             'provider-idempotent', 's3_compatible', 'Mock S3', $1, 'us-east-1',
-            'bucket-001', 1, 0, 'plain:test-access-key:test-secret-key',
+            'bucket-001', TRUE, FALSE, 'plain:test-access-key:test-secret-key',
             'AES256', 'STANDARD', 'active', 1, 'admin-001', 'admin-001'
         )",
     )
@@ -1429,13 +1447,18 @@ async fn create_upload_session_route_is_idempotent() {
         )
         .await
         .expect("first upload session request should be handled");
-    assert_eq!(first_response.status(), StatusCode::CREATED);
-    let first_payload: serde_json::Value = serde_json::from_slice(
-        &to_bytes(first_response.into_body(), usize::MAX)
-            .await
-            .expect("first response body should be read"),
-    )
-    .expect("first response json should be valid");
+    let first_status = first_response.status();
+    let first_raw = to_bytes(first_response.into_body(), usize::MAX)
+        .await
+        .expect("first response body should be read");
+    assert_eq!(
+        first_status,
+        StatusCode::CREATED,
+        "unexpected create upload session response: {}",
+        String::from_utf8_lossy(&first_raw)
+    );
+    let first_payload: serde_json::Value =
+        serde_json::from_slice(&first_raw).expect("first response json should be valid");
 
     let second_response = app
         .oneshot(
@@ -1495,7 +1518,7 @@ async fn app_api_rejects_storage_provider_administration_routes_without_s3_side_
             status, version, created_by, updated_by
         ) VALUES (
             'provider-app-admin-boundary', 's3_compatible', 'App Boundary S3', $1, 'us-east-1',
-            'bucket-s3', 1, 0, 'plain:test-access-key:test-secret-key',
+            'bucket-s3', TRUE, FALSE, 'plain:test-access-key:test-secret-key',
             'AES256', 'STANDARD', 'active', 1, 'admin-app', 'admin-app'
         )",
     )
@@ -1587,11 +1610,11 @@ async fn create_upload_session_rejects_existing_session_id_before_storage_side_e
     sqlx::query(
         "INSERT INTO dr_drive_node (
             id, tenant_id, space_id, parent_node_id, node_type, node_name,
-            content_state, lifecycle_status, version, created_by, updated_by
+            content_state, head_content_type, head_content_type_group, head_content_length, head_version_no, lifecycle_status, version, created_by, updated_by
         ) VALUES (
             'node-upload-id-conflict', 'tenant-upload-id-conflict',
             'space-upload-id-conflict', NULL, 'file', 'upload.bin',
-            'ready', 'active', 1, 'user-upload', 'user-upload'
+            'ready', 'application/octet-stream', 'binary', 0, 1, 'active', 1, 'user-upload', 'user-upload'
         )",
     )
     .execute(&pool)
@@ -1732,7 +1755,7 @@ async fn create_upload_session_resolves_default_bucket_and_generates_standard_ke
             status, version, created_by, updated_by
         ) VALUES (
             'provider-keygen', 's3_compatible', 'Mock S3', $1, 'us-east-1',
-            'bucket-keygen', 1, 0, 'plain:test-access-key:test-secret-key',
+            'bucket-keygen', TRUE, FALSE, 'plain:test-access-key:test-secret-key',
             'AES256', 'STANDARD', 'active', 1, 'admin-keygen', 'admin-keygen'
         )",
     )
@@ -2478,7 +2501,7 @@ async fn s3_upload_session_uses_real_multipart_upload_id_for_presign_and_complet
             status, version, created_by, updated_by
         ) VALUES (
             'provider-s3-upload', 's3_compatible', 'Mock S3', $1, 'us-east-1',
-            'bucket-s3', 1, 0, 'plain:test-access-key:test-secret-key',
+            'bucket-s3', TRUE, FALSE, 'plain:test-access-key:test-secret-key',
             'AES256', 'STANDARD', 'active', 1, 'admin-s3', 'admin-s3'
         )",
     )
@@ -2666,7 +2689,7 @@ async fn uploader_prepare_creates_upload_space_item_and_real_multipart_upload() 
             status, version, created_by, updated_by
         ) VALUES (
             'provider-uploader-s3', 's3_compatible', 'Uploader S3', $1, 'us-east-1',
-            'bucket-s3', 1, 0, 'plain:test-access-key:test-secret-key',
+            'bucket-s3', TRUE, FALSE, 'plain:test-access-key:test-secret-key',
             'AES256', 'STANDARD', 'active', 1, 'admin-uploader', 'admin-uploader'
         )",
     )
@@ -2808,7 +2831,7 @@ async fn uploader_prepare_to_target_space_enforces_writer_permission_and_preserv
             status, version, created_by, updated_by
         ) VALUES (
             'provider-uploader-permission', 's3_compatible', 'Uploader Permission S3',
-            $1, 'us-east-1', 'bucket-s3', 1, 0,
+            $1, 'us-east-1', 'bucket-s3', TRUE, FALSE,
             'plain:test-access-key:test-secret-key', 'AES256', 'STANDARD',
             'active', 1, 'admin-uploader', 'admin-uploader'
         )",
@@ -2913,7 +2936,7 @@ async fn uploader_prepare_to_target_space_enforces_writer_permission_and_preserv
         ) VALUES (
             'perm-uploader-writer', 'tenant-uploader-permission',
             'folder-uploader-permission', 'user', 'user-writer',
-            'writer', 0, 'active', 1, 'space-owner', 'space-owner'
+            'writer', FALSE, 'active', 1, 'space-owner', 'space-owner'
         )",
     )
     .execute(&pool)
@@ -3031,7 +3054,7 @@ async fn uploader_prepare_anonymous_target_space_requires_public_writer_share_to
             status, version, created_by, updated_by
         ) VALUES (
             'provider-uploader-anon-share', 's3_compatible', 'Uploader Anonymous Share S3',
-            $1, 'us-east-1', 'bucket-s3', 1, 0,
+            $1, 'us-east-1', 'bucket-s3', TRUE, FALSE,
             'plain:test-access-key:test-secret-key', 'AES256', 'STANDARD',
             'active', 1, 'admin-uploader', 'admin-uploader'
         )",
@@ -3224,7 +3247,7 @@ async fn uploader_mark_part_uploaded_records_resumable_part_progress() {
             status, version, created_by, updated_by
         ) VALUES (
             'provider-uploader-part', 's3_compatible', 'Uploader S3',
-            'https://s3.example.com', 'us-east-1', 'bucket-s3', 1, 1,
+            'https://s3.example.com', 'us-east-1', 'bucket-s3', TRUE, TRUE,
             'plain:test-access-key:test-secret-key', 'AES256', 'STANDARD',
             'active', 1, 'admin-uploader', 'admin-uploader'
         )",
@@ -3328,7 +3351,7 @@ async fn uploader_upload_session_complete_updates_upload_item_and_sensitive_oper
             status, version, created_by, updated_by
         ) VALUES (
             'provider-uploader-complete', 's3_compatible', 'Uploader Complete S3',
-            $1, 'us-east-1', 'bucket-s3', 1, 0,
+            $1, 'us-east-1', 'bucket-s3', TRUE, FALSE,
             'plain:test-access-key:test-secret-key', 'AES256', 'STANDARD',
             'active', 1, 'admin-uploader', 'admin-uploader'
         )",
@@ -3572,7 +3595,7 @@ async fn uploader_routes_accept_generated_sdk_int64_strings() {
             status, version, created_by, updated_by
         ) VALUES (
             'provider-uploader-string-int', 's3_compatible', 'Uploader String Int S3',
-            $1, 'us-east-1', 'bucket-s3', 1, 0,
+            $1, 'us-east-1', 'bucket-s3', TRUE, FALSE,
             'plain:test-access-key:test-secret-key', 'AES256', 'STANDARD',
             'active', 1, 'admin-uploader', 'admin-uploader'
         )",
@@ -3723,10 +3746,10 @@ async fn create_upload_session_for_existing_file_uses_next_storage_version_in_ob
     sqlx::query(
         "INSERT INTO dr_drive_node (
             id, tenant_id, space_id, parent_node_id, node_type, node_name,
-            content_state, lifecycle_status, version, created_by, updated_by
+            content_state, head_content_type, head_content_type_group, head_content_length, head_version_no, lifecycle_status, version, created_by, updated_by
         ) VALUES (
             'node-version-upload', 'tenant-version-upload', 'space-version-upload',
-            NULL, 'file', 'versioned.bin', 'ready', 'active', 1,
+            NULL, 'file', 'versioned.bin', 'ready', 'application/octet-stream', 'binary', 0, 1, 'active', 1,
             'user-version-upload', 'user-version-upload'
         )",
     )
@@ -3915,7 +3938,7 @@ async fn presign_upload_part_rejects_ttl_outside_contract_before_object_store_ca
             status, version, created_by, updated_by
         ) VALUES (
             'provider-upload-ttl', 's3_compatible', 'TTL S3', $1, 'us-east-1',
-            'bucket-upload-ttl', 1, 0, 'plain:test-access-key:test-secret-key',
+            'bucket-upload-ttl', TRUE, FALSE, 'plain:test-access-key:test-secret-key',
             'AES256', 'STANDARD', 'active', 1, 'admin-upload-ttl', 'admin-upload-ttl'
         )",
     )
@@ -4022,7 +4045,7 @@ async fn upload_session_presign_rejects_when_persisted_provider_is_disabled() {
             status, version, created_by, updated_by
         ) VALUES (
             'provider-original', 's3_compatible', 'Original S3', $1, 'us-east-1',
-            'bucket-s3', 1, 0, 'plain:test-access-key:test-secret-key',
+            'bucket-s3', TRUE, FALSE, 'plain:test-access-key:test-secret-key',
             'AES256', 'STANDARD', 'active', 1, 'admin-s3', 'admin-s3'
         )",
     )
@@ -4089,7 +4112,7 @@ async fn upload_session_presign_rejects_when_persisted_provider_is_disabled() {
             status, version, created_by, updated_by
         ) VALUES (
             'provider-replacement', 'local_filesystem', 'Replacement Local',
-            'file:///tmp/sdkwork-drive', NULL, 'bucket-s3', 1, NULL, NULL, NULL,
+            'file:///tmp/sdkwork-drive', NULL, 'bucket-s3', TRUE, NULL, NULL, NULL,
             'active', 1, 'admin-s3', 'admin-s3'
         )",
     )
@@ -4194,7 +4217,7 @@ async fn complete_upload_session_allows_only_one_in_flight_completion() {
             status, version, created_by, updated_by
         ) VALUES (
             'provider-complete-race', 's3_compatible', 'Mock S3', $1, 'us-east-1',
-            'bucket-s3', 1, 0, 'plain:test-access-key:test-secret-key',
+            'bucket-s3', TRUE, FALSE, 'plain:test-access-key:test-secret-key',
             'AES256', 'STANDARD', 'active', 1, 'admin-race', 'admin-race'
         )",
     )
@@ -4713,7 +4736,7 @@ async fn s3_upload_session_abort_calls_object_store_abort() {
             status, version, created_by, updated_by
         ) VALUES (
             'provider-s3-abort', 's3_compatible', 'Mock S3', $1, 'us-east-1',
-            'bucket-s3', 1, 0, 'plain:test-access-key:test-secret-key',
+            'bucket-s3', TRUE, FALSE, 'plain:test-access-key:test-secret-key',
             'AES256', 'STANDARD', 'active', 1, 'admin-s3', 'admin-s3'
         )",
     )
@@ -4863,7 +4886,7 @@ async fn app_drive_file_lifecycle_routes_get_move_copy_upload_complete_download_
             status, version, created_by, updated_by
         ) VALUES (
             'provider-life', 's3_compatible', 'Mock S3', $1, 'us-east-1',
-            'bucket-life', 1, 0, 'plain:test-access-key:test-secret-key',
+            'bucket-life', TRUE, FALSE, 'plain:test-access-key:test-secret-key',
             'AES256', 'STANDARD', 'active', 1, 'admin-life', 'admin-life'
         )",
     )
@@ -5318,8 +5341,17 @@ async fn app_drive_delete_folder_recursively_deletes_descendants_and_storage_met
         sqlx::query(
             "INSERT INTO dr_drive_node (
                 id, tenant_id, space_id, parent_node_id, node_type, node_name,
-                content_state, lifecycle_status, version, created_by, updated_by
-            ) VALUES ($1, 'tenant-tree-delete', 'space-tree-delete', $2, $3, $4, $5, 'active', 1, 'user-tree-delete', 'user-tree-delete')",
+                content_state, head_content_type, head_content_type_group,
+                head_content_length, head_version_no,
+                lifecycle_status, version, created_by, updated_by
+            ) VALUES (
+                $1, 'tenant-tree-delete', 'space-tree-delete', $2, $3, $4, $5,
+                CASE WHEN $3 = 'file' THEN 'text/plain' END,
+                CASE WHEN $3 = 'file' THEN 'text' END,
+                CASE WHEN $3 = 'file' THEN 0 END,
+                CASE WHEN $3 = 'file' THEN 1 END,
+                'active', 1, 'user-tree-delete', 'user-tree-delete'
+            )",
         )
         .bind(id)
         .bind(parent_id)
@@ -5332,6 +5364,7 @@ async fn app_drive_delete_folder_recursively_deletes_descendants_and_storage_met
     }
     seed_storage_metadata_provider_fixture(
         &pool,
+        "tenant-tree-delete",
         "provider-tree-delete",
         "bucket-tree-delete",
         "user-tree-delete",
@@ -5535,8 +5568,17 @@ async fn app_drive_trash_folder_recursively_trashes_descendants() {
         sqlx::query(
             "INSERT INTO dr_drive_node (
                 id, tenant_id, space_id, parent_node_id, node_type, node_name,
-                content_state, lifecycle_status, version, created_by, updated_by
-            ) VALUES ($1, 'tenant-tree-trash', 'space-tree-trash', $2, $3, $4, $5, 'active', 1, 'user-tree-trash', 'user-tree-trash')",
+                content_state, head_content_type, head_content_type_group,
+                head_content_length, head_version_no,
+                lifecycle_status, version, created_by, updated_by
+            ) VALUES (
+                $1, 'tenant-tree-trash', 'space-tree-trash', $2, $3, $4, $5,
+                CASE WHEN $3 = 'file' THEN 'text/plain' END,
+                CASE WHEN $3 = 'file' THEN 'text' END,
+                CASE WHEN $3 = 'file' THEN 0 END,
+                CASE WHEN $3 = 'file' THEN 1 END,
+                'active', 1, 'user-tree-trash', 'user-tree-trash'
+            )",
         )
         .bind(id)
         .bind(parent_id)
@@ -5741,8 +5783,17 @@ async fn app_drive_restore_folder_recursively_restores_descendants_and_requires_
         sqlx::query(
             "INSERT INTO dr_drive_node (
                 id, tenant_id, space_id, parent_node_id, node_type, node_name,
-                content_state, lifecycle_status, version, created_by, updated_by
-            ) VALUES ($1, 'tenant-tree-restore', 'space-tree-restore', $2, $3, $4, 'ready', 'trashed', 1, 'user-tree-restore', 'user-tree-restore')",
+                content_state, head_content_type, head_content_type_group,
+                head_content_length, head_version_no,
+                lifecycle_status, version, created_by, updated_by
+            ) VALUES (
+                $1, 'tenant-tree-restore', 'space-tree-restore', $2, $3, $4, 'ready',
+                CASE WHEN $3 = 'file' THEN 'application/octet-stream' END,
+                CASE WHEN $3 = 'file' THEN 'binary' END,
+                CASE WHEN $3 = 'file' THEN 0 END,
+                CASE WHEN $3 = 'file' THEN 1 END,
+                'trashed', 1, 'user-tree-restore', 'user-tree-restore'
+            )",
         )
         .bind(id)
         .bind(parent_id)
@@ -5989,7 +6040,7 @@ async fn app_dr_drive_upload_session_abort_rejects_terminal_sessions_without_obj
             status, version, created_by, updated_by
         ) VALUES (
             'provider-abort-terminal', 's3_compatible', 'Mock S3', $1, 'us-east-1',
-            'bucket-abort-terminal', 1, 0, 'plain:test-access-key:test-secret-key',
+            'bucket-abort-terminal', TRUE, FALSE, 'plain:test-access-key:test-secret-key',
             'AES256', 'STANDARD', 'active', 1, 'admin-abort', 'admin-abort'
         )",
     )
@@ -6481,7 +6532,7 @@ async fn complete_upload_session_rejects_invalid_object_metadata_before_storage_
             status, version, created_by, updated_by
         ) VALUES (
             'provider-invalid-metadata', 's3_compatible', 'Metadata S3', $1, 'us-east-1',
-            'bucket-invalid-metadata', 1, 0, 'plain:test-access-key:test-secret-key',
+            'bucket-invalid-metadata', TRUE, FALSE, 'plain:test-access-key:test-secret-key',
             'AES256', 'STANDARD', 'active', 1, 'user-invalid-metadata', 'user-invalid-metadata'
         )",
     )
@@ -6704,8 +6755,17 @@ async fn create_download_url_and_resolve_token_redirects_to_signed_source() {
     sqlx::query(
         "INSERT INTO dr_drive_node (
             id, tenant_id, space_id, parent_node_id, node_type, node_name,
-            content_state, lifecycle_status, version, created_by, updated_by
-        ) VALUES ($1, $2, $3, NULL, $4, $5, 'ready', 'active', 1, $6, $7)",
+            content_state, head_content_type, head_content_type_group,
+            head_content_length, head_version_no,
+            lifecycle_status, version, created_by, updated_by
+        ) VALUES (
+            $1, $2, $3, NULL, $4, $5, 'ready',
+            CASE WHEN $4 = 'file' THEN 'application/octet-stream' END,
+            CASE WHEN $4 = 'file' THEN 'binary' END,
+            CASE WHEN $4 = 'file' THEN 0 END,
+            CASE WHEN $4 = 'file' THEN 1 END,
+            'active', 1, $6, $7
+        )",
     )
     .bind("node-001")
     .bind("tenant-001")
@@ -6866,8 +6926,17 @@ async fn create_download_grant_via_canonical_route_returns_created() {
     sqlx::query(
         "INSERT INTO dr_drive_node (
             id, tenant_id, space_id, parent_node_id, node_type, node_name,
-            content_state, lifecycle_status, version, created_by, updated_by
-        ) VALUES ($1, $2, $3, NULL, $4, $5, 'ready', 'active', 1, $6, $7)",
+            content_state, head_content_type, head_content_type_group,
+            head_content_length, head_version_no,
+            lifecycle_status, version, created_by, updated_by
+        ) VALUES (
+            $1, $2, $3, NULL, $4, $5, 'ready',
+            CASE WHEN $4 = 'file' THEN 'application/octet-stream' END,
+            CASE WHEN $4 = 'file' THEN 'binary' END,
+            CASE WHEN $4 = 'file' THEN 0 END,
+            CASE WHEN $4 = 'file' THEN 1 END,
+            'active', 1, $6, $7
+        )",
     )
     .bind("node-001")
     .bind("tenant-001")
@@ -6992,8 +7061,8 @@ async fn create_download_url_rejects_ttl_outside_contract() {
     sqlx::query(
         "INSERT INTO dr_drive_node (
             id, tenant_id, space_id, parent_node_id, node_type, node_name,
-            content_state, lifecycle_status, version, created_by, updated_by
-        ) VALUES ('node-download-ttl', 'tenant-download-ttl', 'space-download-ttl', NULL, 'file', 'download.bin', 'ready', 'active', 1, 'user-download-ttl', 'user-download-ttl')",
+            content_state, head_content_type, head_content_type_group, head_content_length, head_version_no, lifecycle_status, version, created_by, updated_by
+        ) VALUES ('node-download-ttl', 'tenant-download-ttl', 'space-download-ttl', NULL, 'file', 'download.bin', 'ready', 'application/octet-stream', 'binary', 0, 1, 'active', 1, 'user-download-ttl', 'user-download-ttl')",
     )
     .execute(&pool)
     .await
@@ -7091,8 +7160,8 @@ async fn resolve_download_token_requires_active_object_store_provider() {
     sqlx::query(
         "INSERT INTO dr_drive_node (
             id, tenant_id, space_id, parent_node_id, node_type, node_name,
-            content_state, lifecycle_status, version, created_by, updated_by
-        ) VALUES ('node-download-no-provider', 'tenant-download-no-provider', 'space-download-no-provider', NULL, 'file', 'download.bin', 'ready', 'active', 1, 'user-download-no-provider', 'user-download-no-provider')",
+            content_state, head_content_type, head_content_type_group, head_content_length, head_version_no, lifecycle_status, version, created_by, updated_by
+        ) VALUES ('node-download-no-provider', 'tenant-download-no-provider', 'space-download-no-provider', NULL, 'file', 'download.bin', 'ready', 'application/octet-stream', 'binary', 0, 1, 'active', 1, 'user-download-no-provider', 'user-download-no-provider')",
     )
     .execute(&pool)
     .await
@@ -7205,8 +7274,17 @@ async fn resolve_download_token_uses_active_s3_provider_configuration_when_prese
     sqlx::query(
         "INSERT INTO dr_drive_node (
             id, tenant_id, space_id, parent_node_id, node_type, node_name,
-            content_state, lifecycle_status, version, created_by, updated_by
-        ) VALUES ($1, $2, $3, NULL, $4, $5, 'ready', 'active', 1, $6, $7)",
+            content_state, head_content_type, head_content_type_group,
+            head_content_length, head_version_no,
+            lifecycle_status, version, created_by, updated_by
+        ) VALUES (
+            $1, $2, $3, NULL, $4, $5, 'ready',
+            CASE WHEN $4 = 'file' THEN 'application/octet-stream' END,
+            CASE WHEN $4 = 'file' THEN 'binary' END,
+            CASE WHEN $4 = 'file' THEN 0 END,
+            CASE WHEN $4 = 'file' THEN 1 END,
+            'active', 1, $6, $7
+        )",
     )
     .bind("node-001")
     .bind("tenant-001")
@@ -7368,8 +7446,17 @@ async fn resolve_download_token_uses_aliyun_oss_provider_kind_with_s3_signer() {
     sqlx::query(
         "INSERT INTO dr_drive_node (
             id, tenant_id, space_id, parent_node_id, node_type, node_name,
-            content_state, lifecycle_status, version, created_by, updated_by
-        ) VALUES ($1, $2, $3, NULL, $4, $5, 'ready', 'active', 1, $6, $7)",
+            content_state, head_content_type, head_content_type_group,
+            head_content_length, head_version_no,
+            lifecycle_status, version, created_by, updated_by
+        ) VALUES (
+            $1, $2, $3, NULL, $4, $5, 'ready',
+            CASE WHEN $4 = 'file' THEN 'application/octet-stream' END,
+            CASE WHEN $4 = 'file' THEN 'binary' END,
+            CASE WHEN $4 = 'file' THEN 0 END,
+            CASE WHEN $4 = 'file' THEN 1 END,
+            'active', 1, $6, $7
+        )",
     )
     .bind("node-oss-001")
     .bind("tenant-001")
@@ -7553,9 +7640,9 @@ async fn resolve_download_token_uses_explicit_cloud_s3_provider_kinds_with_s3_si
         sqlx::query(
             "INSERT INTO dr_drive_node (
                 id, tenant_id, space_id, parent_node_id, node_type, node_name,
-                content_state, lifecycle_status, version, created_by, updated_by
+                content_state, head_content_type, head_content_type_group, head_content_length, head_version_no, lifecycle_status, version, created_by, updated_by
             ) VALUES ($1, 'tenant-cloud-s3', $2, NULL, 'file', 'v1.bin',
-                'ready', 'active', 1, 'user-cloud-s3', 'user-cloud-s3')",
+                'ready', 'application/octet-stream', 'binary', 0, 1, 'active', 1, 'user-cloud-s3', 'user-cloud-s3')",
         )
         .bind(node_id)
         .bind(&space_id)
@@ -7567,7 +7654,7 @@ async fn resolve_download_token_uses_explicit_cloud_s3_provider_kinds_with_s3_si
                 id, provider_kind, name, endpoint_url, region, bucket, path_style,
                 strict_tls, credential_ref, server_side_encryption_mode, default_storage_class,
                 status, version, created_by, updated_by
-            ) VALUES ($1, $2, 'Cloud S3', $3, $4, $5, 0, $6,
+            ) VALUES ($1, $2, 'Cloud S3', $3, $4, $5, FALSE, $6,
                 'plain:test-access-key:test-secret-key', 'AES256', 'STANDARD',
                 'active', 1, 'admin-cloud-s3', 'admin-cloud-s3')",
         )
@@ -7861,10 +7948,10 @@ async fn create_download_package_reads_objects_from_their_bound_provider_when_bu
     sqlx::query(
         "INSERT INTO dr_drive_node (
             id, tenant_id, space_id, parent_node_id, node_type, node_name,
-            content_state, lifecycle_status, version, created_by, updated_by
+            content_state, head_content_type, head_content_type_group, head_content_length, head_version_no, lifecycle_status, version, created_by, updated_by
         ) VALUES (
             'node-shared-bound', 'tenant-shared-provider', 'space-shared-provider',
-            NULL, 'file', 'alpha.txt', 'ready', 'active', 1,
+            NULL, 'file', 'alpha.txt', 'ready', 'application/octet-stream', 'binary', 0, 1, 'active', 1,
             'user-shared', 'user-shared'
         )",
     )
@@ -8306,10 +8393,10 @@ async fn extract_archive_entries_auto_renames_file_conflicts_and_completes_atomi
     sqlx::query(
         "INSERT INTO dr_drive_node (
             id, tenant_id, space_id, parent_node_id, node_type, node_name,
-            content_state, lifecycle_status, version, created_by, updated_by
+            content_state, head_content_type, head_content_type_group, head_content_length, head_version_no, lifecycle_status, version, created_by, updated_by
         ) VALUES (
             'file-logo-existing', 'tenant-archive', 'space-archive',
-            'folder-images-existing', 'file', 'logo.png', 'ready', 'active', 1,
+            'folder-images-existing', 'file', 'logo.png', 'ready', 'application/octet-stream', 'binary', 0, 1, 'active', 1,
             'user-archive', 'user-archive'
         )",
     )
@@ -8487,7 +8574,7 @@ async fn create_download_package_reads_files_from_multiple_storage_buckets() {
             status, version, created_by, updated_by
         ) VALUES (
             'provider-bulk-alt', 's3_compatible', 'Bulk S3 Alt', $1, 'us-east-1',
-            'bucket-s3-alt', 1, 0, 'plain:test-access-key:test-secret-key',
+            'bucket-s3-alt', TRUE, FALSE, 'plain:test-access-key:test-secret-key',
             'AES256', 'STANDARD', 'active', 1, 'user-bulk', 'user-bulk'
         )",
     )
@@ -8711,7 +8798,7 @@ async fn create_download_package_rejects_folder_expansion_above_file_limit_befor
             status, version, created_by, updated_by
         ) VALUES (
             'provider-package-limit', 's3_compatible', 'Bulk S3', $1, 'us-east-1',
-            'bucket-package-limit', 1, 0, 'plain:test-access-key:test-secret-key',
+            'bucket-package-limit', TRUE, FALSE, 'plain:test-access-key:test-secret-key',
             'AES256', 'STANDARD', 'active', 1, 'user-bulk', 'user-bulk'
         )",
     )
@@ -8736,9 +8823,9 @@ async fn create_download_package_rejects_folder_expansion_above_file_limit_befor
         sqlx::query(
             "INSERT INTO dr_drive_node (
                 id, tenant_id, space_id, parent_node_id, node_type, node_name,
-                content_state, lifecycle_status, version, created_by, updated_by
+                content_state, head_content_type, head_content_type_group, head_content_length, head_version_no, lifecycle_status, version, created_by, updated_by
             ) VALUES ($1, 'tenant-package-limit', 'space-package-limit', 'folder-package-limit',
-                'file', $2, 'ready', 'active', 1, 'user-bulk', 'user-bulk')",
+                'file', $2, 'ready', 'application/octet-stream', 'binary', 0, 1, 'active', 1, 'user-bulk', 'user-bulk')",
         )
         .bind(&node_id)
         .bind(format!("{index:03}.txt"))
@@ -9023,10 +9110,10 @@ async fn resolve_download_token_rejects_node_after_it_is_moved_to_trash() {
     sqlx::query(
         "INSERT INTO dr_drive_node (
             id, tenant_id, space_id, parent_node_id, node_type, node_name,
-            content_state, lifecycle_status, version, created_by, updated_by
+            content_state, head_content_type, head_content_type_group, head_content_length, head_version_no, lifecycle_status, version, created_by, updated_by
         ) VALUES (
             'node-token-lifecycle', 'tenant-token-lifecycle', 'space-token-lifecycle',
-            NULL, 'file', 'token.bin', 'ready', 'active', 1,
+            NULL, 'file', 'token.bin', 'ready', 'application/octet-stream', 'binary', 0, 1, 'active', 1,
             'user-token-lifecycle', 'user-token-lifecycle'
         )",
     )
@@ -9184,8 +9271,8 @@ async fn resolve_download_token_treats_subsecond_remaining_ttl_as_expired() {
     sqlx::query(
         "INSERT INTO dr_drive_node (
             id, tenant_id, space_id, parent_node_id, node_type, node_name,
-            content_state, lifecycle_status, version, created_by, updated_by
-        ) VALUES ('node-token-subsecond', 'tenant-token-subsecond', 'space-token-subsecond', NULL, 'file', 'ttl.bin', 'ready', 'active', 1, 'user-token-subsecond', 'user-token-subsecond')",
+            content_state, head_content_type, head_content_type_group, head_content_length, head_version_no, lifecycle_status, version, created_by, updated_by
+        ) VALUES ('node-token-subsecond', 'tenant-token-subsecond', 'space-token-subsecond', NULL, 'file', 'ttl.bin', 'ready', 'application/octet-stream', 'binary', 0, 1, 'active', 1, 'user-token-subsecond', 'user-token-subsecond')",
     )
     .execute(&pool)
     .await
@@ -9269,20 +9356,22 @@ fn current_epoch_ms() -> i64 {
 
 async fn seed_storage_metadata_provider_fixture(
     pool: &sqlx::PgPool,
+    tenant_id: &str,
     provider_id: &str,
     bucket: &str,
     actor_id: &str,
 ) {
     sqlx::query(
-        "INSERT OR IGNORE INTO dr_drive_storage_provider (
+        "INSERT INTO dr_drive_storage_provider (
             id, provider_kind, name, endpoint_url, region, bucket, path_style,
             strict_tls, credential_ref, server_side_encryption_mode, default_storage_class,
             status, version, created_by, updated_by
         ) VALUES (
             $1, 's3_compatible', $1, 'https://s3.fixture.local', 'us-east-1',
-            $2, 1, 1, 'plain:test-access-key:test-secret-key', 'AES256',
+            $2, TRUE, TRUE, 'plain:test-access-key:test-secret-key', 'AES256',
             'STANDARD', 'active', 1, $3, $3
-        )",
+        )
+        ON CONFLICT (id) DO NOTHING",
     )
     .bind(provider_id)
     .bind(bucket)
@@ -9290,6 +9379,43 @@ async fn seed_storage_metadata_provider_fixture(
     .execute(pool)
     .await
     .expect("storage metadata provider should be seeded");
+    seed_tenant_storage_provider_binding(pool, tenant_id, provider_id, actor_id).await;
+}
+
+/// Binds a provider to a tenant scope (`space_id IS NULL`, `purpose='primary'`).
+///
+/// Upload and download handlers resolve the active provider through the binding
+/// chain (space -> space type -> tenant), never by provider row alone. A test that
+/// seeds only `dr_drive_storage_provider` therefore fails with
+/// `409 ... active storage provider is required for bucket ... to sign object
+/// store URLs` as soon as it touches a signing path.
+///
+/// The binding's `tenant_id` must equal the request tenant, because
+/// `find_default_storage_provider` filters on it.
+async fn seed_tenant_storage_provider_binding(
+    pool: &sqlx::PgPool,
+    tenant_id: &str,
+    provider_id: &str,
+    actor_id: &str,
+) {
+    sqlx::query(
+        "INSERT INTO dr_drive_storage_provider_binding (
+            id, tenant_id, space_id, provider_id, binding_scope, purpose,
+            storage_root_prefix, lifecycle_status, version, created_by, updated_by
+        ) VALUES (
+            $1, $2, NULL, $3, 'tenant', 'primary',
+            $5, 'active', 1, $4, $4
+        )
+        ON CONFLICT (id) DO NOTHING",
+    )
+    .bind(format!("binding-{tenant_id}-{provider_id}"))
+    .bind(tenant_id)
+    .bind(provider_id)
+    .bind(actor_id)
+    .bind(storage_root_prefix)
+    .execute(pool)
+    .await
+    .expect("storage provider binding should be seeded");
 }
 
 struct StorageObjectFixture<'a> {
@@ -9351,7 +9477,7 @@ async fn seed_s3_provider_fixture(
             status, version, created_by, updated_by
         ) VALUES (
             $1, 's3_compatible', $2, $3, 'us-east-1',
-            $4, 1, $5, 'plain:test-access-key:test-secret-key',
+            $4, TRUE, $5, 'plain:test-access-key:test-secret-key',
             'AES256', 'STANDARD', $6, 1, $7, $7
         )",
     )
@@ -9388,7 +9514,7 @@ async fn seed_object_store_provider_fixture(
     fixture: ObjectStoreProviderFixture<'_>,
 ) {
     sqlx::query(
-        "INSERT OR IGNORE INTO dr_drive_storage_provider (
+        "INSERT INTO dr_drive_storage_provider (
             id, provider_kind, name, endpoint_url, region, bucket, path_style,
             strict_tls, credential_ref, server_side_encryption_mode, default_storage_class,
             status, version, created_by, updated_by
@@ -9396,7 +9522,8 @@ async fn seed_object_store_provider_fixture(
             $1, $2, $3, $4, $5, $6, $7, $8,
             'plain:test-access-key:test-secret-key', 'AES256', 'STANDARD',
             'active', 1, $9, $9
-        )",
+        )
+        ON CONFLICT (id) DO NOTHING",
     )
     .bind(fixture.provider_id)
     .bind(fixture.provider_kind)
@@ -9437,7 +9564,7 @@ async fn seed_download_package_fixture(
             status, version, created_by, updated_by
         ) VALUES (
             'provider-bulk', 's3_compatible', 'Bulk S3', $1, 'us-east-1',
-            'bucket-s3', 1, 0, 'plain:test-access-key:test-secret-key',
+            'bucket-s3', TRUE, FALSE, 'plain:test-access-key:test-secret-key',
             'AES256', 'STANDARD', 'active', 1, 'user-bulk', 'user-bulk'
         )",
     )
@@ -9458,8 +9585,17 @@ async fn seed_download_package_fixture(
         sqlx::query(
             "INSERT INTO dr_drive_node (
                 id, tenant_id, space_id, parent_node_id, node_type, node_name,
-                content_state, lifecycle_status, version, created_by, updated_by
-            ) VALUES ($1, 'tenant-bulk', 'space-bulk', $2, $3, $4, 'ready', 'active', 1, 'user-bulk', 'user-bulk')",
+                content_state, head_content_type, head_content_type_group,
+                head_content_length, head_version_no,
+                lifecycle_status, version, created_by, updated_by
+            ) VALUES (
+                $1, 'tenant-bulk', 'space-bulk', $2, $3, $4, 'ready',
+                CASE WHEN $3 = 'file' THEN 'application/octet-stream' END,
+                CASE WHEN $3 = 'file' THEN 'binary' END,
+                CASE WHEN $3 = 'file' THEN 0 END,
+                CASE WHEN $3 = 'file' THEN 1 END,
+                'active', 1, 'user-bulk', 'user-bulk'
+            )",
         )
         .bind(id)
         .bind(parent_id)
@@ -9525,7 +9661,7 @@ async fn seed_archive_fixture(pool: &sqlx::PgPool, s3_endpoint: &str) -> Result<
             status, version, created_by, updated_by
         ) VALUES (
             'provider-archive', 's3_compatible', 'Archive S3', $1, 'us-east-1',
-            'bucket-archive', 1, 0, 'plain:test-access-key:test-secret-key',
+            'bucket-archive', TRUE, FALSE, 'plain:test-access-key:test-secret-key',
             'AES256', 'STANDARD', 'active', 1, 'user-archive', 'user-archive'
         )",
     )
@@ -9548,10 +9684,10 @@ async fn seed_archive_fixture(pool: &sqlx::PgPool, s3_endpoint: &str) -> Result<
     sqlx::query(
         "INSERT INTO dr_drive_node (
             id, tenant_id, space_id, parent_node_id, node_type, node_name,
-            content_state, lifecycle_status, version, created_by, updated_by
+            content_state, head_content_type, head_content_type_group, head_content_length, head_version_no, lifecycle_status, version, created_by, updated_by
         ) VALUES (
             'node-archive', 'tenant-archive', 'space-archive', NULL, 'file',
-            'report.zip', 'ready', 'active', 1, 'user-archive', 'user-archive'
+            'report.zip', 'ready', 'application/octet-stream', 'binary', 0, 1, 'active', 1, 'user-archive', 'user-archive'
         )",
     )
     .execute(pool)
@@ -9717,10 +9853,10 @@ async fn create_file_rejects_existing_node_id_before_storage_side_effects() {
     sqlx::query(
         "INSERT INTO dr_drive_node (
             id, tenant_id, space_id, parent_node_id, node_type, node_name,
-            content_state, lifecycle_status, version, created_by, updated_by
+            content_state, head_content_type, head_content_type_group, head_content_length, head_version_no, lifecycle_status, version, created_by, updated_by
         ) VALUES (
             'file-conflict', 'tenant-file-conflict', 'space-file-conflict',
-            NULL, 'file', 'existing.pdf', 'ready', 'active', 1,
+            NULL, 'file', 'existing.pdf', 'ready', 'application/octet-stream', 'binary', 0, 1, 'active', 1,
             'user-file', 'user-file'
         )",
     )
@@ -10275,7 +10411,7 @@ async fn app_drive_professional_file_create_upload_status_and_empty_trash_routes
             id, provider_kind, name, endpoint_url, region, bucket, path_style,
             strict_tls, credential_ref, server_side_encryption_mode, default_storage_class,
             status, version, created_by, updated_by
-        ) VALUES ('provider-pro', 's3_compatible', 'Primary S3', $1, 'us-east-1', 'bucket-pro', 1, 0, 'plain:test-access-key:test-secret-key', 'AES256', 'STANDARD', 'active', 1, 'admin-pro', 'admin-pro')",
+        ) VALUES ('provider-pro', 's3_compatible', 'Primary S3', $1, 'us-east-1', 'bucket-pro', TRUE, FALSE, 'plain:test-access-key:test-secret-key', 'AES256', 'STANDARD', 'active', 1, 'admin-pro', 'admin-pro')",
     )
     .bind(&s3_endpoint)
     .execute(&pool)
@@ -10518,10 +10654,10 @@ async fn empty_trash_rejects_missing_or_deleted_explicit_space_before_deleting_n
     sqlx::query(
         "INSERT INTO dr_drive_node (
             id, tenant_id, space_id, parent_node_id, node_type, node_name,
-            content_state, lifecycle_status, version, created_by, updated_by
+            content_state, head_content_type, head_content_type_group, head_content_length, head_version_no, lifecycle_status, version, created_by, updated_by
         ) VALUES (
             'node-trash-active', 'tenant-trash-filter', 'space-trash-active', NULL,
-            'file', 'kept-in-trash.txt', 'ready', 'trashed', 1, 'user-trash', 'user-trash'
+            'file', 'kept-in-trash.txt', 'ready', 'application/octet-stream', 'binary', 0, 1, 'trashed', 1, 'user-trash', 'user-trash'
         )",
     )
     .execute(&pool)
@@ -10950,8 +11086,8 @@ async fn app_dr_drive_node_share_link_create_rejects_negative_download_limit_bef
     sqlx::query(
         "INSERT INTO dr_drive_node (
             id, tenant_id, space_id, parent_node_id, node_type, node_name,
-            content_state, lifecycle_status, version, created_by, updated_by
-        ) VALUES ('node-share-validation', 'tenant-share-validation', 'space-share-validation', NULL, 'file', 'share.txt', 'ready', 'active', 1, 'user-owner', 'user-owner')",
+            content_state, head_content_type, head_content_type_group, head_content_length, head_version_no, lifecycle_status, version, created_by, updated_by
+        ) VALUES ('node-share-validation', 'tenant-share-validation', 'space-share-validation', NULL, 'file', 'share.txt', 'ready', 'application/octet-stream', 'binary', 0, 1, 'active', 1, 'user-owner', 'user-owner')",
     )
     .execute(&pool)
     .await
@@ -11024,8 +11160,8 @@ async fn app_dr_drive_node_share_link_create_stores_access_code_hash_and_reports
     sqlx::query(
         "INSERT INTO dr_drive_node (
             id, tenant_id, space_id, parent_node_id, node_type, node_name,
-            content_state, lifecycle_status, version, created_by, updated_by
-        ) VALUES ('node-share-access-code', 'tenant-share-access-code', 'space-share-access-code', NULL, 'file', 'secret.txt', 'ready', 'active', 1, 'user-owner', 'user-owner')",
+            content_state, head_content_type, head_content_type_group, head_content_length, head_version_no, lifecycle_status, version, created_by, updated_by
+        ) VALUES ('node-share-access-code', 'tenant-share-access-code', 'space-share-access-code', NULL, 'file', 'secret.txt', 'ready', 'application/octet-stream', 'binary', 0, 1, 'active', 1, 'user-owner', 'user-owner')",
     )
     .execute(&pool)
     .await
@@ -11101,8 +11237,8 @@ async fn app_dr_drive_node_share_link_create_rejects_past_expiration_before_data
     sqlx::query(
         "INSERT INTO dr_drive_node (
             id, tenant_id, space_id, parent_node_id, node_type, node_name,
-            content_state, lifecycle_status, version, created_by, updated_by
-        ) VALUES ('node-share-expired-create', 'tenant-share-expired-create', 'space-share-expired-create', NULL, 'file', 'share-expired.txt', 'ready', 'active', 1, 'user-owner', 'user-owner')",
+            content_state, head_content_type, head_content_type_group, head_content_length, head_version_no, lifecycle_status, version, created_by, updated_by
+        ) VALUES ('node-share-expired-create', 'tenant-share-expired-create', 'space-share-expired-create', NULL, 'file', 'share-expired.txt', 'ready', 'application/octet-stream', 'binary', 0, 1, 'active', 1, 'user-owner', 'user-owner')",
     )
     .execute(&pool)
     .await
@@ -11175,8 +11311,8 @@ async fn app_dr_drive_node_share_link_update_rejects_past_expiration_before_data
     sqlx::query(
         "INSERT INTO dr_drive_node (
             id, tenant_id, space_id, parent_node_id, node_type, node_name,
-            content_state, lifecycle_status, version, created_by, updated_by
-        ) VALUES ('node-share-expired-update', 'tenant-share-expired-update', 'space-share-expired-update', NULL, 'file', 'share-expired-update.txt', 'ready', 'active', 1, 'user-owner', 'user-owner')",
+            content_state, head_content_type, head_content_type_group, head_content_length, head_version_no, lifecycle_status, version, created_by, updated_by
+        ) VALUES ('node-share-expired-update', 'tenant-share-expired-update', 'space-share-expired-update', NULL, 'file', 'share-expired-update.txt', 'ready', 'application/octet-stream', 'binary', 0, 1, 'active', 1, 'user-owner', 'user-owner')",
     )
     .execute(&pool)
     .await
@@ -11372,14 +11508,15 @@ async fn app_dr_drive_space_resource_routes_get_update_delete_and_retire_content
     sqlx::query(
         "INSERT INTO dr_drive_node (
             id, tenant_id, space_id, parent_node_id, node_type, node_name,
-            content_state, lifecycle_status, version, created_by, updated_by
-        ) VALUES ('node-resource', 'tenant-resource', 'space-resource', NULL, 'file', 'resource.pdf', 'ready', 'active', 1, 'user-owner', 'user-owner')",
+            content_state, head_content_type, head_content_type_group, head_content_length, head_version_no, lifecycle_status, version, created_by, updated_by
+        ) VALUES ('node-resource', 'tenant-resource', 'space-resource', NULL, 'file', 'resource.pdf', 'ready', 'application/octet-stream', 'binary', 0, 1, 'active', 1, 'user-owner', 'user-owner')",
     )
     .execute(&pool)
     .await
     .expect("node should be seeded");
     seed_storage_metadata_provider_fixture(
         &pool,
+        "tenant-resource",
         "provider-resource",
         "bucket-resource",
         "user-owner",
@@ -11629,20 +11766,20 @@ async fn app_drive_collaboration_and_version_governance_routes_update_and_emit_c
     sqlx::query(
         "INSERT INTO dr_drive_node (
             id, tenant_id, space_id, parent_node_id, node_type, node_name,
-            content_state, lifecycle_status, version, created_by, updated_by
-        ) VALUES ('node-gov', 'tenant-gov', 'space-gov', NULL, 'file', 'governance.pdf', 'ready', 'active', 1, 'user-owner', 'user-owner')",
+            content_state, head_content_type, head_content_type_group, head_content_length, head_version_no, lifecycle_status, version, created_by, updated_by
+        ) VALUES ('node-gov', 'tenant-gov', 'space-gov', NULL, 'file', 'governance.pdf', 'ready', 'application/octet-stream', 'binary', 0, 1, 'active', 1, 'user-owner', 'user-owner')",
     )
     .execute(&pool)
     .await
     .expect("node should be seeded");
-    seed_storage_metadata_provider_fixture(&pool, "provider-gov", "bucket-gov", "user-owner").await;
+    seed_storage_metadata_provider_fixture(&pool, "tenant-gov", "provider-gov", "bucket-gov", "user-owner").await;
     sqlx::query(
         "INSERT INTO dr_drive_node_permission (
             id, tenant_id, node_id, subject_type, subject_id, role,
             inherited, lifecycle_status, version, created_by, updated_by
         ) VALUES (
             'perm-gov', 'tenant-gov', 'node-gov', 'user', 'user-reviewer',
-            'reader', 0, 'active', 1, 'user-owner', 'user-owner'
+            'reader', FALSE, 'active', 1, 'user-owner', 'user-owner'
         )",
     )
     .execute(&pool)
@@ -12142,8 +12279,8 @@ async fn app_dr_drive_node_comment_and_reply_routes_support_collaboration_lifecy
     sqlx::query(
         "INSERT INTO dr_drive_node (
             id, tenant_id, space_id, parent_node_id, node_type, node_name,
-            content_state, lifecycle_status, version, created_by, updated_by
-        ) VALUES ('node-comments', 'tenant-comments', 'space-comments', NULL, 'file', 'proposal.docx', 'ready', 'active', 1, 'user-owner', 'user-owner')",
+            content_state, head_content_type, head_content_type_group, head_content_length, head_version_no, lifecycle_status, version, created_by, updated_by
+        ) VALUES ('node-comments', 'tenant-comments', 'space-comments', NULL, 'file', 'proposal.docx', 'ready', 'application/octet-stream', 'binary', 0, 1, 'active', 1, 'user-owner', 'user-owner')",
     )
     .execute(&pool)
     .await
@@ -12155,7 +12292,7 @@ async fn app_dr_drive_node_comment_and_reply_routes_support_collaboration_lifecy
             inherited, lifecycle_status, version, created_by, updated_by
         ) VALUES (
             'perm-comments-reviewer', 'tenant-comments', 'node-comments', 'user', 'user-reviewer',
-            'writer', 0, 'active', 1, 'user-owner', 'user-owner'
+            'writer', FALSE, 'active', 1, 'user-owner', 'user-owner'
         )",
     )
     .execute(&pool)
@@ -12167,7 +12304,7 @@ async fn app_dr_drive_node_comment_and_reply_routes_support_collaboration_lifecy
             inherited, lifecycle_status, version, created_by, updated_by
         ) VALUES (
             'perm-comments-collaborator', 'tenant-comments', 'node-comments', 'user', 'user-collaborator',
-            'writer', 0, 'active', 1, 'user-owner', 'user-owner'
+            'writer', FALSE, 'active', 1, 'user-owner', 'user-owner'
         )",
     )
     .execute(&pool)
@@ -13132,8 +13269,17 @@ async fn app_dr_drive_node_path_route_returns_ordered_breadcrumbs() {
         sqlx::query(
             "INSERT INTO dr_drive_node (
                 id, tenant_id, space_id, parent_node_id, node_type, node_name,
-                content_state, lifecycle_status, version, created_by, updated_by
-            ) VALUES ($1, 'tenant-path', 'space-path', $2, $3, $4, 'ready', 'active', 1, 'user-owner', 'user-owner')",
+                content_state, head_content_type, head_content_type_group,
+                head_content_length, head_version_no,
+                lifecycle_status, version, created_by, updated_by
+            ) VALUES (
+                $1, 'tenant-path', 'space-path', $2, $3, $4, 'ready',
+                CASE WHEN $3 = 'file' THEN 'application/pdf' END,
+                CASE WHEN $3 = 'file' THEN 'document' END,
+                CASE WHEN $3 = 'file' THEN 0 END,
+                CASE WHEN $3 = 'file' THEN 1 END,
+                'active', 1, 'user-owner', 'user-owner'
+            )",
         )
         .bind(id)
         .bind(parent_id)
@@ -13253,8 +13399,8 @@ async fn app_drive_standard_views_list_trash_recent_shared_and_favorites() {
         sqlx::query(
             "INSERT INTO dr_drive_node (
                 id, tenant_id, space_id, parent_node_id, node_type, node_name,
-                content_state, lifecycle_status, version, created_by, updated_by
-            ) VALUES ($1, 'tenant-views', 'space-views', NULL, 'file', $2, 'ready', $3, 1, 'user-owner', 'user-owner')",
+                content_state, head_content_type, head_content_type_group, head_content_length, head_version_no, lifecycle_status, version, created_by, updated_by
+            ) VALUES ($1, 'tenant-views', 'space-views', NULL, 'file', $2, 'ready', 'application/octet-stream', 'binary', 0, 1, $3, 1, 'user-owner', 'user-owner')",
         )
         .bind(id)
         .bind(node_name)
@@ -13295,7 +13441,7 @@ async fn app_drive_standard_views_list_trash_recent_shared_and_favorites() {
             inherited, lifecycle_status, version, created_by, updated_by
         ) VALUES (
             'perm-shared', 'tenant-views', 'node-shared', 'user', 'user-reviewer',
-            'reader', 0, 'active', 1, 'user-owner', 'user-owner'
+            'reader', FALSE, 'active', 1, 'user-owner', 'user-owner'
         )",
     )
     .execute(&pool)
@@ -13307,7 +13453,7 @@ async fn app_drive_standard_views_list_trash_recent_shared_and_favorites() {
             inherited, lifecycle_status, version, created_by, updated_by
         ) VALUES (
             'perm-trashed', 'tenant-views', 'node-trashed', 'user', 'user-reviewer',
-            'reader', 0, 'active', 1, 'user-owner', 'user-owner'
+            'reader', FALSE, 'active', 1, 'user-owner', 'user-owner'
         )",
     )
     .execute(&pool)
@@ -13319,7 +13465,7 @@ async fn app_drive_standard_views_list_trash_recent_shared_and_favorites() {
             inherited, lifecycle_status, version, created_by, updated_by
         ) VALUES (
             'perm-favorite', 'tenant-views', 'node-favorite', 'user', 'user-reviewer',
-            'reader', 0, 'active', 1, 'user-owner', 'user-owner'
+            'reader', FALSE, 'active', 1, 'user-owner', 'user-owner'
         )",
     )
     .execute(&pool)
@@ -13331,7 +13477,7 @@ async fn app_drive_standard_views_list_trash_recent_shared_and_favorites() {
             inherited, lifecycle_status, version, created_by, updated_by
         ) VALUES (
             'perm-active', 'tenant-views', 'node-active', 'user', 'user-reviewer',
-            'reader', 0, 'active', 1, 'user-owner', 'user-owner'
+            'reader', FALSE, 'active', 1, 'user-owner', 'user-owner'
         )",
     )
     .execute(&pool)
@@ -13718,7 +13864,7 @@ async fn app_drive_list_routes_support_standard_page_tokens() {
     .execute(&pool)
     .await
     .expect("space should be seeded");
-    seed_storage_metadata_provider_fixture(&pool, "provider-page", "bucket-page", "user-page")
+    seed_storage_metadata_provider_fixture(&pool, "tenant-page", "provider-page", "bucket-page", "user-page")
         .await;
     for (id, node_name, updated_at) in [
         ("node-page-a", "a.txt", "2026-06-04 10:00:00"),
@@ -13727,8 +13873,8 @@ async fn app_drive_list_routes_support_standard_page_tokens() {
         sqlx::query(
             "INSERT INTO dr_drive_node (
                 id, tenant_id, space_id, parent_node_id, node_type, node_name,
-                content_state, lifecycle_status, version, created_by, updated_by, updated_at
-            ) VALUES ($1, 'tenant-page', 'space-page', NULL, 'file', $2, 'ready', 'active', 1, 'user-page', 'user-page', $3)",
+                content_state, head_content_type, head_content_type_group, head_content_length, head_version_no, lifecycle_status, version, created_by, updated_by, updated_at
+            ) VALUES ($1, 'tenant-page', 'space-page', NULL, 'file', $2, 'ready', 'application/octet-stream', 'binary', 0, 1, 'active', 1, 'user-page', 'user-page', $3::timestamptz)",
         )
         .bind(id)
         .bind(node_name)
@@ -13747,7 +13893,7 @@ async fn app_drive_list_routes_support_standard_page_tokens() {
                 inherited, lifecycle_status, version, created_by, updated_by
             ) VALUES (
                 $1, 'tenant-page', 'node-page-a', 'user', $2,
-                'reader', 0, 'active', 1, 'user-page', 'user-page'
+                'reader', FALSE, 'active', 1, 'user-page', 'user-page'
             )",
         )
         .bind(id)
@@ -14074,8 +14220,17 @@ async fn app_drive_effective_permissions_include_direct_inherited_acl_and_page_t
         sqlx::query(
             "INSERT INTO dr_drive_node (
                 id, tenant_id, space_id, parent_node_id, node_type, node_name,
-                content_state, lifecycle_status, version, created_by, updated_by
-            ) VALUES ($1, 'tenant-effective-perm', 'space-effective-perm', $2, $3, $4, 'ready', 'active', 1, 'user-owner', 'user-owner')",
+                content_state, head_content_type, head_content_type_group,
+                head_content_length, head_version_no,
+                lifecycle_status, version, created_by, updated_by
+            ) VALUES (
+                $1, 'tenant-effective-perm', 'space-effective-perm', $2, $3, $4, 'ready',
+                CASE WHEN $3 = 'file' THEN 'application/octet-stream' END,
+                CASE WHEN $3 = 'file' THEN 'binary' END,
+                CASE WHEN $3 = 'file' THEN 0 END,
+                CASE WHEN $3 = 'file' THEN 1 END,
+                'active', 1, 'user-owner', 'user-owner'
+            )",
         )
         .bind(id)
         .bind(parent_node_id)
@@ -14114,7 +14269,7 @@ async fn app_drive_effective_permissions_include_direct_inherited_acl_and_page_t
                 inherited, lifecycle_status, version, created_by, updated_by
             ) VALUES (
                 $1, 'tenant-effective-perm', $2, $3, $4,
-                $5, 0, 'active', 1, 'user-owner', 'user-owner'
+                $5, FALSE, 'active', 1, 'user-owner', 'user-owner'
             )",
         )
         .bind(id)
@@ -14225,8 +14380,17 @@ async fn app_drive_effective_permissions_prefer_direct_then_nearest_acl_for_same
         sqlx::query(
             "INSERT INTO dr_drive_node (
                 id, tenant_id, space_id, parent_node_id, node_type, node_name,
-                content_state, lifecycle_status, version, created_by, updated_by
-            ) VALUES ($1, 'tenant-effective-override', 'space-effective-override', $2, $3, $4, 'ready', 'active', 1, 'user-owner', 'user-owner')",
+                content_state, head_content_type, head_content_type_group,
+                head_content_length, head_version_no,
+                lifecycle_status, version, created_by, updated_by
+            ) VALUES (
+                $1, 'tenant-effective-override', 'space-effective-override', $2, $3, $4, 'ready',
+                CASE WHEN $3 = 'file' THEN 'application/octet-stream' END,
+                CASE WHEN $3 = 'file' THEN 'binary' END,
+                CASE WHEN $3 = 'file' THEN 0 END,
+                CASE WHEN $3 = 'file' THEN 1 END,
+                'active', 1, 'user-owner', 'user-owner'
+            )",
         )
         .bind(id)
         .bind(parent_node_id)
@@ -14247,7 +14411,7 @@ async fn app_drive_effective_permissions_prefer_direct_then_nearest_acl_for_same
                 inherited, lifecycle_status, version, created_by, updated_by
             ) VALUES (
                 $1, 'tenant-effective-override', $2, 'user', 'user-overlap',
-                $3, 0, 'active', 1, 'user-owner', 'user-owner'
+                $3, FALSE, 'active', 1, 'user-owner', 'user-owner'
             )",
         )
         .bind(id)
@@ -14308,8 +14472,17 @@ async fn app_dr_drive_node_capabilities_resolve_direct_inherited_owner_and_missi
         sqlx::query(
             "INSERT INTO dr_drive_node (
                 id, tenant_id, space_id, parent_node_id, node_type, node_name,
-                content_state, lifecycle_status, version, created_by, updated_by
-            ) VALUES ($1, 'tenant-capability', 'space-capability', $2, $3, $4, 'ready', 'active', 1, 'user-owner', 'user-owner')",
+                content_state, head_content_type, head_content_type_group,
+                head_content_length, head_version_no,
+                lifecycle_status, version, created_by, updated_by
+            ) VALUES (
+                $1, 'tenant-capability', 'space-capability', $2, $3, $4, 'ready',
+                CASE WHEN $3 = 'file' THEN 'application/octet-stream' END,
+                CASE WHEN $3 = 'file' THEN 'binary' END,
+                CASE WHEN $3 = 'file' THEN 0 END,
+                CASE WHEN $3 = 'file' THEN 1 END,
+                'active', 1, 'user-owner', 'user-owner'
+            )",
         )
         .bind(id)
         .bind(parent_node_id)
@@ -14339,7 +14512,7 @@ async fn app_dr_drive_node_capabilities_resolve_direct_inherited_owner_and_missi
                 inherited, lifecycle_status, version, created_by, updated_by
             ) VALUES (
                 $1, 'tenant-capability', $2, 'user', $3,
-                $4, 0, 'active', 1, 'user-owner', 'user-owner'
+                $4, FALSE, 'active', 1, 'user-owner', 'user-owner'
             )",
         )
         .bind(id)
@@ -14435,10 +14608,10 @@ async fn app_dr_drive_node_capabilities_support_trashed_nodes_with_restore_only_
     sqlx::query(
         "INSERT INTO dr_drive_node (
             id, tenant_id, space_id, parent_node_id, node_type, node_name,
-            content_state, lifecycle_status, version, created_by, updated_by
+            content_state, head_content_type, head_content_type_group, head_content_length, head_version_no, lifecycle_status, version, created_by, updated_by
         ) VALUES (
             'node-cap-trash', 'tenant-cap-trash', 'space-cap-trash',
-            NULL, 'file', 'trashed.pdf', 'ready', 'trashed', 1,
+            NULL, 'file', 'trashed.pdf', 'ready', 'application/octet-stream', 'binary', 0, 1, 'trashed', 1,
             'user-owner', 'user-owner'
         )",
     )
@@ -14451,7 +14624,7 @@ async fn app_dr_drive_node_capabilities_support_trashed_nodes_with_restore_only_
             inherited, lifecycle_status, version, created_by, updated_by
         ) VALUES (
             'perm-cap-trash-writer', 'tenant-cap-trash', 'node-cap-trash',
-            'user', 'user-writer', 'writer', 0, 'active', 1,
+            'user', 'user-writer', 'writer', FALSE, 'active', 1,
             'user-owner', 'user-owner'
         )",
     )
@@ -14523,8 +14696,8 @@ async fn app_dr_drive_node_properties_support_custom_metadata_lifecycle_and_page
     sqlx::query(
         "INSERT INTO dr_drive_node (
             id, tenant_id, space_id, parent_node_id, node_type, node_name,
-            content_state, lifecycle_status, version, created_by, updated_by
-        ) VALUES ('node-property', 'tenant-property', 'space-property', NULL, 'file', 'metadata.pdf', 'ready', 'active', 1, 'user-owner', 'user-owner')",
+            content_state, head_content_type, head_content_type_group, head_content_length, head_version_no, lifecycle_status, version, created_by, updated_by
+        ) VALUES ('node-property', 'tenant-property', 'space-property', NULL, 'file', 'metadata.pdf', 'ready', 'application/octet-stream', 'binary', 0, 1, 'active', 1, 'user-owner', 'user-owner')",
     )
     .execute(&pool)
     .await
@@ -14748,10 +14921,10 @@ async fn app_drive_collaboration_and_metadata_writes_reject_trashed_nodes_withou
     sqlx::query(
         "INSERT INTO dr_drive_node (
             id, tenant_id, space_id, parent_node_id, node_type, node_name,
-            content_state, lifecycle_status, version, created_by, updated_by
+            content_state, head_content_type, head_content_type_group, head_content_length, head_version_no, lifecycle_status, version, created_by, updated_by
         ) VALUES (
             'node-trashed-write', 'tenant-trashed-write', 'space-trashed-write',
-            NULL, 'file', 'trashed-write.pdf', 'ready', 'trashed', 1,
+            NULL, 'file', 'trashed-write.pdf', 'ready', 'application/octet-stream', 'binary', 0, 1, 'trashed', 1,
             'user-owner', 'user-owner'
         )",
     )
@@ -14983,10 +15156,10 @@ async fn app_drive_metadata_deletes_reject_trashed_nodes_without_side_effects() 
     sqlx::query(
         "INSERT INTO dr_drive_node (
             id, tenant_id, space_id, parent_node_id, node_type, node_name,
-            content_state, lifecycle_status, version, created_by, updated_by
+            content_state, head_content_type, head_content_type_group, head_content_length, head_version_no, lifecycle_status, version, created_by, updated_by
         ) VALUES (
             'node-trashed-delete', 'tenant-trashed-delete', 'space-trashed-delete',
-            NULL, 'file', 'trashed-delete.pdf', 'ready', 'trashed', 1,
+            NULL, 'file', 'trashed-delete.pdf', 'ready', 'application/octet-stream', 'binary', 0, 1, 'trashed', 1,
             'user-owner', 'user-owner'
         )",
     )
@@ -15168,10 +15341,10 @@ async fn app_drive_collaboration_updates_and_versions_reject_trashed_nodes_witho
     sqlx::query(
         "INSERT INTO dr_drive_node (
             id, tenant_id, space_id, parent_node_id, node_type, node_name,
-            content_state, lifecycle_status, version, created_by, updated_by
+            content_state, head_content_type, head_content_type_group, head_content_length, head_version_no, lifecycle_status, version, created_by, updated_by
         ) VALUES (
             'node-trashed-update', 'tenant-trashed-update', 'space-trashed-update',
-            NULL, 'file', 'trashed-update.pdf', 'ready', 'trashed', 1,
+            NULL, 'file', 'trashed-update.pdf', 'ready', 'application/octet-stream', 'binary', 0, 1, 'trashed', 1,
             'user-owner', 'user-owner'
         )",
     )
@@ -15180,6 +15353,7 @@ async fn app_drive_collaboration_updates_and_versions_reject_trashed_nodes_witho
     .expect("trashed node should be seeded");
     seed_storage_metadata_provider_fixture(
         &pool,
+        "tenant-trashed-update",
         "provider-trashed-update",
         "bucket-trashed-update",
         "user-owner",
@@ -15191,7 +15365,7 @@ async fn app_drive_collaboration_updates_and_versions_reject_trashed_nodes_witho
             inherited, lifecycle_status, version, created_by, updated_by
         ) VALUES (
             'permission-trashed-update', 'tenant-trashed-update', 'node-trashed-update',
-            'user', 'user-reviewer', 'reader', 0, 'active', 1, 'user-owner', 'user-owner'
+            'user', 'user-reviewer', 'reader', FALSE, 'active', 1, 'user-owner', 'user-owner'
         )",
     )
     .execute(&pool)
@@ -15217,7 +15391,7 @@ async fn app_drive_collaboration_updates_and_versions_reject_trashed_nodes_witho
             version, created_by, updated_by
         ) VALUES (
             'comment-trashed-update', 'tenant-trashed-update', 'node-trashed-update',
-            'Original comment', '$.body[0]', 0, 'active', 1, 'user-owner', 'user-owner'
+            'Original comment', '$.body[0]', FALSE, 'active', 1, 'user-owner', 'user-owner'
         )",
     )
     .execute(&pool)
@@ -15617,8 +15791,17 @@ async fn app_drive_shortcuts_create_and_resolve_target_metadata() {
         sqlx::query(
             "INSERT INTO dr_drive_node (
                 id, tenant_id, space_id, parent_node_id, node_type, node_name,
-                content_state, lifecycle_status, version, created_by, updated_by
-            ) VALUES ($1, 'tenant-shortcut', 'space-shortcut', $2, $3, $4, 'ready', 'active', 1, 'user-owner', 'user-owner')",
+                content_state, head_content_type, head_content_type_group,
+                head_content_length, head_version_no,
+                lifecycle_status, version, created_by, updated_by
+            ) VALUES (
+                $1, 'tenant-shortcut', 'space-shortcut', $2, $3, $4, 'ready',
+                CASE WHEN $3 = 'file' THEN 'application/octet-stream' END,
+                CASE WHEN $3 = 'file' THEN 'binary' END,
+                CASE WHEN $3 = 'file' THEN 0 END,
+                CASE WHEN $3 = 'file' THEN 1 END,
+                'active', 1, 'user-owner', 'user-owner'
+            )",
         )
         .bind(id)
         .bind(parent_node_id)
@@ -15631,8 +15814,8 @@ async fn app_drive_shortcuts_create_and_resolve_target_metadata() {
     sqlx::query(
         "INSERT INTO dr_drive_node (
             id, tenant_id, space_id, parent_node_id, node_type, node_name,
-            content_state, lifecycle_status, version, created_by, updated_by
-        ) VALUES ('node-target-other-space', 'tenant-shortcut', 'space-shortcut-other', NULL, 'file', 'external.pdf', 'ready', 'active', 1, 'user-owner', 'user-owner')",
+            content_state, head_content_type, head_content_type_group, head_content_length, head_version_no, lifecycle_status, version, created_by, updated_by
+        ) VALUES ('node-target-other-space', 'tenant-shortcut', 'space-shortcut-other', NULL, 'file', 'external.pdf', 'ready', 'application/octet-stream', 'binary', 0, 1, 'active', 1, 'user-owner', 'user-owner')",
     )
     .execute(&pool)
     .await
@@ -15791,8 +15974,17 @@ async fn app_dr_drive_node_hierarchy_mutations_validate_parent_type_and_name_con
         sqlx::query(
             "INSERT INTO dr_drive_node (
                 id, tenant_id, space_id, parent_node_id, node_type, node_name,
-                content_state, lifecycle_status, version, created_by, updated_by
-            ) VALUES ($1, 'tenant-hierarchy', 'space-hierarchy', $2, $3, $4, 'ready', 'active', 1, 'user-owner', 'user-owner')",
+                content_state, head_content_type, head_content_type_group,
+                head_content_length, head_version_no,
+                lifecycle_status, version, created_by, updated_by
+            ) VALUES (
+                $1, 'tenant-hierarchy', 'space-hierarchy', $2, $3, $4, 'ready',
+                CASE WHEN $3 = 'file' THEN 'application/octet-stream' END,
+                CASE WHEN $3 = 'file' THEN 'binary' END,
+                CASE WHEN $3 = 'file' THEN 0 END,
+                CASE WHEN $3 = 'file' THEN 1 END,
+                'active', 1, 'user-owner', 'user-owner'
+            )",
         )
         .bind(id)
         .bind(parent_node_id)
@@ -15998,10 +16190,17 @@ async fn app_drive_node_mutations_reject_trashed_sources_and_shortcut_targets_wi
         sqlx::query(
             "INSERT INTO dr_drive_node (
                 id, tenant_id, space_id, parent_node_id, node_type, node_name,
-                content_state, lifecycle_status, version, created_by, updated_by
+                content_state, head_content_type, head_content_type_group,
+                head_content_length, head_version_no,
+                lifecycle_status, version, created_by, updated_by
             ) VALUES (
-                $1, 'tenant-node-mutation-trash', 'space-node-mutation-trash',
-                $2, $3, $4, 'ready', $5, 1, 'user-owner', 'user-owner'
+                $1, 'tenant-node-mutation-trash', 'space-node-mutation-trash', $2, $3, $4, 'ready',
+                CASE WHEN $3 = 'file' THEN 'application/octet-stream' END,
+                CASE WHEN $3 = 'file' THEN 'binary' END,
+                CASE WHEN $3 = 'file' THEN 0 END,
+                CASE WHEN $3 = 'file' THEN 1 END,
+                $5, 1, 'user-owner', 'user-owner'
+            
             )",
         )
         .bind(id)
@@ -16218,8 +16417,17 @@ async fn app_dr_drive_git_repository_space_root_accepts_only_repository_director
         sqlx::query(
             "INSERT INTO dr_drive_node (
                 id, tenant_id, space_id, parent_node_id, node_type, node_name,
-                content_state, lifecycle_status, version, created_by, updated_by
-            ) VALUES ($1, 'tenant-git-repository-root', $2, $3, $4, $5, $6, 'active', 1, 'user-owner', 'user-owner')",
+                content_state, head_content_type, head_content_type_group,
+                head_content_length, head_version_no,
+                lifecycle_status, version, created_by, updated_by
+            ) VALUES (
+                $1, 'tenant-git-repository-root', $2, $3, $4, $5, $6,
+                CASE WHEN $4 = 'file' THEN 'application/zip' END,
+                CASE WHEN $4 = 'file' THEN 'archive' END,
+                CASE WHEN $4 = 'file' THEN 0 END,
+                CASE WHEN $4 = 'file' THEN 1 END,
+                'active', 1, 'user-owner', 'user-owner'
+            )",
         )
         .bind(id)
         .bind(space_id)
@@ -16427,8 +16635,8 @@ async fn app_drive_copy_shortcut_preserves_target_node_reference() {
     sqlx::query(
         "INSERT INTO dr_drive_node (
             id, tenant_id, space_id, parent_node_id, node_type, node_name,
-            content_state, lifecycle_status, version, created_by, updated_by
-        ) VALUES ('node-target-copy', 'tenant-shortcut-copy', 'space-shortcut-copy', NULL, 'file', 'source.pdf', 'ready', 'active', 1, 'user-owner', 'user-owner')",
+            content_state, head_content_type, head_content_type_group, head_content_length, head_version_no, lifecycle_status, version, created_by, updated_by
+        ) VALUES ('node-target-copy', 'tenant-shortcut-copy', 'space-shortcut-copy', NULL, 'file', 'source.pdf', 'ready', 'application/octet-stream', 'binary', 0, 1, 'active', 1, 'user-owner', 'user-owner')",
     )
     .execute(&pool)
     .await
@@ -16597,8 +16805,8 @@ async fn app_dr_drive_node_labels_apply_list_filter_remove_and_emit_changes() {
     sqlx::query(
         "INSERT INTO dr_drive_node (
             id, tenant_id, space_id, parent_node_id, node_type, node_name,
-            content_state, lifecycle_status, version, created_by, updated_by
-        ) VALUES ('node-label', 'tenant-label', 'space-label', NULL, 'file', 'classified.pdf', 'ready', 'active', 1, 'user-owner', 'user-owner')",
+            content_state, head_content_type, head_content_type_group, head_content_length, head_version_no, lifecycle_status, version, created_by, updated_by
+        ) VALUES ('node-label', 'tenant-label', 'space-label', NULL, 'file', 'classified.pdf', 'ready', 'application/octet-stream', 'binary', 0, 1, 'active', 1, 'user-owner', 'user-owner')",
     )
     .execute(&pool)
     .await
@@ -16799,8 +17007,8 @@ async fn app_dr_drive_watch_channels_create_list_get_stop_and_emit_changes() {
     sqlx::query(
         "INSERT INTO dr_drive_node (
             id, tenant_id, space_id, parent_node_id, node_type, node_name,
-            content_state, lifecycle_status, version, created_by, updated_by
-        ) VALUES ('node-watch', 'tenant-watch', 'space-watch', NULL, 'file', 'watched.pdf', 'ready', 'active', 1, 'user-owner', 'user-owner')",
+            content_state, head_content_type, head_content_type_group, head_content_length, head_version_no, lifecycle_status, version, created_by, updated_by
+        ) VALUES ('node-watch', 'tenant-watch', 'space-watch', NULL, 'file', 'watched.pdf', 'ready', 'application/octet-stream', 'binary', 0, 1, 'active', 1, 'user-owner', 'user-owner')",
     )
     .execute(&pool)
     .await
@@ -17129,10 +17337,10 @@ async fn app_dr_drive_watch_node_rejects_trashed_node_before_creating_channel() 
     sqlx::query(
         "INSERT INTO dr_drive_node (
             id, tenant_id, space_id, parent_node_id, node_type, node_name,
-            content_state, lifecycle_status, version, created_by, updated_by
+            content_state, head_content_type, head_content_type_group, head_content_length, head_version_no, lifecycle_status, version, created_by, updated_by
         ) VALUES (
             'node-watch-trashed', 'tenant-watch-trashed', 'space-watch-trashed',
-            NULL, 'file', 'trashed.pdf', 'ready', 'trashed', 1,
+            NULL, 'file', 'trashed.pdf', 'ready', 'application/octet-stream', 'binary', 0, 1, 'trashed', 1,
             'user-owner', 'user-owner'
         )",
     )
@@ -17315,7 +17523,7 @@ async fn app_drive_share_link_routes_enforce_acl_roles() {
             inherited, lifecycle_status, version, created_by, updated_by
         ) VALUES (
             'perm-share-reader', 'tenant-share-acl', 'node-share-acl', 'user', 'user-outsider',
-            'reader', 0, 'active', 1, 'user-owner', 'user-owner'
+            'reader', FALSE, 'active', 1, 'user-owner', 'user-owner'
         )",
     )
     .execute(&pool)
@@ -17447,10 +17655,10 @@ async fn app_drive_search_skips_nodes_without_reader_acl_and_paginates_visible_r
         sqlx::query(
             "INSERT INTO dr_drive_node (
                 id, tenant_id, space_id, parent_node_id, node_type, node_name,
-                content_state, lifecycle_status, version, created_by, updated_by
+                content_state, head_content_type, head_content_type_group, head_content_length, head_version_no, lifecycle_status, version, created_by, updated_by
             ) VALUES (
                 $1, 'tenant-search-acl', 'space-search-acl', NULL, 'file', $2,
-                'ready', 'active', 1, 'user-owner', 'user-owner'
+                'ready', 'application/octet-stream', 'binary', 0, 1, 'active', 1, 'user-owner', 'user-owner'
             )",
         )
         .bind(id)
@@ -17467,7 +17675,7 @@ async fn app_drive_search_skips_nodes_without_reader_acl_and_paginates_visible_r
                 inherited, lifecycle_status, version, created_by, updated_by
             ) VALUES (
                 $1, 'tenant-search-acl', $2, 'user', 'user-reviewer', 'reader',
-                0, 'active', 1, 'user-owner', 'user-owner'
+                FALSE, 'active', 1, 'user-owner', 'user-owner'
             )",
         )
         .bind(format!("perm-{node_id}"))
@@ -17609,7 +17817,7 @@ async fn app_drive_list_skips_nodes_without_reader_acl_and_paginates_visible_res
             inherited, lifecycle_status, version, created_by, updated_by
         ) VALUES (
             'perm-folder-list-acl-anchor', 'tenant-list-acl', 'folder-list-acl-anchor',
-            'user', 'user-reviewer', 'reader', 0, 'active', 1, 'user-owner', 'user-owner'
+            'user', 'user-reviewer', 'reader', FALSE, 'active', 1, 'user-owner', 'user-owner'
         )",
     )
     .execute(&pool)
@@ -17624,10 +17832,10 @@ async fn app_drive_list_skips_nodes_without_reader_acl_and_paginates_visible_res
         sqlx::query(
             "INSERT INTO dr_drive_node (
                 id, tenant_id, space_id, parent_node_id, node_type, node_name,
-                content_state, lifecycle_status, version, created_by, updated_by
+                content_state, head_content_type, head_content_type_group, head_content_length, head_version_no, lifecycle_status, version, created_by, updated_by
             ) VALUES (
                 $1, 'tenant-list-acl', 'space-list-acl', NULL, 'file', $2,
-                'ready', 'active', 1, 'user-owner', 'user-owner'
+                'ready', 'application/octet-stream', 'binary', 0, 1, 'active', 1, 'user-owner', 'user-owner'
             )",
         )
         .bind(id)
@@ -17822,7 +18030,7 @@ async fn uploader_mark_part_uploaded_requires_writer_acl() {
             status, version, created_by, updated_by
         ) VALUES (
             'provider-uploader-part-deny', 's3_compatible', 'Uploader S3',
-            'https://s3.example.com', 'us-east-1', 'bucket-s3', 1, 1,
+            'https://s3.example.com', 'us-east-1', 'bucket-s3', TRUE, TRUE,
             'plain:test-access-key:test-secret-key', 'AES256', 'STANDARD',
             'active', 1, 'admin-uploader', 'admin-uploader'
         )",
@@ -17938,10 +18146,10 @@ async fn app_drive_comment_routes_enforce_acl_roles() {
     sqlx::query(
         "INSERT INTO dr_drive_node (
             id, tenant_id, space_id, parent_node_id, node_type, node_name,
-            content_state, lifecycle_status, version, created_by, updated_by
+            content_state, head_content_type, head_content_type_group, head_content_length, head_version_no, lifecycle_status, version, created_by, updated_by
         ) VALUES (
             'node-comment-acl', 'tenant-comment-acl', 'space-comment-acl', NULL, 'file', 'notes.txt',
-            'ready', 'active', 1, 'user-owner', 'user-owner'
+            'ready', 'application/octet-stream', 'binary', 0, 1, 'active', 1, 'user-owner', 'user-owner'
         )",
     )
     .execute(&pool)
@@ -18015,7 +18223,7 @@ async fn app_drive_comment_routes_enforce_acl_roles() {
             inherited, lifecycle_status, version, created_by, updated_by
         ) VALUES (
             'perm-comment-reader', 'tenant-comment-acl', 'node-comment-acl', 'user', 'user-outsider',
-            'reader', 0, 'active', 1, 'user-owner', 'user-owner'
+            'reader', FALSE, 'active', 1, 'user-owner', 'user-owner'
         )",
     )
     .execute(&pool)
@@ -18099,10 +18307,10 @@ async fn app_drive_legacy_download_url_route_enforces_reader_acl() {
     sqlx::query(
         "INSERT INTO dr_drive_node (
             id, tenant_id, space_id, parent_node_id, node_type, node_name,
-            content_state, lifecycle_status, version, created_by, updated_by
+            content_state, head_content_type, head_content_type_group, head_content_length, head_version_no, lifecycle_status, version, created_by, updated_by
         ) VALUES (
             'node-download-acl', 'tenant-download-acl', 'space-download-acl', NULL, 'file', 'secret.bin',
-            'ready', 'active', 1, 'user-owner', 'user-owner'
+            'ready', 'application/octet-stream', 'binary', 0, 1, 'active', 1, 'user-owner', 'user-owner'
         )",
     )
     .execute(&pool)
@@ -18232,10 +18440,10 @@ async fn app_drive_change_feed_skips_nodes_without_reader_acl_and_paginates_visi
         sqlx::query(
             "INSERT INTO dr_drive_node (
                 id, tenant_id, space_id, parent_node_id, node_type, node_name,
-                content_state, lifecycle_status, version, created_by, updated_by
+                content_state, head_content_type, head_content_type_group, head_content_length, head_version_no, lifecycle_status, version, created_by, updated_by
             ) VALUES (
                 $1, 'tenant-change-acl', 'space-change-acl', NULL, 'file', $1,
-                'ready', 'active', 1, 'user-owner', 'user-owner'
+                'ready', 'application/octet-stream', 'binary', 0, 1, 'active', 1, 'user-owner', 'user-owner'
             )",
         )
         .bind(node_id)
@@ -18249,7 +18457,7 @@ async fn app_drive_change_feed_skips_nodes_without_reader_acl_and_paginates_visi
                 $1, 'tenant-change-acl', 'space-change-acl', $2, $3, $4, 'user-owner'
             )",
         )
-        .bind(format!("change-{seq}"))
+        .bind(seq)
         .bind(node_id)
         .bind(seq)
         .bind(event_type)
@@ -18261,7 +18469,7 @@ async fn app_drive_change_feed_skips_nodes_without_reader_acl_and_paginates_visi
         "INSERT INTO dr_drive_change_log (
             id, tenant_id, space_id, node_id, sequence_no, event_type, actor_id
         ) VALUES (
-            'change-space-level', 'tenant-change-acl', 'space-change-acl', NULL, 4, 'drive.space.updated', 'user-owner'
+            4, 'tenant-change-acl', 'space-change-acl', NULL, 4, 'drive.space.updated', 'user-owner'
         )",
     )
     .execute(&pool)
@@ -18424,8 +18632,8 @@ async fn app_drive_standard_views_hide_nodes_without_reader_acl() {
         sqlx::query(
             "INSERT INTO dr_drive_node (
                 id, tenant_id, space_id, parent_node_id, node_type, node_name,
-                content_state, lifecycle_status, version, created_by, updated_by
-            ) VALUES ($1, 'tenant-view-acl', 'space-view-acl', NULL, 'file', $1, 'ready', $2, 1, 'user-owner', 'user-owner')",
+                content_state, head_content_type, head_content_type_group, head_content_length, head_version_no, lifecycle_status, version, created_by, updated_by
+            ) VALUES ($1, 'tenant-view-acl', 'space-view-acl', NULL, 'file', $1, 'ready', 'application/octet-stream', 'binary', 0, 1, $2, 1, 'user-owner', 'user-owner')",
         )
         .bind(id)
         .bind(lifecycle_status)
@@ -18516,11 +18724,9 @@ async fn app_drive_shared_with_me_includes_inherited_and_share_link_nodes() {
     sqlx::query(
         "INSERT INTO dr_drive_node (
             id, tenant_id, space_id, parent_node_id, node_type, node_name,
-            content_state, lifecycle_status, version, created_by, updated_by, updated_at
+            content_state, head_content_type, head_content_type_group, head_content_length, head_version_no, lifecycle_status, version, created_by, updated_by, updated_at
         ) VALUES
-        ('folder-shared', 'tenant-shared-view', 'space-shared-view', NULL, 'folder', 'Shared Folder', 'ready', 'active', 1, 'user-owner', 'user-owner', '2026-06-04 10:00:00'),
-        ('file-inherited', 'tenant-shared-view', 'space-shared-view', 'folder-shared', 'file', 'inherited.txt', 'ready', 'active', 1, 'user-owner', 'user-owner', '2026-06-04 11:00:00'),
-        ('file-link-only', 'tenant-shared-view', 'space-shared-view', NULL, 'file', 'link-only.txt', 'ready', 'active', 1, 'user-owner', 'user-owner', '2026-06-04 12:00:00')",
+        ('folder-shared', 'tenant-shared-view', 'space-shared-view', NULL, 'folder', 'Shared Folder', 'ready', NULL, NULL, NULL, NULL, 'active', 1, 'user-owner', 'user-owner', '2026-06-04 10:00:00'),('file-inherited', 'tenant-shared-view', 'space-shared-view', 'folder-shared', 'file', 'inherited.txt', 'ready', 'application/octet-stream', 'binary', 0, 1, 'active', 1, 'user-owner', 'user-owner', '2026-06-04 11:00:00'),('file-link-only', 'tenant-shared-view', 'space-shared-view', NULL, 'file', 'link-only.txt', 'ready', 'application/octet-stream', 'binary', 0, 1, 'active', 1, 'user-owner', 'user-owner', '2026-06-04 12:00:00')",
     )
     .execute(&pool)
     .await
@@ -18532,7 +18738,7 @@ async fn app_drive_shared_with_me_includes_inherited_and_share_link_nodes() {
             inherited, lifecycle_status, version, created_by, updated_by
         ) VALUES (
             'perm-folder-shared', 'tenant-shared-view', 'folder-shared', 'user', 'user-reviewer',
-            'reader', 0, 'active', 1, 'user-owner', 'user-owner'
+            'reader', FALSE, 'active', 1, 'user-owner', 'user-owner'
         )",
     )
     .execute(&pool)
@@ -18750,7 +18956,7 @@ async fn app_drive_list_spaces_includes_collaborator_granted_team_space() {
             inherited, lifecycle_status, version, created_by, updated_by
         ) VALUES (
             'perm-team-collab', 'tenant-list-collab', 'folder-team-root', 'user', 'user-collab',
-            'reader', 0, 'active', 1, 'user-owner', 'user-owner'
+            'reader', FALSE, 'active', 1, 'user-owner', 'user-owner'
         )",
     )
     .execute(&pool)
@@ -19324,10 +19530,10 @@ async fn app_drive_claim_share_link_grants_access_and_lists_in_shared_with_me() 
     sqlx::query(
         "INSERT INTO dr_drive_node (
             id, tenant_id, space_id, parent_node_id, node_type, node_name,
-            content_state, lifecycle_status, version, created_by, updated_by, updated_at
+            content_state, head_content_type, head_content_type_group, head_content_length, head_version_no, lifecycle_status, version, created_by, updated_by, updated_at
         ) VALUES (
             'node-claim-target', 'tenant-claim', 'space-claim', NULL, 'file', 'shared.docx',
-            'ready', 'active', 1, 'user-owner', 'user-owner', '2026-06-04 10:00:00'
+            'ready', 'application/octet-stream', 'binary', 0, 1, 'active', 1, 'user-owner', 'user-owner', '2026-06-04 10:00:00'
         )",
     )
     .execute(&pool)
@@ -19442,10 +19648,10 @@ async fn app_drive_claim_share_link_is_idempotent_and_rejects_cross_tenant() {
     sqlx::query(
         "INSERT INTO dr_drive_node (
             id, tenant_id, space_id, parent_node_id, node_type, node_name,
-            content_state, lifecycle_status, version, created_by, updated_by
+            content_state, head_content_type, head_content_type_group, head_content_length, head_version_no, lifecycle_status, version, created_by, updated_by
         ) VALUES (
             'node-claim-idempotent', 'tenant-claim-idempotent', 'space-claim-idempotent', NULL, 'file', 'shared.docx',
-            'ready', 'active', 1, 'user-owner', 'user-owner'
+            'ready', 'application/octet-stream', 'binary', 0, 1, 'active', 1, 'user-owner', 'user-owner'
         )",
     )
     .execute(&pool)

@@ -37,7 +37,7 @@ async fn seed_storage_provider(pool: &sqlx::PgPool, provider_id: &str, bucket: &
             status, version, created_by, updated_by
         ) VALUES (
             $1, 's3_compatible', $1, 'https://s3.example.com', 'us-east-1',
-            $2, 1, 1, 'plain:test-access:test-secret', NULL, NULL,
+            $2, TRUE, TRUE, 'plain:test-access:test-secret', NULL, NULL,
             'active', 1, 'test', 'test'
         )",
     )
@@ -77,8 +77,11 @@ async fn download_url_is_short_lived_and_hides_object_key() {
     sqlx::query(
         "INSERT INTO dr_drive_node (
             id, tenant_id, space_id, parent_node_id, node_type, node_name,
-            content_state, lifecycle_status, version, created_by, updated_by
-        ) VALUES ($1, $2, $3, NULL, $4, $5, 'ready', 'active', 1, $6, $7)",
+            content_state, head_content_type, head_content_type_group,
+            head_content_length, head_version_no, lifecycle_status, version,
+            created_by, updated_by
+        ) VALUES ($1, $2, $3, NULL, $4, $5, 'ready',
+                  'application/octet-stream', 'binary', 0, 1, 'active', 1, $6, $7)",
     )
     .bind("node-001")
     .bind("tenant-001")
@@ -208,8 +211,11 @@ async fn create_download_url_rejects_trashed_node_even_when_storage_object_is_ac
     sqlx::query(
         "INSERT INTO dr_drive_node (
             id, tenant_id, space_id, parent_node_id, node_type, node_name,
-            content_state, lifecycle_status, version, created_by, updated_by
-        ) VALUES ($1, $2, $3, NULL, $4, $5, 'ready', 'trashed', 1, $6, $7)",
+            content_state, head_content_type, head_content_type_group,
+            head_content_length, head_version_no, lifecycle_status, version,
+            created_by, updated_by
+        ) VALUES ($1, $2, $3, NULL, $4, $5, 'ready',
+                  'application/octet-stream', 'binary', 0, 1, 'trashed', 1, $6, $7)",
     )
     .bind("node-trashed")
     .bind("tenant-trashed")
@@ -298,8 +304,11 @@ async fn resolve_download_token_restores_node_and_signs_source_url() {
     sqlx::query(
         "INSERT INTO dr_drive_node (
             id, tenant_id, space_id, parent_node_id, node_type, node_name,
-            content_state, lifecycle_status, version, created_by, updated_by
-        ) VALUES ($1, $2, $3, NULL, $4, $5, 'ready', 'active', 1, $6, $7)",
+            content_state, head_content_type, head_content_type_group,
+            head_content_length, head_version_no, lifecycle_status, version,
+            created_by, updated_by
+        ) VALUES ($1, $2, $3, NULL, $4, $5, 'ready',
+                  'application/octet-stream', 'binary', 0, 1, 'active', 1, $6, $7)",
     )
     .bind("node-001")
     .bind("tenant-001")

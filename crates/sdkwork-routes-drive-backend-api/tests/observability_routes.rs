@@ -158,8 +158,8 @@ async fn maintenance_sweeps_emit_structured_observability_logs() {
     sqlx::query(
         "INSERT INTO dr_drive_node (
             id, tenant_id, space_id, parent_node_id, node_type, node_name,
-            content_state, lifecycle_status, version, created_by, updated_by
-        ) VALUES ($1, $2, $3, NULL, 'file', $4, 'ready', 'active', 1, $5, $6)",
+            content_state, head_content_type, head_content_type_group, head_content_length, head_version_no, lifecycle_status, version, created_by, updated_by
+        ) VALUES ($1, $2, $3, NULL, 'file', $4, 'ready', 'application/octet-stream', 'binary', 0, 1, 'active', 1, $5, $6)",
     )
     .bind("node-001")
     .bind("tenant-001")
@@ -178,7 +178,7 @@ async fn maintenance_sweeps_emit_structured_observability_logs() {
             status, version, created_by, updated_by
         ) VALUES (
             'provider-001', 's3_compatible', 'Maintenance S3',
-            'https://s3.example.com', 'us-east-1', 'bucket-001', 1,
+            'https://s3.example.com', 'us-east-1', 'bucket-001', TRUE,
             'plain:test-access-key:test-secret-key', 'AES256', 'STANDARD',
             'active', 1, 'admin-001', 'admin-001'
         )",

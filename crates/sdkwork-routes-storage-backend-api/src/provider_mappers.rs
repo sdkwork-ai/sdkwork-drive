@@ -89,7 +89,10 @@ pub(crate) fn parse_storage_provider_kind(
 ) -> Result<DriveStorageProviderKind, DriveServiceError> {
     DriveStorageProviderKind::try_from_str(raw).ok_or_else(|| {
         DriveServiceError::Validation(
-            "provider_kind is invalid; allowed: local_filesystem, s3_compatible, google_cloud_storage, aliyun_oss, tencent_cos, huawei_obs, volcengine_tos, or custom:<vendor_key>"
+            format!(
+                "provider_kind is invalid; allowed: one of the {} catalogued storage provider kinds, or custom:<vendor_key>",
+                DriveStorageProviderKind::BUILTIN.len()
+            )
                 .to_string(),
         )
     })

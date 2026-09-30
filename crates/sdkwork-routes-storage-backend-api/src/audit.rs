@@ -12,8 +12,17 @@ pub(crate) async fn record_storage_provider_audit(
     action: &str,
     provider_id: &str,
     operator_id: &str,
+    tenant_id: &str,
 ) -> Result<(), (StatusCode, Json<ProblemDetail>)> {
-    record_audit_event(state, action, "storage_provider", provider_id, operator_id).await
+    record_audit_event(
+        state,
+        action,
+        "storage_provider",
+        provider_id,
+        operator_id,
+        tenant_id,
+    )
+    .await
 }
 
 pub(crate) async fn record_storage_provider_kind_audit(
@@ -21,6 +30,7 @@ pub(crate) async fn record_storage_provider_kind_audit(
     action: &str,
     provider_kind: &str,
     operator_id: &str,
+    tenant_id: &str,
 ) -> Result<(), (StatusCode, Json<ProblemDetail>)> {
     record_audit_event(
         state,
@@ -28,6 +38,7 @@ pub(crate) async fn record_storage_provider_kind_audit(
         "storage_provider_kind",
         provider_kind,
         operator_id,
+        tenant_id,
     )
     .await
 }
@@ -38,12 +49,15 @@ pub(crate) async fn record_audit_event(
     resource_type: &str,
     resource_id: &str,
     operator_id: &str,
+    tenant_id: &str,
 ) -> Result<(), (StatusCode, Json<ProblemDetail>)> {
     let ids = sdkwork_drive_http::problem_correlation::current_problem_correlation();
     let audit_service = DriveAuditService::new(SqlAuditStore::new(state.pool.clone()));
     audit_service
         .record_event(RecordAuditEventCommand {
-            tenant_id: "0".to_string(),
+            // Attributed to the requesting tenant, never a sentinel: audit
+            // history must be filterable per tenant like every other row.
+            tenant_id: tenant_id.to_string(),
             action: action.to_string(),
             resource_type: resource_type.to_string(),
             resource_id: resource_id.to_string(),

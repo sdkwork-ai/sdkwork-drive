@@ -30,10 +30,9 @@ use axum::http::StatusCode;
 use axum::Extension;
 use axum::Json;
 use sdkwork_drive_storage_contract::{
-    DriveByteRange, DriveObjectLocator, DriveObjectStore, PresignDownloadRequest, PutObjectRequest,
-    ReadObjectRangeRequest,
+    DriveByteRange, DriveObjectLocator, DriveObjectStore, PresignDownloadRequest,
+    PutObjectFromPathRequest, PutObjectRequest, ReadObjectRangeRequest,
 };
-use sdkwork_drive_storage_s3::S3DriveObjectStore;
 use sdkwork_drive_workspace_service::infrastructure::sql::NODE_API_SELECT_COLUMNS;
 use sdkwork_drive_workspace_service::ports::storage_object_store::SignedDownloadPayload;
 use sdkwork_utils_rust::SdkWorkApiResponse;
@@ -41,6 +40,7 @@ use sqlx::PgPool;
 use sqlx::Row;
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 use std::io::{Cursor, Write};
+use std::sync::Arc;
 use tempfile::NamedTempFile;
 use zip::write::SimpleFileOptions;
 use zip::ZipWriter;
@@ -109,14 +109,13 @@ pub(crate) async fn create_download_package(
         .map_err(map_service_error)?
         .ok_or_else(|| map_service_error(missing_signing_provider_error(&bucket)))?;
     let provider = require_active_storage_provider(provider, &bucket).map_err(map_service_error)?;
-    let object_store = build_s3_object_store_for_provider(&provider)
+    let object_store = build_s3_object_store_for_provider(&state, &provider.to_domain_provider())
         .await
         .map_err(map_service_error)?
         .ok_or_else(|| map_service_error(unsupported_signing_provider_error(&bucket)))?;
     let archive_object_key = build_download_package_object_key(&tenant_id, &package_id);
     let total_bytes = package_files.iter().map(|item| item.content_length).sum();
-    let built_archive =
-        build_download_package_zip(&state.pool, &package_files, total_bytes).await?;
+    let built_archive = build_download_package_zip(&state, &package_files, total_bytes).await?;
     let archive_size_bytes = built_archive.size_bytes();
     let requested_node_ids_json = serde_json::to_string(&requested_node_ids).map_err(|error| {
         internal_problem(format!("serialize requested node ids failed: {error}"))
@@ -219,7 +218,7 @@ pub(crate) async fn resolve_download_package_url(
         .ok_or_else(|| map_service_error(missing_signing_provider_error(&package.bucket)))?;
     let provider =
         require_active_storage_provider(provider, &package.bucket).map_err(map_service_error)?;
-    let object_store = build_s3_object_store_for_provider(&provider)
+    let object_store = build_s3_object_store_for_provider(&state, &provider.to_domain_provider())
         .await
         .map_err(map_service_error)?
         .ok_or_else(|| map_service_error(unsupported_signing_provider_error(&package.bucket)))?;
@@ -571,14 +570,14 @@ async fn read_download_package_file(
 }
 
 async fn build_download_package_zip(
-    pool: &PgPool,
+    state: &AppState,
     files: &[DownloadPackageFileItem],
     total_source_bytes: i64,
 ) -> Result<BuiltPackageArchive, (StatusCode, Json<ProblemDetail>)> {
     let options = SimpleFileOptions::default()
         .compression_method(zip::CompressionMethod::Stored)
         .unix_permissions(0o644);
-    let mut stores = BTreeMap::<String, S3DriveObjectStore>::new();
+    let mut stores = BTreeMap::<String, Arc<dyn DriveObjectStore>>::new();
     if total_source_bytes > IN_MEMORY_PACKAGE_ARCHIVE_THRESHOLD_BYTES {
         let mut temp_file = NamedTempFile::new().map_err(|error| {
             internal_problem(format!("create download package temp file failed: {error}"))
@@ -586,7 +585,7 @@ async fn build_download_package_zip(
         {
             let mut writer = ZipWriter::new(std::io::BufWriter::new(temp_file.as_file_mut()));
             for file in files {
-                let object_store = resolve_package_object_store(pool, file, &mut stores).await?;
+                let object_store = resolve_package_object_store(state, file, &mut stores).await?;
                 stream_file_into_zip(&mut writer, object_store, file, options).await?;
             }
             writer
@@ -598,7 +597,7 @@ async fn build_download_package_zip(
 
     let mut writer = ZipWriter::new(Cursor::new(Vec::new()));
     for file in files {
-        let object_store = resolve_package_object_store(pool, file, &mut stores).await?;
+        let object_store = resolve_package_object_store(state, file, &mut stores).await?;
         stream_file_into_zip(&mut writer, object_store, file, options).await?;
     }
     let cursor = writer
@@ -608,21 +607,24 @@ async fn build_download_package_zip(
 }
 
 async fn resolve_package_object_store<'a>(
-    pool: &PgPool,
+    state: &AppState,
     file: &DownloadPackageFileItem,
-    stores: &'a mut BTreeMap<String, S3DriveObjectStore>,
-) -> Result<&'a S3DriveObjectStore, (StatusCode, Json<ProblemDetail>)> {
+    stores: &'a mut BTreeMap<String, Arc<dyn DriveObjectStore>>,
+) -> Result<&'a Arc<dyn DriveObjectStore>, (StatusCode, Json<ProblemDetail>)> {
     if !stores.contains_key(&file.storage_provider_id) {
-        let provider = find_storage_provider_by_id(pool, &file.storage_provider_id)
+        let provider = find_storage_provider_by_id(&state.pool, &file.storage_provider_id)
             .await
             .map_err(map_service_error)?
             .ok_or_else(|| map_service_error(missing_signing_provider_error(&file.bucket)))?;
         let provider =
             require_active_storage_provider(provider, &file.bucket).map_err(map_service_error)?;
-        let object_store = build_s3_object_store_for_provider(&provider)
-            .await
-            .map_err(map_service_error)?
-            .ok_or_else(|| map_service_error(unsupported_signing_provider_error(&file.bucket)))?;
+        let object_store =
+            build_s3_object_store_for_provider(&state, &provider.to_domain_provider())
+                .await
+                .map_err(map_service_error)?
+                .ok_or_else(|| {
+                    map_service_error(unsupported_signing_provider_error(&file.bucket))
+                })?;
         stores.insert(file.storage_provider_id.clone(), object_store);
     }
     stores
@@ -632,7 +634,7 @@ async fn resolve_package_object_store<'a>(
 
 async fn stream_file_into_zip<W: Write + std::io::Seek>(
     writer: &mut ZipWriter<W>,
-    object_store: &S3DriveObjectStore,
+    object_store: &Arc<dyn DriveObjectStore>,
     file: &DownloadPackageFileItem,
     options: SimpleFileOptions,
 ) -> Result<(), (StatusCode, Json<ProblemDetail>)> {
@@ -682,7 +684,7 @@ async fn stream_file_into_zip<W: Write + std::io::Seek>(
 }
 
 async fn upload_built_package_archive(
-    object_store: &S3DriveObjectStore,
+    object_store: &Arc<dyn DriveObjectStore>,
     locator: DriveObjectLocator,
     metadata: BTreeMap<String, String>,
     archive: BuiltPackageArchive,
@@ -701,12 +703,13 @@ async fn upload_built_package_archive(
         }
         BuiltPackageArchive::File(temp_file) => {
             object_store
-                .put_object_from_path(
+                .put_object_from_path(PutObjectFromPathRequest {
                     locator,
-                    Some("application/zip".to_string()),
+                    content_type: Some("application/zip".to_string()),
                     metadata,
-                    temp_file.path(),
-                )
+                    source_path: temp_file.path().to_path_buf(),
+                    checksum_sha256_hex: None,
+                })
                 .await?;
         }
     }
@@ -808,7 +811,7 @@ async fn find_download_package_record(
 }
 
 async fn sign_download_package(
-    object_store: &S3DriveObjectStore,
+    object_store: &Arc<dyn DriveObjectStore>,
     bucket: &str,
     archive_object_key: &str,
     expires_at_epoch_ms: i64,

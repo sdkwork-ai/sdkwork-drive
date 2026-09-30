@@ -301,6 +301,29 @@ function createDesktopHost(
 ): HostAdapter {
   return {
     isNativeHost: true,
+    hostId: 'tauri',
+    capabilities: new Set(['window', 'tray', 'shortcuts', 'clipboard']),
+    hasCapability: (capability) => ['window', 'tray', 'shortcuts', 'clipboard'].includes(capability),
+    tray: {
+      setVisible: async () => ({ ok: true, value: undefined }),
+      setMenu: async () => ({ ok: true, value: undefined }),
+      restoreWindow: async () => ({ ok: true, value: undefined }),
+      onMenuActivated: () => () => undefined,
+    },
+    shortcuts: {
+      registerAll: async () => ({ ok: true, value: [] }),
+      unregister: async () => ({ ok: true, value: undefined }),
+      unregisterAll: async () => ({ ok: true, value: undefined }),
+      onTriggered: () => () => undefined,
+    },
+    clipboard: {
+      cutPaths: async ({ paths }) => ({
+        ok: true,
+        value: { accepted: true, acceptedCount: paths.length },
+      }),
+      readPaths: async () => ({ ok: true, value: [] }),
+      writeText: async () => ({ ok: true, value: undefined }),
+    },
     windowControl: async () => undefined,
     openExternal: async () => undefined,
     writeTextToClipboard: async () => undefined,

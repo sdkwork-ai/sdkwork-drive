@@ -1,11 +1,12 @@
 use crate::app_context::DriveRequestContext;
 use crate::dto::{
     StorageOverviewBindingScopeCountsResponse, StorageOverviewBindingsResponse,
-    StorageOverviewCapacityResponse, StorageOverviewCatalogResponse, StorageOverviewProvidersResponse,
-    StorageOverviewProviderUsageResponse, StorageOverviewQuery, StorageOverviewResponse,
-    StorageOverviewTrendPointResponse,
+    StorageOverviewCapacityResponse, StorageOverviewCatalogResponse,
+    StorageOverviewProviderUsageResponse, StorageOverviewProvidersResponse, StorageOverviewQuery,
+    StorageOverviewResponse, StorageOverviewTrendPointResponse,
 };
 use crate::error::{map_service_error, validation_problem, ProblemDetail};
+use crate::response::{success_item, StorageItemHttpResponse};
 use crate::state::AdminStorageState;
 use crate::validators::{default_storage_provider_binding_id, StorageProviderBindingTarget};
 use axum::extract::{Query, State};
@@ -27,7 +28,7 @@ pub(crate) async fn get_storage_overview(
     State(state): State<AdminStorageState>,
     Extension(ctx): Extension<DriveRequestContext>,
     Query(query): Query<StorageOverviewQuery>,
-) -> Result<Json<StorageOverviewResponse>, (StatusCode, Json<ProblemDetail>)> {
+) -> Result<StorageItemHttpResponse<StorageOverviewResponse>, (StatusCode, Json<ProblemDetail>)> {
     let tenant_id = ctx.resolve_tenant_id()?;
     let trend_months = resolve_trend_months(query.trend_months)?;
 
@@ -37,14 +38,18 @@ pub(crate) async fn get_storage_overview(
 
     let capacity = load_capacity(&state, &tenant_id).await?;
     let provider_counts = load_provider_counts(&state, &tenant_id).await?;
-    let provider_usage =
-        load_provider_usage(&state, &tenant_id, capacity.metrics.used_bytes, &tenant_default)
-            .await?;
+    let provider_usage = load_provider_usage(
+        &state,
+        &tenant_id,
+        capacity.metrics.used_bytes,
+        &tenant_default,
+    )
+    .await?;
     let bindings = load_bindings(&state, &tenant_id, &tenant_default).await?;
     let catalog = load_catalog(&state).await?;
     let trend = load_trend(&state, &tenant_id, trend_months).await?;
 
-    Ok(Json(StorageOverviewResponse {
+    Ok(success_item(StorageOverviewResponse {
         generated_at: capacity.generated_at,
         scope_tenant_id: tenant_id,
         capacity: capacity.metrics,
@@ -233,7 +238,8 @@ async fn load_provider_usage(
             let provider_id = row.get::<String, _>("provider_id");
             let used_bytes = row.get::<i64, _>("used_bytes");
             StorageOverviewProviderUsageResponse {
-                is_tenant_default: Some(provider_id.as_str()) == tenant_default.provider_id.as_deref(),
+                is_tenant_default: Some(provider_id.as_str())
+                    == tenant_default.provider_id.as_deref(),
                 provider_id,
                 name: row.get::<String, _>("name"),
                 provider_kind: row.get::<String, _>("provider_kind"),
@@ -397,9 +403,7 @@ fn ratio(part: i64, whole: i64) -> f64 {
 /// Extracted from the handler so the reject/clamp decision is unit-testable:
 /// an inline `if` behind an HTTP extension extractor is a blind spot for tests
 /// that never build the router.
-fn resolve_trend_months(
-    requested: Option<i64>,
-) -> Result<i64, (StatusCode, Json<ProblemDetail>)> {
+fn resolve_trend_months(requested: Option<i64>) -> Result<i64, (StatusCode, Json<ProblemDetail>)> {
     match requested {
         None => Ok(TREND_MONTHS_DEFAULT),
         Some(months) if (TREND_MONTHS_MIN..=TREND_MONTHS_MAX).contains(&months) => Ok(months),
@@ -413,9 +417,7 @@ fn resolve_trend_months(
 mod tests {
     use super::*;
 
-    fn error_detail(
-        error: Result<i64, (StatusCode, Json<ProblemDetail>)>,
-    ) -> (StatusCode, String) {
+    fn error_detail(error: Result<i64, (StatusCode, Json<ProblemDetail>)>) -> (StatusCode, String) {
         let (status, json) = error.expect_err("expected a validation problem");
         // `SdkWorkProblemDetail` fields are crate-private; read the serialized
         // wire form instead, which is the contract the client actually sees.

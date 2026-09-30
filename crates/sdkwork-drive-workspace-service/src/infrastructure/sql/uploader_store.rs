@@ -444,7 +444,10 @@ impl DriveUploaderStore for SqlUploaderStore {
         .bind(&item.id)
         .bind(&item.task_id)
         .bind(&item.tenant_id)
-        .bind(&item.organization_id)
+        // `organization_id` is `NOT NULL DEFAULT '0'`; binding NULL would
+        // override the default and violate the constraint, so an absent
+        // organization falls back to the DDL's own `'0'` sentinel.
+        .bind(item.organization_id.as_deref().unwrap_or("0"))
         .bind(&item.user_id)
         .bind(&item.actor_type)
         .bind(&item.actor_id)
@@ -791,7 +794,7 @@ impl DriveUploaderStore for SqlUploaderStore {
             )
             .bind(sensitive_operation_id)
             .bind(tenant_id)
-            .bind(row.get::<Option<String>, _>("organization_id"))
+            .bind(row.get::<Option<String>, _>("organization_id").as_deref().unwrap_or("0"))
             .bind(row.get::<Option<String>, _>("user_id"))
             .bind(&space_id)
             .bind(&node_id)
@@ -1364,7 +1367,7 @@ async fn insert_upload_completed_sensitive_operation(
         &storage_object.id,
     ))
     .bind(&completion.tenant_id)
-    .bind(&target.item.organization_id)
+    .bind(target.item.organization_id.as_deref().unwrap_or("0"))
     .bind(&target.item.user_id)
     .bind(&target.item.space_id)
     .bind(&target.item.node_id)

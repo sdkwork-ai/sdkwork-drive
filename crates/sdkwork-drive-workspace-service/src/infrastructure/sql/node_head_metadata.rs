@@ -114,7 +114,20 @@ pub async fn apply_file_node_head_snapshot_in_transaction(
            AND id=$2
            AND node_type='file'
            AND lifecycle_status != 'deleted'
-           AND (head_version_no IS NULL OR head_version_no <= $7)",
+           AND (head_version_no IS NULL OR head_version_no <= $7)
+           -- Re-applying an already-current head snapshot must be a no-op:
+           -- without this, a concurrent `ensure_nodes` wave where every writer
+           -- still observes `head_version_no IS NULL` would each pass the guard
+           -- and bump `version`, breaking idempotency.
+           AND (
+             content_state IS DISTINCT FROM 'ready'
+             OR file_extension IS DISTINCT FROM $3
+             OR head_content_type IS DISTINCT FROM $4
+             OR head_content_type_group IS DISTINCT FROM $5
+             OR head_content_length IS DISTINCT FROM $6
+             OR head_version_no IS DISTINCT FROM $7
+             OR head_checksum_sha256_hex IS DISTINCT FROM $8
+           )",
     )
     .bind(tenant_id)
     .bind(node_id)

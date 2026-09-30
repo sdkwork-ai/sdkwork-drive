@@ -94,4 +94,29 @@ pub(crate) fn storage_drive_routes(prefix: &str) -> Router<AdminStorageState> {
             &format!("{prefix}/drive/storage/bindings"),
             get(list_storage_provider_bindings),
         )
+        // Cross-provider migration. The batch endpoint (`/run`) is the only
+        // writable one: a client drives the loop and polls `/migrations/{id}`
+        // until `completed` is true. Keeping the copy work behind one verb means
+        // there is no second code path that could re-point a half-migrated
+        // tenant.
+        .route(
+            &format!("{prefix}/drive/storage/migrations"),
+            get(list_storage_migrations).post(plan_storage_migration),
+        )
+        .route(
+            &format!("{prefix}/drive/storage/migrations/{{migration_id}}"),
+            get(get_storage_migration),
+        )
+        .route(
+            &format!("{prefix}/drive/storage/migrations/{{migration_id}}/run"),
+            post(run_storage_migration),
+        )
+        .route(
+            &format!("{prefix}/drive/storage/migrations/{{migration_id}}/items"),
+            get(list_storage_migration_items),
+        )
+        .route(
+            &format!("{prefix}/drive/storage/migrations/{{migration_id}}/cancel"),
+            post(cancel_storage_migration),
+        )
 }

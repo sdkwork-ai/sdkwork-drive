@@ -27,8 +27,12 @@ use crate::dto::{
 use crate::error::{
     invalid_json_problem, map_provider_account_error, problem, ProblemDetail, SdkWorkResultCode,
 };
+use crate::audit::record_audit_event;
 use crate::provider_mappers::map_storage_provider_account;
-use crate::response::{success_list_page_simple, StorageListHttpResponse};
+use sdkwork_drive_contract::drive::domain_events::admin_audit;
+use crate::response::{
+    success_item, success_list_page_simple, StorageItemHttpResponse, StorageListHttpResponse,
+};
 use crate::state::AdminStorageState;
 use crate::validators::{next_page_token, parse_offset_page};
 use axum::extract::rejection::JsonRejection;
@@ -141,7 +145,13 @@ pub(crate) async fn create_storage_provider_account(
     State(state): State<AdminStorageState>,
     Extension(ctx): Extension<DriveRequestContext>,
     payload: Result<Json<CreateStorageProviderAccountRequest>, JsonRejection>,
-) -> Result<(StatusCode, Json<StorageProviderAccountResponse>), (StatusCode, Json<ProblemDetail>)> {
+) -> Result<
+    (
+        StatusCode,
+        StorageItemHttpResponse<StorageProviderAccountResponse>,
+    ),
+    (StatusCode, Json<ProblemDetail>),
+> {
     let Json(payload) = payload.map_err(invalid_json_problem)?;
     let operator_id = ctx.resolve_operator_id()?;
     let tenant_id = ctx.resolve_tenant_id()?;
@@ -254,7 +264,7 @@ pub(crate) async fn create_storage_provider_account(
             session_token: payload.session_token,
             secret_text: None,
             expires_at: None,
-            actor_id: operator_id,
+            actor_id: operator_id.clone(),
         },
     )
     .await
@@ -276,8 +286,20 @@ pub(crate) async fn create_storage_provider_account(
         ))
     })?;
 
+    // Mutating surface: the account creation is audited like every other
+    // write on this admin API, attributed to the account's own tenant.
+    record_audit_event(
+        &state,
+        admin_audit::storage_provider_account::CREATED,
+        "storage_provider_account",
+        &account.id,
+        &operator_id,
+        &account.tenant_id,
+    )
+    .await?;
+
     Ok((
         StatusCode::CREATED,
-        Json(map_storage_provider_account(account)),
+        success_item(map_storage_provider_account(account)),
     ))
 }

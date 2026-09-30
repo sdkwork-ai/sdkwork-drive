@@ -26,7 +26,7 @@ import type { DriveOpenRequest } from "../types/driveOpenRequest";
 import { DownloadManager, type DownloadJob } from "./DownloadManager";
 import { FileBrowserHeader } from "./FileBrowserHeader";
 import { FileDetailModal } from "./FileDetailModal";
-import { Info, Star, Download, Trash2, CheckSquare, Copy, FolderInput } from "lucide-react";
+import { Info, Star, Download, Trash2, CheckSquare, Copy, FolderInput, Scissors, ClipboardPaste } from "lucide-react";
 import { formatDriveBytes, useTranslation, useDrivePcPreferences, hasSiblingNameConflict, isDriveConflictError, resolveUniqueSiblingName } from "sdkwork-drive-pc-commons";
 import { createLatestRequestGuard } from "./fileBrowserLoadGuard";
 import {
@@ -66,6 +66,15 @@ import { FileRowItem } from "./FileRowItem";
 import { FileGridItem } from "./FileGridItem";
 import { ShareLinkModal } from "./ShareLinkModal";
 import { MoveCopyModal, type MoveCopyMode } from "./MoveCopyModal";
+import {
+  clearDriveCutSelection,
+  getDriveCutSelection,
+  isCutIntoSameFolder,
+  resolveCutLocalPaths,
+  setDriveCutSelection,
+  subscribeDriveCutSelection,
+} from "../state/driveCutClipboard";
+import { driveFileBrowserCommandRegistry } from "../state/driveFileBrowserCommands";
 
 interface FileBrowserProps {
   activeSection: DriveSection;
@@ -578,6 +587,66 @@ export function FileBrowser({
     openMoveCopyModal("copy", selectedFilesObj);
   };
 
+  /**
+   * Cuts the current selection.
+   *
+   * Records the pending cut in the renderer so the next paste resolves to a
+   * move, and additionally writes the OS cut marker for any selection member
+   * that also has a local absolute path so an external paste moves too.
+   */
+  const handleBatchCut = () => {
+    const selectedFilesObj = files.filter((file) => selectedFileIds.includes(file.id));
+    if (selectedFilesObj.length === 0) {
+      return;
+    }
+
+    setDriveCutSelection({
+      section: activeSection,
+      parentId: currentFolderId,
+      files: selectedFilesObj,
+    });
+
+    const localPaths = resolveCutLocalPaths({
+      section: activeSection,
+      parentId: currentFolderId,
+      files: selectedFilesObj,
+    });
+    if (localPaths.length > 0 && host.hasCapability("clipboard")) {
+      void host.clipboard.cutPaths({ paths: localPaths }).then((result) => {
+        if (!result.ok) {
+          triggerToast(t("fileBrowser.cutLocalClipboardUnavailable"), "info");
+        }
+      });
+    }
+
+    triggerToast(
+      t("fileBrowser.cutSelectionToast", { count: selectedFilesObj.length }),
+      "success",
+    );
+  };
+
+  /**
+   * Pastes the pending cut into the current folder.
+   *
+   * Drive-to-Drive pastes reuse the move modal so the existing conflict policy
+   * (`resolveUniqueSiblingName`) and SDK `nodes.move` flow stay the single
+   * move implementation.
+   */
+  const handlePasteCut = () => {
+    const cut = getDriveCutSelection();
+    if (!cut || cut.files.length === 0) {
+      triggerToast(t("fileBrowser.clipboardEmptyToast"), "info");
+      return;
+    }
+
+    if (isCutIntoSameFolder(cut, activeSection, currentFolderId)) {
+      triggerToast(t("fileBrowser.pasteIntoSameFolderToast"), "info");
+      return;
+    }
+
+    openMoveCopyModal("move", cut.files);
+  };
+
   const handleShareFile = (file: DriveFile) => {
     setShareFile(file);
     setActiveMenuId(null);
@@ -710,6 +779,40 @@ export function FileBrowser({
     setToast({ message, type });
   };
   triggerToastRef.current = triggerToast;
+
+  // Pending cut state drives both the row affordance and the paste guard.
+  const [cutSelection, setCutSelectionState] = useState(getDriveCutSelection());
+  useEffect(() => subscribeDriveCutSelection(setCutSelectionState), []);
+
+  /**
+   * Exposes the file-browser commands the desktop host dispatches.
+   *
+   * The tray menu and the global shortcut bindings both resolve to these same
+   * command ids, so cut/paste triggered from the tray behaves exactly like the
+   * in-app toolbar action.
+   */
+  useEffect(() => {
+    const registry = driveFileBrowserCommandRegistry;
+    registry.cut = handleBatchCut;
+    registry.paste = handlePasteCut;
+    registry.refresh = () => void loadFilesRef.current();
+    return () => {
+      registry.cut = null;
+      registry.paste = null;
+      registry.refresh = null;
+    };
+  });
+
+  // Escape clears a pending cut, matching desktop file-manager behavior.
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && getDriveCutSelection()) {
+        clearDriveCutSelection();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
 
   useEffect(() => {
     if (toast) {
@@ -1968,6 +2071,24 @@ export function FileBrowser({
                   <FolderInput size={14} />
                   {t("fileBrowser.move")}
                 </button>
+                <button
+                  onClick={handleBatchCut}
+                  title={t("fileBrowser.cutHint")}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-neutral-200 hover:text-blue-400 hover:bg-neutral-800 border border-neutral-800 transition-all cursor-pointer"
+                >
+                  <Scissors size={14} />
+                  {t("fileBrowser.cut")}
+                </button>
+                {cutSelection && cutSelection.files.length > 0 && (
+                  <button
+                    onClick={handlePasteCut}
+                    title={t("fileBrowser.pasteHint")}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-blue-400 hover:bg-neutral-800 border border-blue-900/40 transition-all cursor-pointer"
+                  >
+                    <ClipboardPaste size={14} />
+                    {t("fileBrowser.pasteCount", { count: cutSelection.files.length })}
+                  </button>
+                )}
                 <button
                   onClick={handleBatchCopy}
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-neutral-200 hover:text-blue-400 hover:bg-neutral-800 border border-neutral-800 transition-all cursor-pointer"

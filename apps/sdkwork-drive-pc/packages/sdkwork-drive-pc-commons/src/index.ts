@@ -5,6 +5,7 @@ export * from './components/LanguageProvider';
 export * from './components/UserProfileModal';
 export * from './components/preferenceStorage';
 export * from './components/drivePcPreferences';
+export * from './components/ShortcutRecorder';
 export * from './utils/formatDriveBytes';
 export * from './utils/transferJobDisplay';
 export * from './utils/driveConflictError';

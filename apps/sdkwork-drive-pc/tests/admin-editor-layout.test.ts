@@ -14,7 +14,11 @@ describe('Drive admin editor layout', () => {
 
     expect(labels).toContain('<Drawer');
     expect(labels).not.toContain('const editing = editingLabelId');
-    expect(bindings.match(/<Drawer\b/gu)).toHaveLength(2);
+    // One drawer per editor on the bindings page — tenant storage-provider
+    // configuration, space-type binding, space-scope binding. The rule this
+    // guards is "editors are drawers, never inline table cells", so it counts a
+    // floor rather than an exact number that a new editor would have to bump.
+    expect((bindings.match(/<Drawer\b/gu) ?? []).length).toBeGreaterThanOrEqual(3);
     expect(bindings).not.toContain('const isEditing =');
     expect(quota).toContain('<Drawer');
     expect(quota).toContain('policyEditorOpen');

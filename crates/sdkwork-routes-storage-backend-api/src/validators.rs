@@ -203,6 +203,49 @@ pub(crate) fn validate_storage_binding_lifecycle_status(
     Err(validation_problem("lifecycleStatus is invalid"))
 }
 
+/// Validate the resolution step a binding list is narrowed to.
+///
+/// Modelled as a validator rather than a passthrough because the values are a
+/// closed set that mirrors `ck_dr_drive_storage_provider_binding_scope`: a typo
+/// would otherwise answer an empty page, which reads as "this tenant has no
+/// space-type bindings" — the exact false statement the filter exists to avoid.
+pub(crate) fn validate_storage_binding_scope(
+    scope: &str,
+) -> Result<(), (StatusCode, Json<ProblemDetail>)> {
+    if matches!(scope, "tenant" | "space" | "space_type") {
+        return Ok(());
+    }
+    Err(validation_problem("bindingScope is invalid"))
+}
+
+/// Validate a client-supplied migration item status filter.
+///
+/// Modelled as a validator rather than reusing the domain parser because the
+/// two have different meanings: the domain parser reads a *persisted* value, so
+/// an unrecognized one is a corrupt row (an internal fault), whereas an
+/// unrecognized *query* value is a malformed request and must answer `400`.
+pub(crate) fn validate_storage_migration_item_status(
+    status: &str,
+) -> Result<(), (StatusCode, Json<ProblemDetail>)> {
+    if matches!(status, "pending" | "copied" | "failed") {
+        return Ok(());
+    }
+    Err(validation_problem("status is invalid"))
+}
+
+/// Validate a client-supplied migration run status filter.
+pub(crate) fn validate_storage_migration_status(
+    status: &str,
+) -> Result<(), (StatusCode, Json<ProblemDetail>)> {
+    if matches!(
+        status,
+        "pending" | "running" | "succeeded" | "failed" | "cancelled"
+    ) {
+        return Ok(());
+    }
+    Err(validation_problem("status is invalid"))
+}
+
 pub(crate) fn normalize_optional_text(value: Option<String>) -> Option<String> {
     value
         .map(|raw| raw.trim().to_string())
