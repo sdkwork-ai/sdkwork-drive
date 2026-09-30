@@ -2030,7 +2030,7 @@
               "type": "string",
               "minLength": 1,
               "maxLength": 1024,
-              "pattern": "^(?!/)(?!.*//)(?!.*(?:^|/)\\.{1,2}(?:/|$))(?!.*\u0000).*$",
+              "pattern": "^(?!/)(?!.*//)(?!.*(?:^|/)\\.{1,2}(?:/|$))(?!.*\\u0000).*(?:[^/])$",
               "description": "Drive object key path tail. May end with a single slash for directory placeholder objects. The runtime percent-decodes the path segment once before validation."
             },
             "description": "Drive object key path tail. For content writes the key may end with a slash to create a directory placeholder object with empty content."
@@ -2165,7 +2165,7 @@
               "type": "string",
               "minLength": 1,
               "maxLength": 1024,
-              "pattern": "^(?!/)(?!.*//)(?!.*(?:^|/)\\.{1,2}(?:/|$))(?!.*\u0000).*$",
+              "pattern": "^(?!/)(?!.*//)(?!.*(?:^|/)\\.{1,2}(?:/|$))(?!.*\\u0000).*(?:[^/])$",
               "description": "Drive object key path tail. May end with a single slash for directory placeholder objects. The runtime percent-decodes the path segment once before validation."
             },
             "description": "Drive object key path tail. For content writes the key may end with a slash to create a directory placeholder object with empty content."
@@ -2974,7 +2974,7 @@
               "minLength": 1,
               "maxLength": 1024,
               "description": "Drive object key path tail. May end with a single slash for directory placeholder objects. The runtime percent-decodes the path segment once before validation.",
-              "pattern": "^(?!/)(?!.*//)(?!.*(?:^|/)\\.{1,2}(?:/|$))(?!.*\u0000).*$"
+              "pattern": "^(?!/)(?!.*//)(?!.*(?:^|/)\\.{1,2}(?:/|$))(?!.*\\u0000).*(?:[^/])$"
             },
             "description": "Drive object key path tail. For content writes the key may end with a slash to create a directory placeholder object with empty content."
           }
@@ -3111,7 +3111,7 @@
               "minLength": 1,
               "maxLength": 1024,
               "description": "Drive object key path tail. May end with a single slash for directory placeholder objects. The runtime percent-decodes the path segment once before validation.",
-              "pattern": "^(?!/)(?!.*//)(?!.*(?:^|/)\\.{1,2}(?:/|$))(?!.*\u0000).*$"
+              "pattern": "^(?!/)(?!.*//)(?!.*(?:^|/)\\.{1,2}(?:/|$))(?!.*\\u0000).*(?:[^/])$"
             },
             "description": "Drive object key path tail. For content writes the key may end with a slash to create a directory placeholder object with empty content."
           }
@@ -4715,9 +4715,27 @@
               "aliyun_oss",
               "tencent_cos",
               "huawei_obs",
-              "volcengine_tos"
+              "volcengine_tos",
+              "baidu_bos",
+              "kingsoft_ks3",
+              "qiniu_kodo",
+              "china_mobile_ecloud",
+              "china_telecom_eos",
+              "china_unicom_wo",
+              "minio",
+              "cloudflare_r2",
+              "backblaze_b2",
+              "wasabi",
+              "digitalocean_spaces",
+              "linode_object_storage",
+              "vultr_object_storage",
+              "scaleway_object_storage",
+              "oracle_cloud_storage",
+              "ibm_cos",
+              "alibaba_cloud_international",
+              "tencent_cloud_international"
             ],
-            "pattern": "^(local_filesystem|s3_compatible|google_cloud_storage|aliyun_oss|tencent_cos|huawei_obs|volcengine_tos|custom:[a-z0-9_-]{2,32})$"
+            "pattern": "^(local_filesystem|s3_compatible|google_cloud_storage|aliyun_oss|tencent_cos|huawei_obs|volcengine_tos|baidu_bos|kingsoft_ks3|qiniu_kodo|china_mobile_ecloud|china_telecom_eos|china_unicom_wo|minio|cloudflare_r2|backblaze_b2|wasabi|digitalocean_spaces|linode_object_storage|vultr_object_storage|scaleway_object_storage|oracle_cloud_storage|ibm_cos|alibaba_cloud_international|tencent_cloud_international|custom:[a-z0-9_-]{2,32})$"
           },
           "name": {
             "type": "string"
@@ -4790,9 +4808,27 @@
               "aliyun_oss",
               "tencent_cos",
               "huawei_obs",
-              "volcengine_tos"
+              "volcengine_tos",
+              "baidu_bos",
+              "kingsoft_ks3",
+              "qiniu_kodo",
+              "china_mobile_ecloud",
+              "china_telecom_eos",
+              "china_unicom_wo",
+              "minio",
+              "cloudflare_r2",
+              "backblaze_b2",
+              "wasabi",
+              "digitalocean_spaces",
+              "linode_object_storage",
+              "vultr_object_storage",
+              "scaleway_object_storage",
+              "oracle_cloud_storage",
+              "ibm_cos",
+              "alibaba_cloud_international",
+              "tencent_cloud_international"
             ],
-            "pattern": "^(local_filesystem|s3_compatible|google_cloud_storage|aliyun_oss|tencent_cos|huawei_obs|volcengine_tos|custom:[a-z0-9_-]{2,32})$"
+            "pattern": "^(local_filesystem|s3_compatible|google_cloud_storage|aliyun_oss|tencent_cos|huawei_obs|volcengine_tos|baidu_bos|kingsoft_ks3|qiniu_kodo|china_mobile_ecloud|china_telecom_eos|china_unicom_wo|minio|cloudflare_r2|backblaze_b2|wasabi|digitalocean_spaces|linode_object_storage|vultr_object_storage|scaleway_object_storage|oracle_cloud_storage|ibm_cos|alibaba_cloud_international|tencent_cloud_international|custom:[a-z0-9_-]{2,32})$"
           },
           "name": {
             "type": "string"
