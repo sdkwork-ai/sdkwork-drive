@@ -2,10 +2,10 @@
   "workspace": "sdkwork-drive-app-sdk",
   "sdkOwner": "sdkwork-drive",
   "apiAuthority": "sdkwork-drive-app-api",
-  "authoritySpec": "../../apis/app-api/drive/drive-app-api.openapi.json",
-  "generationInputSpec": "../../target/drive-sdk-generator-input/sdkwork-drive-app-sdk/drive-app-api.openapi.json",
+  "authoritySpec": "../../target/drive-app-api.head-snapshot.openapi.json",
+  "generationInputSpec": "../../target/drive-sdk-generator-input/sdkwork-drive-app-sdk/drive-app-api.head-snapshot.openapi.json",
   "derivedSpecs": {
-    "default": "../../target/drive-sdk-generator-input/sdkwork-drive-app-sdk/drive-app-api.openapi.json"
+    "default": "../../target/drive-sdk-generator-input/sdkwork-drive-app-sdk/drive-app-api.head-snapshot.openapi.json"
   },
   "discoverySurface": {
     "sdkTarget": "app",
@@ -70,6 +70,17 @@
       "name": "github.com/sdkwork/sdkwork-drive-app-sdk-generated",
       "version": "0.1.0",
       "description": "Generator-owned Go transport SDK for sdkwork-drive-app-sdk."
+    },
+    {
+      "language": "flutter",
+      "workspace": "sdkwork-drive-app-sdk-flutter",
+      "generationState": "declared",
+      "releaseState": "not_published",
+      "generatedPath": "sdkwork-drive-app-sdk-flutter/generated/server-openapi",
+      "manifestPath": "sdkwork-drive-app-sdk-flutter/generated/server-openapi/pubspec.yaml",
+      "name": "sdkwork-drive-app-sdk-generated",
+      "version": "0.1.0",
+      "description": "Generator-owned Flutter/Dart transport SDK for sdkwork-drive-app-sdk."
     }
   ],
   "sdkDependencies": [
@@ -120,6 +131,11 @@
       "language": "go",
       "packageName": "sdkwork-drive-app-sdk-generated-go",
       "generatedOutput": "sdkwork-drive-app-sdk-go/generated/server-openapi"
+    },
+    "flutter": {
+      "language": "flutter",
+      "packageName": "sdkwork-drive-app-sdk-generated-flutter",
+      "generatedOutput": "sdkwork-drive-app-sdk-flutter/generated/server-openapi"
     }
   },
   "generatorName": "sdkwork-sdk-generator",

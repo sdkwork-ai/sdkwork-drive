@@ -16,7 +16,7 @@ const HTTP_METHODS = new Set([
   "trace",
 ]);
 
-const OFFICIAL_LANGUAGE_ORDER = ["typescript", "rust", "java", "python", "go"];
+const OFFICIAL_LANGUAGE_ORDER = ["typescript", "rust", "java", "python", "go", "flutter"];
 const DEFAULT_LANGUAGE = "typescript";
 const FIXED_SDK_VERSION = "0.1.0";
 const STANDARD_PROFILE = "sdkwork-v3";
@@ -539,6 +539,7 @@ function languageDisplayName(language) {
     java: "Java",
     python: "Python",
     go: "Go",
+    flutter: "Flutter/Dart",
   }[language] || language;
 }
 
@@ -549,6 +550,7 @@ function languageManifestFile(language) {
     java: "pom.xml",
     python: "pyproject.toml",
     go: "go.mod",
+    flutter: "pubspec.yaml",
   }[language] || "sdkwork-sdk.json";
 }
 

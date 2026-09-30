@@ -1,0 +1,26 @@
+name: drive_uploader_composed
+description: >-
+  Composed Drive Uploader facade over the generator-owned sdkwork-drive-app-sdk
+  Flutter transport. Owns part planning, presigning, provider PUT, part
+  marking, completion, progress, and resumable state (DRIVE_SPEC.md section 8.1).
+version: 0.1.0
+publish_to: none
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  crypto: ^3.0.6
+  http: ^1.2.0
+  sdkwork_common_flutter: ^1.0.0
+  sdkwork_drive_app_sdk_generated_flutter:
+    path: ../../generated/server-openapi
+
+# Local workspace resolution: the common flutter package is a workspace
+# sibling, not a published artifact; hosts apply the same override.
+dependency_overrides:
+  sdkwork_common_flutter:
+    path: ../../../../../../sdkwork-sdk-commons/sdkwork-sdk-common-flutter
+
+dev_dependencies:
+  lints: ^3.0.0
