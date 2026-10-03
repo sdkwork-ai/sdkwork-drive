@@ -34,6 +34,13 @@ export interface DriveUploadImageServiceOptions {
   previewReader?: DriveImagePreviewReaderLike;
   /** Read ceiling for Drive-backed previews; default 2 MiB. */
   previewMaxBytes?: number;
+  /**
+   * Explicit Drive target for hosts whose contract pins an upload space or
+   * parent folder (`DRIVE_SPEC.md` §9.4: explicit targets require Drive
+   * permission validation). Omit for the default caller-owned Upload space.
+   */
+  spaceId?: string;
+  parentNodeId?: string;
 }
 
 function uploaderMethodForProfile(
@@ -48,6 +55,27 @@ function uploaderMethodForProfile(
     case "image":
       return (request) => uploader.uploadImage(request);
   }
+}
+
+/**
+ * Retention travels from the declaration (`DRIVE_SPEC.md` §18.1): the
+ * declared mode is what Drive records; temporary declarations carry their
+ * declared TTL (wire type is int64-as-string).
+ */
+function retentionRequest(declaration: DriveUploadImageDeclaration): {
+  retention?: { mode: "long_term" | "temporary"; ttlSeconds?: string };
+} {
+  if (declaration.retention === "temporary") {
+    return {
+      retention: {
+        mode: "temporary",
+        ...(declaration.retentionTtlSeconds === undefined
+          ? {}
+          : { ttlSeconds: String(declaration.retentionTtlSeconds) }),
+      },
+    };
+  }
+  return { retention: { mode: "long_term" } };
 }
 
 /**
@@ -170,6 +198,9 @@ export function createDriveUploadImageService(
         scene: options.declaration.scene,
         source: options.declaration.source,
         uploadProfileCode: options.declaration.uploadProfileCode,
+        ...(options.spaceId === undefined ? {} : { spaceId: options.spaceId }),
+        ...(options.parentNodeId === undefined ? {} : { parentNodeId: options.parentNodeId }),
+        ...retentionRequest(options.declaration),
         ...(file.name === undefined ? {} : { originalFileName: file.name }),
         ...(file.type === undefined ? {} : { contentType: file.type }),
         ...(signal === undefined ? {} : { signal }),

@@ -4,6 +4,26 @@ import { createDriveNodesImagePreviewReader, createDriveUploadImageService } fro
 import { avatarDeclaration, byteFile, recordingUploader, uploadResultFixture } from "./test-support";
 import { DriveUploadImageError } from "./types";
 
+test("service forwards declared retention ttl and pinned drive target", async () => {
+  const uploader = recordingUploader();
+  const service = createDriveUploadImageService({
+    uploader,
+    declaration: {
+      ...avatarDeclaration,
+      retention: "temporary",
+      retentionTtlSeconds: 3600,
+    },
+    spaceId: "space_pinned",
+    parentNodeId: "node_parent",
+  });
+  await service.upload({ file: byteFile(4), appResourceId: "user_01" });
+  const request = uploader.recorded[0]?.request;
+  assert.ok(request);
+  assert.deepEqual(request.retention, { mode: "temporary", ttlSeconds: "3600" });
+  assert.equal(request.spaceId, "space_pinned");
+  assert.equal(request.parentNodeId, "node_parent");
+});
+
 test("service uploads through the declared profile with declared intent only", async () => {
   const uploader = recordingUploader();
   const service = createDriveUploadImageService({
@@ -27,6 +47,7 @@ test("service uploads through the declared profile with declared intent only", a
   assert.equal(request?.uploadProfileCode, "avatar");
   assert.equal(request?.contentType, "image/png");
   assert.equal(request?.originalFileName, "cat.png");
+  assert.deepEqual(request?.retention, { mode: "long_term" });
   assert.equal("tenantId" in (request ?? {}), false);
   assert.equal(value.source, "drive");
   assert.equal(value.uri, "drive://spaces/space_app_upload_01/nodes/node_01HR6P7ZJQ4A7M2CKA9F0P6R7S");
