@@ -1,4 +1,3 @@
-import { describeDriveUploadImageRejection } from "./copy";
 import { resolveDriveUploadImageConstraints, validateDriveUploadImageFile } from "./validation";
 import {
   DRIVE_UPLOAD_IMAGE_DEFAULT_ACCEPT,
