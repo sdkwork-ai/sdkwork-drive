@@ -1,0 +1,30 @@
+name: drive_upload_image_composed
+description: >-
+  Reusable Drive image-upload UI family for Flutter: declaration-validated
+  service binding over the composed Drive Uploader, a shared upload state
+  machine, and configurable single/grid image fields (DRIVE_SPEC.md sections
+  9, 10, and 18).
+version: 0.1.0
+publish_to: none
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+  flutter: '>=3.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  drive_uploader_composed:
+    path: ../drive_uploader_composed
+
+# Local workspace resolution: the common flutter package is a workspace
+# sibling, not a published artifact; hosts apply the same override (the
+# dependency_overrides of drive_uploader_composed do not propagate here).
+dependency_overrides:
+  sdkwork_common_flutter:
+    path: ../../../../../../sdkwork-sdk-commons/sdkwork-sdk-common-flutter
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  lints: ^3.0.0

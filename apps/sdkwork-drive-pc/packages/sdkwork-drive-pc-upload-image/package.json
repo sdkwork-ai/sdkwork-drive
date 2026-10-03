@@ -21,6 +21,7 @@
     "lucide-react": "^0.546.0"
   },
   "devDependencies": {
+    "typescript": "catalog:",
     "vitest": "^3.2.6"
   }
 }

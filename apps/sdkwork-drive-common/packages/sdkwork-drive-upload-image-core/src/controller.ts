@@ -84,25 +84,23 @@ function defaultPreviewUrlAdapter(): DriveUploadImagePreviewUrlAdapter {
 export interface DriveUploadImageControllerOptions extends DriveUploadImageFileConstraints {
   service: DriveUploadImageService;
   /** Maximum admitted images; `1` renders the single-field shells. */
-  maxFiles?: number;
+  maxFiles?: number | undefined;
   /** Single-field mode: picking again replaces the stored image. */
-  replaceOnMax?: boolean;
+  replaceOnMax?: boolean | undefined;
   /**
    * Supplies the entity anchor at upload time. Returning `null`/`undefined`
    * defers the upload until `uploadPending` carries one — the
    * persist-first-then-upload flow (`DRIVE_SPEC.md` §18.3).
    */
-  resolveAppResourceId?: () => string | null | undefined;
-  previewUrls?: DriveUploadImagePreviewUrlAdapter | null;
-  onUploaded?: (values: readonly DriveUploadImageValue[]) => void;
-  onRejected?: (rejection: {
-    item: DriveUploadImageItem;
-    code: DriveUploadImageRejectionCode;
-  }) => void;
-  onFailed?: (failure: {
-    item: DriveUploadImageItem;
-    error: DriveUploadImageError;
-  }) => void;
+  resolveAppResourceId?: (() => string | null | undefined) | undefined;
+  previewUrls?: DriveUploadImagePreviewUrlAdapter | null | undefined;
+  onUploaded?: ((values: readonly DriveUploadImageValue[]) => void) | undefined;
+  onRejected?:
+    | ((rejection: { item: DriveUploadImageItem; code: DriveUploadImageRejectionCode }) => void)
+    | undefined;
+  onFailed?:
+    | ((failure: { item: DriveUploadImageItem; error: DriveUploadImageError }) => void)
+    | undefined;
 }
 
 interface InternalItem extends DriveUploadImageItem {

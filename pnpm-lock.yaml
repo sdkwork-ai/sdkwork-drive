@@ -621,6 +621,9 @@ importers:
       '@tailwindcss/vite':
         specifier: 4.2.2
         version: 4.2.2(vite@8.1.5(@types/node@25.9.4)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.0))
+      '@testing-library/dom':
+        specifier: 'catalog:'
+        version: 10.4.1
       '@testing-library/jest-dom':
         specifier: ^6.9.1
         version: 6.9.1
@@ -700,6 +703,53 @@ importers:
       tsx:
         specifier: 'catalog:'
         version: 4.23.15
+
+  apps/sdkwork-drive-common/packages/sdkwork-drive-mobile-react-upload-image:
+    dependencies:
+      '@sdkwork/drive-upload-image-core':
+        specifier: workspace:*
+        version: link:../sdkwork-drive-upload-image-core
+      lucide-react:
+        specifier: 'catalog:'
+        version: 1.41.0(react@19.2.8)
+      react:
+        specifier: 'catalog:'
+        version: 19.2.8
+    devDependencies:
+      '@types/node':
+        specifier: ^24.0.0
+        version: 24.19.1
+      '@types/react':
+        specifier: ^19.2.0
+        version: 19.2.14
+      '@types/react-dom':
+        specifier: ^19.2.0
+        version: 19.2.3(@types/react@19.2.14)
+      react-dom:
+        specifier: 'catalog:'
+        version: 19.2.8(react@19.2.8)
+      tsx:
+        specifier: 'catalog:'
+        version: 4.23.15
+      typescript:
+        specifier: 'catalog:'
+        version: 6.0.3
+
+  apps/sdkwork-drive-common/packages/sdkwork-drive-mp-upload-image:
+    dependencies:
+      '@sdkwork/drive-upload-image-core':
+        specifier: workspace:*
+        version: link:../sdkwork-drive-upload-image-core
+    devDependencies:
+      '@types/node':
+        specifier: ^24.0.0
+        version: 24.19.1
+      tsx:
+        specifier: 'catalog:'
+        version: 4.23.15
+      typescript:
+        specifier: 'catalog:'
+        version: 6.0.3
 
   apps/sdkwork-drive-common/packages/sdkwork-drive-upload-image-core:
     dependencies:
@@ -1131,6 +1181,28 @@ importers:
       sdkwork-drive-pc-core:
         specifier: workspace:*
         version: link:../sdkwork-drive-pc-core
+
+  apps/sdkwork-drive-pc/packages/sdkwork-drive-pc-upload-image:
+    dependencies:
+      '@sdkwork/drive-upload-image-core':
+        specifier: workspace:*
+        version: link:../../../sdkwork-drive-common/packages/sdkwork-drive-upload-image-core
+      lucide-react:
+        specifier: ^0.546.0
+        version: 0.546.0(react@19.2.8)
+      react:
+        specifier: 'catalog:'
+        version: 19.2.8
+      react-dom:
+        specifier: 'catalog:'
+        version: 19.2.8(react@19.2.8)
+    devDependencies:
+      typescript:
+        specifier: 'catalog:'
+        version: 6.0.3
+      vitest:
+        specifier: ^3.2.6
+        version: 3.2.6(@types/debug@4.1.13)(@types/node@25.9.4)(jiti@2.7.0)(jsdom@29.1.1)(lightningcss@1.32.0)(tsx@4.23.15)(yaml@2.9.0)
 
   sdks/sdkwork-drive-admin-storage-sdk/sdkwork-drive-admin-storage-sdk-typescript:
     dependencies:

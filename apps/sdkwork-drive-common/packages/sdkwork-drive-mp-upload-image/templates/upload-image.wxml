@@ -1,0 +1,54 @@
+<view class="drive-upload-image">
+  <view class="drive-upload-image__label" wx:if="{{label}}">{{label}}</view>
+
+  <view class="drive-upload-image__grid" role="list">
+    <view
+      class="drive-upload-image__item drive-upload-image__item--{{item.status}}"
+      role="listitem"
+      wx:for="{{state.items}}"
+      wx:key="id"
+    >
+      <image
+        wx:if="{{item.previewUrl}}"
+        class="drive-upload-image__thumb"
+        src="{{item.previewUrl}}"
+        mode="aspectFill"
+      />
+      <view wx:else class="drive-upload-image__placeholder" aria-hidden="true">＋</view>
+
+      <view
+        wx:if="{{item.status === 'uploading'}}"
+        class="drive-upload-image__progress"
+      >
+        <view
+          class="drive-upload-image__progress-bar"
+          style="width: {{item.progressPercent || 0}}%"
+        />
+      </view>
+
+      <view
+        wx:if="{{item.status === 'uploaded' && !readOnly}}"
+        class="drive-upload-image__remove"
+        role="button"
+        aria-label="移除图片"
+        bindtap="onDriveUploadImageRemove"
+        data-id="{{item.id}}"
+      >×</view>
+    </view>
+
+    <view
+      wx:if="{{state.canAddMore && !state.isUploading}}"
+      class="drive-upload-image__add"
+      role="button"
+      aria-label="上传图片"
+      bindtap="onDriveUploadImagePick"
+    >＋</view>
+  </view>
+
+  <view
+    wx:if="{{state.items[0].errorMessage}}"
+    class="drive-upload-image__error"
+    aria-live="polite"
+  >{{state.items[0].errorMessage}}</view>
+  <view wx:if="{{description}}" class="drive-upload-image__description">{{description}}</view>
+</view>

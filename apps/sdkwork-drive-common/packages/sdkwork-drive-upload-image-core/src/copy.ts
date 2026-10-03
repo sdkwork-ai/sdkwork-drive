@@ -23,6 +23,10 @@ export interface DriveUploadImageCopy {
   /** `{max}` interpolates the human-readable configured ceiling. */
   fileTooLargeDetail: string;
   previewUnavailable: string;
+  /** Mobile shells with camera support: source-sheet actions. */
+  chooseFromAlbum: string;
+  takePhoto: string;
+  cancel: string;
 }
 
 export const defaultDriveUploadImageCopy: DriveUploadImageCopy = {
@@ -38,6 +42,9 @@ export const defaultDriveUploadImageCopy: DriveUploadImageCopy = {
   tooManyFiles: "Too many images selected.",
   fileTooLargeDetail: "Images must be {max} or smaller.",
   previewUnavailable: "Preview unavailable",
+  chooseFromAlbum: "Choose from album",
+  takePhoto: "Take photo",
+  cancel: "Cancel",
 };
 
 export function mergeDriveUploadImageCopy(
@@ -59,7 +66,7 @@ export function formatDriveUploadImageMessage(
 export function describeDriveUploadImageRejection(
   code: DriveUploadImageRejectionCode,
   copy: DriveUploadImageCopy,
-  context?: { maxSizeBytes?: number },
+  context?: { maxSizeBytes?: number | undefined },
 ): string {
   switch (code) {
     case "invalid-file-type":

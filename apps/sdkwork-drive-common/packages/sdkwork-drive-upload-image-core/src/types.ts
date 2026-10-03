@@ -160,9 +160,9 @@ export interface DriveUploadImageService {
 /** File constraints a component exposes as configurable props. */
 export interface DriveUploadImageFileConstraints {
   /** MIME or extension accept list, e.g. `["image/*"]`, `[".png", "image/jpeg"]`. */
-  accept?: readonly string[];
+  accept?: readonly string[] | undefined;
   /** Upload ceiling in bytes; the shared default is 5 MiB. */
-  maxSizeBytes?: number;
+  maxSizeBytes?: number | undefined;
 }
 
 export const DRIVE_UPLOAD_IMAGE_DEFAULT_MAX_BYTES = 5 * 1024 * 1024;
