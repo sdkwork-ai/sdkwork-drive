@@ -1889,6 +1889,30 @@
               "minimum": 1,
               "maximum": 200
             }
+          },
+          {
+            "name": "bucket",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 3,
+              "maxLength": 63,
+              "pattern": "^(?!xn--)(?!sthree-)(?!.*\\.\\.)(?!.*\\.-)(?!.*-\\.)(?!\\d+\\.\\d+\\.\\d+\\.\\d+$)(?!.*(-s3alias|--ol-s3|\\.mrap|--x-s3)$)[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$",
+              "description": "Target bucket override for this object operation. Absent means the bucket configured on the storage provider. The provider credentials still apply."
+            }
+          },
+          {
+            "name": "region",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 63,
+              "pattern": "^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?$",
+              "description": "Region the target bucket lives in, exactly as the bucket inventory reports it on that row. The bucket inventory is an account-level read that spans regions, so this is what lets the operation address the bucket's own regional endpoint per the vendor's own endpoint convention; absent, or a convention that cannot express it, keeps the endpoint the provider configuration stores."
+            }
           }
         ],
         "responses": {
@@ -2030,10 +2054,34 @@
               "type": "string",
               "minLength": 1,
               "maxLength": 1024,
-              "pattern": "^(?!/)(?!.*//)(?!.*(?:^|/)\\.{1,2}(?:/|$))(?!.*\u0000).*$",
+              "pattern": "^(?!/)(?!.*//)(?!.*(?:^|/)\\.{1,2}(?:/|$))(?!.*\\u0000).*(?:[^/])$",
               "description": "Drive object key path tail. May end with a single slash for directory placeholder objects. The runtime percent-decodes the path segment once before validation."
             },
             "description": "Drive object key path tail. For content writes the key may end with a slash to create a directory placeholder object with empty content."
+          },
+          {
+            "name": "bucket",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 3,
+              "maxLength": 63,
+              "pattern": "^(?!xn--)(?!sthree-)(?!.*\\.\\.)(?!.*\\.-)(?!.*-\\.)(?!\\d+\\.\\d+\\.\\d+\\.\\d+$)(?!.*(-s3alias|--ol-s3|\\.mrap|--x-s3)$)[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$",
+              "description": "Target bucket override for this object operation. Absent means the bucket configured on the storage provider. The provider credentials still apply."
+            }
+          },
+          {
+            "name": "region",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 63,
+              "pattern": "^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?$",
+              "description": "Region the target bucket lives in, exactly as the bucket inventory reports it on that row. The bucket inventory is an account-level read that spans regions, so this is what lets the operation address the bucket's own regional endpoint per the vendor's own endpoint convention; absent, or a convention that cannot express it, keeps the endpoint the provider configuration stores."
+            }
           }
         ],
         "responses": {
@@ -2165,10 +2213,34 @@
               "type": "string",
               "minLength": 1,
               "maxLength": 1024,
-              "pattern": "^(?!/)(?!.*//)(?!.*(?:^|/)\\.{1,2}(?:/|$))(?!.*\u0000).*$",
+              "pattern": "^(?!/)(?!.*//)(?!.*(?:^|/)\\.{1,2}(?:/|$))(?!.*\\u0000).*(?:[^/])$",
               "description": "Drive object key path tail. May end with a single slash for directory placeholder objects. The runtime percent-decodes the path segment once before validation."
             },
             "description": "Drive object key path tail. For content writes the key may end with a slash to create a directory placeholder object with empty content."
+          },
+          {
+            "name": "bucket",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 3,
+              "maxLength": 63,
+              "pattern": "^(?!xn--)(?!sthree-)(?!.*\\.\\.)(?!.*\\.-)(?!.*-\\.)(?!\\d+\\.\\d+\\.\\d+\\.\\d+$)(?!.*(-s3alias|--ol-s3|\\.mrap|--x-s3)$)[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$",
+              "description": "Target bucket override for this object operation. Absent means the bucket configured on the storage provider. The provider credentials still apply."
+            }
+          },
+          {
+            "name": "region",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 63,
+              "pattern": "^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?$",
+              "description": "Region the target bucket lives in, exactly as the bucket inventory reports it on that row. The bucket inventory is an account-level read that spans regions, so this is what lets the operation address the bucket's own regional endpoint per the vendor's own endpoint convention; absent, or a convention that cannot express it, keeps the endpoint the provider configuration stores."
+            }
           }
         ],
         "responses": {
@@ -2376,6 +2448,706 @@
             "AccessToken": []
           }
         ],
+        "x-sdkwork-owner": "sdkwork-drive",
+        "x-sdkwork-api-authority": "sdkwork-drive.admin.storage",
+        "x-sdkwork-request-context": "WebRequestContext",
+        "x-sdkwork-api-surface": "backend-api",
+        "x-sdkwork-permission": "drive.storage.admin"
+      }
+    },
+    "/backend/v3/api/drive/storage/providers/{providerId}/objects/multipart-uploads": {
+      "post": {
+        "tags": [
+          "storageAdmin"
+        ],
+        "operationId": "storageProviders.objects.multipartUpload.create",
+        "summary": "Start a provider object multipart upload",
+        "description": "Opens a vendor multipart upload for one object key and returns its uploadId. Use it for objects above the single-request content limit (8 MiB): the browser uploads each part straight to the vendor with the presigned URLs from `storageProviders.objects.multipartUpload.parts.presign`, then calls `...complete`. Abandoned uploads hold billable parts until `...abort` runs.",
+        "security": [
+          {
+            "AuthToken": [],
+            "AccessToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "providerId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "bucket",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 3,
+              "maxLength": 63,
+              "pattern": "^(?!xn--)(?!sthree-)(?!.*\\.\\.)(?!.*\\.-)(?!.*-\\.)(?!\\d+\\.\\d+\\.\\d+\\.\\d+$)(?!.*(-s3alias|--ol-s3|\\.mrap|--x-s3)$)[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$",
+              "description": "Target bucket override for this object operation. Absent means the bucket configured on the storage provider. The provider credentials still apply."
+            }
+          },
+          {
+            "name": "region",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 63,
+              "pattern": "^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?$",
+              "description": "Region the target bucket lives in, exactly as the bucket inventory reports it on that row. The bucket inventory is an account-level read that spans regions, so this is what lets the operation address the bucket's own regional endpoint per the vendor's own endpoint convention; absent, or a convention that cannot express it, keeps the endpoint the provider configuration stores."
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateProviderObjectMultipartUploadRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SdkWorkApiResponse"
+                    },
+                    {
+                      "type": "object",
+                      "required": [
+                        "data"
+                      ],
+                      "properties": {
+                        "data": {
+                          "type": "object",
+                          "required": [
+                            "item"
+                          ],
+                          "properties": {
+                            "item": {
+                              "$ref": "#/components/schemas/ProviderObjectMultipartUpload"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Problem detail",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Problem detail",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Problem detail",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Problem detail",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Problem detail",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "x-sdkwork-owner": "sdkwork-drive",
+        "x-sdkwork-api-authority": "sdkwork-drive.admin.storage",
+        "x-sdkwork-request-context": "WebRequestContext",
+        "x-sdkwork-api-surface": "backend-api",
+        "x-sdkwork-permission": "drive.storage.admin"
+      }
+    },
+    "/backend/v3/api/drive/storage/providers/{providerId}/objects/multipart-uploads/parts": {
+      "post": {
+        "tags": [
+          "storageAdmin"
+        ],
+        "operationId": "storageProviders.objects.multipartUpload.parts.presign",
+        "summary": "Presign provider object upload parts",
+        "description": "Returns one presigned PUT grant per requested part number. The client must send the returned `headers` verbatim: they are part of the signature (server-side encryption and content type are signed too). The vendor bucket must allow cross-origin PUT from the console origin and expose the `ETag` response header, otherwise the browser cannot report part ETags and `...complete` cannot succeed.",
+        "security": [
+          {
+            "AuthToken": [],
+            "AccessToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "providerId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "bucket",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 3,
+              "maxLength": 63,
+              "pattern": "^(?!xn--)(?!sthree-)(?!.*\\.\\.)(?!.*\\.-)(?!.*-\\.)(?!\\d+\\.\\d+\\.\\d+\\.\\d+$)(?!.*(-s3alias|--ol-s3|\\.mrap|--x-s3)$)[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$",
+              "description": "Target bucket override for this object operation. Absent means the bucket configured on the storage provider. The provider credentials still apply."
+            }
+          },
+          {
+            "name": "region",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 63,
+              "pattern": "^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?$",
+              "description": "Region the target bucket lives in, exactly as the bucket inventory reports it on that row. The bucket inventory is an account-level read that spans regions, so this is what lets the operation address the bucket's own regional endpoint per the vendor's own endpoint convention; absent, or a convention that cannot express it, keeps the endpoint the provider configuration stores."
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PresignProviderObjectUploadPartsRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SdkWorkApiResponse"
+                    },
+                    {
+                      "type": "object",
+                      "required": [
+                        "data"
+                      ],
+                      "properties": {
+                        "data": {
+                          "type": "object",
+                          "required": [
+                            "item"
+                          ],
+                          "properties": {
+                            "item": {
+                              "$ref": "#/components/schemas/ProviderObjectUploadPartGrants"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Problem detail",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Problem detail",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Problem detail",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Problem detail",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Problem detail",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "x-sdkwork-owner": "sdkwork-drive",
+        "x-sdkwork-api-authority": "sdkwork-drive.admin.storage",
+        "x-sdkwork-request-context": "WebRequestContext",
+        "x-sdkwork-api-surface": "backend-api",
+        "x-sdkwork-permission": "drive.storage.admin"
+      }
+    },
+    "/backend/v3/api/drive/storage/providers/{providerId}/objects/multipart-uploads/complete": {
+      "post": {
+        "tags": [
+          "storageAdmin"
+        ],
+        "operationId": "storageProviders.objects.multipartUpload.complete",
+        "summary": "Complete a provider object multipart upload",
+        "description": "Finishes the multipart upload from the collected part ETags and returns the written object. Part numbers must be the ones that were uploaded, each with the ETag the vendor returned for that part.",
+        "security": [
+          {
+            "AuthToken": [],
+            "AccessToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "providerId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "bucket",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 3,
+              "maxLength": 63,
+              "pattern": "^(?!xn--)(?!sthree-)(?!.*\\.\\.)(?!.*\\.-)(?!.*-\\.)(?!\\d+\\.\\d+\\.\\d+\\.\\d+$)(?!.*(-s3alias|--ol-s3|\\.mrap|--x-s3)$)[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$",
+              "description": "Target bucket override for this object operation. Absent means the bucket configured on the storage provider. The provider credentials still apply."
+            }
+          },
+          {
+            "name": "region",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 63,
+              "pattern": "^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?$",
+              "description": "Region the target bucket lives in, exactly as the bucket inventory reports it on that row. The bucket inventory is an account-level read that spans regions, so this is what lets the operation address the bucket's own regional endpoint per the vendor's own endpoint convention; absent, or a convention that cannot express it, keeps the endpoint the provider configuration stores."
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CompleteProviderObjectMultipartUploadRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SdkWorkApiResponse"
+                    },
+                    {
+                      "type": "object",
+                      "required": [
+                        "data"
+                      ],
+                      "properties": {
+                        "data": {
+                          "type": "object",
+                          "required": [
+                            "item"
+                          ],
+                          "properties": {
+                            "item": {
+                              "$ref": "#/components/schemas/ProviderObject"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Problem detail",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Problem detail",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Problem detail",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Problem detail",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Problem detail",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "x-sdkwork-owner": "sdkwork-drive",
+        "x-sdkwork-api-authority": "sdkwork-drive.admin.storage",
+        "x-sdkwork-request-context": "WebRequestContext",
+        "x-sdkwork-api-surface": "backend-api",
+        "x-sdkwork-permission": "drive.storage.admin"
+      }
+    },
+    "/backend/v3/api/drive/storage/providers/{providerId}/objects/multipart-uploads/abort": {
+      "post": {
+        "tags": [
+          "storageAdmin"
+        ],
+        "operationId": "storageProviders.objects.multipartUpload.abort",
+        "summary": "Abort a provider object multipart upload",
+        "description": "Discards an in-flight multipart upload. Call it when the operator cancels or closes the upload, so the vendor does not keep billing for the parts already uploaded.",
+        "security": [
+          {
+            "AuthToken": [],
+            "AccessToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "providerId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "bucket",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 3,
+              "maxLength": 63,
+              "pattern": "^(?!xn--)(?!sthree-)(?!.*\\.\\.)(?!.*\\.-)(?!.*-\\.)(?!\\d+\\.\\d+\\.\\d+\\.\\d+$)(?!.*(-s3alias|--ol-s3|\\.mrap|--x-s3)$)[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$",
+              "description": "Target bucket override for this object operation. Absent means the bucket configured on the storage provider. The provider credentials still apply."
+            }
+          },
+          {
+            "name": "region",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 63,
+              "pattern": "^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?$",
+              "description": "Region the target bucket lives in, exactly as the bucket inventory reports it on that row. The bucket inventory is an account-level read that spans regions, so this is what lets the operation address the bucket's own regional endpoint per the vendor's own endpoint convention; absent, or a convention that cannot express it, keeps the endpoint the provider configuration stores."
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AbortProviderObjectMultipartUploadRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SdkWorkApiResponse"
+                    },
+                    {
+                      "type": "object",
+                      "required": [
+                        "data"
+                      ],
+                      "properties": {
+                        "data": {
+                          "type": "object",
+                          "required": [
+                            "item"
+                          ],
+                          "properties": {
+                            "item": {
+                              "$ref": "#/components/schemas/ProviderObjectMutation"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Problem detail",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Problem detail",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Problem detail",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Problem detail",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Problem detail",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
         "x-sdkwork-owner": "sdkwork-drive",
         "x-sdkwork-api-authority": "sdkwork-drive.admin.storage",
         "x-sdkwork-request-context": "WebRequestContext",
@@ -2974,9 +3746,33 @@
               "minLength": 1,
               "maxLength": 1024,
               "description": "Drive object key path tail. May end with a single slash for directory placeholder objects. The runtime percent-decodes the path segment once before validation.",
-              "pattern": "^(?!/)(?!.*//)(?!.*(?:^|/)\\.{1,2}(?:/|$))(?!.*\u0000).*$"
+              "pattern": "^(?!/)(?!.*//)(?!.*(?:^|/)\\.{1,2}(?:/|$))(?!.*\\u0000).*(?:[^/])$"
             },
             "description": "Drive object key path tail. For content writes the key may end with a slash to create a directory placeholder object with empty content."
+          },
+          {
+            "name": "bucket",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 3,
+              "maxLength": 63,
+              "pattern": "^(?!xn--)(?!sthree-)(?!.*\\.\\.)(?!.*\\.-)(?!.*-\\.)(?!\\d+\\.\\d+\\.\\d+\\.\\d+$)(?!.*(-s3alias|--ol-s3|\\.mrap|--x-s3)$)[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$",
+              "description": "Target bucket override for this object operation. Absent means the bucket configured on the storage provider. The provider credentials still apply."
+            }
+          },
+          {
+            "name": "region",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 63,
+              "pattern": "^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?$",
+              "description": "Region the target bucket lives in, exactly as the bucket inventory reports it on that row. The bucket inventory is an account-level read that spans regions, so this is what lets the operation address the bucket's own regional endpoint per the vendor's own endpoint convention; absent, or a convention that cannot express it, keeps the endpoint the provider configuration stores."
+            }
           }
         ],
         "responses": {
@@ -3111,7 +3907,7 @@
               "minLength": 1,
               "maxLength": 1024,
               "description": "Drive object key path tail. May end with a single slash for directory placeholder objects. The runtime percent-decodes the path segment once before validation.",
-              "pattern": "^(?!/)(?!.*//)(?!.*(?:^|/)\\.{1,2}(?:/|$))(?!.*\u0000).*$"
+              "pattern": "^(?!/)(?!.*//)(?!.*(?:^|/)\\.{1,2}(?:/|$))(?!.*\\u0000).*(?:[^/])$"
             },
             "description": "Drive object key path tail. For content writes the key may end with a slash to create a directory placeholder object with empty content."
           }
@@ -3310,6 +4106,30 @@
               "type": "string"
             },
             "description": "Only return accounts declaring this capability (for example object_storage for storage providers)."
+          },
+          {
+            "name": "bucket",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 3,
+              "maxLength": 63,
+              "pattern": "^(?!xn--)(?!sthree-)(?!.*\\.\\.)(?!.*\\.-)(?!.*-\\.)(?!\\d+\\.\\d+\\.\\d+\\.\\d+$)(?!.*(-s3alias|--ol-s3|\\.mrap|--x-s3)$)[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$",
+              "description": "Target bucket override for this object operation. Absent means the bucket configured on the storage provider. The provider credentials still apply."
+            }
+          },
+          {
+            "name": "region",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 63,
+              "pattern": "^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?$",
+              "description": "Region the target bucket lives in, exactly as the bucket inventory reports it on that row. The bucket inventory is an account-level read that spans regions, so this is what lets the operation address the bucket's own regional endpoint per the vendor's own endpoint convention; absent, or a convention that cannot express it, keeps the endpoint the provider configuration stores."
+            }
           }
         ],
         "responses": {
@@ -4715,9 +5535,27 @@
               "aliyun_oss",
               "tencent_cos",
               "huawei_obs",
-              "volcengine_tos"
+              "volcengine_tos",
+              "baidu_bos",
+              "kingsoft_ks3",
+              "qiniu_kodo",
+              "china_mobile_ecloud",
+              "china_telecom_eos",
+              "china_unicom_wo",
+              "minio",
+              "cloudflare_r2",
+              "backblaze_b2",
+              "wasabi",
+              "digitalocean_spaces",
+              "linode_object_storage",
+              "vultr_object_storage",
+              "scaleway_object_storage",
+              "oracle_cloud_storage",
+              "ibm_cos",
+              "alibaba_cloud_international",
+              "tencent_cloud_international"
             ],
-            "pattern": "^(local_filesystem|s3_compatible|google_cloud_storage|aliyun_oss|tencent_cos|huawei_obs|volcengine_tos|custom:[a-z0-9_-]{2,32})$"
+            "pattern": "^(local_filesystem|s3_compatible|google_cloud_storage|aliyun_oss|tencent_cos|huawei_obs|volcengine_tos|baidu_bos|kingsoft_ks3|qiniu_kodo|china_mobile_ecloud|china_telecom_eos|china_unicom_wo|minio|cloudflare_r2|backblaze_b2|wasabi|digitalocean_spaces|linode_object_storage|vultr_object_storage|scaleway_object_storage|oracle_cloud_storage|ibm_cos|alibaba_cloud_international|tencent_cloud_international|custom:[a-z0-9_-]{2,32})$"
           },
           "name": {
             "type": "string"
@@ -4790,9 +5628,27 @@
               "aliyun_oss",
               "tencent_cos",
               "huawei_obs",
-              "volcengine_tos"
+              "volcengine_tos",
+              "baidu_bos",
+              "kingsoft_ks3",
+              "qiniu_kodo",
+              "china_mobile_ecloud",
+              "china_telecom_eos",
+              "china_unicom_wo",
+              "minio",
+              "cloudflare_r2",
+              "backblaze_b2",
+              "wasabi",
+              "digitalocean_spaces",
+              "linode_object_storage",
+              "vultr_object_storage",
+              "scaleway_object_storage",
+              "oracle_cloud_storage",
+              "ibm_cos",
+              "alibaba_cloud_international",
+              "tencent_cloud_international"
             ],
-            "pattern": "^(local_filesystem|s3_compatible|google_cloud_storage|aliyun_oss|tencent_cos|huawei_obs|volcengine_tos|custom:[a-z0-9_-]{2,32})$"
+            "pattern": "^(local_filesystem|s3_compatible|google_cloud_storage|aliyun_oss|tencent_cos|huawei_obs|volcengine_tos|baidu_bos|kingsoft_ks3|qiniu_kodo|china_mobile_ecloud|china_telecom_eos|china_unicom_wo|minio|cloudflare_r2|backblaze_b2|wasabi|digitalocean_spaces|linode_object_storage|vultr_object_storage|scaleway_object_storage|oracle_cloud_storage|ibm_cos|alibaba_cloud_international|tencent_cloud_international|custom:[a-z0-9_-]{2,32})$"
           },
           "name": {
             "type": "string"
@@ -5017,6 +5873,261 @@
         },
         "additionalProperties": false
       },
+      "CreateProviderObjectMultipartUploadRequest": {
+        "type": "object",
+        "required": [
+          "objectKey"
+        ],
+        "properties": {
+          "objectKey": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1024,
+            "pattern": "^(?!/)(?!.*//)(?!.*(?:^|/)\\.{1,2}(?:/|$))(?!.*\\u0000).+$",
+            "description": "Drive object listing key. UTF-8 1-1024 bytes, trimmed relative key; no leading slash, double slash, NUL, or period-only path segments."
+          },
+          "contentType": {
+            "type": "string",
+            "nullable": true,
+            "description": "Content type recorded on the finished object. Signed into each part grant."
+          },
+          "checksumSha256Hex": {
+            "type": "string",
+            "nullable": true,
+            "description": "Optional lowercase hex SHA-256 of the whole object, when the client already has it."
+          }
+        },
+        "additionalProperties": false
+      },
+      "ProviderObjectMultipartUpload": {
+        "type": "object",
+        "required": [
+          "providerId",
+          "bucket",
+          "objectKey",
+          "uploadId"
+        ],
+        "properties": {
+          "providerId": {
+            "type": "string"
+          },
+          "bucket": {
+            "type": "string"
+          },
+          "objectKey": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1024,
+            "pattern": "^(?!/)(?!.*//)(?!.*(?:^|/)\\.{1,2}(?:/|$))(?!.*\\u0000).+$",
+            "description": "Drive object listing key. UTF-8 1-1024 bytes, trimmed relative key; no leading slash, double slash, NUL, or period-only path segments."
+          },
+          "uploadId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2048,
+            "description": "Opaque vendor multipart upload id returned by `...multipartUpload.create`. It is never parsed, only echoed back to the vendor."
+          }
+        },
+        "additionalProperties": false
+      },
+      "PresignProviderObjectUploadPartsRequest": {
+        "type": "object",
+        "required": [
+          "objectKey",
+          "uploadId",
+          "partNumbers"
+        ],
+        "properties": {
+          "objectKey": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1024,
+            "pattern": "^(?!/)(?!.*//)(?!.*(?:^|/)\\.{1,2}(?:/|$))(?!.*\\u0000).+$",
+            "description": "Drive object listing key. UTF-8 1-1024 bytes, trimmed relative key; no leading slash, double slash, NUL, or period-only path segments."
+          },
+          "uploadId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2048,
+            "description": "Opaque vendor multipart upload id returned by `...multipartUpload.create`. It is never parsed, only echoed back to the vendor."
+          },
+          "partNumbers": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 100,
+            "items": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 10000,
+              "description": "Vendor part number, 1-based and contiguous. Vendors require at least 5 MiB per part except the last one."
+            },
+            "description": "Part numbers to sign in this call. Batched so a single request can cover the parts a client is about to send concurrently."
+          },
+          "expiresInSeconds": {
+            "type": "integer",
+            "minimum": 60,
+            "maximum": 604800,
+            "nullable": true,
+            "description": "Grant lifetime. Defaults to 3600 seconds when absent."
+          }
+        },
+        "additionalProperties": false
+      },
+      "ProviderObjectUploadPartGrant": {
+        "type": "object",
+        "required": [
+          "partNumber",
+          "method",
+          "url",
+          "expiresAtEpochMs"
+        ],
+        "properties": {
+          "partNumber": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 10000,
+            "description": "Vendor part number, 1-based and contiguous. Vendors require at least 5 MiB per part except the last one."
+          },
+          "method": {
+            "type": "string",
+            "description": "HTTP method to use against `url`. Vendors return PUT."
+          },
+          "url": {
+            "type": "string",
+            "description": "Absolute presigned vendor URL. The bytes go here, never through this API."
+          },
+          "headers": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "default": {},
+            "description": "Headers that are part of the signature. Send them verbatim with the upload or the vendor rejects it with 403."
+          },
+          "expiresAtEpochMs": {
+            "type": "string",
+            "format": "int64",
+            "nullable": true,
+            "x-sdkwork-int64-string": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "ProviderObjectUploadPartGrants": {
+        "type": "object",
+        "required": [
+          "providerId",
+          "bucket",
+          "objectKey",
+          "uploadId",
+          "parts"
+        ],
+        "properties": {
+          "providerId": {
+            "type": "string"
+          },
+          "bucket": {
+            "type": "string"
+          },
+          "objectKey": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1024,
+            "pattern": "^(?!/)(?!.*//)(?!.*(?:^|/)\\.{1,2}(?:/|$))(?!.*\\u0000).+$",
+            "description": "Drive object listing key. UTF-8 1-1024 bytes, trimmed relative key; no leading slash, double slash, NUL, or period-only path segments."
+          },
+          "uploadId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2048,
+            "description": "Opaque vendor multipart upload id returned by `...multipartUpload.create`. It is never parsed, only echoed back to the vendor."
+          },
+          "parts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProviderObjectUploadPartGrant"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "ProviderObjectUploadPartReference": {
+        "type": "object",
+        "required": [
+          "partNumber",
+          "etag"
+        ],
+        "properties": {
+          "partNumber": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 10000,
+            "description": "Vendor part number, 1-based and contiguous. Vendors require at least 5 MiB per part except the last one."
+          },
+          "etag": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "description": "ETag the vendor returned for that part. Browsers can only read it when the bucket CORS policy exposes the ETag header."
+          }
+        },
+        "additionalProperties": false
+      },
+      "CompleteProviderObjectMultipartUploadRequest": {
+        "type": "object",
+        "required": [
+          "objectKey",
+          "uploadId",
+          "parts"
+        ],
+        "properties": {
+          "objectKey": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1024,
+            "pattern": "^(?!/)(?!.*//)(?!.*(?:^|/)\\.{1,2}(?:/|$))(?!.*\\u0000).+$",
+            "description": "Drive object listing key. UTF-8 1-1024 bytes, trimmed relative key; no leading slash, double slash, NUL, or period-only path segments."
+          },
+          "uploadId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2048,
+            "description": "Opaque vendor multipart upload id returned by `...multipartUpload.create`. It is never parsed, only echoed back to the vendor."
+          },
+          "parts": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 10000,
+            "items": {
+              "$ref": "#/components/schemas/ProviderObjectUploadPartReference"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "AbortProviderObjectMultipartUploadRequest": {
+        "type": "object",
+        "required": [
+          "objectKey",
+          "uploadId"
+        ],
+        "properties": {
+          "objectKey": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1024,
+            "pattern": "^(?!/)(?!.*//)(?!.*(?:^|/)\\.{1,2}(?:/|$))(?!.*\\u0000).+$",
+            "description": "Drive object listing key. UTF-8 1-1024 bytes, trimmed relative key; no leading slash, double slash, NUL, or period-only path segments."
+          },
+          "uploadId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2048,
+            "description": "Opaque vendor multipart upload id returned by `...multipartUpload.create`. It is never parsed, only echoed back to the vendor."
+          }
+        },
+        "additionalProperties": false
+      },
       "ProviderObject": {
         "type": "object",
         "required": [
@@ -5127,12 +6238,26 @@
             "description": "Drive object key. UTF-8 1-1024 bytes, trimmed relative key; no leading/trailing slash, double slash, NUL, or period-only path segments.",
             "pattern": "^(?!/)(?!.*//)(?!.*(?:^|/)\\.{1,2}(?:/|$))(?!.*\\u0000).*(?:[^/])$"
           },
+          "sourceBucket": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 63,
+            "pattern": "^(?!xn--)(?!sthree-)(?!.*\\.\\.)(?!.*\\.-)(?!.*-\\.)(?!\\d+\\.\\d+\\.\\d+\\.\\d+$)(?!.*(-s3alias|--ol-s3|\\.mrap|--x-s3)$)[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$",
+            "description": "Source bucket override for the copy. Absent means the bucket configured on the storage provider. The provider endpoint, region, and credentials still apply."
+          },
           "destinationBucket": {
             "type": "string",
             "minLength": 3,
             "maxLength": 63,
             "pattern": "^(?!xn--)(?!sthree-)(?!.*\\.\\.)(?!.*\\.-)(?!.*-\\.)(?!\\d+\\.\\d+\\.\\d+\\.\\d+$)(?!.*(-s3alias|--ol-s3|\\.mrap|--x-s3)$)[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$",
             "description": "S3-compatible bucket name. DNS-compatible 3-63 characters; lowercase letters, digits, dots, and hyphens only; must start and end with a letter or digit; no IPv4-looking names, adjacent dots, dot-hyphen adjacency, or reserved S3 affixes."
+          },
+          "region": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 63,
+            "pattern": "^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?$",
+            "description": "Region the copy's buckets live in, exactly as the bucket inventory reports it on that row. The server-side copy is issued at the destination endpoint, so this is what addresses the destination bucket's own regional endpoint per the vendor's own endpoint convention; absent, or a convention that cannot express it, keeps the endpoint the provider configuration stores."
           },
           "metadataDirective": {
             "type": "string",
@@ -5164,6 +6289,12 @@
             "format": "int64",
             "minimum": 0,
             "x-sdkwork-int64-string": true
+          },
+          "region": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 63,
+            "description": "Region the vendor reports for this bucket on its account bucket inventory (`Location`). The inventory is an account-level read that spans regions, so the region belongs to the row rather than to the provider configuration; omitted for vendors that report none."
           }
         }
       },

@@ -1,7 +1,7 @@
 import { customApiPath } from './paths';
 import type { ApiRequestOptions, HttpClient } from '../http/client';
 
-import type { CopyProviderObjectRequest, CreateStorageMigrationRequest, CreateStorageProviderAccountRequest, CreateStorageProviderRequest, RotateStorageProviderCredentialRequest, RunStorageMigrationRequest, SetDefaultStorageProviderBindingRequest, SetStorageProviderKindEnabledRequest, StorageMigrationsCancelResponse, StorageMigrationsCreateResponse, StorageMigrationsItemsListResponse, StorageMigrationsListResponse, StorageMigrationsRetrieveResponse, StorageMigrationsRunResponse, StorageOverviewRetrieveResponse, StorageProviderAccountDefaultsCreateResponse201, StorageProviderAccountsCreateResponse201, StorageProviderAccountsListResponse, StorageProviderBindingsDefaultRetrieveResponse, StorageProviderBindingsDefaultUpdateResponse, StorageProviderBindingsListResponse, StorageProviderKindsCreateResponse201, StorageProviderKindsListResponse, StorageProviderKindsUpdateResponse, StorageProvidersActivateResponse, StorageProvidersBucketRetrieveResponse, StorageProvidersBucketsListResponse, StorageProvidersBucketUpdateResponse, StorageProvidersCapabilitiesListResponse, StorageProvidersCreateResponse201, StorageProvidersCredentialsRotateResponse, StorageProvidersDeactivateResponse, StorageProvidersListResponse, StorageProvidersObjectsContentRetrieveResponse, StorageProvidersObjectsContentUpdateResponse, StorageProvidersObjectsCopyResponse, StorageProvidersObjectsListResponse, StorageProvidersObjectsRetrieveResponse, StorageProvidersRetrieveResponse, StorageProvidersTestResponse, StorageProvidersUpdateResponse, UpdateProviderObjectContent, UpdateStorageProviderRequest } from '../types';
+import type { AbortProviderObjectMultipartUploadRequest, CompleteProviderObjectMultipartUploadRequest, CopyProviderObjectRequest, CreateProviderObjectMultipartUploadRequest, CreateStorageMigrationRequest, CreateStorageProviderAccountRequest, CreateStorageProviderRequest, PresignProviderObjectUploadPartsRequest, RotateStorageProviderCredentialRequest, RunStorageMigrationRequest, SetDefaultStorageProviderBindingRequest, SetStorageProviderKindEnabledRequest, StorageMigrationsCancelResponse, StorageMigrationsCreateResponse, StorageMigrationsItemsListResponse, StorageMigrationsListResponse, StorageMigrationsRetrieveResponse, StorageMigrationsRunResponse, StorageOverviewRetrieveResponse, StorageProviderAccountDefaultsCreateResponse201, StorageProviderAccountsCreateResponse201, StorageProviderAccountsListResponse, StorageProviderBindingsDefaultRetrieveResponse, StorageProviderBindingsDefaultUpdateResponse, StorageProviderBindingsListResponse, StorageProviderKindsCreateResponse201, StorageProviderKindsListResponse, StorageProviderKindsUpdateResponse, StorageProvidersActivateResponse, StorageProvidersBucketRetrieveResponse, StorageProvidersBucketsListResponse, StorageProvidersBucketUpdateResponse, StorageProvidersCapabilitiesListResponse, StorageProvidersCreateResponse201, StorageProvidersCredentialsRotateResponse, StorageProvidersDeactivateResponse, StorageProvidersListResponse, StorageProvidersObjectsContentRetrieveResponse, StorageProvidersObjectsContentUpdateResponse, StorageProvidersObjectsCopyResponse, StorageProvidersObjectsListResponse, StorageProvidersObjectsMultipartUploadAbortResponse, StorageProvidersObjectsMultipartUploadCompleteResponse, StorageProvidersObjectsMultipartUploadCreateResponse, StorageProvidersObjectsMultipartUploadPartsPresignResponse, StorageProvidersObjectsRetrieveResponse, StorageProvidersRetrieveResponse, StorageProvidersTestResponse, StorageProvidersUpdateResponse, UpdateProviderObjectContent, UpdateStorageProviderRequest } from '../types';
 
 
 export interface DriveStorageMigrationsItemsListParams {
@@ -113,6 +113,8 @@ export interface DriveStorageProviderAccountsListParams {
   mine?: boolean;
   includePlatform?: boolean;
   capabilityCode?: string;
+  bucket?: string;
+  region?: string;
 }
 
 export class DriveStorageProviderAccountsApi {
@@ -133,6 +135,8 @@ async list(params?: DriveStorageProviderAccountsListParams, requestOptions?: Api
       { name: 'mine', value: params?.mine, style: 'form', explode: true, allowReserved: false },
       { name: 'includePlatform', value: params?.includePlatform, style: 'form', explode: true, allowReserved: false },
       { name: 'capabilityCode', value: params?.capabilityCode, style: 'form', explode: true, allowReserved: false },
+      { name: 'bucket', value: params?.bucket, style: 'form', explode: true, allowReserved: false },
+      { name: 'region', value: params?.region, style: 'form', explode: true, allowReserved: false },
     ]);
     return this.client.request<StorageProviderAccountsListResponse>(appendQueryString(customApiPath(`/drive/storage/provider-accounts`), query), { ...(requestOptions?.signal !== undefined ? { signal: requestOptions.signal } : {}), ...(requestOptions?.timeout !== undefined ? { timeout: requestOptions.timeout } : {}), method: 'GET' as any });
   }
@@ -163,6 +167,11 @@ async update(providerKind: string, body: SetStorageProviderKindEnabledRequest, r
   }
 }
 
+export interface DriveStorageProvidersObjectsContentRetrieveParams {
+  bucket?: string;
+  region?: string;
+}
+
 export class DriveStorageProvidersObjectsContentApi {
   private client: HttpClient;
 
@@ -172,8 +181,12 @@ export class DriveStorageProvidersObjectsContentApi {
 
 
 /** Retrieve provider object content */
-  async retrieve(providerId: string, objectKey: string, requestOptions?: ApiRequestOptions): Promise<StorageProvidersObjectsContentRetrieveResponse> {
-    return this.client.request<StorageProvidersObjectsContentRetrieveResponse>(customApiPath(`/drive/storage/providers/${serializePathParameter(providerId, { name: 'providerId', style: 'simple', explode: false })}/object-contents/${serializePathParameter(objectKey, { name: 'objectKey', style: 'simple', explode: false })}`), { ...(requestOptions?.signal !== undefined ? { signal: requestOptions.signal } : {}), ...(requestOptions?.timeout !== undefined ? { timeout: requestOptions.timeout } : {}), method: 'GET' as any });
+  async retrieve(providerId: string, objectKey: string, params?: DriveStorageProvidersObjectsContentRetrieveParams, requestOptions?: ApiRequestOptions): Promise<StorageProvidersObjectsContentRetrieveResponse> {
+    const query = buildQueryString([
+      { name: 'bucket', value: params?.bucket, style: 'form', explode: true, allowReserved: false },
+      { name: 'region', value: params?.region, style: 'form', explode: true, allowReserved: false },
+    ]);
+    return this.client.request<StorageProvidersObjectsContentRetrieveResponse>(appendQueryString(customApiPath(`/drive/storage/providers/${serializePathParameter(providerId, { name: 'providerId', style: 'simple', explode: false })}/object-contents/${serializePathParameter(objectKey, { name: 'objectKey', style: 'simple', explode: false })}`), query), { ...(requestOptions?.signal !== undefined ? { signal: requestOptions.signal } : {}), ...(requestOptions?.timeout !== undefined ? { timeout: requestOptions.timeout } : {}), method: 'GET' as any });
   }
 
 /** Write provider object content */
@@ -182,19 +195,109 @@ export class DriveStorageProvidersObjectsContentApi {
   }
 }
 
+export interface DriveStorageProvidersObjectsMultipartUploadPartsPresignParams {
+  bucket?: string;
+  region?: string;
+}
+
+export class DriveStorageProvidersObjectsMultipartUploadPartsApi {
+  private client: HttpClient;
+
+  constructor(client: HttpClient) {
+    this.client = client;
+  }
+
+
+/** Presign provider object upload parts */
+  async presign(providerId: string, body: PresignProviderObjectUploadPartsRequest, params?: DriveStorageProvidersObjectsMultipartUploadPartsPresignParams, requestOptions?: ApiRequestOptions): Promise<StorageProvidersObjectsMultipartUploadPartsPresignResponse> {
+    const query = buildQueryString([
+      { name: 'bucket', value: params?.bucket, style: 'form', explode: true, allowReserved: false },
+      { name: 'region', value: params?.region, style: 'form', explode: true, allowReserved: false },
+    ]);
+    return this.client.request<StorageProvidersObjectsMultipartUploadPartsPresignResponse>(appendQueryString(customApiPath(`/drive/storage/providers/${serializePathParameter(providerId, { name: 'providerId', style: 'simple', explode: false })}/objects/multipart-uploads/parts`), query), { ...(requestOptions?.signal !== undefined ? { signal: requestOptions.signal } : {}), ...(requestOptions?.timeout !== undefined ? { timeout: requestOptions.timeout } : {}), method: 'POST' as any, body, contentType: 'application/json' });
+  }
+}
+
+export interface DriveStorageProvidersObjectsMultipartUploadCreateParams {
+  bucket?: string;
+  region?: string;
+}
+
+export interface DriveStorageProvidersObjectsMultipartUploadCompleteParams {
+  bucket?: string;
+  region?: string;
+}
+
+export interface DriveStorageProvidersObjectsMultipartUploadAbortParams {
+  bucket?: string;
+  region?: string;
+}
+
+export class DriveStorageProvidersObjectsMultipartUploadApi {
+  private client: HttpClient;
+  public readonly parts: DriveStorageProvidersObjectsMultipartUploadPartsApi;
+
+  constructor(client: HttpClient) {
+    this.client = client;
+    this.parts = new DriveStorageProvidersObjectsMultipartUploadPartsApi(client);
+  }
+
+
+/** Start a provider object multipart upload */
+  async create(providerId: string, body: CreateProviderObjectMultipartUploadRequest, params?: DriveStorageProvidersObjectsMultipartUploadCreateParams, requestOptions?: ApiRequestOptions): Promise<StorageProvidersObjectsMultipartUploadCreateResponse> {
+    const query = buildQueryString([
+      { name: 'bucket', value: params?.bucket, style: 'form', explode: true, allowReserved: false },
+      { name: 'region', value: params?.region, style: 'form', explode: true, allowReserved: false },
+    ]);
+    return this.client.request<StorageProvidersObjectsMultipartUploadCreateResponse>(appendQueryString(customApiPath(`/drive/storage/providers/${serializePathParameter(providerId, { name: 'providerId', style: 'simple', explode: false })}/objects/multipart-uploads`), query), { ...(requestOptions?.signal !== undefined ? { signal: requestOptions.signal } : {}), ...(requestOptions?.timeout !== undefined ? { timeout: requestOptions.timeout } : {}), method: 'POST' as any, body, contentType: 'application/json' });
+  }
+
+/** Complete a provider object multipart upload */
+  async complete(providerId: string, body: CompleteProviderObjectMultipartUploadRequest, params?: DriveStorageProvidersObjectsMultipartUploadCompleteParams, requestOptions?: ApiRequestOptions): Promise<StorageProvidersObjectsMultipartUploadCompleteResponse> {
+    const query = buildQueryString([
+      { name: 'bucket', value: params?.bucket, style: 'form', explode: true, allowReserved: false },
+      { name: 'region', value: params?.region, style: 'form', explode: true, allowReserved: false },
+    ]);
+    return this.client.request<StorageProvidersObjectsMultipartUploadCompleteResponse>(appendQueryString(customApiPath(`/drive/storage/providers/${serializePathParameter(providerId, { name: 'providerId', style: 'simple', explode: false })}/objects/multipart-uploads/complete`), query), { ...(requestOptions?.signal !== undefined ? { signal: requestOptions.signal } : {}), ...(requestOptions?.timeout !== undefined ? { timeout: requestOptions.timeout } : {}), method: 'POST' as any, body, contentType: 'application/json' });
+  }
+
+/** Abort a provider object multipart upload */
+  async abort(providerId: string, body: AbortProviderObjectMultipartUploadRequest, params?: DriveStorageProvidersObjectsMultipartUploadAbortParams, requestOptions?: ApiRequestOptions): Promise<StorageProvidersObjectsMultipartUploadAbortResponse> {
+    const query = buildQueryString([
+      { name: 'bucket', value: params?.bucket, style: 'form', explode: true, allowReserved: false },
+      { name: 'region', value: params?.region, style: 'form', explode: true, allowReserved: false },
+    ]);
+    return this.client.request<StorageProvidersObjectsMultipartUploadAbortResponse>(appendQueryString(customApiPath(`/drive/storage/providers/${serializePathParameter(providerId, { name: 'providerId', style: 'simple', explode: false })}/objects/multipart-uploads/abort`), query), { ...(requestOptions?.signal !== undefined ? { signal: requestOptions.signal } : {}), ...(requestOptions?.timeout !== undefined ? { timeout: requestOptions.timeout } : {}), method: 'POST' as any, body, contentType: 'application/json' });
+  }
+}
+
 export interface DriveStorageProvidersObjectsListParams {
   prefix?: string;
   delimiter?: string;
   cursor?: string;
   pageSize?: number;
+  bucket?: string;
+  region?: string;
+}
+
+export interface DriveStorageProvidersObjectsRetrieveParams {
+  bucket?: string;
+  region?: string;
+}
+
+export interface DriveStorageProvidersObjectsDeleteParams {
+  bucket?: string;
+  region?: string;
 }
 
 export class DriveStorageProvidersObjectsApi {
   private client: HttpClient;
+  public readonly multipartUpload: DriveStorageProvidersObjectsMultipartUploadApi;
   public readonly content: DriveStorageProvidersObjectsContentApi;
 
   constructor(client: HttpClient) {
     this.client = client;
+    this.multipartUpload = new DriveStorageProvidersObjectsMultipartUploadApi(client);
     this.content = new DriveStorageProvidersObjectsContentApi(client);
   }
 
@@ -205,16 +308,26 @@ async list(providerId: string, params?: DriveStorageProvidersObjectsListParams, 
       { name: 'delimiter', value: params?.delimiter, style: 'form', explode: true, allowReserved: false },
       { name: 'cursor', value: params?.cursor, style: 'form', explode: true, allowReserved: false },
       { name: 'page_size', value: params?.pageSize, style: 'form', explode: true, allowReserved: false },
+      { name: 'bucket', value: params?.bucket, style: 'form', explode: true, allowReserved: false },
+      { name: 'region', value: params?.region, style: 'form', explode: true, allowReserved: false },
     ]);
     return this.client.request<StorageProvidersObjectsListResponse>(appendQueryString(customApiPath(`/drive/storage/providers/${serializePathParameter(providerId, { name: 'providerId', style: 'simple', explode: false })}/objects`), query), { ...(requestOptions?.signal !== undefined ? { signal: requestOptions.signal } : {}), ...(requestOptions?.timeout !== undefined ? { timeout: requestOptions.timeout } : {}), method: 'GET' as any });
   }
 
-async retrieve(providerId: string, objectKey: string, requestOptions?: ApiRequestOptions): Promise<StorageProvidersObjectsRetrieveResponse> {
-    return this.client.request<StorageProvidersObjectsRetrieveResponse>(customApiPath(`/drive/storage/providers/${serializePathParameter(providerId, { name: 'providerId', style: 'simple', explode: false })}/objects/${serializePathParameter(objectKey, { name: 'objectKey', style: 'simple', explode: false })}`), { ...(requestOptions?.signal !== undefined ? { signal: requestOptions.signal } : {}), ...(requestOptions?.timeout !== undefined ? { timeout: requestOptions.timeout } : {}), method: 'GET' as any });
+async retrieve(providerId: string, objectKey: string, params?: DriveStorageProvidersObjectsRetrieveParams, requestOptions?: ApiRequestOptions): Promise<StorageProvidersObjectsRetrieveResponse> {
+    const query = buildQueryString([
+      { name: 'bucket', value: params?.bucket, style: 'form', explode: true, allowReserved: false },
+      { name: 'region', value: params?.region, style: 'form', explode: true, allowReserved: false },
+    ]);
+    return this.client.request<StorageProvidersObjectsRetrieveResponse>(appendQueryString(customApiPath(`/drive/storage/providers/${serializePathParameter(providerId, { name: 'providerId', style: 'simple', explode: false })}/objects/${serializePathParameter(objectKey, { name: 'objectKey', style: 'simple', explode: false })}`), query), { ...(requestOptions?.signal !== undefined ? { signal: requestOptions.signal } : {}), ...(requestOptions?.timeout !== undefined ? { timeout: requestOptions.timeout } : {}), method: 'GET' as any });
   }
 
-async delete(providerId: string, objectKey: string, requestOptions?: ApiRequestOptions): Promise<void> {
-    return this.client.request<void>(customApiPath(`/drive/storage/providers/${serializePathParameter(providerId, { name: 'providerId', style: 'simple', explode: false })}/objects/${serializePathParameter(objectKey, { name: 'objectKey', style: 'simple', explode: false })}`), { ...(requestOptions?.signal !== undefined ? { signal: requestOptions.signal } : {}), ...(requestOptions?.timeout !== undefined ? { timeout: requestOptions.timeout } : {}), method: 'DELETE' as any });
+async delete(providerId: string, objectKey: string, params?: DriveStorageProvidersObjectsDeleteParams, requestOptions?: ApiRequestOptions): Promise<void> {
+    const query = buildQueryString([
+      { name: 'bucket', value: params?.bucket, style: 'form', explode: true, allowReserved: false },
+      { name: 'region', value: params?.region, style: 'form', explode: true, allowReserved: false },
+    ]);
+    return this.client.request<void>(appendQueryString(customApiPath(`/drive/storage/providers/${serializePathParameter(providerId, { name: 'providerId', style: 'simple', explode: false })}/objects/${serializePathParameter(objectKey, { name: 'objectKey', style: 'simple', explode: false })}`), query), { ...(requestOptions?.signal !== undefined ? { signal: requestOptions.signal } : {}), ...(requestOptions?.timeout !== undefined ? { timeout: requestOptions.timeout } : {}), method: 'DELETE' as any });
   }
 
 async copy(providerId: string, body: CopyProviderObjectRequest, requestOptions?: ApiRequestOptions): Promise<StorageProvidersObjectsCopyResponse> {

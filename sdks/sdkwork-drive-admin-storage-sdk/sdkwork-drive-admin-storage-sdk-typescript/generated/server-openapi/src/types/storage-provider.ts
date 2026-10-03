@@ -1,6 +1,6 @@
 export interface StorageProvider {
   id: string;
-  providerKind: 'local_filesystem' | 's3_compatible' | 'google_cloud_storage' | 'aliyun_oss' | 'tencent_cos' | 'huawei_obs' | 'volcengine_tos';
+  providerKind: 'local_filesystem' | 's3_compatible' | 'google_cloud_storage' | 'aliyun_oss' | 'tencent_cos' | 'huawei_obs' | 'volcengine_tos' | 'baidu_bos' | 'kingsoft_ks3' | 'qiniu_kodo' | 'china_mobile_ecloud' | 'china_telecom_eos' | 'china_unicom_wo' | 'minio' | 'cloudflare_r2' | 'backblaze_b2' | 'wasabi' | 'digitalocean_spaces' | 'linode_object_storage' | 'vultr_object_storage' | 'scaleway_object_storage' | 'oracle_cloud_storage' | 'ibm_cos' | 'alibaba_cloud_international' | 'tencent_cloud_international';
   name: string;
   endpointUrl: string;
   region?: string;

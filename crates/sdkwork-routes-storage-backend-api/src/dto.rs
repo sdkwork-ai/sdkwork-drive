@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use sdkwork_drive_storage_contract::DriveObjectHeaders;
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
@@ -125,6 +126,16 @@ pub(crate) struct ListProviderBucketsQuery {
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct ListProviderObjectsQuery {
+    /// 目标存储桶覆盖。缺省时读到的是服务商配置里设定的存储桶。
+    ///
+    /// 管理员在存储桶列表里点开的是厂商账号下的任意一个桶，而不是配置里那一个，
+    /// 所以对象平面必须能按请求指定桶；凭证仍然来自该服务商配置。
+    pub(crate) bucket: Option<String>,
+    /// 该存储桶所在的地域（账号级桶清单里每一行自带）。
+    ///
+    /// 有了它，端点才按厂商自己的规范落到这个桶所在地域，而不是配置里写的那个地域；
+    /// 缺省或厂商规范表达不出来时，仍然用配置里的端点。
+    pub(crate) region: Option<String>,
     pub(crate) prefix: Option<String>,
     pub(crate) delimiter: Option<String>,
     #[serde(rename = "cursor")]
@@ -133,12 +144,27 @@ pub(crate) struct ListProviderObjectsQuery {
     pub(crate) page_size: Option<u16>,
 }
 
+/// 单对象路由（head / delete / content read / content write）的存储桶覆盖。
+///
+/// 这些路径参数里没有桶，只有对象 key，所以桶只能走查询参数。
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct ProviderObjectBucketQuery {
+    pub(crate) bucket: Option<String>,
+    /// 该存储桶所在地域，语义与 [`ListProviderObjectsQuery::region`] 相同。
+    pub(crate) region: Option<String>,
+}
+
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub(crate) struct CopyProviderObjectRequest {
     pub(crate) source_object_key: String,
     pub(crate) destination_object_key: String,
+    pub(crate) source_bucket: Option<String>,
     pub(crate) destination_bucket: Option<String>,
+    /// 目标桶所在地域。服务端复制是在目标端点发起的，所以由它决定本次请求的端点；
+    /// 桶内复制（源桶缺省）与同地域跨桶复制都被它覆盖。
+    pub(crate) region: Option<String>,
     pub(crate) metadata_directive: Option<String>,
 }
 
@@ -356,6 +382,9 @@ pub(crate) struct ProviderBucketListItemResponse {
     pub(crate) bucket: String,
     pub(crate) configured: bool,
     pub(crate) creation_date_epoch_ms: Option<i64>,
+    /// 厂商为该桶报告的地域。桶清单是账号级读取，地域属于每一行，而不是配置。
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) region: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -378,6 +407,9 @@ pub(crate) struct ProviderObjectResponse {
     pub(crate) etag: Option<String>,
     pub(crate) version_id: Option<String>,
     pub(crate) storage_class: Option<String>,
+    /// 契约把 `lastModifiedEpochMs` 声明为 int64 字符串（`API_SPEC.md` §13.6）：生成的 Go/Rust/Java
+    /// SDK 按字符串反序列化，直接序列化成数字会让它们在解析这一条响应时失败。
+    #[serde(with = "sdkwork_utils_rust::serde_int64::option")]
     pub(crate) last_modified_epoch_ms: Option<i64>,
 }
 
@@ -412,6 +444,85 @@ pub(crate) struct UpdateProviderObjectContentRequest {
     pub(crate) content: String,
     pub(crate) encoding: Option<String>,
     pub(crate) content_type: Option<String>,
+}
+
+/// 分片上传开启请求。
+///
+/// 单次内容接口（8 MiB）之外的对象的入口：先开启拿到 `uploadId`，再按分片签发直传 URL，
+/// 最后完成或中止。`content_type` 会签进每个分片授权，客户端必须原样回放。
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub(crate) struct CreateProviderObjectMultipartUploadRequest {
+    pub(crate) object_key: String,
+    pub(crate) content_type: Option<String>,
+    pub(crate) checksum_sha256_hex: Option<String>,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct ProviderObjectMultipartUploadResponse {
+    pub(crate) provider_id: String,
+    pub(crate) bucket: String,
+    pub(crate) object_key: String,
+    pub(crate) upload_id: String,
+}
+
+/// 分片授权签发请求：`part_numbers` 是客户端"这一批要并发上传"的分片号。
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub(crate) struct PresignProviderObjectUploadPartsRequest {
+    pub(crate) object_key: String,
+    pub(crate) upload_id: String,
+    pub(crate) part_numbers: Vec<u16>,
+    pub(crate) expires_in_seconds: Option<u32>,
+}
+
+/// 单个分片的直传授权。
+///
+/// `headers` 是签名的一部分：客户端必须一字不差地带上，否则厂商返回 403（内容类型、
+/// 服务端加密相关的头都在里面）。
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct ProviderObjectUploadPartGrantResponse {
+    pub(crate) part_number: u16,
+    pub(crate) method: String,
+    pub(crate) url: String,
+    pub(crate) headers: DriveObjectHeaders,
+    #[serde(with = "sdkwork_utils_rust::serde_int64")]
+    pub(crate) expires_at_epoch_ms: i64,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct ProviderObjectUploadPartGrantsResponse {
+    pub(crate) provider_id: String,
+    pub(crate) bucket: String,
+    pub(crate) object_key: String,
+    pub(crate) upload_id: String,
+    pub(crate) parts: Vec<ProviderObjectUploadPartGrantResponse>,
+}
+
+/// 完成分片上传时提交的一个分片：厂商返回的 ETag + 分片号。
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub(crate) struct CompletedProviderObjectUploadPartRequest {
+    pub(crate) part_number: u16,
+    pub(crate) etag: String,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub(crate) struct CompleteProviderObjectMultipartUploadRequest {
+    pub(crate) object_key: String,
+    pub(crate) upload_id: String,
+    pub(crate) parts: Vec<CompletedProviderObjectUploadPartRequest>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub(crate) struct AbortProviderObjectMultipartUploadRequest {
+    pub(crate) object_key: String,
+    pub(crate) upload_id: String,
 }
 
 #[derive(Debug, Serialize)]

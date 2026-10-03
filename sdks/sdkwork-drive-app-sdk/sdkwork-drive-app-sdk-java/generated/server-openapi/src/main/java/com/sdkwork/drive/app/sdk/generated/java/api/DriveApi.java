@@ -31,6 +31,22 @@ public class DriveApi {
         return client.convertValue(raw, new TypeReference<StartPageTokenHttpResponse>() {});
     }
 
+    /** Create a push notification channel for Drive changes */
+    public DriveWatchChannelHttpResponse changesWatch(CreateWatchChannelRequest body) throws Exception {
+        Object raw = client.post(ApiPaths.appPath("/drive/changes/watch"), body, null, null, "application/json");
+        return client.convertValue(raw, new TypeReference<DriveWatchChannelHttpResponse>() {});
+    }
+
+    public DownloadPackageHttpResponse downloadPackagesCreate(CreateDownloadPackageRequest body) throws Exception {
+        Object raw = client.post(ApiPaths.appPath("/drive/download_packages"), body, null, null, "application/json");
+        return client.convertValue(raw, new TypeReference<DownloadPackageHttpResponse>() {});
+    }
+
+    public DownloadPackageHttpResponse downloadPackagesUrlsRetrieve(String packageId) throws Exception {
+        Object raw = client.get(ApiPaths.appPath("/drive/download_packages/" + serializePathParameter(packageId, new PathParameterSpec("packageId", "simple", false)) + "/download_url"));
+        return client.convertValue(raw, new TypeReference<DownloadPackageHttpResponse>() {});
+    }
+
     public CreateDownloadUrlHttpResponse downloadTokensRetrieve(String token) throws Exception {
         Object raw = client.get(ApiPaths.appPath("/drive/download_tokens/" + serializePathParameter(token, new PathParameterSpec("token", "simple", false)) + ""));
         return client.convertValue(raw, new TypeReference<CreateDownloadUrlHttpResponse>() {});
@@ -58,9 +74,20 @@ public class DriveApi {
         return client.convertValue(raw, new TypeReference<SdkWorkApiResponse>() {});
     }
 
-    public QuotaSummaryHttpResponse quotasRetrieve() throws Exception {
-        Object raw = client.get(ApiPaths.appPath("/drive/quotas/summary"));
-        return client.convertValue(raw, new TypeReference<QuotaSummaryHttpResponse>() {});
+    public CreateFileHttpResponse nodesFilesCreate(CreateFileRequest body) throws Exception {
+        Object raw = client.post(ApiPaths.appPath("/drive/nodes/files"), body, null, null, "application/json");
+        return client.convertValue(raw, new TypeReference<CreateFileHttpResponse>() {});
+    }
+
+    public DriveNodeHttpResponse nodesFoldersCreate(CreateFolderRequest body) throws Exception {
+        Object raw = client.post(ApiPaths.appPath("/drive/nodes/folders"), body, null, null, "application/json");
+        return client.convertValue(raw, new TypeReference<DriveNodeHttpResponse>() {});
+    }
+
+    /** Create a shortcut node */
+    public DriveNodeHttpResponse nodesShortcutsCreate(CreateShortcutRequest body) throws Exception {
+        Object raw = client.post(ApiPaths.appPath("/drive/nodes/shortcuts"), body, null, null, "application/json");
+        return client.convertValue(raw, new TypeReference<DriveNodeHttpResponse>() {});
     }
 
     public DriveNodeHttpResponse nodesUpdate(String nodeId, UpdateNodeRequest body) throws Exception {
@@ -76,6 +103,16 @@ public class DriveApi {
     public Void nodesDelete(String nodeId) throws Exception {
         client.delete(ApiPaths.appPath("/drive/nodes/" + serializePathParameter(nodeId, new PathParameterSpec("nodeId", "simple", false)) + ""));
         return null;
+    }
+
+    public ArchiveEntryListHttpResponse archiveEntriesList(String nodeId) throws Exception {
+        Object raw = client.get(ApiPaths.appPath("/drive/nodes/" + serializePathParameter(nodeId, new PathParameterSpec("nodeId", "simple", false)) + "/archive_entries"));
+        return client.convertValue(raw, new TypeReference<ArchiveEntryListHttpResponse>() {});
+    }
+
+    public ExtractArchiveEntriesHttpResponse archiveEntriesExtract(String nodeId, ExtractArchiveEntriesRequest body) throws Exception {
+        Object raw = client.post(ApiPaths.appPath("/drive/nodes/" + serializePathParameter(nodeId, new PathParameterSpec("nodeId", "simple", false)) + "/archive_entries/extract"), body, null, null, "application/json");
+        return client.convertValue(raw, new TypeReference<ExtractArchiveEntriesHttpResponse>() {});
     }
 
     public NodeCapabilitiesHttpResponse nodesCapabilitiesList(String nodeId) throws Exception {
@@ -141,19 +178,6 @@ public class DriveApi {
         return null;
     }
 
-    public DriveNodeHttpResponse nodesCopy(String nodeId, CopyNodeRequest body) throws Exception {
-        Object raw = client.post(ApiPaths.appPath("/drive/nodes/" + serializePathParameter(nodeId, new PathParameterSpec("nodeId", "simple", false)) + "/copy"), body, null, null, "application/json");
-        return client.convertValue(raw, new TypeReference<DriveNodeHttpResponse>() {});
-    }
-
-    public CreateDownloadUrlHttpResponse nodesDownloadUrlsRetrieve(String nodeId, Integer requestedTtlSeconds) throws Exception {
-        String query = buildQueryString(List.of(
-            new QueryParameterSpec("requestedTtlSeconds", requestedTtlSeconds, "form", true, false, null)
-        ));
-        Object raw = client.get(ApiPaths.appendQueryString(ApiPaths.appPath("/drive/nodes/" + serializePathParameter(nodeId, new PathParameterSpec("nodeId", "simple", false)) + "/download_url"), query));
-        return client.convertValue(raw, new TypeReference<CreateDownloadUrlHttpResponse>() {});
-    }
-
     /** Read active Drive node content on the same origin */
     public DriveNodeContentHttpResponse nodesContentRetrieve(String nodeId, Integer maxBytes, Integer byteRangeStart, Integer byteRangeLength, String encoding) throws Exception {
         String query = buildQueryString(List.of(
@@ -166,8 +190,21 @@ public class DriveApi {
         return client.convertValue(raw, new TypeReference<DriveNodeContentHttpResponse>() {});
     }
 
+    public DriveNodeHttpResponse nodesCopy(String nodeId, CopyNodeRequest body) throws Exception {
+        Object raw = client.post(ApiPaths.appPath("/drive/nodes/" + serializePathParameter(nodeId, new PathParameterSpec("nodeId", "simple", false)) + "/copy"), body, null, null, "application/json");
+        return client.convertValue(raw, new TypeReference<DriveNodeHttpResponse>() {});
+    }
+
     public CreateDownloadUrlHttpResponse downloadGrantsCreate(String nodeId, CreateDownloadGrantRequest body) throws Exception {
         Object raw = client.post(ApiPaths.appPath("/drive/nodes/" + serializePathParameter(nodeId, new PathParameterSpec("nodeId", "simple", false)) + "/download_grants"), body, null, null, "application/json");
+        return client.convertValue(raw, new TypeReference<CreateDownloadUrlHttpResponse>() {});
+    }
+
+    public CreateDownloadUrlHttpResponse nodesDownloadUrlsRetrieve(String nodeId, Integer requestedTtlSeconds) throws Exception {
+        String query = buildQueryString(List.of(
+            new QueryParameterSpec("requestedTtlSeconds", requestedTtlSeconds, "form", true, false, null)
+        ));
+        Object raw = client.get(ApiPaths.appendQueryString(ApiPaths.appPath("/drive/nodes/" + serializePathParameter(nodeId, new PathParameterSpec("nodeId", "simple", false)) + "/download_url"), query));
         return client.convertValue(raw, new TypeReference<CreateDownloadUrlHttpResponse>() {});
     }
 
@@ -228,6 +265,15 @@ public class DriveApi {
         return client.convertValue(raw, new TypeReference<DrivePermissionHttpResponse>() {});
     }
 
+    public EffectivePermissionListHttpResponse permissionsEffectiveList(String nodeId, String pageSize, String cursor) throws Exception {
+        String query = buildQueryString(List.of(
+            new QueryParameterSpec("page_size", pageSize, "form", true, false, null),
+            new QueryParameterSpec("cursor", cursor, "form", true, false, null)
+        ));
+        Object raw = client.get(ApiPaths.appendQueryString(ApiPaths.appPath("/drive/nodes/" + serializePathParameter(nodeId, new PathParameterSpec("nodeId", "simple", false)) + "/permissions/effective"), query));
+        return client.convertValue(raw, new TypeReference<EffectivePermissionListHttpResponse>() {});
+    }
+
     public Void permissionsDelete(String nodeId, String permissionId) throws Exception {
         client.delete(ApiPaths.appPath("/drive/nodes/" + serializePathParameter(nodeId, new PathParameterSpec("nodeId", "simple", false)) + "/permissions/" + serializePathParameter(permissionId, new PathParameterSpec("permissionId", "simple", false)) + ""));
         return null;
@@ -241,15 +287,6 @@ public class DriveApi {
     public DrivePermissionHttpResponse permissionsRetrieve(String nodeId, String permissionId) throws Exception {
         Object raw = client.get(ApiPaths.appPath("/drive/nodes/" + serializePathParameter(nodeId, new PathParameterSpec("nodeId", "simple", false)) + "/permissions/" + serializePathParameter(permissionId, new PathParameterSpec("permissionId", "simple", false)) + ""));
         return client.convertValue(raw, new TypeReference<DrivePermissionHttpResponse>() {});
-    }
-
-    public EffectivePermissionListHttpResponse permissionsEffectiveList(String nodeId, String pageSize, String cursor) throws Exception {
-        String query = buildQueryString(List.of(
-            new QueryParameterSpec("page_size", pageSize, "form", true, false, null),
-            new QueryParameterSpec("cursor", cursor, "form", true, false, null)
-        ));
-        Object raw = client.get(ApiPaths.appendQueryString(ApiPaths.appPath("/drive/nodes/" + serializePathParameter(nodeId, new PathParameterSpec("nodeId", "simple", false)) + "/permissions/effective"), query));
-        return client.convertValue(raw, new TypeReference<EffectivePermissionListHttpResponse>() {});
     }
 
     /** List node custom properties */
@@ -321,20 +358,10 @@ public class DriveApi {
         return client.convertValue(raw, new TypeReference<DriveNodeHttpResponse>() {});
     }
 
-    public CreateFileHttpResponse nodesFilesCreate(CreateFileRequest body) throws Exception {
-        Object raw = client.post(ApiPaths.appPath("/drive/nodes/files"), body, null, null, "application/json");
-        return client.convertValue(raw, new TypeReference<CreateFileHttpResponse>() {});
-    }
-
-    public DriveNodeHttpResponse nodesFoldersCreate(CreateFolderRequest body) throws Exception {
-        Object raw = client.post(ApiPaths.appPath("/drive/nodes/folders"), body, null, null, "application/json");
-        return client.convertValue(raw, new TypeReference<DriveNodeHttpResponse>() {});
-    }
-
-    /** Create a shortcut node */
-    public DriveNodeHttpResponse nodesShortcutsCreate(CreateShortcutRequest body) throws Exception {
-        Object raw = client.post(ApiPaths.appPath("/drive/nodes/shortcuts"), body, null, null, "application/json");
-        return client.convertValue(raw, new TypeReference<DriveNodeHttpResponse>() {});
+    /** Create a push notification channel for a Drive node */
+    public DriveWatchChannelHttpResponse nodesWatch(String nodeId, CreateWatchChannelRequest body) throws Exception {
+        Object raw = client.post(ApiPaths.appPath("/drive/nodes/" + serializePathParameter(nodeId, new PathParameterSpec("nodeId", "simple", false)) + "/watch"), body, null, null, "application/json");
+        return client.convertValue(raw, new TypeReference<DriveWatchChannelHttpResponse>() {});
     }
 
     /** List nodes carrying an app_public property */
@@ -345,6 +372,11 @@ public class DriveApi {
         ));
         Object raw = client.get(ApiPaths.appendQueryString(ApiPaths.appPath("/drive/properties/" + serializePathParameter(propertyKey, new PathParameterSpec("propertyKey", "simple", false)) + "/nodes"), query));
         return client.convertValue(raw, new TypeReference<DriveNodeListHttpResponse>() {});
+    }
+
+    public QuotaSummaryHttpResponse quotasRetrieve() throws Exception {
+        Object raw = client.get(ApiPaths.appPath("/drive/quotas/summary"));
+        return client.convertValue(raw, new TypeReference<QuotaSummaryHttpResponse>() {});
     }
 
     public DriveNodeListHttpResponse recentList(String spaceId, String pageSize, String cursor, String sortBy, String sortOrder) throws Exception {
@@ -359,49 +391,6 @@ public class DriveApi {
         return client.convertValue(raw, new TypeReference<DriveNodeListHttpResponse>() {});
     }
 
-    public DriveNodeListHttpResponse searchList(String q, String spaceId, String pageSize, String cursor) throws Exception {
-        String query = buildQueryString(List.of(
-            new QueryParameterSpec("q", q, "form", true, false, null),
-            new QueryParameterSpec("spaceId", spaceId, "form", true, false, null),
-            new QueryParameterSpec("page_size", pageSize, "form", true, false, null),
-            new QueryParameterSpec("cursor", cursor, "form", true, false, null)
-        ));
-        Object raw = client.get(ApiPaths.appendQueryString(ApiPaths.appPath("/drive/search"), query));
-        return client.convertValue(raw, new TypeReference<DriveNodeListHttpResponse>() {});
-    }
-
-    public ClaimShareLinkHttpResponse shareLinksClaim(String token) throws Exception {
-        Object raw = client.post(ApiPaths.appPath("/drive/share_links/" + serializePathParameter(token, new PathParameterSpec("token", "simple", false)) + "/claim"), null);
-        return client.convertValue(raw, new TypeReference<ClaimShareLinkHttpResponse>() {});
-    }
-
-    public Void shareLinksDelete(String shareLinkId) throws Exception {
-        client.delete(ApiPaths.appPath("/drive/share_links/" + serializePathParameter(shareLinkId, new PathParameterSpec("shareLinkId", "simple", false)) + ""));
-        return null;
-    }
-
-    public ShareLinkHttpResponse shareLinksUpdate(String shareLinkId, UpdateShareLinkRequest body) throws Exception {
-        Object raw = client.patch(ApiPaths.appPath("/drive/share_links/" + serializePathParameter(shareLinkId, new PathParameterSpec("shareLinkId", "simple", false)) + ""), body, null, null, "application/json");
-        return client.convertValue(raw, new TypeReference<ShareLinkHttpResponse>() {});
-    }
-
-    public ShareLinkHttpResponse shareLinksRetrieve(String shareLinkId) throws Exception {
-        Object raw = client.get(ApiPaths.appPath("/drive/share_links/" + serializePathParameter(shareLinkId, new PathParameterSpec("shareLinkId", "simple", false)) + ""));
-        return client.convertValue(raw, new TypeReference<ShareLinkHttpResponse>() {});
-    }
-
-    public DriveNodeListHttpResponse sharedWithMeList(String spaceId, String pageSize, String cursor, String sortBy, String sortOrder) throws Exception {
-        String query = buildQueryString(List.of(
-            new QueryParameterSpec("spaceId", spaceId, "form", true, false, null),
-            new QueryParameterSpec("page_size", pageSize, "form", true, false, null),
-            new QueryParameterSpec("cursor", cursor, "form", true, false, null),
-            new QueryParameterSpec("sortBy", sortBy, "form", true, false, null),
-            new QueryParameterSpec("sortOrder", sortOrder, "form", true, false, null)
-        ));
-        Object raw = client.get(ApiPaths.appendQueryString(ApiPaths.appPath("/drive/shared_with_me"), query));
-        return client.convertValue(raw, new TypeReference<DriveNodeListHttpResponse>() {});
-    }
-
     public DriveSandboxVolumeListHttpResponse sandboxesList(Integer page, Integer pageSize) throws Exception {
         String query = buildQueryString(List.of(
             new QueryParameterSpec("page", page, "form", true, false, null),
@@ -409,6 +398,15 @@ public class DriveApi {
         ));
         Object raw = client.get(ApiPaths.appendQueryString(ApiPaths.appPath("/drive/sandboxes"), query));
         return client.convertValue(raw, new TypeReference<DriveSandboxVolumeListHttpResponse>() {});
+    }
+
+    public DriveSandboxEntryHttpResponse sandboxDirectoriesCreate(String sandboxId, CreateDriveSandboxDirectoryRequest body, String idempotencyKey) throws Exception {
+        Map<String, String> requestHeaders = buildRequestHeaders(
+                Map.of("Idempotency-Key", new HeaderParameterSpec(idempotencyKey, "simple", false, null)),
+                Map.of()
+        );
+        Object raw = client.post(ApiPaths.appPath("/drive/sandboxes/" + serializePathParameter(sandboxId, new PathParameterSpec("sandboxId", "simple", false)) + "/directories"), body, null, requestHeaders, "application/json");
+        return client.convertValue(raw, new TypeReference<DriveSandboxEntryHttpResponse>() {});
     }
 
     public DriveSandboxEntryListHttpResponse sandboxEntriesList(String sandboxId, String parentPath, String cursor, Integer pageSize) throws Exception {
@@ -421,13 +419,22 @@ public class DriveApi {
         return client.convertValue(raw, new TypeReference<DriveSandboxEntryListHttpResponse>() {});
     }
 
-    public DriveSandboxEntryHttpResponse sandboxDirectoriesCreate(String sandboxId, CreateDriveSandboxDirectoryRequest body, String idempotencyKey) throws Exception {
+    public DriveSandboxEntryHttpResponse sandboxEntriesUpdate(String sandboxId, String entryId, UpdateDriveSandboxEntryRequest body, String ifMatch, String idempotencyKey) throws Exception {
         Map<String, String> requestHeaders = buildRequestHeaders(
-                Map.of("Idempotency-Key", new HeaderParameterSpec(idempotencyKey, "simple", false, null)),
+                Map.of("If-Match", new HeaderParameterSpec(ifMatch, "simple", false, null), "Idempotency-Key", new HeaderParameterSpec(idempotencyKey, "simple", false, null)),
                 Map.of()
         );
-        Object raw = client.post(ApiPaths.appPath("/drive/sandboxes/" + serializePathParameter(sandboxId, new PathParameterSpec("sandboxId", "simple", false)) + "/directories"), body, null, requestHeaders, "application/json");
+        Object raw = client.patch(ApiPaths.appPath("/drive/sandboxes/" + serializePathParameter(sandboxId, new PathParameterSpec("sandboxId", "simple", false)) + "/entries/" + serializePathParameter(entryId, new PathParameterSpec("entryId", "simple", false)) + ""), body, null, requestHeaders, "application/json");
         return client.convertValue(raw, new TypeReference<DriveSandboxEntryHttpResponse>() {});
+    }
+
+    public DriveSandboxMutationCommandHttpResponse sandboxEntriesPurge(String sandboxId, String entryId, PurgeDriveSandboxEntryRequest body, String ifMatch, String idempotencyKey) throws Exception {
+        Map<String, String> requestHeaders = buildRequestHeaders(
+                Map.of("If-Match", new HeaderParameterSpec(ifMatch, "simple", false, null), "Idempotency-Key", new HeaderParameterSpec(idempotencyKey, "simple", false, null)),
+                Map.of()
+        );
+        Object raw = client.post(ApiPaths.appPath("/drive/sandboxes/" + serializePathParameter(sandboxId, new PathParameterSpec("sandboxId", "simple", false)) + "/entries/" + serializePathParameter(entryId, new PathParameterSpec("entryId", "simple", false)) + "/purge"), body, null, requestHeaders, "application/json");
+        return client.convertValue(raw, new TypeReference<DriveSandboxMutationCommandHttpResponse>() {});
     }
 
     public DriveSandboxEntryHttpResponse sandboxFilesCreate(String sandboxId, CreateDriveSandboxFileRequest body, String idempotencyKey) throws Exception {
@@ -457,22 +464,47 @@ public class DriveApi {
         return client.convertValue(raw, new TypeReference<DriveSandboxEntryHttpResponse>() {});
     }
 
-    public DriveSandboxEntryHttpResponse sandboxEntriesUpdate(String sandboxId, String entryId, UpdateDriveSandboxEntryRequest body, String ifMatch, String idempotencyKey) throws Exception {
-        Map<String, String> requestHeaders = buildRequestHeaders(
-                Map.of("If-Match", new HeaderParameterSpec(ifMatch, "simple", false, null), "Idempotency-Key", new HeaderParameterSpec(idempotencyKey, "simple", false, null)),
-                Map.of()
-        );
-        Object raw = client.patch(ApiPaths.appPath("/drive/sandboxes/" + serializePathParameter(sandboxId, new PathParameterSpec("sandboxId", "simple", false)) + "/entries/" + serializePathParameter(entryId, new PathParameterSpec("entryId", "simple", false)) + ""), body, null, requestHeaders, "application/json");
-        return client.convertValue(raw, new TypeReference<DriveSandboxEntryHttpResponse>() {});
+    public DriveNodeListHttpResponse searchList(String q, String spaceId, String pageSize, String cursor) throws Exception {
+        String query = buildQueryString(List.of(
+            new QueryParameterSpec("q", q, "form", true, false, null),
+            new QueryParameterSpec("spaceId", spaceId, "form", true, false, null),
+            new QueryParameterSpec("page_size", pageSize, "form", true, false, null),
+            new QueryParameterSpec("cursor", cursor, "form", true, false, null)
+        ));
+        Object raw = client.get(ApiPaths.appendQueryString(ApiPaths.appPath("/drive/search"), query));
+        return client.convertValue(raw, new TypeReference<DriveNodeListHttpResponse>() {});
     }
 
-    public DriveSandboxMutationCommandHttpResponse sandboxEntriesPurge(String sandboxId, String entryId, PurgeDriveSandboxEntryRequest body, String ifMatch, String idempotencyKey) throws Exception {
-        Map<String, String> requestHeaders = buildRequestHeaders(
-                Map.of("If-Match", new HeaderParameterSpec(ifMatch, "simple", false, null), "Idempotency-Key", new HeaderParameterSpec(idempotencyKey, "simple", false, null)),
-                Map.of()
-        );
-        Object raw = client.post(ApiPaths.appPath("/drive/sandboxes/" + serializePathParameter(sandboxId, new PathParameterSpec("sandboxId", "simple", false)) + "/entries/" + serializePathParameter(entryId, new PathParameterSpec("entryId", "simple", false)) + "/purge"), body, null, requestHeaders, "application/json");
-        return client.convertValue(raw, new TypeReference<DriveSandboxMutationCommandHttpResponse>() {});
+    public Void shareLinksDelete(String shareLinkId) throws Exception {
+        client.delete(ApiPaths.appPath("/drive/share_links/" + serializePathParameter(shareLinkId, new PathParameterSpec("shareLinkId", "simple", false)) + ""));
+        return null;
+    }
+
+    public ShareLinkHttpResponse shareLinksUpdate(String shareLinkId, UpdateShareLinkRequest body) throws Exception {
+        Object raw = client.patch(ApiPaths.appPath("/drive/share_links/" + serializePathParameter(shareLinkId, new PathParameterSpec("shareLinkId", "simple", false)) + ""), body, null, null, "application/json");
+        return client.convertValue(raw, new TypeReference<ShareLinkHttpResponse>() {});
+    }
+
+    public ShareLinkHttpResponse shareLinksRetrieve(String shareLinkId) throws Exception {
+        Object raw = client.get(ApiPaths.appPath("/drive/share_links/" + serializePathParameter(shareLinkId, new PathParameterSpec("shareLinkId", "simple", false)) + ""));
+        return client.convertValue(raw, new TypeReference<ShareLinkHttpResponse>() {});
+    }
+
+    public ClaimShareLinkHttpResponse shareLinksClaim(String token) throws Exception {
+        Object raw = client.post(ApiPaths.appPath("/drive/share_links/" + serializePathParameter(token, new PathParameterSpec("token", "simple", false)) + "/claim"), null);
+        return client.convertValue(raw, new TypeReference<ClaimShareLinkHttpResponse>() {});
+    }
+
+    public DriveNodeListHttpResponse sharedWithMeList(String spaceId, String pageSize, String cursor, String sortBy, String sortOrder) throws Exception {
+        String query = buildQueryString(List.of(
+            new QueryParameterSpec("spaceId", spaceId, "form", true, false, null),
+            new QueryParameterSpec("page_size", pageSize, "form", true, false, null),
+            new QueryParameterSpec("cursor", cursor, "form", true, false, null),
+            new QueryParameterSpec("sortBy", sortBy, "form", true, false, null),
+            new QueryParameterSpec("sortOrder", sortOrder, "form", true, false, null)
+        ));
+        Object raw = client.get(ApiPaths.appendQueryString(ApiPaths.appPath("/drive/shared_with_me"), query));
+        return client.convertValue(raw, new TypeReference<DriveNodeListHttpResponse>() {});
     }
 
     public DriveSpaceListHttpResponse spacesList(String spaceType, Integer pageSize, String cursor) throws Exception {
@@ -488,6 +520,43 @@ public class DriveApi {
     public DriveSpaceHttpResponse spacesCreate(CreateSpaceRequest body) throws Exception {
         Object raw = client.post(ApiPaths.appPath("/drive/spaces"), body, null, null, "application/json");
         return client.convertValue(raw, new TypeReference<DriveSpaceHttpResponse>() {});
+    }
+
+    public DriveSpaceHttpResponse spacesRetrieve(String spaceId) throws Exception {
+        Object raw = client.get(ApiPaths.appPath("/drive/spaces/" + serializePathParameter(spaceId, new PathParameterSpec("spaceId", "simple", false)) + ""));
+        return client.convertValue(raw, new TypeReference<DriveSpaceHttpResponse>() {});
+    }
+
+    public DriveSpaceHttpResponse spacesUpdate(String spaceId, UpdateSpaceRequest body) throws Exception {
+        Object raw = client.patch(ApiPaths.appPath("/drive/spaces/" + serializePathParameter(spaceId, new PathParameterSpec("spaceId", "simple", false)) + ""), body, null, null, "application/json");
+        return client.convertValue(raw, new TypeReference<DriveSpaceHttpResponse>() {});
+    }
+
+    public Void spacesDelete(String spaceId) throws Exception {
+        client.delete(ApiPaths.appPath("/drive/spaces/" + serializePathParameter(spaceId, new PathParameterSpec("spaceId", "simple", false)) + ""));
+        return null;
+    }
+
+    public DriveNodeListHttpResponse moveDestinationsList(String spaceId, String excludeNodeIds, String pageSize, String cursor) throws Exception {
+        String query = buildQueryString(List.of(
+            new QueryParameterSpec("excludeNodeIds", excludeNodeIds, "form", true, false, null),
+            new QueryParameterSpec("page_size", pageSize, "form", true, false, null),
+            new QueryParameterSpec("cursor", cursor, "form", true, false, null)
+        ));
+        Object raw = client.get(ApiPaths.appendQueryString(ApiPaths.appPath("/drive/spaces/" + serializePathParameter(spaceId, new PathParameterSpec("spaceId", "simple", false)) + "/move_destinations"), query));
+        return client.convertValue(raw, new TypeReference<DriveNodeListHttpResponse>() {});
+    }
+
+    public DriveNodeListHttpResponse nodesList(String spaceId, String parentNodeId, String pageSize, String cursor, String sortBy, String sortOrder) throws Exception {
+        String query = buildQueryString(List.of(
+            new QueryParameterSpec("parentNodeId", parentNodeId, "form", true, false, null),
+            new QueryParameterSpec("page_size", pageSize, "form", true, false, null),
+            new QueryParameterSpec("cursor", cursor, "form", true, false, null),
+            new QueryParameterSpec("sortBy", sortBy, "form", true, false, null),
+            new QueryParameterSpec("sortOrder", sortOrder, "form", true, false, null)
+        ));
+        Object raw = client.get(ApiPaths.appendQueryString(ApiPaths.appPath("/drive/spaces/" + serializePathParameter(spaceId, new PathParameterSpec("spaceId", "simple", false)) + "/nodes"), query));
+        return client.convertValue(raw, new TypeReference<DriveNodeListHttpResponse>() {});
     }
 
     public WebsiteRootListHttpResponse websiteRootsList(String spaceId, Integer pageSize, String cursor) throws Exception {
@@ -508,90 +577,6 @@ public class DriveApi {
         return client.convertValue(raw, new TypeReference<WebsiteRootHttpResponse>() {});
     }
 
-    public WebsiteRootHttpResponse websiteRootsRetrieve(String rootUuid) throws Exception {
-        Object raw = client.get(ApiPaths.appPath("/drive/website_roots/" + serializePathParameter(rootUuid, new PathParameterSpec("rootUuid", "simple", false)) + ""));
-        return client.convertValue(raw, new TypeReference<WebsiteRootHttpResponse>() {});
-    }
-
-    /** Create an isolated atomic website synchronization */
-    public WebsiteSyncHttpResponse websiteRootsSyncsCreate(String rootUuid, CreateWebsiteSyncRequest body, String idempotencyKey) throws Exception {
-        Map<String, String> requestHeaders = buildRequestHeaders(
-                Map.of("Idempotency-Key", new HeaderParameterSpec(idempotencyKey, "simple", false, null)),
-                Map.of()
-        );
-        Object raw = client.post(ApiPaths.appPath("/drive/website_roots/" + serializePathParameter(rootUuid, new PathParameterSpec("rootUuid", "simple", false)) + "/syncs"), body, null, requestHeaders, "application/json");
-        return client.convertValue(raw, new TypeReference<WebsiteSyncHttpResponse>() {});
-    }
-
-    /** Retrieve an atomic website synchronization */
-    public WebsiteSyncHttpResponse websiteRootsSyncsRetrieve(String rootUuid, String syncId) throws Exception {
-        Object raw = client.get(ApiPaths.appPath("/drive/website_roots/" + serializePathParameter(rootUuid, new PathParameterSpec("rootUuid", "simple", false)) + "/syncs/" + serializePathParameter(syncId, new PathParameterSpec("syncId", "simple", false)) + ""));
-        return client.convertValue(raw, new TypeReference<WebsiteSyncHttpResponse>() {});
-    }
-
-    /** Validate and atomically activate a complete website tree */
-    public WebsiteSyncActivationHttpResponse websiteRootsSyncsFinalize(String rootUuid, String syncId, WebsiteSyncVersionRequest body, String idempotencyKey) throws Exception {
-        Map<String, String> requestHeaders = buildRequestHeaders(
-                Map.of("Idempotency-Key", new HeaderParameterSpec(idempotencyKey, "simple", false, null)),
-                Map.of()
-        );
-        Object raw = client.post(ApiPaths.appPath("/drive/website_roots/" + serializePathParameter(rootUuid, new PathParameterSpec("rootUuid", "simple", false)) + "/syncs/" + serializePathParameter(syncId, new PathParameterSpec("syncId", "simple", false)) + "/finalize"), body, null, requestHeaders, "application/json");
-        return client.convertValue(raw, new TypeReference<WebsiteSyncActivationHttpResponse>() {});
-    }
-
-    /** Abort an unactivated website synchronization */
-    public WebsiteSyncHttpResponse websiteRootsSyncsAbort(String rootUuid, String syncId, WebsiteSyncVersionRequest body, String idempotencyKey) throws Exception {
-        Map<String, String> requestHeaders = buildRequestHeaders(
-                Map.of("Idempotency-Key", new HeaderParameterSpec(idempotencyKey, "simple", false, null)),
-                Map.of()
-        );
-        Object raw = client.post(ApiPaths.appPath("/drive/website_roots/" + serializePathParameter(rootUuid, new PathParameterSpec("rootUuid", "simple", false)) + "/syncs/" + serializePathParameter(syncId, new PathParameterSpec("syncId", "simple", false)) + "/abort"), body, null, requestHeaders, "application/json");
-        return client.convertValue(raw, new TypeReference<WebsiteSyncHttpResponse>() {});
-    }
-
-    /** Activate a retained website generation as a new logical generation */
-    public WebsiteGenerationActivationHttpResponse websiteRootsGenerationsActivate(String rootUuid, String generation, ActivateWebsiteGenerationRequest body) throws Exception {
-        Object raw = client.post(ApiPaths.appPath("/drive/website_roots/" + serializePathParameter(rootUuid, new PathParameterSpec("rootUuid", "simple", false)) + "/generations/" + serializePathParameter(generation, new PathParameterSpec("generation", "simple", false)) + "/activate"), body, null, null, "application/json");
-        return client.convertValue(raw, new TypeReference<WebsiteGenerationActivationHttpResponse>() {});
-    }
-
-    public DriveNodeListHttpResponse moveDestinationsList(String spaceId, String excludeNodeIds, String pageSize, String cursor) throws Exception {
-        String query = buildQueryString(List.of(
-            new QueryParameterSpec("excludeNodeIds", excludeNodeIds, "form", true, false, null),
-            new QueryParameterSpec("page_size", pageSize, "form", true, false, null),
-            new QueryParameterSpec("cursor", cursor, "form", true, false, null)
-        ));
-        Object raw = client.get(ApiPaths.appendQueryString(ApiPaths.appPath("/drive/spaces/" + serializePathParameter(spaceId, new PathParameterSpec("spaceId", "simple", false)) + "/move_destinations"), query));
-        return client.convertValue(raw, new TypeReference<DriveNodeListHttpResponse>() {});
-    }
-
-    public DriveSpaceHttpResponse spacesRetrieve(String spaceId) throws Exception {
-        Object raw = client.get(ApiPaths.appPath("/drive/spaces/" + serializePathParameter(spaceId, new PathParameterSpec("spaceId", "simple", false)) + ""));
-        return client.convertValue(raw, new TypeReference<DriveSpaceHttpResponse>() {});
-    }
-
-    public DriveSpaceHttpResponse spacesUpdate(String spaceId, UpdateSpaceRequest body) throws Exception {
-        Object raw = client.patch(ApiPaths.appPath("/drive/spaces/" + serializePathParameter(spaceId, new PathParameterSpec("spaceId", "simple", false)) + ""), body, null, null, "application/json");
-        return client.convertValue(raw, new TypeReference<DriveSpaceHttpResponse>() {});
-    }
-
-    public Void spacesDelete(String spaceId) throws Exception {
-        client.delete(ApiPaths.appPath("/drive/spaces/" + serializePathParameter(spaceId, new PathParameterSpec("spaceId", "simple", false)) + ""));
-        return null;
-    }
-
-    public DriveNodeListHttpResponse nodesList(String spaceId, String parentNodeId, String pageSize, String cursor, String sortBy, String sortOrder) throws Exception {
-        String query = buildQueryString(List.of(
-            new QueryParameterSpec("parentNodeId", parentNodeId, "form", true, false, null),
-            new QueryParameterSpec("page_size", pageSize, "form", true, false, null),
-            new QueryParameterSpec("cursor", cursor, "form", true, false, null),
-            new QueryParameterSpec("sortBy", sortBy, "form", true, false, null),
-            new QueryParameterSpec("sortOrder", sortOrder, "form", true, false, null)
-        ));
-        Object raw = client.get(ApiPaths.appendQueryString(ApiPaths.appPath("/drive/spaces/" + serializePathParameter(spaceId, new PathParameterSpec("spaceId", "simple", false)) + "/nodes"), query));
-        return client.convertValue(raw, new TypeReference<DriveNodeListHttpResponse>() {});
-    }
-
     public DriveNodeListHttpResponse trashList(String spaceId, String pageSize, String cursor, String parentNodeId, String sortBy, String sortOrder) throws Exception {
         String query = buildQueryString(List.of(
             new QueryParameterSpec("spaceId", spaceId, "form", true, false, null),
@@ -605,14 +590,14 @@ public class DriveApi {
         return client.convertValue(raw, new TypeReference<DriveNodeListHttpResponse>() {});
     }
 
-    public DriveNodeHttpResponse trashRestore(String nodeId, NodeCommandRequest body) throws Exception {
-        Object raw = client.post(ApiPaths.appPath("/drive/trash/" + serializePathParameter(nodeId, new PathParameterSpec("nodeId", "simple", false)) + "/restore"), body, null, null, "application/json");
-        return client.convertValue(raw, new TypeReference<DriveNodeHttpResponse>() {});
-    }
-
     public EmptyTrashHttpResponse trashEmpty(EmptyTrashRequest body) throws Exception {
         Object raw = client.post(ApiPaths.appPath("/drive/trash/empty"), body, null, null, "application/json");
         return client.convertValue(raw, new TypeReference<EmptyTrashHttpResponse>() {});
+    }
+
+    public DriveNodeHttpResponse trashRestore(String nodeId, NodeCommandRequest body) throws Exception {
+        Object raw = client.post(ApiPaths.appPath("/drive/trash/" + serializePathParameter(nodeId, new PathParameterSpec("nodeId", "simple", false)) + "/restore"), body, null, null, "application/json");
+        return client.convertValue(raw, new TypeReference<DriveNodeHttpResponse>() {});
     }
 
     public DriveUploadSessionHttpResponse uploadSessionsCreate(CreateUploadSessionRequest body) throws Exception {
@@ -640,16 +625,14 @@ public class DriveApi {
         return client.convertValue(raw, new TypeReference<PresignedUploadPartHttpResponse>() {});
     }
 
-    /** Create a push notification channel for Drive changes */
-    public DriveWatchChannelHttpResponse changesWatch(CreateWatchChannelRequest body) throws Exception {
-        Object raw = client.post(ApiPaths.appPath("/drive/changes/watch"), body, null, null, "application/json");
-        return client.convertValue(raw, new TypeReference<DriveWatchChannelHttpResponse>() {});
+    public PrepareUploaderUploadHttpResponse uploaderUploadsCreate(PrepareUploaderUploadRequest body) throws Exception {
+        Object raw = client.post(ApiPaths.appPath("/drive/uploader/uploads"), body, null, null, "application/json");
+        return client.convertValue(raw, new TypeReference<PrepareUploaderUploadHttpResponse>() {});
     }
 
-    /** Create a push notification channel for a Drive node */
-    public DriveWatchChannelHttpResponse nodesWatch(String nodeId, CreateWatchChannelRequest body) throws Exception {
-        Object raw = client.post(ApiPaths.appPath("/drive/nodes/" + serializePathParameter(nodeId, new PathParameterSpec("nodeId", "simple", false)) + "/watch"), body, null, null, "application/json");
-        return client.convertValue(raw, new TypeReference<DriveWatchChannelHttpResponse>() {});
+    public UploaderUploadPartHttpResponse uploaderUploadsPartsUpdate(String uploadItemId, Integer partNo, MarkUploaderPartUploadedRequest body) throws Exception {
+        Object raw = client.put(ApiPaths.appPath("/drive/uploader/uploads/" + serializePathParameter(uploadItemId, new PathParameterSpec("uploadItemId", "simple", false)) + "/parts/" + serializePathParameter(partNo, new PathParameterSpec("partNo", "simple", false)) + ""), body, null, null, "application/json");
+        return client.convertValue(raw, new TypeReference<UploaderUploadPartHttpResponse>() {});
     }
 
     /** List Drive watch channels */
@@ -676,34 +659,51 @@ public class DriveApi {
         return client.convertValue(raw, new TypeReference<StopWatchChannelHttpResponse>() {});
     }
 
-    public DownloadPackageHttpResponse downloadPackagesCreate(CreateDownloadPackageRequest body) throws Exception {
-        Object raw = client.post(ApiPaths.appPath("/drive/download_packages"), body, null, null, "application/json");
-        return client.convertValue(raw, new TypeReference<DownloadPackageHttpResponse>() {});
+    public WebsiteRootHttpResponse websiteRootsRetrieve(String rootUuid) throws Exception {
+        Object raw = client.get(ApiPaths.appPath("/drive/website_roots/" + serializePathParameter(rootUuid, new PathParameterSpec("rootUuid", "simple", false)) + ""));
+        return client.convertValue(raw, new TypeReference<WebsiteRootHttpResponse>() {});
     }
 
-    public DownloadPackageHttpResponse downloadPackagesUrlsRetrieve(String packageId) throws Exception {
-        Object raw = client.get(ApiPaths.appPath("/drive/download_packages/" + serializePathParameter(packageId, new PathParameterSpec("packageId", "simple", false)) + "/download_url"));
-        return client.convertValue(raw, new TypeReference<DownloadPackageHttpResponse>() {});
+    /** Activate a retained website generation as a new logical generation */
+    public WebsiteGenerationActivationHttpResponse websiteRootsGenerationsActivate(String rootUuid, String generation, ActivateWebsiteGenerationRequest body) throws Exception {
+        Object raw = client.post(ApiPaths.appPath("/drive/website_roots/" + serializePathParameter(rootUuid, new PathParameterSpec("rootUuid", "simple", false)) + "/generations/" + serializePathParameter(generation, new PathParameterSpec("generation", "simple", false)) + "/activate"), body, null, null, "application/json");
+        return client.convertValue(raw, new TypeReference<WebsiteGenerationActivationHttpResponse>() {});
     }
 
-    public ArchiveEntryListHttpResponse archiveEntriesList(String nodeId) throws Exception {
-        Object raw = client.get(ApiPaths.appPath("/drive/nodes/" + serializePathParameter(nodeId, new PathParameterSpec("nodeId", "simple", false)) + "/archive_entries"));
-        return client.convertValue(raw, new TypeReference<ArchiveEntryListHttpResponse>() {});
+    /** Create an isolated atomic website synchronization */
+    public WebsiteSyncHttpResponse websiteRootsSyncsCreate(String rootUuid, CreateWebsiteSyncRequest body, String idempotencyKey) throws Exception {
+        Map<String, String> requestHeaders = buildRequestHeaders(
+                Map.of("Idempotency-Key", new HeaderParameterSpec(idempotencyKey, "simple", false, null)),
+                Map.of()
+        );
+        Object raw = client.post(ApiPaths.appPath("/drive/website_roots/" + serializePathParameter(rootUuid, new PathParameterSpec("rootUuid", "simple", false)) + "/syncs"), body, null, requestHeaders, "application/json");
+        return client.convertValue(raw, new TypeReference<WebsiteSyncHttpResponse>() {});
     }
 
-    public ExtractArchiveEntriesHttpResponse archiveEntriesExtract(String nodeId, ExtractArchiveEntriesRequest body) throws Exception {
-        Object raw = client.post(ApiPaths.appPath("/drive/nodes/" + serializePathParameter(nodeId, new PathParameterSpec("nodeId", "simple", false)) + "/archive_entries/extract"), body, null, null, "application/json");
-        return client.convertValue(raw, new TypeReference<ExtractArchiveEntriesHttpResponse>() {});
+    /** Retrieve an atomic website synchronization */
+    public WebsiteSyncHttpResponse websiteRootsSyncsRetrieve(String rootUuid, String syncId) throws Exception {
+        Object raw = client.get(ApiPaths.appPath("/drive/website_roots/" + serializePathParameter(rootUuid, new PathParameterSpec("rootUuid", "simple", false)) + "/syncs/" + serializePathParameter(syncId, new PathParameterSpec("syncId", "simple", false)) + ""));
+        return client.convertValue(raw, new TypeReference<WebsiteSyncHttpResponse>() {});
     }
 
-    public PrepareUploaderUploadHttpResponse uploaderUploadsCreate(PrepareUploaderUploadRequest body) throws Exception {
-        Object raw = client.post(ApiPaths.appPath("/drive/uploader/uploads"), body, null, null, "application/json");
-        return client.convertValue(raw, new TypeReference<PrepareUploaderUploadHttpResponse>() {});
+    /** Abort an unactivated website synchronization */
+    public WebsiteSyncHttpResponse websiteRootsSyncsAbort(String rootUuid, String syncId, WebsiteSyncVersionRequest body, String idempotencyKey) throws Exception {
+        Map<String, String> requestHeaders = buildRequestHeaders(
+                Map.of("Idempotency-Key", new HeaderParameterSpec(idempotencyKey, "simple", false, null)),
+                Map.of()
+        );
+        Object raw = client.post(ApiPaths.appPath("/drive/website_roots/" + serializePathParameter(rootUuid, new PathParameterSpec("rootUuid", "simple", false)) + "/syncs/" + serializePathParameter(syncId, new PathParameterSpec("syncId", "simple", false)) + "/abort"), body, null, requestHeaders, "application/json");
+        return client.convertValue(raw, new TypeReference<WebsiteSyncHttpResponse>() {});
     }
 
-    public UploaderUploadPartHttpResponse uploaderUploadsPartsUpdate(String uploadItemId, Integer partNo, MarkUploaderPartUploadedRequest body) throws Exception {
-        Object raw = client.put(ApiPaths.appPath("/drive/uploader/uploads/" + serializePathParameter(uploadItemId, new PathParameterSpec("uploadItemId", "simple", false)) + "/parts/" + serializePathParameter(partNo, new PathParameterSpec("partNo", "simple", false)) + ""), body, null, null, "application/json");
-        return client.convertValue(raw, new TypeReference<UploaderUploadPartHttpResponse>() {});
+    /** Validate and atomically activate a complete website tree */
+    public WebsiteSyncActivationHttpResponse websiteRootsSyncsFinalize(String rootUuid, String syncId, WebsiteSyncVersionRequest body, String idempotencyKey) throws Exception {
+        Map<String, String> requestHeaders = buildRequestHeaders(
+                Map.of("Idempotency-Key", new HeaderParameterSpec(idempotencyKey, "simple", false, null)),
+                Map.of()
+        );
+        Object raw = client.post(ApiPaths.appPath("/drive/website_roots/" + serializePathParameter(rootUuid, new PathParameterSpec("rootUuid", "simple", false)) + "/syncs/" + serializePathParameter(syncId, new PathParameterSpec("syncId", "simple", false)) + "/finalize"), body, null, requestHeaders, "application/json");
+        return client.convertValue(raw, new TypeReference<WebsiteSyncActivationHttpResponse>() {});
     }
 
     private record PathParameterSpec(String name, String style, boolean explode) {}

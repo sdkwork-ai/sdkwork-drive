@@ -143,6 +143,61 @@ describe('StorageProvidersAdminPage', () => {
     });
   });
 
+  it('re-reads the table at the chosen page size and restarts the cursor chain', async () => {
+    const request = vi.fn(async (arg: { operationId: string; query?: ListQuery }) => {
+      if (arg.operationId !== 'storageProviders.list') {
+        throw new Error(`Unexpected operation ${arg.operationId}`);
+      }
+      if (arg.query?.page_size === 200) {
+        // The switch's option walk; unrelated to the table's window size.
+        return { items: [LOADED_PROVIDER], pageInfo: { mode: 'cursor', hasMore: false } };
+      }
+      if (arg.query?.page_size === 50) {
+        return {
+          items: [LOADED_PROVIDER, ARCHIVE_PROVIDER],
+          pageInfo: { mode: 'cursor', hasMore: false },
+        };
+      }
+      if (arg.query?.cursor === 'opaque-provider-next') {
+        return { items: [ARCHIVE_PROVIDER], pageInfo: { mode: 'cursor', hasMore: false } };
+      }
+      return {
+        items: [LOADED_PROVIDER],
+        pageInfo: { mode: 'cursor', hasMore: true, nextCursor: 'opaque-provider-next' },
+      };
+    });
+
+    render(
+      <StorageProvidersAdminPage
+        adminStorageSdkClient={fakeClient(request)}
+        getSession={OPERATOR_SESSION}
+      />,
+    );
+
+    await screen.findByText('Primary Provider');
+    // Walk to page 2 first: the window size then changes while a cursor minted
+    // for the 20-row window is live, which is the state the reset has to handle.
+    fireEvent.click(screen.getByRole('button', { name: 'nextPage' }));
+    await screen.findByText('Archive Provider');
+    expect(lastPageQuery(request).cursor).toBe('opaque-provider-next');
+
+    fireEvent.change(screen.getByLabelText('pageSizeLabel'), { target: { value: '50' } });
+
+    await waitFor(() => expect(listCalls(request, 50)).toHaveLength(1));
+    // The choice is a server window, not a client-side slice: it travels as
+    // `page_size` on a fresh request.
+    expect(listCalls(request, 50)[0][0]).toMatchObject({
+      operationId: 'storageProviders.list',
+      query: { page_size: 50 },
+    });
+    // And the 20-row cursor is not replayed into it — a keyset cursor describes
+    // the window it was minted for, so the chain restarts at page 1.
+    expect((listCalls(request, 50)[0][0] as { query: ListQuery }).query.cursor).toBeUndefined();
+    // Page 1, not page 2 with its cursor dropped: "previous" is the control that
+    // says so, and it is only disabled on the first page.
+    expect((screen.getByRole('button', { name: 'previousPage' }) as HTMLButtonElement).disabled).toBe(true);
+  });
+
   it('sends the provider-kind switch to the server instead of filtering one page', async () => {
     const request = vi.fn(async (arg: { operationId: string; query?: ListQuery }) => {
       if (arg.operationId !== 'storageProviders.list') {

@@ -1,0 +1,103 @@
+import type { FilePreviewLabels } from 'sdkwork-drive-pc-file-preview';
+
+/** 存储中心字典的取值函数签名（`useTranslation().t` 的结构子集）。 */
+export type StorageDictionaryTranslate = (
+  key: string,
+  params?: Record<string, string | number>,
+) => string;
+
+/**
+ * 把 drive 字典折成预览组件的 labels。
+ *
+ * 预览包不认识宿主的字典（那是它有意的解耦），所以本地化发生在这一层：字典里翻过的
+ * 字段用译文，没翻的字段直接不传，由预览包用英文兜底——这样漏翻只影响一个词条，
+ * 不会让整个预览露出 `filePreview.save` 这样的 key。
+ */
+export function buildFilePreviewLabels(
+  t: StorageDictionaryTranslate,
+): Partial<FilePreviewLabels> {
+  return {
+    preview: t('filePreviewPreview'),
+    edit: t('filePreviewEdit'),
+    editHint: t('filePreviewEditHint'),
+    previousFile: t('filePreviewPreviousFile'),
+    nextFile: t('filePreviewNextFile'),
+    position: t('filePreviewPosition'),
+    save: t('filePreviewSave'),
+    saving: t('filePreviewSaving'),
+    saved: t('filePreviewSaved'),
+    saveFailed: t('filePreviewSaveFailed'),
+    discardChanges: t('filePreviewDiscardChanges'),
+    unsavedChanges: t('filePreviewUnsavedChanges'),
+    unsavedCloseConfirm: t('filePreviewUnsavedCloseConfirm'),
+    cancel: t('cancel'),
+    download: t('download'),
+    downloadFailed: t('downloadError'),
+    openInNewTab: t('filePreviewOpenInNewTab'),
+    close: t('bucketsBrowseClose'),
+    loading: t('filePreviewLoading'),
+    loadFailed: t('filePreviewLoadFailed'),
+    retry: t('overviewRetry'),
+    tooLargeTitle: t('filePreviewTooLargeTitle'),
+    tooLargeHint: t('filePreviewTooLargeHint'),
+    unavailableTitle: t('filePreviewUnavailableTitle'),
+    unavailableHint: t('filePreviewUnavailableHint'),
+    emptyFile: t('filePreviewEmptyFile'),
+    zoomIn: t('filePreviewZoomIn'),
+    zoomOut: t('filePreviewZoomOut'),
+    rotate: t('filePreviewRotate'),
+    fitToScreen: t('filePreviewFitToScreen'),
+    actualSize: t('filePreviewActualSize'),
+    wrapLines: t('filePreviewWrapLines'),
+    unwrapLines: t('filePreviewUnwrapLines'),
+    copy: t('filePreviewCopy'),
+    copied: t('filePreviewCopied'),
+    search: t('filePreviewSearch'),
+    searchPlaceholder: t('filePreviewSearchPlaceholder'),
+    noMatches: t('filePreviewNoMatches'),
+    matchCount: t('filePreviewMatchCount'),
+    previous: t('filePreviewPrevious'),
+    next: t('filePreviewNext'),
+    play: t('filePreviewPlay'),
+    pause: t('filePreviewPause'),
+    mute: t('filePreviewMute'),
+    unmute: t('filePreviewUnmute'),
+    volume: t('filePreviewVolume'),
+    playbackRate: t('filePreviewPlaybackRate'),
+    fullscreen: t('filePreviewFullscreen'),
+    sheetLabel: t('filePreviewSheetLabel'),
+    slideLabel: t('filePreviewSlideLabel'),
+    slideCount: t('filePreviewSlideCount'),
+    sheetCount: t('filePreviewSheetCount'),
+    unsupportedSheet: t('filePreviewUnsupportedSheet'),
+    archiveEntries: t('filePreviewArchiveEntries'),
+    archiveTruncated: t('filePreviewArchiveTruncated'),
+    archiveTotalSize: t('filePreviewArchiveTotalSize'),
+    rowsTruncated: t('filePreviewRowsTruncated'),
+    columnsTruncated: t('filePreviewColumnsTruncated'),
+    corruptFileHint: t('filePreviewCorruptFileHint'),
+    parserUnavailableHint: t('filePreviewParserUnavailableHint'),
+    imageDimensions: t('filePreviewImageDimensions'),
+    sizeLabel: t('sizeHeader'),
+    typeLabel: t('filePreviewTypeLabel'),
+    modifiedLabel: t('modifiedHeader'),
+    linesLabel: t('filePreviewLinesLabel'),
+    wordsLabel: t('filePreviewWordsLabel'),
+    charactersLabel: t('filePreviewCharactersLabel'),
+    kind: {
+      folder: t('filePreviewKindFolder'),
+      image: t('filePreviewKindImage'),
+      video: t('filePreviewKindVideo'),
+      audio: t('filePreviewKindAudio'),
+      pdf: t('filePreviewKindPdf'),
+      word: t('filePreviewKindWord'),
+      spreadsheet: t('filePreviewKindSpreadsheet'),
+      presentation: t('filePreviewKindPresentation'),
+      archive: t('filePreviewKindArchive'),
+      text: t('filePreviewKindText'),
+      markdown: t('filePreviewKindMarkdown'),
+      code: t('filePreviewKindCode'),
+      unsupported: t('filePreviewKindUnsupported'),
+    },
+  };
+}

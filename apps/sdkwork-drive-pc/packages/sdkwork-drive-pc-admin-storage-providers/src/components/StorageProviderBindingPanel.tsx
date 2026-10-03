@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import type { StorageProviderBindingView, StorageProviderView } from '../types/storageProviderAdminTypes';
-import { getProviderKindMeta } from '../utils/providerKindConfig';
+import { getProviderKindMeta, providerDisplayName } from '../utils/providerKindConfig';
 import { SELECT_CLASS, INPUT_CLASS, PRIMARY_BUTTON_CLASS, SECONDARY_BUTTON_CLASS, CARD_CLASS, BADGE_BASE_CLASS } from '../utils/uiPrimitives';
 import { ConfirmDialog } from './ConfirmDialog';
 import { useTranslation } from '../hooks/useTranslation';
@@ -64,7 +64,7 @@ export function StorageProviderBindingPanel({
                         {meta.icon}
                       </span>
                       <span className="text-xs font-medium text-blue-700 dark:text-blue-300">
-                        {boundProvider.displayName}
+                        {providerDisplayName(t, boundProvider)}
                       </span>
                     </div>
                   );
@@ -99,7 +99,7 @@ export function StorageProviderBindingPanel({
             <option value="">{t('selectProvider')}</option>
             {providers.filter((p) => p.status === 'active').map((provider) => (
               <option key={provider.id} value={provider.id}>
-                {provider.displayName || provider.id}
+                {providerDisplayName(t, provider) || provider.id}
               </option>
             ))}
           </select>

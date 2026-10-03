@@ -572,8 +572,7 @@ describe('storage provider admin service', () => {
     });
   });
 
-  it('forwards the scope slice of the account list as query parameters', async () => {
-    const { calls, service } = createFakeService();
+  it('forwards the scope slice of the account list as query parameters', async () => {    const { calls, service } = createFakeService();
 
     await service.listProviderAccounts({ mine: true });
     expect(lastCall(calls).query).toMatchObject({ mine: true });
@@ -593,6 +592,150 @@ describe('storage provider admin service', () => {
     expect(lastCall(calls).query?.scopeType).toBeUndefined();
     expect(lastCall(calls).query?.mine).toBeUndefined();
     expect(lastCall(calls).query?.includePlatform).toBeUndefined();
+  });
+
+  it('sends the account page window and reads the server continuation back', async () => {
+    const calls: DriveAdminStorageSdkRequest[] = [];
+    const service = createServiceWithClient(
+      recordingClient(calls, () => ({
+        items: [
+          {
+            id: 'iampacct-018f-page-2',
+            scopeType: 'platform',
+            vendorCode: 'tencent',
+            accountCode: 'tencent-main-hyeu7e61',
+            displayName: 'Tencent storage',
+            accountType: 'long_term_key',
+            environment: 'production',
+            capabilityCodes: ['object_storage'],
+            status: 'active',
+            credentialConfigured: true,
+            credentialCount: 1,
+            version: 1,
+          },
+        ],
+        // The account list is paginated: a client that drops `pageInfo` cannot
+        // tell this page from a complete set, which is how an account that
+        // sorts past the window becomes unreachable.
+        pageInfo: { mode: 'cursor', hasMore: true, nextCursor: 'b3BhcXVlLWN1cnNvcg' },
+      })),
+    );
+
+    const page = await service.listProviderAccountsPage({
+      status: 'active',
+      scopeType: 'platform',
+      vendorCode: 'tencent',
+      pageSize: 20,
+      pageToken: 'b3BhcXVlLWN1cnNvcg==',
+    });
+
+    expect(lastCall(calls)).toMatchObject({
+      operationId: 'storageProviderAccounts.list',
+      query: {
+        status: 'active',
+        scopeType: 'platform',
+        vendorCode: 'tencent',
+        page_size: 20,
+        cursor: 'b3BhcXVlLWN1cnNvcg==',
+      },
+    });
+    expect(page.items).toHaveLength(1);
+    expect(page.items[0]).toMatchObject({ id: 'iampacct-018f-page-2', vendorCode: 'tencent' });
+    expect(page.hasMore).toBe(true);
+    expect(page.nextPageToken).toBe('b3BhcXVlLWN1cnNvcg');
+  });
+
+  it('reads the whole vendor bucket inventory instead of one window of it', async () => {
+    // 厂商清单是全量的，接口却按 offset 分页：只读第一页时，第 21 个之后的桶在页面上
+    // 直接消失，而页面把它们当"这个配置下的所有桶"来展示（数量徽标、搜索都在这个前提
+    // 下才成立）。所以服务必须跟着 nextCursor 读完。
+    const calls: DriveAdminStorageSdkRequest[] = [];
+    const pages: unknown[] = [
+      {
+        items: [
+          { bucket: 'archive-2024', configured: false, creationDateEpochMs: Date.UTC(2024, 0, 2) },
+          { bucket: 'drive-prod', configured: true, creationDateEpochMs: Date.UTC(2023, 4, 1) },
+        ],
+        pageInfo: { mode: 'cursor', hasMore: true, nextCursor: 'b3BhcXVlLWJ1Y2tldC1jdXJzb3I' },
+      },
+      {
+        items: [{ bucket: 'media-2025', configured: false }],
+        pageInfo: { mode: 'cursor', hasMore: false },
+      },
+    ];
+    let pageIndex = 0;
+    const service = createServiceWithClient({
+      metadata: {},
+      operations: {},
+      setTokenManager: () => undefined,
+      async request<T>(request: DriveAdminStorageSdkRequest): Promise<T> {
+        calls.push(request);
+        const page = pages[Math.min(pageIndex, pages.length - 1)];
+        pageIndex += 1;
+        return page as T;
+      },
+    } as unknown as DriveAdminStorageSdkClient);
+
+    const buckets = await service.listBuckets('provider-s3');
+
+    expect(buckets.map((bucket) => bucket.bucket)).toEqual([
+      'archive-2024',
+      'drive-prod',
+      'media-2025',
+    ]);
+    expect(buckets[1]).toMatchObject({ configured: true });
+    /*
+     * 时间以 ISO 交给显示层，服务层不做本地化：曾经这里是 `toLocaleDateString()`，
+     * 读到的是浏览器区域而不是控制台语言，于是英文界面出现中文格式的日期，还被列表
+     * 按语言二次格式化一遍。这条断言把"边界只搬 ISO"钉住。
+     */
+    expect(buckets[0].creationDateIso).toBe(new Date(Date.UTC(2024, 0, 2)).toISOString());
+    expect(buckets[2].creationDateIso).toBeUndefined();
+    // 按声明上限读（1..=200），续页带上服务端给的游标。
+    expect(calls).toHaveLength(2);
+    expect(calls[0]).toMatchObject({
+      operationId: 'storageProviders.buckets.list',
+      pathParams: { providerId: 'provider-s3' },
+      query: { page_size: 200 },
+    });
+    expect(calls[0].query?.cursor).toBeUndefined();
+    expect(calls[1]).toMatchObject({
+      operationId: 'storageProviders.buckets.list',
+      query: { page_size: 200, cursor: 'b3BhcXVlLWJ1Y2tldC1jdXJzb3I' },
+    });
+  });
+
+  it('stops following a bucket cursor that does not advance the window', async () => {
+    // 服务端若把同一个游标再回答一次，继续跟只会空转；同名桶也不该被记两遍
+    // （offset 窗口在并发写入后可能重叠，重复行还会撞掉表格的 key）。
+    const calls: DriveAdminStorageSdkRequest[] = [];
+    const page = {
+      items: [{ bucket: 'drive-prod', configured: true }],
+      pageInfo: { mode: 'cursor', hasMore: true, nextCursor: 'c3RhbGxlZC1jdXJzb3I' },
+    };
+    const service = createServiceWithClient(
+      recordingClient(calls, () => page),
+    );
+
+    const buckets = await service.listBuckets('provider-s3');
+
+    expect(buckets.map((bucket) => bucket.bucket)).toEqual(['drive-prod']);
+    expect(calls).toHaveLength(2);
+  });
+
+  it('reports a complete account page as complete instead of inferring it from a short page', async () => {
+    const { calls, service } = createFakeService();
+
+    const page = await service.listProviderAccountsPage({ scopeType: 'platform' });
+
+    // The shared fake answers without `pageInfo` — the pre-fix server shape.
+    // A missing continuation is the only honest reading of "no cursor".
+    expect(page.hasMore).toBe(false);
+    expect(page.nextPageToken).toBeUndefined();
+    // The single-page wrapper still projects the items for callers that only
+    // render one page (`listProviderAccounts`).
+    expect(page.items[0]).toMatchObject({ id: 'iampacct-018f-list' });
+    expect(calls.at(-1)?.query?.page_size).toBeUndefined();
   });
 
   it('registers a reusable account with its access key pair through the account center', async () => {    const { calls, service } = createFakeService();
@@ -808,6 +951,8 @@ describe('storage provider admin service', () => {
         sizeBytes: 2048,
         contentType: 'text/plain',
         isFolder: false,
+        // 时间同样是 ISO：显示层按宿主语言格式化。
+        lastModifiedIso: new Date(1700000000000).toISOString(),
       }),
     ]);
   });

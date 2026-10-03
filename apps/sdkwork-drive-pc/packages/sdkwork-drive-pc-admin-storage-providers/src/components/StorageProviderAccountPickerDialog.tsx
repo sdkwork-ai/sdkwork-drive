@@ -73,6 +73,20 @@ interface StorageProviderAccountPickerDialogProps {
   loading: boolean;
   error?: string;
   /**
+   * Whether the account center holds accounts past the loaded pages.
+   *
+   * The list is paginated, so a page that is full is not the same answer as a
+   * complete set: without the server's own `hasMore` an operator cannot tell a
+   * vendor whose accounts start on a later page from a vendor that has none,
+   * and the empty state then reads as "register one" for a vendor that already
+   * has an account.
+   */
+  hasMoreAccounts?: boolean;
+  /** True while the next page is in flight. */
+  loadingMoreAccounts?: boolean;
+  /** Read the next page from the account center (server-issued cursor). */
+  onLoadMoreAccounts?: () => void;
+  /**
    * Vendor codes the provider's kind can bind, derived from the kind catalog.
    * The picker lists only these accounts and the create form is pinned to
    * them, so an Aliyun provider never sees a Tencent account. Empty/undefined
@@ -107,6 +121,9 @@ export function StorageProviderAccountPickerDialog({
   accounts,
   loading,
   error,
+  hasMoreAccounts,
+  loadingMoreAccounts,
+  onLoadMoreAccounts,
   allowedVendorCodes,
   selectedAccountId,
   onSelectedAccountChange,
@@ -175,6 +192,12 @@ export function StorageProviderAccountPickerDialog({
         .includes(keyword),
     );
   }, [scopedAccounts, search]);
+
+  // The editor links a provider kind to exactly one vendor and sends that
+  // vendor to the server as the list's `vendorCode` window filter, so with a
+  // single allowed vendor an empty result means "this vendor has no account
+  // yet" rather than "the platform has none".
+  const vendorScoped = Boolean(allowedVendorCodes && allowedVendorCodes.length === 1);
 
   const submitNewAccount = async () => {
     if (!displayName.trim() || !accessKeyId.trim() || !secretAccessKey.trim()) {
@@ -293,7 +316,8 @@ export function StorageProviderAccountPickerDialog({
                 </div>
               ) : visibleAccounts.length === 0 ? (
                 (() => {
-                  const platformEmpty = (accounts ?? []).length === 0 && !search.trim();
+                  const platformEmpty =
+                    (accounts ?? []).length === 0 && !search.trim() && !vendorScoped;
                   const emptyTitle = search.trim()
                     ? t('accountPickerSearchEmpty')
                     : platformEmpty
@@ -379,6 +403,26 @@ export function StorageProviderAccountPickerDialog({
                     );
                   })}
                 </ul>
+              )}
+              {/* The loaded rows are one page of a paginated list, so the
+                  continuation is rendered from the server's own `hasMore`
+                  (`PAGINATION_SPEC.md` §8) instead of being inferred from a
+                  full page — an operator looking for an account that sorts
+                  past the window has to be able to reach it. */}
+              {!loading && hasMoreAccounts && onLoadMoreAccounts && (
+                <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-neutral-200 bg-neutral-50 px-3 py-2 dark:border-neutral-700 dark:bg-neutral-800/60">
+                  <span className="text-[11px] text-neutral-500 dark:text-neutral-400">
+                    {t('accountLoadMoreHint')}
+                  </span>
+                  <button
+                    type="button"
+                    className={SECONDARY_BUTTON_CLASS}
+                    disabled={loadingMoreAccounts}
+                    onClick={onLoadMoreAccounts}
+                  >
+                    {loadingMoreAccounts ? t('accountLoadingMore') : t('accountLoadMore')}
+                  </button>
+                </div>
               )}
             </div>
           ) : (

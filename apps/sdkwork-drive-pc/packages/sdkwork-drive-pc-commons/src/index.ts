@@ -11,3 +11,4 @@ export * from './utils/transferJobDisplay';
 export * from './utils/driveConflictError';
 export * from './utils/driveSensitiveConfirm';
 export * from './utils/resolveUniqueSiblingName';
+export * from './utils/storageLimits';

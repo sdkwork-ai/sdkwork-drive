@@ -54,10 +54,12 @@
     "react-router-dom": "^7.17.0",
     "sdkwork-drive-pc-admin-core": "workspace:*",
     "sdkwork-drive-pc-admin-operations": "workspace:*",
+    "sdkwork-drive-pc-admin-storage-buckets": "workspace:*",
     "sdkwork-drive-pc-admin-storage-providers": "workspace:*",
     "sdkwork-drive-pc-commons": "workspace:*",
     "sdkwork-drive-pc-core": "workspace:*",
     "sdkwork-drive-pc-file": "workspace:*",
+    "sdkwork-drive-pc-file-preview": "workspace:*",
     "sdkwork-drive-pc-transfer": "workspace:*",
     "sdkwork-drive-pc-types": "workspace:*",
     "tailwindcss": "^4.1.14"

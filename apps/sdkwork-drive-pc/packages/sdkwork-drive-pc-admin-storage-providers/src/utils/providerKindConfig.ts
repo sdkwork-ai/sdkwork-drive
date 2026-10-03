@@ -1,4 +1,8 @@
-import type { StorageProviderHealthStatus, StorageProviderKind } from '../types/storageProviderAdminTypes';
+import type {
+  StorageProviderHealthStatus,
+  StorageProviderKind,
+  StorageProviderView,
+} from '../types/storageProviderAdminTypes';
 
 export interface ProviderRegion {
   value: string;
@@ -1262,6 +1266,59 @@ const CUSTOM_PROVIDER_META: ProviderKindMeta = {
   },
 };
 
+/**
+ * Provider id prefix every bootstrapped configuration shares.
+ *
+ * Mirrors `BUILTIN_PROVIDER_ID_PREFIX` in the server's
+ * `provider_account_defaults.rs`, where the id is derived from the kind rather
+ * than generated, so a re-run recognizes its own row. That same property is
+ * what makes the prefix the honest way to recognize a built-in row here: the
+ * display name cannot, because an operator may rename a built-in row and a
+ * hand-made row may carry any name at all.
+ */
+export const BUILTIN_PROVIDER_ID_PREFIX = 'builtin-storage-provider-';
+
+/**
+ * Display name the server's bootstrap writes for each catalogued kind.
+ *
+ * This is the *canonical English* name as stored in the row
+ * (`BuiltinCloudProvider::provider_name`), not a per-locale label: it is what
+ * a row still carrying its bootstrap name compares equal to, which is how
+ * {@link providerDisplayName} tells an untouched built-in row from one an
+ * operator renamed. The operator-facing per-locale copy lives in the
+ * `builtInProviderName.<kind>` dictionary entries.
+ *
+ * Keep it in step with the server table; `providerKindCatalog.test.ts` mirrors
+ * the Rust side and fails when the two drift.
+ */
+export const BUILTIN_PROVIDER_DISPLAY_NAMES: Readonly<Record<string, string>> = {
+  local_filesystem: 'Built-in Local Filesystem',
+  s3_compatible: 'Built-in Amazon S3',
+  aliyun_oss: 'Built-in Alibaba Cloud OSS',
+  tencent_cos: 'Built-in Tencent Cloud COS',
+  huawei_obs: 'Built-in Huawei Cloud OBS',
+  volcengine_tos: 'Built-in Volcengine TOS',
+  google_cloud_storage: 'Built-in Google Cloud Storage',
+  baidu_bos: 'Built-in Baidu Cloud BOS',
+  kingsoft_ks3: 'Built-in Kingsoft Cloud KS3',
+  qiniu_kodo: 'Built-in Qiniu Kodo',
+  china_mobile_ecloud: 'Built-in China Mobile Ecloud',
+  china_telecom_eos: 'Built-in China Telecom EOS',
+  china_unicom_wo: 'Built-in China Unicom Wo Cloud',
+  minio: 'Built-in MinIO',
+  cloudflare_r2: 'Built-in Cloudflare R2',
+  backblaze_b2: 'Built-in Backblaze B2',
+  wasabi: 'Built-in Wasabi',
+  digitalocean_spaces: 'Built-in DigitalOcean Spaces',
+  linode_object_storage: 'Built-in Akamai / Linode Object Storage',
+  vultr_object_storage: 'Built-in Vultr Object Storage',
+  scaleway_object_storage: 'Built-in Scaleway Object Storage',
+  oracle_cloud_storage: 'Built-in Oracle Cloud Object Storage',
+  ibm_cos: 'Built-in IBM Cloud Object Storage',
+  alibaba_cloud_international: 'Built-in Alibaba Cloud OSS (International)',
+  tencent_cloud_international: 'Built-in Tencent Cloud COS (International)',
+};
+
 const REGION_ENDPOINT_BUILDERS: Record<string, (region: string) => string> = {
   s3_compatible: (region) =>
     region === 'us-east-1' ? 'https://s3.amazonaws.com' : `https://s3.${region}.amazonaws.com`,
@@ -1450,7 +1507,15 @@ function translateOr(
   fallback: string,
 ): string {
   const value = translate(key);
-  return value === `storageProviders.${key}` ? fallback : value;
+  /*
+   * Two miss shapes, and both have to fall back: the dictionary provider
+   * answers with the fully qualified key, while a component rendered without
+   * one — a unit test, or a host that forgot to mount `LanguageProvider` —
+   * receives the bare key it passed in. Treating only the first as a miss
+   * would paint raw keys into the UI of exactly the host that is already
+   * misconfigured.
+   */
+  return value === `storageProviders.${key}` || value === key ? fallback : value;
 }
 
 /**
@@ -1508,4 +1573,37 @@ export function providerCredentialLabel(
   meta: Pick<ProviderKindMeta, 'value' | 'credentialLabel'>,
 ): string {
   return translateOr(translate, `credentialLabel.${String(meta.value)}`, meta.credentialLabel);
+}
+
+/**
+ * Operator-facing name of a provider configuration.
+ *
+ * A built-in row that still carries the name the bootstrap wrote is shown in
+ * the reader's language (`builtInProviderName.<kind>`), so a Chinese console
+ * does not greet its operator with a wall of `Built-in …` rows. Both halves of
+ * the test are required and neither is decoration:
+ *
+ * * the id prefix says the row came from the bootstrap, so a hand-made
+ *   configuration that happens to be named like a built-in one is left alone;
+ * * the name equality says nobody has renamed it, so an operator's own name —
+ *   their data, in whatever language they chose — is never replaced by a
+ *   translated default they did not pick.
+ *
+ * A miss in both catalogs keeps the stored name, which is what a provider
+ * whose kind the console does not catalogue yet must show.
+ */
+export function providerDisplayName(
+  translate: ProviderMetaTranslate,
+  provider: Pick<StorageProviderView, 'id' | 'providerKind' | 'displayName'>,
+): string {
+  const kind = String(getProviderKindMeta(provider.providerKind).value);
+  const builtInName = BUILTIN_PROVIDER_DISPLAY_NAMES[kind];
+  if (
+    !builtInName
+    || provider.displayName !== builtInName
+    || !provider.id.startsWith(BUILTIN_PROVIDER_ID_PREFIX)
+  ) {
+    return provider.displayName;
+  }
+  return translateOr(translate, `builtInProviderName.${kind}`, provider.displayName);
 }

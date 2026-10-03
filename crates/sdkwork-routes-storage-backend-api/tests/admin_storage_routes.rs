@@ -138,8 +138,45 @@ async fn mock_s3_endpoint(
         )
             .into_response();
     }
-    if method == Method::GET && query.contains("list-type=2") {
+    // 分片上传：厂商用查询参数区分四个动作，响应体是 XML（SDK 按 XML 解析上传 id 与 ETag）。
+    if method == Method::POST && query.contains("uploads") {
         return (
+            StatusCode::OK,
+            [("content-type", "application/xml")],
+            format!(
+                r#"<?xml version="1.0" encoding="UTF-8"?>
+<InitiateMultipartUploadResult>
+  <Bucket>bucket-admin</Bucket>
+  <Key>{}</Key>
+  <UploadId>upload-mock-1</UploadId>
+</InitiateMultipartUploadResult>"#,
+                uri.path().trim_start_matches('/')
+            ),
+        )
+            .into_response();
+    }
+    if method == Method::POST && query.contains("uploadId=") {
+        return (
+            StatusCode::OK,
+            [("content-type", "application/xml")],
+            format!(
+                r#"<?xml version="1.0" encoding="UTF-8"?>
+<CompleteMultipartUploadResult>
+  <Location>http://127.0.0.1/bucket-admin/{}</Location>
+  <Bucket>bucket-admin</Bucket>
+  <Key>{}</Key>
+  <ETag>"etag-completed"</ETag>
+</CompleteMultipartUploadResult>"#,
+                uri.path().trim_start_matches('/'),
+                uri.path().trim_start_matches('/')
+            ),
+        )
+            .into_response();
+    }
+    if method == Method::DELETE && query.contains("uploadId=") {
+        return StatusCode::NO_CONTENT.into_response();
+    }
+    if method == Method::GET && query.contains("list-type=2") {        return (
             StatusCode::OK,
             [("content-type", "application/xml")],
             r#"<?xml version="1.0" encoding="UTF-8"?>
@@ -1215,6 +1252,214 @@ async fn admin_storage_bucket_and_object_routes_use_configured_s3_store() {
 }
 
 #[tokio::test]
+async fn admin_storage_object_routes_honor_the_bucket_override() {
+    let (s3_endpoint, captured_requests) = start_s3_mock_server().await;
+    let Some((pool, _database_guard)) = sdkwork_drive_test_support::postgres_test_database().await
+    else {
+        return;
+    };
+
+    // 配置桶是 bucket-admin；管理端浏览的是账号下另一个真实存在的桶。
+    sqlx::query(
+        "INSERT INTO dr_drive_storage_provider (
+            id, tenant_id, provider_kind, name, endpoint_url, region, bucket, path_style,
+            strict_tls, credential_ref, server_side_encryption_mode, default_storage_class,
+            status, version, created_by, updated_by
+        ) VALUES ('provider-bucket-override', 'tenant-storage', 's3_compatible', 'Override S3', $1, 'us-east-1', 'bucket-admin', true, false, 'plain:test-access-key:test-secret-key', 'AES256', 'STANDARD', 'active', 1, 'admin-storage', 'admin-storage')",
+    )
+    .bind(&s3_endpoint)
+    .execute(&pool)
+    .await
+    .expect("storage provider should be seeded");
+
+    let app = build_router_with_pool_without_iam(pool);
+    let override_bucket = "image2-1253947560";
+
+    let list_response = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method(Method::GET)
+                .uri(format!(
+                    "/backend/v3/api/drive/storage/providers/provider-bucket-override/objects?bucket={override_bucket}&prefix=objects/&page_size=100"
+                ))
+                .body(Body::empty())
+                .expect("object list request should be built"),
+        )
+        .await
+        .expect("object list request should be handled");
+    assert_eq!(list_response.status(), StatusCode::OK);
+    let list_payload: serde_json::Value = serde_json::from_slice(
+        &to_bytes(list_response.into_body(), usize::MAX)
+            .await
+            .expect("object list response body should be read"),
+    )
+    .expect("object list response should be json");
+    assert_eq!(list_payload["data"]["items"][0]["objectKey"], "objects/file-a.bin");
+    assert_eq!(list_payload["data"]["items"][0]["bucket"], override_bucket);
+
+    let head_response = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method(Method::GET)
+                .uri(format!(
+                    "/backend/v3/api/drive/storage/providers/provider-bucket-override/objects/objects/file-a.bin?bucket={override_bucket}"
+                ))
+                .body(Body::empty())
+                .expect("object head request should be built"),
+        )
+        .await
+        .expect("object head request should be handled");
+    assert_eq!(head_response.status(), StatusCode::OK);
+
+    let write_response = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method(Method::PUT)
+                .uri(format!(
+                    "/backend/v3/api/drive/storage/providers/provider-bucket-override/object-contents/objects/notes.txt?bucket={override_bucket}"
+                ))
+                .header("content-type", "application/json")
+                .body(Body::from(r#"{"content":"hello world","contentType":"text/plain"}"#))
+                .expect("object content request should be built"),
+        )
+        .await
+        .expect("object content request should be handled");
+    assert_eq!(write_response.status(), StatusCode::OK);
+    let write_payload: serde_json::Value = serde_json::from_slice(
+        &to_bytes(write_response.into_body(), usize::MAX)
+            .await
+            .expect("object content response body should be read"),
+    )
+    .expect("object content response should be json");
+    assert_eq!(write_payload["data"]["item"]["bucket"], override_bucket);
+
+    let delete_response = app
+        .oneshot(
+            Request::builder()
+                .method(Method::DELETE)
+                .uri(format!(
+                    "/backend/v3/api/drive/storage/providers/provider-bucket-override/objects/objects/file-a.bin?bucket={override_bucket}"
+                ))
+                .body(Body::empty())
+                .expect("object delete request should be built"),
+        )
+        .await
+        .expect("object delete request should be handled");
+    assert_no_content_response(delete_response).await;
+
+    let requests = captured_requests
+        .lock()
+        .expect("captured s3 requests mutex should not be poisoned")
+        .clone();
+    assert!(
+        requests.iter().any(|request| request.method == "GET"
+            && request.path == format!("/{override_bucket}/")
+            && request.query.contains("list-type=2")),
+        "object list route should list the requested bucket: {requests:?}"
+    );
+    assert!(
+        requests.iter().any(|request| request.method == "HEAD"
+            && request.path == format!("/{override_bucket}/objects/file-a.bin")),
+        "object head route should head the requested bucket: {requests:?}"
+    );
+    assert!(
+        requests.iter().any(|request| request.method == "PUT"
+            && request.path == format!("/{override_bucket}/objects/notes.txt")),
+        "object content write should write into the requested bucket: {requests:?}"
+    );
+    assert!(
+        requests.iter().any(|request| request.method == "DELETE"
+            && request.path == format!("/{override_bucket}/objects/file-a.bin")),
+        "object delete route should delete in the requested bucket: {requests:?}"
+    );
+    // 覆盖的是桶，不是端点：配置桶本身一次都不该被碰到。
+    assert!(
+        !requests
+            .iter()
+            .any(|request| request.path.starts_with("/bucket-admin/")),
+        "configured bucket must stay untouched when a bucket override is given: {requests:?}"
+    );
+}
+
+#[tokio::test]
+async fn admin_storage_object_routes_reject_invalid_bucket_override_before_calling_s3() {
+    let (s3_endpoint, captured_requests) = start_s3_mock_server().await;
+    let Some((pool, _database_guard)) = sdkwork_drive_test_support::postgres_test_database().await
+    else {
+        return;
+    };
+
+    sqlx::query(
+        "INSERT INTO dr_drive_storage_provider (
+            id, tenant_id, provider_kind, name, endpoint_url, region, bucket, path_style,
+            strict_tls, credential_ref, server_side_encryption_mode, default_storage_class,
+            status, version, created_by, updated_by
+        ) VALUES ('provider-bucket-override-validation', 'tenant-storage', 's3_compatible', 'Override Validation S3', $1, 'us-east-1', 'bucket-admin', true, false, 'plain:test-access-key:test-secret-key', 'AES256', 'STANDARD', 'active', 1, 'admin-storage', 'admin-storage')",
+    )
+    .bind(&s3_endpoint)
+    .execute(&pool)
+    .await
+    .expect("storage provider should be seeded");
+
+    let app = build_router_with_pool_without_iam(pool);
+
+    let list_response = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method(Method::GET)
+                .uri("/backend/v3/api/drive/storage/providers/provider-bucket-override-validation/objects?bucket=Drive_Bucket")
+                .body(Body::empty())
+                .expect("object list request should be built"),
+        )
+        .await
+        .expect("object list request should be handled");
+    assert_eq!(list_response.status(), StatusCode::BAD_REQUEST);
+    let payload: serde_json::Value = serde_json::from_slice(
+        &to_bytes(list_response.into_body(), usize::MAX)
+            .await
+            .expect("error response body should be read"),
+    )
+    .expect("error response should be json");
+    assert!(
+        payload["detail"]
+            .as_str()
+            .is_some_and(|detail| detail.contains("bucket")),
+        "validation error should name the bucket parameter: {payload}"
+    );
+
+    let copy_response = app
+        .oneshot(
+            Request::builder()
+                .method(Method::POST)
+                .uri("/backend/v3/api/drive/storage/providers/provider-bucket-override-validation/objects/copy")
+                .header("content-type", "application/json")
+                .body(Body::from(
+                    r#"{
+                        "sourceObjectKey":"objects/file-a.bin",
+                        "destinationObjectKey":"objects/file-b.bin",
+                        "sourceBucket":"Drive_Bucket"
+                    }"#,
+                ))
+                .expect("object copy request should be built"),
+        )
+        .await
+        .expect("object copy request should be handled");
+    assert_eq!(copy_response.status(), StatusCode::BAD_REQUEST);
+
+    assert!(
+        captured_requests
+            .lock()
+            .expect("captured s3 requests mutex should not be poisoned")
+            .is_empty(),
+        "an invalid bucket override should fail before calling object storage"
+    );
+}
+
+#[tokio::test]
 async fn admin_storage_bucket_initialization_is_idempotent() {
     let (s3_endpoint, captured_requests) = start_s3_mock_server().await;
     let Some((pool, _database_guard)) = sdkwork_drive_test_support::postgres_test_database().await
@@ -1559,6 +1804,342 @@ async fn admin_storage_object_content_routes_write_then_read_through_configured_
                 && request.path == "/bucket-admin/objects/notes.txt"),
         "object content read route should call S3 GetObject"
     );
+}
+
+/// 上传大对象的请求体必须能进到业务校验。
+///
+/// 回归用例：路由最初没有声明请求体上限，用的是 axum 的默认 2 MB。业务上限是 8 MiB 对象、
+/// 以 base64 装在 JSON 里（网线体积约 11.2 MB），于是 1.4 MB 以上的文件在业务校验之前就被
+/// 拒掉，客户端只看到框架归一化后的 `Payload too large`——用户表现为"就是传不上去"。
+/// 这里用一个 4 MiB 对象（base64 约 5.6 MB，远高于 2 MB、低于 11.2 MB）锁住这个边界。
+#[tokio::test]
+async fn admin_storage_object_content_write_accepts_a_body_beyond_the_default_axum_limit() {
+    let (s3_endpoint, captured_requests) = start_s3_mock_server().await;
+    let Some((pool, _database_guard)) = sdkwork_drive_test_support::postgres_test_database().await
+    else {
+        return;
+    };
+
+    sqlx::query(
+        "INSERT INTO dr_drive_storage_provider (
+            id, tenant_id, provider_kind, name, endpoint_url, region, bucket, path_style,
+            strict_tls, credential_ref, server_side_encryption_mode, default_storage_class,
+            status, version, created_by, updated_by
+        ) VALUES ('provider-content-large-body', 'tenant-storage', 's3_compatible', 'Content Large Body S3', $1, 'us-east-1', 'bucket-admin', true, false, 'plain:test-access-key:test-secret-key', 'AES256', 'STANDARD', 'active', 1, 'admin-storage', 'admin-storage')",
+    )
+    .bind(&s3_endpoint)
+    .execute(&pool)
+    .await
+    .expect("storage provider should be seeded");
+
+    let app = build_router_with_pool_without_iam(pool);
+
+    let plaintext = vec![b'x'; 4 * 1024 * 1024];
+    let body = serde_json::json!({
+        "content": sdkwork_utils_rust::base64_encode(&plaintext),
+        "encoding": "base64",
+        "contentType": "application/octet-stream",
+    })
+    .to_string();
+
+    let response = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method(Method::PUT)
+                .uri("/backend/v3/api/drive/storage/providers/provider-content-large-body/object-contents/objects/large.bin")
+                .header("content-type", "application/json")
+                .body(Body::from(body))
+                .expect("large object content write request should be built"),
+        )
+        .await
+        .expect("large object content write request should be handled");
+
+    let status = response.status();
+    let payload = to_bytes(response.into_body(), usize::MAX)
+        .await
+        .expect("large object content response body should be readable");
+    assert_eq!(
+        status,
+        StatusCode::OK,
+        "a 4 MiB object (≈5.6 MB base64) must reach the handler instead of being rejected by the request body limit: {}",
+        String::from_utf8_lossy(&payload)
+    );
+    assert!(
+        captured_requests
+            .lock()
+            .expect("captured s3 requests mutex should not be poisoned")
+            .iter()
+            .any(|request| request.method == "PUT"
+                && request.path == "/bucket-admin/objects/large.bin"),
+        "the large body should reach S3 PutObject"
+    );
+}
+
+/// 预签名分片上传：开启 → 签发分片授权 → 完成 → 中止。
+///
+/// 这是 >8 MiB 对象的唯一通道（单次内容接口上限 8 MiB，且 base64 会把请求体放大 1.37 倍）。
+/// 断言的重点不是"接口返回 200"，而是：
+/// - 签发的是**厂商**地址（字节不经过本服务）；
+/// - 授权里带回客户端必须原样发送的签名头；
+/// - int64 字段是字符串（生成的 SDK 按字符串解析）；
+/// - 四个动作分别落到厂商的 create / complete / abort 调用上。
+#[tokio::test]
+async fn admin_storage_multipart_upload_routes_open_presign_complete_and_abort() {
+    let (s3_endpoint, captured_requests) = start_s3_mock_server().await;
+    let Some((pool, _database_guard)) = sdkwork_drive_test_support::postgres_test_database().await
+    else {
+        return;
+    };
+
+    sqlx::query(
+        "INSERT INTO dr_drive_storage_provider (
+            id, tenant_id, provider_kind, name, endpoint_url, region, bucket, path_style,
+            strict_tls, credential_ref, server_side_encryption_mode, default_storage_class,
+            status, version, created_by, updated_by
+        ) VALUES ('provider-multipart', 'tenant-storage', 's3_compatible', 'Multipart S3', $1, 'us-east-1', 'bucket-admin', true, false, 'plain:test-access-key:test-secret-key', 'AES256', 'STANDARD', 'active', 1, 'admin-storage', 'admin-storage')",
+    )
+    .bind(&s3_endpoint)
+    .execute(&pool)
+    .await
+    .expect("storage provider should be seeded");
+
+    let app = build_router_with_pool_without_iam(pool);
+    let base = "/backend/v3/api/drive/storage/providers/provider-multipart/objects/multipart-uploads";
+
+    let create = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method(Method::POST)
+                .uri(base)
+                .header("content-type", "application/json")
+                .body(Body::from(
+                    r#"{"objectKey":"objects/large.bin","contentType":"application/octet-stream"}"#,
+                ))
+                .expect("create request should be built"),
+        )
+        .await
+        .expect("create request should be handled");
+    assert_eq!(create.status(), StatusCode::OK);
+    let create_payload: serde_json::Value = serde_json::from_slice(
+        &to_bytes(create.into_body(), usize::MAX)
+            .await
+            .expect("create body should be readable"),
+    )
+    .expect("create response should be json");
+    assert_eq!(create_payload["data"]["item"]["uploadId"], "upload-mock-1");
+    assert_eq!(create_payload["data"]["item"]["bucket"], "bucket-admin");
+
+    let presign = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method(Method::POST)
+                .uri(format!("{base}/parts"))
+                .header("content-type", "application/json")
+                .body(Body::from(
+                    r#"{"objectKey":"objects/large.bin","uploadId":"upload-mock-1","partNumbers":[1,2]}"#,
+                ))
+                .expect("presign request should be built"),
+        )
+        .await
+        .expect("presign request should be handled");
+    assert_eq!(presign.status(), StatusCode::OK);
+    let presign_payload: serde_json::Value = serde_json::from_slice(
+        &to_bytes(presign.into_body(), usize::MAX)
+            .await
+            .expect("presign body should be readable"),
+    )
+    .expect("presign response should be json");
+    let parts = presign_payload["data"]["item"]["parts"]
+        .as_array()
+        .expect("presign response should carry a parts array");
+    assert_eq!(parts.len(), 2, "one grant per requested part");
+    for (index, part) in parts.iter().enumerate() {
+        assert_eq!(part["partNumber"], index + 1);
+        assert_eq!(part["method"], "PUT");
+        assert!(
+            part["url"]
+                .as_str()
+                .is_some_and(|url| url.contains("partNumber=") && url.contains("uploadId=")),
+            "the grant must point at the vendor with the part query: {part}"
+        );
+        assert!(
+            part["expiresAtEpochMs"].is_string(),
+            "int64 wire fields must be strings: {part}"
+        );
+    }
+    // 签发不产生厂商调用：URL 是本地签名算出来的。
+    assert!(
+        !captured_requests
+            .lock()
+            .expect("captured s3 requests mutex should not be poisoned")
+            .iter()
+            .any(|request| request.path.contains("partNumber=")),
+        "presigning must not call the vendor"
+    );
+
+    let complete = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method(Method::POST)
+                .uri(format!("{base}/complete"))
+                .header("content-type", "application/json")
+                .body(Body::from(
+                    r#"{"objectKey":"objects/large.bin","uploadId":"upload-mock-1","parts":[{"partNumber":1,"etag":"etag-1"},{"partNumber":2,"etag":"etag-2"}]}"#,
+                ))
+                .expect("complete request should be built"),
+        )
+        .await
+        .expect("complete request should be handled");
+    assert_eq!(complete.status(), StatusCode::OK);
+    let complete_payload: serde_json::Value = serde_json::from_slice(
+        &to_bytes(complete.into_body(), usize::MAX)
+            .await
+            .expect("complete body should be readable"),
+    )
+    .expect("complete response should be json");
+    assert_eq!(
+        complete_payload["data"]["item"]["objectKey"],
+        "objects/large.bin"
+    );
+
+    let abort = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method(Method::POST)
+                .uri(format!("{base}/abort"))
+                .header("content-type", "application/json")
+                .body(Body::from(
+                    r#"{"objectKey":"objects/large.bin","uploadId":"upload-mock-1"}"#,
+                ))
+                .expect("abort request should be built"),
+        )
+        .await
+        .expect("abort request should be handled");
+    assert_eq!(abort.status(), StatusCode::OK);
+
+    let requests = captured_requests
+        .lock()
+        .expect("captured s3 requests mutex should not be poisoned")
+        .clone();
+    assert!(
+        requests
+            .iter()
+            .any(|request| request.method == "POST" && request.query.contains("uploads")),
+        "create must call the vendor CreateMultipartUpload: {requests:?}"
+    );
+    assert!(
+        requests
+            .iter()
+            .any(|request| request.method == "POST" && request.query.contains("uploadId=")),
+        "complete must call the vendor CompleteMultipartUpload: {requests:?}"
+    );
+    assert!(
+        requests
+            .iter()
+            .any(|request| request.method == "DELETE" && request.query.contains("uploadId=")),
+        "abort must call the vendor AbortMultipartUpload: {requests:?}"
+    );
+}
+
+/// 分片参数在触达厂商之前就要被挡住：这些错误形态都会让厂商回一句没有上下文的 400。
+///
+/// 用惰性连接池跑：校验发生在任何数据访问之前，所以这条用例**不需要数据库**也能执行——
+/// 它同时证明了四个路由确实挂上了（没挂上会是 404/405，而不是 400）。
+#[tokio::test]
+async fn admin_storage_multipart_upload_routes_reject_malformed_part_lists() {
+    let app = build_router_with_pool_without_iam(sdkwork_drive_test_support::lazy_postgres_test_pool());
+    let base =
+        "/backend/v3/api/drive/storage/providers/provider-multipart-invalid/objects/multipart-uploads";
+
+    for (uri, body, expectation) in [
+        (
+            format!("{base}/parts"),
+            r#"{"objectKey":"objects/a.bin","uploadId":"upload-1","partNumbers":[]}"#,
+            "an empty part batch is rejected",
+        ),
+        (
+            format!("{base}/parts"),
+            r#"{"objectKey":"objects/a.bin","uploadId":"upload-1","partNumbers":[0]}"#,
+            "part number 0 is rejected",
+        ),
+        (
+            format!("{base}/parts"),
+            r#"{"objectKey":"objects/a.bin","uploadId":"upload-1","partNumbers":[1,1]}"#,
+            "a duplicated part number is rejected",
+        ),
+        (
+            format!("{base}/parts"),
+            r#"{"objectKey":"objects/a.bin","uploadId":"upload-1","partNumbers":[1],"expiresInSeconds":5}"#,
+            "a grant lifetime below the floor is rejected",
+        ),
+        (
+            format!("{base}/parts"),
+            r#"{"objectKey":"","uploadId":"upload-1","partNumbers":[1]}"#,
+            "an empty object key is rejected",
+        ),
+        (
+            format!("{base}/parts"),
+            r#"{"objectKey":"objects/a.bin","uploadId":"   ","partNumbers":[1]}"#,
+            "a blank upload id is rejected",
+        ),
+        (
+            format!("{base}/complete"),
+            r#"{"objectKey":"objects/a.bin","uploadId":"upload-1","parts":[{"partNumber":1,"etag":""}]}"#,
+            "a blank etag is rejected",
+        ),
+        (
+            format!("{base}/complete"),
+            r#"{"objectKey":"objects/a.bin","uploadId":"upload-1","parts":[{"partNumber":1,"etag":"a"},{"partNumber":3,"etag":"c"}]}"#,
+            "a gap in part numbers is rejected",
+        ),
+        (
+            format!("{base}/abort"),
+            r#"{"objectKey":"objects/a.bin","uploadId":""}"#,
+            "abort requires an upload id",
+        ),
+        (
+            base.to_string(),
+            r#"{"objectKey":""}"#,
+            "create requires an object key",
+        ),
+    ] {
+        let response = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method(Method::POST)
+                    .uri(uri)
+                    .header("content-type", "application/json")
+                    .body(Body::from(body))
+                    .expect("request should be built"),
+            )
+            .await
+            .expect("request should be handled");
+        assert_eq!(
+            response.status(),
+            StatusCode::BAD_REQUEST,
+            "{expectation}: got {}",
+            response.status()
+        );
+        // 错误信封必须带可定位的 detail，而不是空 body。
+        let payload: serde_json::Value = serde_json::from_slice(
+            &to_bytes(response.into_body(), usize::MAX)
+                .await
+                .expect("problem body should be readable"),
+        )
+        .expect("problem response should be json");
+        assert!(
+            payload["detail"]
+                .as_str()
+                .is_some_and(|detail| !detail.is_empty()),
+            "{expectation}: problem detail must explain the rejection: {payload}"
+        );
+    }
 }
 
 #[tokio::test]
@@ -3059,4 +3640,204 @@ async fn admin_storage_provider_routes_reject_cross_tenant_access() {
         .await
         .expect("owning get request should be handled");
     assert_eq!(get.status(), StatusCode::OK);
+}
+
+/// Read one account-list page as JSON.
+async fn list_provider_accounts_payload(app: Router, uri: &str) -> serde_json::Value {
+    let response = app
+        .oneshot(
+            Request::builder()
+                .method(Method::GET)
+                .uri(uri)
+                .body(Body::empty())
+                .expect("list provider accounts request should be built"),
+        )
+        .await
+        .expect("list provider accounts request should be handled");
+    assert_eq!(response.status(), StatusCode::OK);
+    serde_json::from_slice(
+        &to_bytes(response.into_body(), usize::MAX)
+            .await
+            .expect("list provider accounts response body should be read"),
+    )
+    .expect("list provider accounts response should be json")
+}
+
+/// `(id, vendorCode)` of one account-list page, in response order.
+fn provider_account_rows(payload: &serde_json::Value) -> Vec<(String, String)> {
+    payload["data"]["items"]
+        .as_array()
+        .expect("account list items should be an array")
+        .iter()
+        .map(|item| {
+            (
+                item["id"].as_str().expect("account id should be a string").to_string(),
+                item["vendorCode"]
+                    .as_str()
+                    .expect("account vendorCode should be a string")
+                    .to_string(),
+            )
+        })
+        .collect()
+}
+
+/// A vendor code no earlier run can have used.
+///
+/// The account center is IAM-owned and the Drive fixture only truncates `dr_`
+/// tables, so a fixed code would inherit rows from a previous run and make the
+/// page boundaries below describe somebody else's accounts.
+fn unique_vendor_code() -> String {
+    let nanos = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .expect("the system clock should be after the unix epoch")
+        .as_nanos();
+    format!("it{:x}", nanos & 0xffff_ffff_ffff)
+}
+
+/// Seed one account-center row.
+///
+/// The rows are written directly rather than through
+/// `POST /storage/provider-accounts`: what this test pins down is the *list*
+/// window and its continuation, and the create route adds nothing to that
+/// question beyond a credential seal that needs a deployment master secret.
+/// The account center is IAM-owned, so its table is addressed by name here.
+async fn seed_provider_account(
+    pool: &sqlx::PgPool,
+    account_id: &str,
+    tenant_id: &str,
+    scope_type: &str,
+    vendor_code: &str,
+    account_code: &str,
+) {
+    sqlx::query(
+        "INSERT INTO iam_provider_account (
+            id, uuid, tenant_id, organization_id, scope_type, owner_user_id, vendor_code,
+            account_code, display_name, account_type, environment, capability_codes, status,
+            version, created_by, updated_by
+         ) VALUES ($1, $2, $3, '0', $4, NULL, $5, $6, $6, 'long_term_key', 'production', \
+            '[\"object_storage\"]', 'active', 1, 'test', 'test')",
+    )
+    .bind(account_id)
+    .bind(account_id)
+    .bind(tenant_id)
+    .bind(scope_type)
+    .bind(vendor_code)
+    .bind(account_code)
+    .execute(pool)
+    .await
+    .expect("seed an account-center provider account");
+}
+
+/// The account list has to report a continuation the console can follow.
+///
+/// The defect this pins down: `list_accounts` applies `LIMIT` itself, so a
+/// handler that asks it for exactly `page_size` rows can never prove another
+/// page exists — `pageInfo.hasMore` was `false` and no `nextCursor` was ever
+/// issued for *any* window. The console reads one page, so every account that
+/// sorted past it was unreachable: an operator registered a new account, the
+/// account center stored it, and the picker still answered "no account for this
+/// vendor" and invited registering it again.
+#[tokio::test]
+async fn admin_storage_provider_account_list_reports_a_real_continuation() {
+    let Some((pool, _database_guard)) = sdkwork_drive_test_support::postgres_test_database().await
+    else {
+        return;
+    };
+
+    // Platform scope: the storage console registers platform-wide accounts,
+    // which is also the slice its credential picker lists.
+    let app = build_router_with_pool_without_iam_and_test_tenant(pool.clone(), "100001");
+    let vendor_code = unique_vendor_code();
+    let account_ids = ["one", "two", "three"].map(|suffix| format!("iampacct-{vendor_code}-{suffix}"));
+    for account_id in &account_ids {
+        seed_provider_account(
+            &pool,
+            account_id,
+            "100001",
+            "platform",
+            &vendor_code,
+            &format!("{vendor_code}-{account_id}"),
+        )
+        .await;
+    }
+
+    let first_page = list_provider_accounts_payload(
+        app.clone(),
+        &format!(
+            "/backend/v3/api/drive/storage/provider-accounts?scopeType=platform&vendorCode={vendor_code}&page_size=2"
+        ),
+    )
+    .await;
+    let first_rows = provider_account_rows(&first_page);
+    assert_eq!(
+        first_rows.len(),
+        2,
+        "a two-row window must return two rows: {first_page}"
+    );
+    // Every row belongs to the filtered vendor: the window is selected from that
+    // vendor's accounts, not filtered after the fact from a mixed page.
+    assert!(
+        first_rows.iter().all(|(_, vendor)| vendor == &vendor_code),
+        "the vendor filter must select the window, got {first_page}"
+    );
+    assert_eq!(
+        first_page["data"]["pageInfo"]["hasMore"], true,
+        "a third matching row exists, so the page must report more: {first_page}"
+    );
+    let next_cursor = first_page["data"]["pageInfo"]["nextCursor"]
+        .as_str()
+        .expect("a page with more rows must carry an opaque cursor")
+        .to_string();
+
+    let second_page = list_provider_accounts_payload(
+        app.clone(),
+        &format!(
+            "/backend/v3/api/drive/storage/provider-accounts?scopeType=platform&vendorCode={vendor_code}&page_size=2&cursor={next_cursor}"
+        ),
+    )
+    .await;
+    let second_rows = provider_account_rows(&second_page);
+    assert_eq!(
+        second_rows.len(),
+        1,
+        "the cursor must land on the remaining row: {second_page}"
+    );
+    assert!(
+        second_rows.iter().all(|(_, vendor)| vendor == &vendor_code),
+        "the continuation must stay inside the same vendor window: {second_page}"
+    );
+    assert_eq!(
+        second_page["data"]["pageInfo"]["hasMore"], false,
+        "the last page must not claim a successor: {second_page}"
+    );
+
+    // The two pages partition the vendor's accounts: no row is skipped and no
+    // row is served twice, which is what makes "page forward to find it" a real
+    // answer for the operator.
+    let mut served = first_rows
+        .iter()
+        .chain(second_rows.iter())
+        .map(|(id, _)| id.clone())
+        .collect::<Vec<_>>();
+    served.sort();
+    let mut expected = account_ids.to_vec();
+    expected.sort();
+    assert_eq!(served, expected, "pages must partition the account set");
+
+    // Finally the console's own request — the one the credential picker issues —
+    // finds the account that was registered last, on its first page.
+    let console_page = list_provider_accounts_payload(
+        app,
+        &format!(
+            "/backend/v3/api/drive/storage/provider-accounts?status=active&scopeType=platform&vendorCode={vendor_code}&page_size=20"
+        ),
+    )
+    .await;
+    let console_rows = provider_account_rows(&console_page);
+    assert!(
+        console_rows
+            .iter()
+            .any(|(id, _)| id == account_ids.last().expect("three accounts were seeded")),
+        "the console's vendor-scoped page must carry the newest account: {console_page}"
+    );
 }

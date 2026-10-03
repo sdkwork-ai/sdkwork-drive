@@ -201,7 +201,20 @@ export interface SetDefaultStorageProviderBindingInput {
 export interface StorageProviderBucketListItemView {
   bucket: string;
   configured: boolean;
-  creationDate?: string;
+  /**
+   * 桶的创建时间，ISO 8601（服务端下发 epoch 毫秒）。
+   *
+   * 服务层不做本地化：同一份数据要在多种语言的控制台里显示，格式化必须发生在知道宿主
+   * 语言的那一层（`formatDriveDate`），否则英文界面会混进浏览器区域的日期格式。
+   */
+  creationDateIso?: string;
+  /**
+   * 厂商为该桶报告的地域。
+   *
+   * 桶清单是账号级读取、跨地域，所以地域属于这一行而不是服务商配置：它既是要显示的
+   * "所属地域"，也是后续读写这个桶时该用哪个端点的依据。厂商不报告时为空。
+   */
+  region?: string;
 }
 
 export interface StorageProviderObjectView {
@@ -209,11 +222,21 @@ export interface StorageProviderObjectView {
   sizeBytes: number;
   contentType?: string;
   etag?: string;
-  lastModified?: string;
+  /** 最后修改时间，ISO 8601；格式化同样留给知道宿主语言的显示层。 */
+  lastModifiedIso?: string;
   isFolder: boolean;
 }
 
 export interface ListStorageProviderObjectsInput {
+  /**
+   * 目标存储桶覆盖；缺省读取服务商配置里设定的存储桶。
+   *
+   * 管理端的桶浏览器列的是厂商账号下的全部桶，点开任意一个都要能读它的对象，
+   * 所以桶随请求走，而凭证仍然来自该服务商配置。
+   */
+  bucket?: string;
+  /** 该存储桶所在地域，语义与 {@link StorageProviderObjectScopeOptions.region} 相同。 */
+  region?: string;
   prefix?: string;
   pageToken?: string;
   pageSize?: number;
@@ -244,9 +267,78 @@ export interface WriteStorageProviderObjectContentInput {
   contentType?: string;
 }
 
-export interface CopyStorageProviderObjectInput {
-  sourceObjectKey: string;
+/** 开启分片上传的输入：对象 key 与（可选的）内容类型。 */
+export interface CreateStorageProviderMultipartUploadInput {
+  objectKey: string;
+  contentType?: string;
+  checksumSha256Hex?: string;
+}
+
+export interface StorageProviderMultipartUploadView {
+  providerId: string;
+  bucket: string;
+  objectKey: string;
+  /** 厂商的不透明 uploadId：本服务只回传，不解析。 */
+  uploadId: string;
+}
+
+export interface PresignStorageProviderUploadPartsInput {
+  objectKey: string;
+  uploadId: string;
+  /** 本次要签发的分片号（1 起，最大 10000）；一批最多 100 个。 */
+  partNumbers: number[];
+  expiresInSeconds?: number;
+}
+
+export interface StorageProviderUploadPartGrantView {
+  partNumber: number;
+  /** 对 `url` 使用的方法（厂商返回 PUT）。 */
+  method: string;
+  /** 厂商的预签名地址：字节直传这里，不经过管理端 API。 */
+  url: string;
+  /**
+   * 签名的一部分：必须原样随上传发送。
+   *
+   * 内容类型、服务端加密相关的头都在里面，少一个或改一个都会被厂商拒绝（403）。
+   */
+  headers: Record<string, string>;
+  /** 授权到期时间（epoch 毫秒）；缺省表示厂商未返回，界面不必展示。 */
+  expiresAtEpochMs?: number;
+}
+
+export interface StorageProviderUploadPartGrantsView {
+  providerId: string;
+  bucket: string;
+  objectKey: string;
+  uploadId: string;
+  parts: StorageProviderUploadPartGrantView[];
+}
+
+/** 完成分片上传：提交厂商返回的 (分片号, ETag) 列表。 */
+export interface CompleteStorageProviderMultipartUploadInput {
+  objectKey: string;
+  uploadId: string;
+  parts: { partNumber: number; etag: string }[];
+}
+
+export interface AbortStorageProviderMultipartUploadInput {
+  objectKey: string;
+  uploadId: string;
+}
+
+export interface CopyStorageProviderObjectInput {  sourceObjectKey: string;
   destinationObjectKey: string;
+  /** 源桶覆盖；缺省为服务商配置里设定的存储桶。 */
+  sourceBucket?: string;
+  /** 目标桶覆盖；缺省为源桶，再缺省为服务商配置里设定的存储桶。 */
+  destinationBucket?: string;
+  /**
+   * 这些桶所在地域（桶清单里那一行的 `region`）。
+   *
+   * 服务端复制是在目标端点发起的，所以它决定本次请求落到哪个地域的端点；桶内改名/移动
+   * 与同地域跨桶复制都由它覆盖。
+   */
+  region?: string;
 }
 
 export interface StorageProviderObjectMutationResult {
@@ -258,6 +350,23 @@ export interface StorageProviderObjectMutationResult {
 
 export interface StorageProviderMutationOptions {
   signal?: AbortSignal;
+}
+
+/**
+ * 单对象操作的请求选项。
+ *
+ * 桶随请求走（`bucket`），凭证与端点仍来自服务商配置：管理端的桶浏览器管理的是
+ * 厂商账号下真实存在的桶，而不是配置里写的那一个。
+ */
+export interface StorageProviderObjectScopeOptions extends StorageProviderMutationOptions {
+  bucket?: string;
+  /**
+   * 被访问存储桶所在地域，取自桶清单里那一行的 `region`。
+   *
+   * 桶清单跨地域，点开的桶未必在服务商配置写的地域里；带上它，服务端才会按厂商自己的
+   * 端点规范落到这个桶所在地域（服务端推不出该厂商规范时仍用配置端点）。
+   */
+  region?: string;
 }
 
 /**
@@ -366,7 +475,26 @@ export interface ListStorageProviderAccountsInput {
   mine?: boolean;
   /** Whether platform-wide accounts are included. Defaults to true. */
   includePlatform?: boolean;
+  /** Rows per page; the account center defaults to 20 and caps at 200. */
+  pageSize?: number;
+  /** Opaque continuation from the previous page's `nextPageToken`. */
+  pageToken?: string;
   signal?: AbortSignal;
+}
+
+/**
+ * One page of account-center accounts plus the continuation to read the rest.
+ *
+ * The account list is a paginated endpoint (`PAGINATION_SPEC.md` §8): a view
+ * that keeps only `items` cannot tell a vendor whose accounts start on a later
+ * page from a vendor that has none, so every consumer of the list has to carry
+ * the cursor. `hasMore` is the server's answer, never inferred from a short
+ * page — a short page is also what a fully-read last page looks like.
+ */
+export interface ListStorageProviderAccountsPageResult {
+  items: StorageProviderAccountView[];
+  nextPageToken?: string;
+  hasMore: boolean;
 }
 
 /** Registers a reusable account together with its access key pair. */

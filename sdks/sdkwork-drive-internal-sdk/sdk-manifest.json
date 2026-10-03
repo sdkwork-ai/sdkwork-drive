@@ -82,6 +82,17 @@
       "name": "github.com/sdkwork/sdkwork-drive-internal-sdk-generated",
       "version": "0.1.0",
       "description": "Generator-owned Go transport SDK for sdkwork-drive-internal-sdk."
+    },
+    {
+      "language": "flutter",
+      "workspace": "sdkwork-drive-internal-sdk-flutter",
+      "generationState": "declared",
+      "releaseState": "not_published",
+      "generatedPath": "sdkwork-drive-internal-sdk-flutter/generated/server-openapi",
+      "manifestPath": "sdkwork-drive-internal-sdk-flutter/generated/server-openapi/pubspec.yaml",
+      "name": "sdkwork-drive-internal-sdk-generated",
+      "version": "0.1.0",
+      "description": "Generator-owned Flutter/Dart transport SDK for sdkwork-drive-internal-sdk."
     }
   ],
   "generatedPackages": {
@@ -109,6 +120,11 @@
       "language": "go",
       "packageName": "sdkwork-drive-internal-sdk-generated-go",
       "generatedOutput": "sdkwork-drive-internal-sdk-go/generated/server-openapi"
+    },
+    "flutter": {
+      "language": "flutter",
+      "packageName": "sdkwork-drive-internal-sdk-generated-flutter",
+      "generatedOutput": "sdkwork-drive-internal-sdk-flutter/generated/server-openapi"
     }
   },
   "ownerOnlyOperationCount": 7,

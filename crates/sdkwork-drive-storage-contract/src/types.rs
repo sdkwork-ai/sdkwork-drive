@@ -476,6 +476,13 @@ pub struct ListBucketsRequest;
 pub struct ListedBucket {
     pub bucket: String,
     pub creation_date_epoch_ms: Option<i64>,
+    /// Region the vendor reports for this bucket, when it reports one.
+    ///
+    /// The bucket inventory is an account-level read that spans regions, so the
+    /// region is a property of the *row*, not of the provider configuration: it
+    /// is what tells an operator where a bucket lives and what lets a later
+    /// object operation address that bucket's own regional endpoint.
+    pub region: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -778,6 +785,58 @@ pub fn validate_s3_bucket_name(raw: &str, field_name: &str) -> Result<(), DriveO
         return Err(DriveObjectStoreError::new(
             DriveObjectStoreErrorKind::InvalidRequest,
             format!("{field_name} uses a reserved S3 bucket name affix"),
+        ));
+    }
+    Ok(())
+}
+
+pub const S3_REGION_TOKEN_PATTERN: &str = "^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?$";
+
+pub const S3_REGION_TOKEN_DESCRIPTION: &str =
+    "Vendor region code as the provider publishes it (for example `ap-guangzhou`, `cn-hangzhou`, `us-east-1`). Letters, digits, and single hyphens; 1-63 characters; must start and end with a letter or digit.";
+
+/// Validate a vendor region code before it is allowed to take part in endpoint
+/// derivation.
+///
+/// The code reaches the endpoint host, so it is validated exactly like a bucket
+/// name is: letters, digits, and inner hyphens only. Anything else — a dot, a
+/// slash, a colon, an empty string — is rejected rather than substituted, which
+/// keeps a caller from steering a request at a host of its own choosing.
+pub fn validate_s3_region_token(raw: &str, field_name: &str) -> Result<(), DriveObjectStoreError> {
+    let region = raw.trim();
+    if raw != region {
+        return Err(DriveObjectStoreError::new(
+            DriveObjectStoreErrorKind::InvalidRequest,
+            format!("{field_name} must be trimmed"),
+        ));
+    }
+    if region.is_empty() || region.len() > 63 {
+        return Err(DriveObjectStoreError::new(
+            DriveObjectStoreErrorKind::InvalidRequest,
+            format!("{field_name} must be between 1 and 63 characters"),
+        ));
+    }
+    let mut bytes = region.bytes();
+    let starts_with_alnum = bytes
+        .next()
+        .is_some_and(|byte| byte.is_ascii_alphanumeric());
+    let ends_with_alnum = region
+        .bytes()
+        .last()
+        .is_some_and(|byte| byte.is_ascii_alphanumeric());
+    if !starts_with_alnum || !ends_with_alnum {
+        return Err(DriveObjectStoreError::new(
+            DriveObjectStoreErrorKind::InvalidRequest,
+            format!("{field_name} must start and end with a letter or digit"),
+        ));
+    }
+    if !region
+        .bytes()
+        .all(|byte| byte.is_ascii_alphanumeric() || byte == b'-')
+    {
+        return Err(DriveObjectStoreError::new(
+            DriveObjectStoreErrorKind::InvalidRequest,
+            format!("{field_name} may only contain letters, digits, or hyphen"),
         ));
     }
     Ok(())

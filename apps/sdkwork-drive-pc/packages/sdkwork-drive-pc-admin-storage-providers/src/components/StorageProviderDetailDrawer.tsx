@@ -5,7 +5,13 @@ import type { DriveAdminStorageSdkClient } from 'sdkwork-drive-pc-admin-core';
 import type { StorageProviderAdminService } from '../services/storageProviderAdminService';
 import type { StorageProviderBindingView, StorageProviderBucketListItemView, StorageProviderBucketView, StorageProviderCapabilitiesView, StorageProviderView } from '../types/storageProviderAdminTypes';
 import { formatDriveBytes } from 'sdkwork-drive-pc-commons';
-import { getProviderKindMeta, HEALTH_STATUS_CONFIG, providerKindLabel } from '../utils/providerKindConfig';
+import {
+  getProviderKindMeta,
+  HEALTH_STATUS_CONFIG,
+  providerDisplayName,
+  providerKindLabel,
+} from '../utils/providerKindConfig';
+import { formatDriveDate, formatDriveDateTime } from '../utils/formatDriveTimestamp';
 import { formatMutationError } from '../utils/mutationError';
 import { SECONDARY_BUTTON_CLASS, PRIMARY_BUTTON_CLASS, BADGE_BASE_CLASS } from '../utils/uiPrimitives';
 import { useTranslation } from '../hooks/useTranslation';
@@ -26,7 +32,7 @@ interface Props {
 }
 
 export function StorageProviderDetailDrawer({ provider, providers, providerOptionsHasMore, onLoadMoreProviderOptions, adminStorageSdkClient, service, pending, onClose, onTestProvider, onActivateProvider, onDeactivateProvider, onSetDefaultBinding, onDeleteDefaultBinding }: Props) {
-  const { t } = useTranslation();
+  const { t, language } = useTranslation();
   const [tab, setTab] = useState<DrawerTab>('overview');
   const meta = getProviderKindMeta(provider.providerKind);
   const health = HEALTH_STATUS_CONFIG[provider.healthStatus ?? 'unknown'];
@@ -40,7 +46,7 @@ export function StorageProviderDetailDrawer({ provider, providers, providerOptio
   const [error, setError] = useState<string | null>(null);
   const [bucketExists, setBucketExists] = useState<boolean | null>(null);
   const [buckets, setBuckets] = useState<StorageProviderBucketListItemView[]>([]);
-  const [objects, setObjects] = useState<Array<{ key: string; sizeBytes: number; lastModified?: string; isFolder: boolean }>>([]);
+  const [objects, setObjects] = useState<Array<{ key: string; sizeBytes: number; lastModifiedIso?: string; isFolder: boolean }>>([]);
   const [currentPrefix, setCurrentPrefix] = useState('');
   const [pageToken, setPageToken] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(false);
@@ -144,7 +150,7 @@ export function StorageProviderDetailDrawer({ provider, providers, providerOptio
         open
         size="lg"
         slotProps={{ body: { className: 'p-0 xl:p-0' } }}
-        title={provider.displayName}
+        title={providerDisplayName(t, provider)}
       >
 
         <div className="sticky top-0 z-10 flex border-b border-neutral-200 bg-white px-5 dark:border-neutral-800 dark:bg-neutral-900" role="tablist">
@@ -219,7 +225,7 @@ export function StorageProviderDetailDrawer({ provider, providers, providerOptio
                 <p className="mt-0.5 text-[11px] text-neutral-500">{t('bindingDesc')}</p>
                 <div className="mt-2 text-xs text-neutral-600 dark:text-neutral-300">{t('currentBinding')} {binding?.providerId ? `${binding.providerId}${binding.spaceId ? ` → ${binding.spaceId}` : ` (${t('tenantDefault')})`}` : t('notConfigured')}</div>
                 <div className="mt-2 flex gap-2">
-                  <select value={bindingProviderId} onChange={(e) => setBindingProviderId(e.target.value)} className="h-8 rounded-md border border-neutral-300 px-2 text-xs dark:border-neutral-600 dark:bg-neutral-800"><option value="">{t('selectProvider')}</option>{providers.filter((p) => p.status === 'active').map((p) => <option key={p.id} value={p.id}>{p.displayName}</option>)}</select>
+                  <select value={bindingProviderId} onChange={(e) => setBindingProviderId(e.target.value)} className="h-8 rounded-md border border-neutral-300 px-2 text-xs dark:border-neutral-600 dark:bg-neutral-800"><option value="">{t('selectProvider')}</option>{providers.filter((p) => p.status === 'active').map((p) => <option key={p.id} value={p.id}>{providerDisplayName(t, p)}</option>)}</select>
                   {providerOptionsHasMore && onLoadMoreProviderOptions && (
                     <button
                       type="button"
@@ -263,7 +269,7 @@ export function StorageProviderDetailDrawer({ provider, providers, providerOptio
                 <button onClick={() => setDeleteTarget({ kind: 'bucket' })} disabled={loading} className="rounded-md bg-red-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-red-700 disabled:opacity-50">{t('deleteBucket')}</button>
                 <button onClick={loadBuckets} disabled={loading} className={SECONDARY_BUTTON_CLASS}>{t('listAll')}</button>
               </div>
-              {buckets.length > 0 && <div className="rounded-md border dark:border-neutral-700">{buckets.map((b) => <div key={b.bucket} className={`flex items-center justify-between border-b px-3 py-2 text-xs dark:border-neutral-800 ${b.configured ? 'bg-blue-50 dark:bg-blue-950/20' : ''}`}><span>{b.bucket}{b.configured && <span className="ml-2 text-blue-600">({t('configured')})</span>}</span>{b.creationDate && <span className="text-neutral-400">{b.creationDate}</span>}</div>)}</div>}
+              {buckets.length > 0 && <div className="rounded-md border dark:border-neutral-700">{buckets.map((b) => <div key={b.bucket} className={`flex items-center justify-between border-b px-3 py-2 text-xs dark:border-neutral-800 ${b.configured ? 'bg-blue-50 dark:bg-blue-950/20' : ''}`}><span>{b.bucket}{b.configured && <span className="ml-2 text-blue-600">({t('configured')})</span>}</span>{b.creationDateIso && <span className="text-neutral-400">{formatDriveDate(b.creationDateIso, language)}</span>}</div>)}</div>}
             </div>
           )}
 
@@ -281,7 +287,7 @@ export function StorageProviderDetailDrawer({ provider, providers, providerOptio
                   <div key={obj.key} className="grid grid-cols-[1fr_80px_120px_60px] gap-2 border-t px-3 py-1.5 text-xs hover:bg-neutral-50 dark:border-neutral-800 dark:hover:bg-neutral-800">
                     <span className="truncate">{obj.isFolder ? <button onClick={() => loadObjects(obj.key)} className="inline-flex items-center gap-1 text-blue-600 hover:underline" type="button"><Folder aria-hidden="true" size={14} />{obj.key.split('/').filter(Boolean).pop()}/</button> : <span className="inline-flex items-center gap-1"><File aria-hidden="true" size={14} />{obj.key.split('/').pop()}</span>}</span>
                     <span className="text-right text-neutral-500">{obj.isFolder ? '-' : formatDriveBytes(obj.sizeBytes)}</span>
-                    <span className="text-right text-neutral-400">{obj.lastModified || '-'}</span>
+                    <span className="text-right text-neutral-400">{obj.lastModifiedIso ? formatDriveDateTime(obj.lastModifiedIso, language) : '-'}</span>
                     <span className="text-right">{!obj.isFolder && <button onClick={() => setDeleteTarget({ key: obj.key, kind: 'object' })} className="text-red-600 hover:text-red-800">{t('del')}</button>}</span>
                   </div>
                 ))}

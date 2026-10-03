@@ -33,7 +33,7 @@ pub(crate) async fn head_storage_provider_bucket(
 ) -> Result<StorageItemHttpResponse<ProviderBucketResponse>, (StatusCode, Json<ProblemDetail>)> {
     let tenant_id = ctx.resolve_tenant_id()?;
     let provider = get_active_provider(&state, &tenant_id, &provider_id).await?;
-    let object_store = build_object_store_for_provider(&state, &provider).await?;
+    let object_store = build_object_store_for_provider(&state, &provider, None).await?;
     let result = object_store
         .head_bucket(HeadBucketRequest {
             bucket: provider.bucket.clone(),
@@ -61,7 +61,7 @@ pub(crate) async fn list_storage_provider_buckets(
 
     let provider = get_active_provider(&state, &tenant_id, &provider_id).await?;
     let configured_bucket = provider.bucket.clone();
-    let object_store = build_object_store_for_provider(&state, &provider).await?;
+    let object_store = build_object_store_for_provider(&state, &provider, None).await?;
     let result = object_store
         .list_buckets(ListBucketsRequest)
         .await
@@ -83,6 +83,7 @@ pub(crate) async fn list_storage_provider_buckets(
             configured: item.bucket == configured_bucket,
             bucket: item.bucket,
             creation_date_epoch_ms: item.creation_date_epoch_ms,
+            region: item.region,
         })
         .collect();
     mapped_items.sort_by(|left, right| left.bucket.cmp(&right.bucket));
@@ -113,7 +114,7 @@ pub(crate) async fn create_storage_provider_bucket(
     let tenant_id = ctx.resolve_tenant_id()?;
 
     let provider = get_active_provider(&state, &tenant_id, &provider_id).await?;
-    let object_store = build_object_store_for_provider(&state, &provider).await?;
+    let object_store = build_object_store_for_provider(&state, &provider, None).await?;
     let result = object_store
         .create_bucket(CreateBucketRequest {
             bucket: provider.bucket.clone(),
@@ -146,7 +147,7 @@ pub(crate) async fn delete_storage_provider_bucket(
     let tenant_id = ctx.resolve_tenant_id()?;
 
     let provider = get_active_provider(&state, &tenant_id, &provider_id).await?;
-    let object_store = build_object_store_for_provider(&state, &provider).await?;
+    let object_store = build_object_store_for_provider(&state, &provider, None).await?;
     let result = object_store
         .delete_bucket(DeleteBucketRequest {
             bucket: provider.bucket.clone(),

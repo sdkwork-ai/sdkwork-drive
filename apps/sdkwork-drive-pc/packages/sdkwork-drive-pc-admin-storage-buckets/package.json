@@ -1,0 +1,31 @@
+{
+  "name": "sdkwork-drive-pc-admin-storage-buckets",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": {
+      "import": "./src/index.ts",
+      "types": "./src/index.ts"
+    }
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit --project ../../tsconfig.json"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "catalog:",
+    "@aws-sdk/s3-request-presigner": "catalog:",
+    "@sdkwork/ui-pc-react": "workspace:*",
+    "lucide-react": "catalog:",
+    "sdkwork-drive-pc-admin-core": "workspace:*",
+    "sdkwork-drive-pc-admin-storage-providers": "workspace:*",
+    "sdkwork-drive-pc-commons": "workspace:*",
+    "sdkwork-drive-pc-core": "workspace:*",
+    "sdkwork-drive-pc-file-preview": "workspace:*"
+  },
+  "peerDependencies": {
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  }
+}

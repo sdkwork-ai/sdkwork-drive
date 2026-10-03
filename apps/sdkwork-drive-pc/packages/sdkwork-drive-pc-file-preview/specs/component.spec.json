@@ -1,0 +1,73 @@
+{
+  "schemaVersion": 1,
+  "kind": "sdkwork.component.spec",
+  "component": {
+    "name": "sdkwork-drive-pc-file-preview",
+    "displayName": "SDKWork Drive PC File Preview",
+    "version": "0.1.0",
+    "type": "react-package",
+    "root": ".",
+    "domain": "drive",
+    "capability": "file-preview",
+    "surface": "shared",
+    "languages": [
+      "typescript",
+      "react"
+    ],
+    "generated": false,
+    "manifests": [
+      "package.json"
+    ]
+  },
+  "canonicalSpecs": [
+    {
+      "file": "CODE_STYLE_SPEC.md",
+      "path": "../../../../sdkwork-specs/CODE_STYLE_SPEC.md",
+      "purpose": "Cross-language code organization."
+    },
+    {
+      "file": "NAMING_SPEC.md",
+      "path": "../../../../sdkwork-specs/NAMING_SPEC.md",
+      "purpose": "Canonical naming."
+    },
+    {
+      "file": "TYPESCRIPT_CODE_SPEC.md",
+      "path": "../../../../sdkwork-specs/TYPESCRIPT_CODE_SPEC.md",
+      "purpose": "TypeScript implementation."
+    },
+    {
+      "file": "FRONTEND_CODE_SPEC.md",
+      "path": "../../../../sdkwork-specs/FRONTEND_CODE_SPEC.md",
+      "purpose": "Frontend UI-service-SDK layering."
+    },
+    {
+      "file": "APP_PC_ARCHITECTURE_SPEC.md",
+      "path": "../../../../sdkwork-specs/APP_PC_ARCHITECTURE_SPEC.md",
+      "purpose": "PC package boundaries."
+    },
+    {
+      "file": "DRIVE_SPEC.md",
+      "path": "../../../../sdkwork-specs/DRIVE_SPEC.md",
+      "purpose": "Drive preview and editor behavior."
+    }
+  ],
+  "contracts": {
+    "publicExports": [
+      "."
+    ],
+    "runtimeEntrypoints": [],
+    "routeManifest": null,
+    "sdkClients": [],
+    "sdkDependencies": [],
+    "dependencyApiExports": [],
+    "dependencyApiSurfaces": [],
+    "events": [],
+    "configKeys": []
+  },
+  "verification": {
+    "commands": [
+      "pnpm typecheck",
+      "pnpm --dir ../.. exec vitest run packages/sdkwork-drive-pc-file-preview/tests"
+    ]
+  }
+}

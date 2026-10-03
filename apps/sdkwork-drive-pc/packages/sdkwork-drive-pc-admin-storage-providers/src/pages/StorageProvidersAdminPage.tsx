@@ -45,6 +45,19 @@ interface StorageProvidersAdminPageProps {
 
 type PageNotice = { type: 'success' | 'error'; messageKey: string; params?: Record<string, string> } | undefined;
 
+/**
+ * Rows-per-page choices for the provider table.
+ *
+ * The table is one server cursor window, so the operator's choice is a
+ * `page_size` value on `storageProviders.list`: the operation declares
+ * `minimum: 1, maximum: 200` and `PAGINATION_SPEC.md` §3 fixes the default at
+ * 20, which is why the default here is 20 and every option stays inside the
+ * declared bound. Offering a larger option would ask the server for a window it
+ * is contracted to reject.
+ */
+const PROVIDER_PAGE_SIZE_OPTIONS = [10, 20, 50, 100] as const;
+const DEFAULT_PROVIDER_PAGE_SIZE = 20;
+
 export function StorageProvidersAdminPage({
   adminStorageSdkClient,
   getSession,
@@ -81,7 +94,7 @@ export function StorageProvidersAdminPage({
   >({});
   const [kindFilter, setKindFilter] = useState('all');
   const [page, setPage] = useState(1);
-  const [pageSize] = useState(20);
+  const [pageSize, setPageSize] = useState<number>(DEFAULT_PROVIDER_PAGE_SIZE);
   const [pageCursors, setPageCursors] = useState<Record<number, string | undefined>>({ 1: undefined });
   const [nextPageToken, setNextPageToken] = useState<string | undefined>();
   const [hasMore, setHasMore] = useState(false);
@@ -177,6 +190,26 @@ export function StorageProvidersAdminPage({
         if (!isDriveRequestCancellationError(err)) setNotice({ type: 'error', messageKey: 'noticeLoadFailed' });
       })
       .finally(() => setLoading(false));
+  };
+
+  /**
+   * Rows-per-page selection.
+   *
+   * The table is a keyset (cursor) window, so the window size is what the
+   * cursor was minted against: page 3 of a 20-row window has no counterpart in a
+   * 50-row one, and replaying its cursor would answer a window the operator
+   * never asked for. Every window size does share page 1, so the selection
+   * restarts the chain there — the same reason the provider-kind switch resets
+   * it. The stale cursors are dropped with it, so paging forward from the new
+   * first page mints a fresh chain instead of reusing a neighbour's.
+   */
+  const changePageSize = (nextPageSize: number) => {
+    if (nextPageSize === pageSize) {
+      return;
+    }
+    setPageSize(nextPageSize);
+    setPage(1);
+    setPageCursors({ 1: undefined });
   };
 
   /**
@@ -595,8 +628,30 @@ export function StorageProvidersAdminPage({
               onTestProviders={testProviders}
               onDeleteProvider={deleteProvider}
             />
-            <div className="mt-4 flex items-center justify-between gap-3 rounded-lg border border-neutral-200 bg-white px-4 py-3 dark:border-neutral-800 dark:bg-neutral-900">
-              <span className="text-sm text-neutral-500">{t('pageLabel', { page })}</span>
+            <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-neutral-200 bg-white px-4 py-3 dark:border-neutral-800 dark:bg-neutral-900">
+              <div className="flex flex-wrap items-center gap-3">
+                <span className="text-sm text-neutral-500">{t('pageLabel', { page })}</span>
+                {/*
+                  The window size is a request parameter (`page_size`), not a
+                  client-side slice: changing it re-reads the page from the
+                  server, which is also why it restarts the cursor chain (see
+                  `changePageSize`).
+                */}
+                <span className="flex items-center gap-1.5 text-sm text-neutral-500">
+                  <span className="whitespace-nowrap">{t('pageSizeLabel')}</span>
+                  <select
+                    aria-label={t('pageSizeLabel')}
+                    className={`${SELECT_CLASS} !w-auto !py-1.5 text-xs`}
+                    disabled={loading}
+                    value={String(pageSize)}
+                    onChange={(event) => changePageSize(Number(event.target.value))}
+                  >
+                    {PROVIDER_PAGE_SIZE_OPTIONS.map((option) => (
+                      <option key={option} value={option}>{t('pageSizeOption', { count: option })}</option>
+                    ))}
+                  </select>
+                </span>
+              </div>
               <div className="flex gap-2">
                 <button
                   type="button"
@@ -638,7 +693,11 @@ export function StorageProvidersAdminPage({
           onProviderSaved={(saved) => {
             setEditingProvider((current) => (current?.id === saved.id ? saved : current));
           }}
-          onListProviderAccounts={(input) => service.listProviderAccounts(input)}
+          // The editor pages through the account center itself: the callback
+          // hands back the page *and* its continuation, so the picker can offer
+          // the rest of a vendor's accounts instead of presenting one page as
+          // the complete set.
+          onListProviderAccounts={(input) => service.listProviderAccountsPage(input)}
           onCreateProviderAccount={(input) => service.createProviderAccount(input)}
         />
       )}

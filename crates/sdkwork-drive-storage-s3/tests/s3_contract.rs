@@ -1,6 +1,6 @@
 use sdkwork_drive_storage_contract::{
-    DriveObjectLocator, DriveObjectStore, DriveStorageProviderKind, HeadObjectRequest,
-    ListObjectsRequest, PresignDownloadRequest, PresignUploadPartRequest,
+    validate_s3_region_token, DriveObjectLocator, DriveObjectStore, DriveStorageProviderKind,
+    HeadObjectRequest, ListObjectsRequest, PresignDownloadRequest, PresignUploadPartRequest,
 };
 use sdkwork_drive_storage_s3::{S3DriveObjectStore, S3ProviderProfile, S3StoreConfig};
 
@@ -554,6 +554,253 @@ fn provider_profile_defaults_match_s3_provider_expectations() {
     assert!(!S3ProviderProfile::TencentCos.default_force_path_style());
     assert!(!S3ProviderProfile::HuaweiObs.default_force_path_style());
     assert!(!S3ProviderProfile::VolcengineTos.default_force_path_style());
+}
+
+/// The bucket inventory is the one account-level operation in the set, and the
+/// vendors that publish it on a separate host must be read there: asking the
+/// regional object endpoint scopes the answer to that region, which is how a
+/// COS account with buckets in several regions read as a one-bucket account.
+#[test]
+fn provider_profile_service_endpoint_covers_only_the_vendors_that_publish_one() {
+    assert_eq!(
+        S3ProviderProfile::TencentCos.service_endpoint(),
+        Some("https://service.cos.myqcloud.com")
+    );
+    assert_eq!(
+        S3ProviderProfile::TencentCosInternational.service_endpoint(),
+        Some("https://service.cos.myqcloud.com")
+    );
+    for profile in [
+        S3ProviderProfile::AwsS3,
+        S3ProviderProfile::Minio,
+        S3ProviderProfile::AliyunOss,
+        S3ProviderProfile::HuaweiObs,
+        S3ProviderProfile::GenericCompatible,
+    ] {
+        assert_eq!(
+            profile.service_endpoint(),
+            None,
+            "{} answers the inventory on its regional endpoint",
+            profile.as_str()
+        );
+    }
+}
+
+#[test]
+fn bucket_inventory_endpoint_applies_the_service_host_only_to_the_vendors_own_domain() {
+    let cos = S3StoreConfig::from_provider_parts(
+        "tencent_cos",
+        "https://cos.ap-guangzhou.myqcloud.com",
+        Some("ap-guangzhou"),
+        "drive-bucket",
+        false,
+        Some("plain:secret-id:secret-key"),
+        None,
+    )
+    .expect("COS provider config should build");
+    assert_eq!(
+        cos.bucket_inventory_endpoint(),
+        Some("https://service.cos.myqcloud.com"),
+        "a COS account is read through the service host"
+    );
+
+    // The vendor is also reachable as a generic S3 provider: the profile is
+    // inferred from the endpoint there, and the inventory host with it.
+    let generic_kind = S3StoreConfig::from_provider_parts(
+        "s3_compatible",
+        "https://cos.ap-guangzhou.myqcloud.com",
+        Some("ap-guangzhou"),
+        "drive-bucket",
+        false,
+        Some("plain:secret-id:secret-key"),
+        None,
+    )
+    .expect("generic S3 config pointed at COS should build");
+    assert_eq!(
+        generic_kind.bucket_inventory_endpoint(),
+        Some("https://service.cos.myqcloud.com")
+    );
+
+    // A proxy or private gateway configured as a COS provider answers the
+    // inventory itself; redirecting that call to the public service host would
+    // break a deployment that deliberately fronts the vendor.
+    let proxied = S3StoreConfig::from_provider_parts(
+        "tencent_cos",
+        "https://cos-gateway.internal.example.com",
+        Some("ap-guangzhou"),
+        "drive-bucket",
+        false,
+        Some("plain:secret-id:secret-key"),
+        None,
+    )
+    .expect("proxied provider config should build");
+    assert_eq!(
+        proxied.bucket_inventory_endpoint(),
+        Some("https://cos-gateway.internal.example.com")
+    );
+
+    let aws = S3StoreConfig::from_provider_parts(
+        "s3_compatible",
+        "https://s3.us-east-1.amazonaws.com",
+        Some("us-east-1"),
+        "drive-bucket",
+        false,
+        Some("plain:access-key:secret-key"),
+        None,
+    )
+    .expect("S3 provider config should build");
+    assert_eq!(
+        aws.bucket_inventory_endpoint(),
+        Some("https://s3.us-east-1.amazonaws.com")
+    );
+}
+
+#[tokio::test]
+async fn s3_store_reads_the_inventory_from_the_vendor_service_host() {
+    let cos = S3StoreConfig::from_provider_parts(
+        "tencent_cos",
+        "https://cos.ap-guangzhou.myqcloud.com",
+        Some("ap-guangzhou"),
+        "drive-bucket",
+        false,
+        Some("plain:secret-id:secret-key"),
+        None,
+    )
+    .expect("COS provider config should build");
+    let store = S3DriveObjectStore::new(cos)
+        .await
+        .expect("store should be constructed without connecting");
+    assert_eq!(
+        store.bucket_inventory_endpoint(),
+        Some("https://service.cos.myqcloud.com")
+    );
+
+    // Every other vendor keeps listing through the configured endpoint.
+    let store = S3DriveObjectStore::new(test_config())
+        .await
+        .expect("store should be constructed without connecting");
+    assert_eq!(
+        store.bucket_inventory_endpoint(),
+        Some("http://127.0.0.1:9000")
+    );
+}
+
+/// 账号级桶清单跨地域，所以点开的桶要按**它自己**的地域寻址：厂商把地域写进端点主机，
+/// 于是"这个桶的端点"就是配置端点上的一次主机替换。推不出来时必须保持配置原样，否则
+/// 代理、私有网关、单端点厂商都会被改道到不存在的地址。
+#[test]
+fn endpoint_for_region_derives_the_bucket_own_endpoint_per_vendor_convention() {
+    let cases = [
+        (
+            "tencent_cos",
+            "https://cos.ap-guangzhou.myqcloud.com",
+            "ap-guangzhou",
+            "ap-beijing",
+            Some("https://cos.ap-beijing.myqcloud.com"),
+        ),
+        (
+            "aliyun_oss",
+            "https://oss-cn-hangzhou.aliyuncs.com",
+            "cn-hangzhou",
+            "cn-beijing",
+            Some("https://oss-cn-beijing.aliyuncs.com"),
+        ),
+        (
+            "s3_compatible",
+            "https://s3.us-east-1.amazonaws.com",
+            "us-east-1",
+            "eu-west-1",
+            Some("https://s3.eu-west-1.amazonaws.com"),
+        ),
+        // 单端点厂商：地域不在主机里，保持配置端点。
+        (
+            "cloudflare_r2",
+            "https://account.r2.cloudflarestorage.com",
+            "auto",
+            "auto-2",
+            None,
+        ),
+        // 代理 / 私有网关：端点不是厂商自己的域名，不猜别的地域主机。
+        (
+            "tencent_cos",
+            "https://cos-gateway.internal.example.com",
+            "ap-guangzhou",
+            "ap-beijing",
+            None,
+        ),
+        (
+            "minio",
+            "https://minio.internal.example.com",
+            "us-east-1",
+            "eu-west-1",
+            None,
+        ),
+        // 就是配置里的地域：没有可推的东西。
+        (
+            "tencent_cos",
+            "https://cos.ap-guangzhou.myqcloud.com",
+            "ap-guangzhou",
+            "ap-guangzhou",
+            None,
+        ),
+        // 非法地域码：绝不拼进主机。
+        (
+            "tencent_cos",
+            "https://cos.ap-guangzhou.myqcloud.com",
+            "ap-guangzhou",
+            "ap-beijing.example.com/",
+            None,
+        ),
+    ];
+
+    for (kind, endpoint, configured_region, bucket_region, expected) in cases {
+        let config = S3StoreConfig::from_provider_parts(
+            kind,
+            endpoint,
+            Some(configured_region),
+            "drive-bucket",
+            false,
+            Some("plain:access-key:secret-key"),
+            None,
+        )
+        .expect("provider config should build");
+        assert_eq!(
+            config.endpoint_for_region(bucket_region).as_deref(),
+            expected,
+            "{kind} at {endpoint} ({configured_region}) for bucket region {bucket_region}"
+        );
+    }
+}
+
+#[test]
+fn region_token_validation_rejects_anything_that_could_steer_a_host() {
+    for invalid in [
+        "",
+        " ",
+        "ap guangzhou",
+        "ap_guangzhou",
+        "-leading",
+        "trailing-",
+        "..",
+        "a/../b",
+    ] {
+        assert!(
+            validate_s3_region_token(invalid, "region").is_err(),
+            "{invalid:?} must be rejected"
+        );
+    }
+    for valid in [
+        "ap-guangzhou",
+        "cn-hangzhou",
+        "us-east-1",
+        "auto",
+        "BEIJING",
+    ] {
+        assert!(
+            validate_s3_region_token(valid, "region").is_ok(),
+            "{valid:?} must be accepted"
+        );
+    }
 }
 
 fn test_config() -> S3StoreConfig {

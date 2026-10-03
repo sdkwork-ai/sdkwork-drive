@@ -12,6 +12,12 @@ async-trait.workspace = true
 aws-config.workspace = true
 aws-credential-types.workspace = true
 aws-sdk-s3.workspace = true
+aws-smithy-http-client.workspace = true
+aws-smithy-runtime-api.workspace = true
+aws-smithy-xml.workspace = true
 aws-types.workspace = true
+futures-util.workspace = true
 sdkwork-drive-storage-contract.workspace = true
-tokio.workspace = true
+# `time` bounds the best-effort per-bucket region lookup; without it a vendor
+# that stalls on `GetBucketLocation` would hold the whole account inventory.
+tokio = { workspace = true, features = ["time"] }

@@ -74,9 +74,20 @@ pub(crate) async fn resolve_provider_credentials(
     }
 }
 
+/// Build the store a request operates on.
+///
+/// `bucket_region` is the region the *bucket being addressed* lives in, when the
+/// caller knows it (the bucket inventory reports it per row). The bucket
+/// inventory is an account-level read that spans regions, so the bucket an
+/// operator picked can live somewhere other than the region the provider
+/// configuration was written for; asking that bucket's own endpoint is each
+/// vendor's standard rule (see [`S3StoreConfig::endpoint_for_region`]).
+/// `None` — and any region the vendor's endpoint convention cannot express —
+/// keeps addressing exactly what the configuration stores.
 pub(crate) async fn build_object_store_for_provider(
     state: &AdminStorageState,
     provider: &DriveStorageProvider,
+    bucket_region: Option<&str>,
 ) -> Result<Box<dyn DriveObjectStore>, (StatusCode, Json<ProblemDetail>)> {
     // Local filesystem rows speak the on-disk protocol, not S3; they are
     // served by the same store builder the object runtime uses so bucket and
@@ -98,8 +109,9 @@ pub(crate) async fn build_object_store_for_provider(
 
     match state.config.object_store_adapter {
         DriveAdminStorageObjectStoreAdapter::AwsSdkS3 => {
-            let boxed: Box<dyn DriveObjectStore> =
-                Box::new(build_aws_sdk_object_store(provider, credentials.as_ref()).await?);
+            let boxed: Box<dyn DriveObjectStore> = Box::new(
+                build_aws_sdk_object_store(provider, credentials.as_ref(), bucket_region).await?,
+            );
             Ok(boxed)
         }
         DriveAdminStorageObjectStoreAdapter::OpendalS3 => {
@@ -119,14 +131,15 @@ pub(crate) async fn build_full_s3_object_store_for_provider(
         )));
     }
     let credentials = resolve_provider_credentials(state, provider).await?;
-    build_aws_sdk_object_store(provider, credentials.as_ref()).await
+    build_aws_sdk_object_store(provider, credentials.as_ref(), None).await
 }
 
 async fn build_aws_sdk_object_store(
     provider: &DriveStorageProvider,
     credentials: Option<&DriveStorageCredentialSnapshot>,
+    bucket_region: Option<&str>,
 ) -> Result<S3DriveObjectStore, (StatusCode, Json<ProblemDetail>)> {
-    let config = match credentials {
+    let mut config = match credentials {
         Some(credentials) => S3StoreConfig::from_provider_parts_with_credentials(
             provider.provider_kind.as_str(),
             &provider.endpoint_url,
@@ -148,6 +161,16 @@ async fn build_aws_sdk_object_store(
         )
         .map_err(map_object_store_route_error)?,
     };
+    // 存储桶跨地域：账号级清单给出的地域决定这个桶该问哪个端点，端点由厂商自己的
+    // 命名规范推出来（见 `S3StoreConfig::endpoint_for_region`）。推不出来时保持配置
+    // 原样——代理、私有网关、单端点厂商都不受影响。
+    if let Some(region) = bucket_region {
+        if let Some(endpoint) = config.endpoint_for_region(region) {
+            config.endpoint = Some(endpoint);
+            config.region = region.trim().to_string();
+            config.validate().map_err(map_object_store_route_error)?;
+        }
+    }
     S3DriveObjectStore::new(config)
         .await
         .map_err(map_object_store_route_error)

@@ -50,6 +50,15 @@ use crate::{
 
 const MAX_SANDBOX_BASE64_CONTENT_CHARS: usize = 5_592_408;
 
+/// 沙箱文件内容写入请求的**请求体**上限（字节）。
+///
+/// 文件字节以 base64 装在 JSON 里：业务上限 4 MiB（`MAX_SANDBOX_FILE_CONTENT_BYTES`）对应
+/// 约 5.6 MB 的网线体积。路由必须显式声明这个上限（见 `routes`），否则 axum 的默认 2 MB
+/// 会在业务校验之前拒掉 1.4 MB 以上的写入，客户端只看到一句没有上下文的
+/// `Payload too large`。
+pub(crate) const MAX_SANDBOX_FILE_CONTENT_REQUEST_BYTES: usize =
+    MAX_SANDBOX_BASE64_CONTENT_CHARS + 64 * 1024;
+
 pub(crate) async fn list_sandboxes(
     State(state): State<AppState>,
     Extension(ctx): Extension<DriveRequestContext>,

@@ -23,7 +23,7 @@ import type {
   StorageOverviewProviderUsageView,
   StorageOverviewView,
 } from '../types/storageProviderAdminTypes';
-import { getProviderKindMeta } from '../utils/providerKindConfig';
+import { getProviderKindMeta, providerDisplayName } from '../utils/providerKindConfig';
 import {
   BADGE_BASE_CLASS,
   CARD_CLASS,
@@ -78,7 +78,12 @@ export function StorageOverviewAdminPage({
     return () => controller.abort();
   }, [load]);
 
-  const locale = language === 'zh' ? 'zh-CN' : 'en-US';
+  /*
+   * 语言本身就是可用的 BCP 47 标签（宿主只有 zh-CN / en-US 两种），直接交给 `Intl`。
+   * 这里曾写成 `language === 'zh' ? 'zh-CN' : 'en-US'`：`language` 从来不是 `'zh'`，
+   * 于是中文控制台的数字与时间一直按 en-US 渲染。
+   */
+  const locale = language;
   const formatCount = (value: number) => value.toLocaleString(locale);
 
   return (
@@ -271,6 +276,18 @@ export function StorageOverviewAdminPage({
                 statusDeleted: t('overviewStatusDeleted'),
               }}
               formatCount={formatCount}
+              /*
+                The overview answers with the id, the kind and the name
+                separately, so the row is projected onto the shape the shared
+                name rule reads: a built-in row that still carries its bootstrap
+                name is listed localized here exactly as in the provider list.
+              */
+              formatProviderName={(row) =>
+                providerDisplayName(t, {
+                  id: row.providerId,
+                  providerKind: row.providerKind,
+                  displayName: row.name,
+                }) || row.providerId}
             />
 
             <TrendCard
@@ -348,6 +365,7 @@ function ProviderUsageCard({
   emptyText,
   labels,
   formatCount,
+  formatProviderName,
 }: {
   usage: StorageOverviewProviderUsageView[];
   emptyText: string;
@@ -365,6 +383,8 @@ function ProviderUsageCard({
     statusDeleted: string;
   };
   formatCount: (value: number) => string;
+  /** Operator-facing name of a usage row, in the reader's language. */
+  formatProviderName: (row: StorageOverviewProviderUsageView) => string;
 }) {
   return (
     <section className={CARD_CLASS}>
@@ -402,7 +422,7 @@ function ProviderUsageCard({
                   >
                     <td className="px-5 py-3">
                       <div className="flex flex-wrap items-center gap-2">
-                        <span className="font-medium">{row.name || row.providerId}</span>
+                        <span className="font-medium">{formatProviderName(row)}</span>
                         {row.isTenantDefault ? (
                           <span
                             className={`${BADGE_BASE_CLASS} bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300`}

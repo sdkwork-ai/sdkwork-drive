@@ -55,10 +55,10 @@ impl DriveStorageMigrationCopier for AdminStorageMigrationCopier<'_> {
             .await
             .map_err(map_route_error_to_service)?;
 
-        let source_store = build_object_store_for_provider(self.state, &source_provider)
+        let source_store = build_object_store_for_provider(self.state, &source_provider, None)
             .await
             .map_err(map_route_error_to_service)?;
-        let target_store = build_object_store_for_provider(self.state, &target_provider)
+        let target_store = build_object_store_for_provider(self.state, &target_provider, None)
             .await
             .map_err(map_route_error_to_service)?;
 

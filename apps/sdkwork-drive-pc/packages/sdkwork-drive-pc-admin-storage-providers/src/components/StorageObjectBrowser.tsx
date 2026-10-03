@@ -10,8 +10,10 @@ import {
 } from 'lucide-react';
 import type { StorageProviderAdminService } from '../services/storageProviderAdminService';
 import type { StorageProviderObjectView, StorageProviderView } from '../types/storageProviderAdminTypes';
-import { formatDriveBytes } from 'sdkwork-drive-pc-commons';
+import { formatDriveBytes, MAX_OBJECT_CONTENT_BYTES } from 'sdkwork-drive-pc-commons';
+import { formatDriveDateTime } from '../utils/formatDriveTimestamp';
 import { formatMutationError } from '../utils/mutationError';
+import { fileNameOf, parentPrefixOf } from '../utils/objectKeyUtils';
 import { useTranslation } from '../hooks/useTranslation';
 import { ConfirmDialog } from './ConfirmDialog';
 import {
@@ -21,8 +23,11 @@ import {
   SECONDARY_BUTTON_CLASS,
 } from '../utils/uiPrimitives';
 
-/** 上传大小上限（与服务端对象内容写入上限一致）。 */
-const MAX_UPLOAD_BYTES = 8 * 1024 * 1024;
+/**
+ * 上传大小上限：与服务端对象内容写入上限一致，取自 commons 的单一定义
+ * （`MAX_OBJECT_CONTENT_BYTES`）。桶浏览器读的是同一个常量，两边不会再漂移。
+ */
+const MAX_UPLOAD_BYTES = MAX_OBJECT_CONTENT_BYTES;
 
 interface StorageObjectBrowserProps {
   provider: StorageProviderView;
@@ -45,19 +50,8 @@ interface ObjectPrompt {
   initialValue: string;
 }
 
-function fileNameOf(key: string): string {
-  const segments = key.split('/').filter(Boolean);
-  return segments.at(-1) ?? key;
-}
-
-function parentPrefixOf(key: string): string {
-  const segments = key.split('/').filter(Boolean);
-  segments.pop();
-  return segments.length > 0 ? `${segments.join('/')}/` : '';
-}
-
 export function StorageObjectBrowser({ provider, service, initialPrefix = '' }: StorageObjectBrowserProps) {
-  const { t } = useTranslation();
+  const { t, language } = useTranslation();
   const [objects, setObjects] = useState<StorageProviderObjectView[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -360,7 +354,9 @@ export function StorageObjectBrowser({ provider, service, initialPrefix = '' }: 
                     <td className="py-2 pr-4 tabular-nums text-neutral-600 dark:text-neutral-300">
                       {obj.isFolder ? '—' : formatSize(obj.sizeBytes)}
                     </td>
-                    <td className="py-2 pr-4 text-neutral-400">{obj.lastModified ?? '—'}</td>
+                    <td className="py-2 pr-4 text-neutral-400">
+                      {obj.lastModifiedIso ? formatDriveDateTime(obj.lastModifiedIso, language) : '—'}
+                    </td>
                     <td className="py-2">
                       <div className="flex items-center justify-end gap-3">
                         {!obj.isFolder && obj.sizeBytes > MAX_UPLOAD_BYTES && (

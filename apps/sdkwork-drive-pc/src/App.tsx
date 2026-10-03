@@ -84,7 +84,7 @@ const StorageProviderKindsAdminPage = React.lazy(() =>
   })),
 );
 const StorageBucketsAdminPage = React.lazy(() =>
-  import('sdkwork-drive-pc-admin-storage-providers').then((module) => ({
+  import('sdkwork-drive-pc-admin-storage-buckets').then((module) => ({
     default: module.StorageBucketsAdminPage,
   })),
 );

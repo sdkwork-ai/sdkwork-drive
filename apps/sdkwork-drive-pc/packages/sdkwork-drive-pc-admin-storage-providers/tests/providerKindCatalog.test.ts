@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   buildProviderEndpointUrl,
+  BUILTIN_PROVIDER_DISPLAY_NAMES,
   getAllProviderKindMeta,
   getProviderKindMeta,
   providerVendorCodeForKind,
@@ -584,5 +585,65 @@ describe('provider advanced-control vocabulary', () => {
     expect(meta.features.hasStorageClass).toBe(false);
     expect(meta.sseModes).toEqual([]);
     expect(meta.storageClasses).toEqual([]);
+  });
+});
+
+/**
+ * The configuration names the server's bootstrap writes, mirrored from
+ * `BUILTIN_CLOUD_PROVIDERS` / `LOCAL_PROVIDER_NAME` in
+ * `provider_account_defaults.rs`.
+ *
+ * The console keeps its own copy because it is what tells "this row still
+ * carries the name the bootstrap gave it" (and may therefore be shown
+ * localized) from "an operator named this row" (and must be shown verbatim).
+ * A copy that drifts does not fail loudly — it silently stops translating rows,
+ * or worse, starts translating a name an operator typed. Mirroring the server
+ * table here turns that into a red test.
+ */
+const BACKEND_BUILTIN_PROVIDER_NAMES: Record<string, string> = {
+  local_filesystem: 'Built-in Local Filesystem',
+  s3_compatible: 'Built-in Amazon S3',
+  aliyun_oss: 'Built-in Alibaba Cloud OSS',
+  tencent_cos: 'Built-in Tencent Cloud COS',
+  huawei_obs: 'Built-in Huawei Cloud OBS',
+  volcengine_tos: 'Built-in Volcengine TOS',
+  google_cloud_storage: 'Built-in Google Cloud Storage',
+  baidu_bos: 'Built-in Baidu Cloud BOS',
+  kingsoft_ks3: 'Built-in Kingsoft Cloud KS3',
+  qiniu_kodo: 'Built-in Qiniu Kodo',
+  china_mobile_ecloud: 'Built-in China Mobile Ecloud',
+  china_telecom_eos: 'Built-in China Telecom EOS',
+  china_unicom_wo: 'Built-in China Unicom Wo Cloud',
+  minio: 'Built-in MinIO',
+  cloudflare_r2: 'Built-in Cloudflare R2',
+  backblaze_b2: 'Built-in Backblaze B2',
+  wasabi: 'Built-in Wasabi',
+  digitalocean_spaces: 'Built-in DigitalOcean Spaces',
+  linode_object_storage: 'Built-in Akamai / Linode Object Storage',
+  vultr_object_storage: 'Built-in Vultr Object Storage',
+  scaleway_object_storage: 'Built-in Scaleway Object Storage',
+  oracle_cloud_storage: 'Built-in Oracle Cloud Object Storage',
+  ibm_cos: 'Built-in IBM Cloud Object Storage',
+  alibaba_cloud_international: 'Built-in Alibaba Cloud OSS (International)',
+  tencent_cloud_international: 'Built-in Tencent Cloud COS (International)',
+};
+
+describe('built-in provider configuration names', () => {
+  it('covers exactly the backend built-in kinds, local kind included', () => {
+    expect(Object.keys(BUILTIN_PROVIDER_DISPLAY_NAMES).sort()).toEqual(
+      [...BACKEND_BUILTIN_PROVIDER_KINDS].sort(),
+    );
+  });
+
+  it('mirrors the name the server bootstrap writes for every kind', () => {
+    expect(Object.keys(BACKEND_BUILTIN_PROVIDER_NAMES).sort()).toEqual(
+      Object.keys(BUILTIN_PROVIDER_DISPLAY_NAMES).sort(),
+    );
+    for (const [kind, name] of Object.entries(BACKEND_BUILTIN_PROVIDER_NAMES)) {
+      expect(
+        BUILTIN_PROVIDER_DISPLAY_NAMES[kind],
+        `${kind} built-in name drifted from the server bootstrap`,
+      ).toBe(name);
+    }
   });
 });

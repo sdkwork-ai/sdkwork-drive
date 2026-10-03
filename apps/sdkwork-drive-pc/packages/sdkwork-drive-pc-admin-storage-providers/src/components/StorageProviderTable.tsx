@@ -12,7 +12,11 @@ import {
   Zap,
 } from 'lucide-react';
 import type { StorageProviderView } from '../types/storageProviderAdminTypes';
-import { getProviderKindMeta, HEALTH_STATUS_CONFIG } from '../utils/providerKindConfig';
+import {
+  getProviderKindMeta,
+  HEALTH_STATUS_CONFIG,
+  providerDisplayName,
+} from '../utils/providerKindConfig';
 import { GHOST_BUTTON_CLASS, BADGE_BASE_CLASS, SECONDARY_BUTTON_CLASS, PRIMARY_BUTTON_CLASS } from '../utils/uiPrimitives';
 import { ConfirmDialog } from './ConfirmDialog';
 import { useTranslation } from '../hooks/useTranslation';
@@ -87,7 +91,9 @@ export function StorageProviderTable({
 
   const filtered = providers.filter((p) => {
     const q = appliedFilters.search.trim().toLowerCase();
-    const matchSearch = !q || p.displayName.toLowerCase().includes(q) || p.id.toLowerCase().includes(q) || p.endpointUrl.toLowerCase().includes(q) || p.bucket.toLowerCase().includes(q);
+    // Both spellings of the name are searchable: the localized one an operator
+    // reads in the list, and the stored one they may have copied from an export.
+    const matchSearch = !q || providerDisplayName(t, p).toLowerCase().includes(q) || p.displayName.toLowerCase().includes(q) || p.id.toLowerCase().includes(q) || p.endpointUrl.toLowerCase().includes(q) || p.bucket.toLowerCase().includes(q);
     const matchStatus = appliedFilters.status === 'all' || p.status === appliedFilters.status;
     const matchCredential =
       appliedFilters.credential === 'all'
@@ -228,7 +234,7 @@ export function StorageProviderTable({
                 <tr key={provider.id} className={`hover:bg-neutral-50 dark:hover:bg-neutral-800/50 ${hasIssue ? 'bg-amber-50/30 dark:bg-amber-950/10' : ''}`}>
                   <td className="px-4 py-3">
                     <button type="button" className="text-left" onClick={() => onViewDetail(provider)}>
-                      <span className="block font-semibold text-neutral-900 hover:text-blue-600 dark:text-neutral-100 dark:hover:text-blue-400">{provider.displayName}</span>
+                      <span className="block font-semibold text-neutral-900 hover:text-blue-600 dark:text-neutral-100 dark:hover:text-blue-400">{providerDisplayName(t, provider)}</span>
                       <span className="block font-mono text-xs text-neutral-500">{provider.id}</span>
                     </button>
                   </td>
@@ -274,7 +280,7 @@ export function StorageProviderTable({
       <ConfirmDialog
         open={!!deleteTarget}
         title={t('deleteConfirmTitle')}
-        message={t('deleteConfirmMessage', { name: deleteTarget?.displayName ?? deleteTarget?.id ?? '' })}
+        message={t('deleteConfirmMessage', { name: deleteTarget ? providerDisplayName(t, deleteTarget) : '' })}
         confirmLabel={t('deleteConfirmLabel')}
         variant="danger"
         onConfirm={() => { if (deleteTarget) { onDeleteProvider(deleteTarget.id); setDeleteTarget(null); } }}

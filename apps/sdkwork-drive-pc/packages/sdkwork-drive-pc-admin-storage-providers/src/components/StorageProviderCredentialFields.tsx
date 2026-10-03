@@ -34,6 +34,12 @@ interface StorageProviderCredentialFieldsProps {
   providerAccounts: StorageProviderAccountView[] | undefined;
   accountsLoading: boolean;
   accountsError?: string;
+  /** True when the account center holds accounts past the loaded pages. */
+  accountsHasMore?: boolean;
+  /** True while the next account page is in flight. */
+  accountsLoadingMore?: boolean;
+  /** Read the account center's next page (server-issued cursor). */
+  onLoadMoreProviderAccounts?: () => void;
   onReloadProviderAccounts: () => void;
   onCreateProviderAccount: (
     input: CreateStorageProviderAccountInput,
@@ -73,6 +79,9 @@ export function StorageProviderCredentialFields({
   providerAccounts,
   accountsLoading,
   accountsError,
+  accountsHasMore,
+  accountsLoadingMore,
+  onLoadMoreProviderAccounts,
   onReloadProviderAccounts,
   onCreateProviderAccount,
   allowedVendorCodes,
@@ -394,6 +403,9 @@ export function StorageProviderCredentialFields({
           accounts={providerAccounts}
           loading={accountsLoading}
           error={accountsError}
+          hasMoreAccounts={accountsHasMore}
+          loadingMoreAccounts={accountsLoadingMore}
+          onLoadMoreAccounts={onLoadMoreProviderAccounts}
           selectedAccountId={providerAccountId.trim()}
           onSelectedAccountChange={onProviderAccountIdChange}
           onClose={() => setPickerOpen(false)}

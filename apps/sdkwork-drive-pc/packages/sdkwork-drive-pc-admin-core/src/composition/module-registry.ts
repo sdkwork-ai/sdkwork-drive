@@ -17,6 +17,12 @@ const ADMIN_STORAGE_ROUTES: readonly SdkworkDrivePcAdminRouteDescriptor[] = [
   { id: 'admin-storage-bindings', path: '/admin/storage-bindings', screen: 'storage-bindings', surface: 'backend-admin' },
 ];
 
+// 桶浏览器是独立的包：它读的是服务商账号下的桶与桶内对象，跟服务商配置表单不是
+// 同一个变更理由，所以模块注册表里也各自成项。
+const ADMIN_STORAGE_BUCKET_ROUTES: readonly SdkworkDrivePcAdminRouteDescriptor[] = [
+  { id: 'admin-storage-buckets', path: '/admin/storage-buckets', screen: 'storage-buckets', surface: 'backend-admin' },
+];
+
 const ADMIN_OPERATIONS_ROUTES: readonly SdkworkDrivePcAdminRouteDescriptor[] = [
   { id: 'admin-audit', path: '/admin/audit', screen: 'audit', surface: 'backend-admin' },
   { id: 'admin-maintenance', path: '/admin/maintenance', screen: 'maintenance', surface: 'backend-admin' },
@@ -33,6 +39,12 @@ export function createSdkworkCoreModuleRegistry(): readonly SdkworkDrivePcAdminM
       id: 'drive-admin-storage',
       packageName: 'sdkwork-drive-pc-admin-storage-providers',
       routes: ADMIN_STORAGE_ROUTES,
+    },
+    {
+      capability: 'drive-admin-storage-buckets',
+      id: 'drive-admin-storage-buckets',
+      packageName: 'sdkwork-drive-pc-admin-storage-buckets',
+      routes: ADMIN_STORAGE_BUCKET_ROUTES,
     },
     {
       capability: 'drive-admin-operations',

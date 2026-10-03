@@ -1,0 +1,25 @@
+{
+  "name": "sdkwork-drive-pc-file-preview",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": {
+      "import": "./src/index.ts",
+      "types": "./src/index.ts"
+    }
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit --project ../../tsconfig.json"
+  },
+  "dependencies": {
+    "@monaco-editor/react": "^4.6.0",
+    "lucide-react": "catalog:",
+    "monaco-editor": "^0.55.1"
+  },
+  "peerDependencies": {
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  }
+}

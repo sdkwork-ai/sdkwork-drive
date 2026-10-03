@@ -147,6 +147,14 @@ pub mod admin_audit {
         pub const OBJECT_PUT: &str = "drive.storage_provider.object_put";
         pub const OBJECT_DELETED: &str = "drive.storage_provider.object_deleted";
         pub const OBJECT_COPIED: &str = "drive.storage_provider.object_copied";
+        /// 分片上传开启（拿到 uploadId）。
+        ///
+        /// 分片把一次写入拆成"开启 → 签发分片 URL → 完成/中止"三步，审计必须能拼回整条链：
+        /// 只记完成会丢掉"谁开启过、有没有中止"，只记开启又看不出最终有没有落盘。
+        pub const MULTIPART_UPLOAD_CREATED: &str = "drive.storage_provider.multipart_upload_created";
+        pub const MULTIPART_UPLOAD_COMPLETED: &str =
+            "drive.storage_provider.multipart_upload_completed";
+        pub const MULTIPART_UPLOAD_ABORTED: &str = "drive.storage_provider.multipart_upload_aborted";
     }
 
     /// Storage provider kind registry mutations (backend-api).
@@ -283,6 +291,9 @@ mod tests {
         admin_audit::storage_provider::BUCKET_DELETED,
         admin_audit::storage_provider::OBJECT_DELETED,
         admin_audit::storage_provider::OBJECT_COPIED,
+        admin_audit::storage_provider::MULTIPART_UPLOAD_CREATED,
+        admin_audit::storage_provider::MULTIPART_UPLOAD_COMPLETED,
+        admin_audit::storage_provider::MULTIPART_UPLOAD_ABORTED,
         admin_audit::storage_provider_kind::INITIALIZED,
         admin_audit::storage_provider_kind::ENABLED,
         admin_audit::storage_provider_kind::DISABLED,

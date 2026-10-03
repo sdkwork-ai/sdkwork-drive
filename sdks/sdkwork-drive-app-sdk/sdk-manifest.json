@@ -2,10 +2,10 @@
   "workspace": "sdkwork-drive-app-sdk",
   "sdkOwner": "sdkwork-drive",
   "apiAuthority": "sdkwork-drive-app-api",
-  "authoritySpec": "../../target/drive-app-api.head-snapshot.openapi.json",
-  "generationInputSpec": "../../target/drive-sdk-generator-input/sdkwork-drive-app-sdk/drive-app-api.head-snapshot.openapi.json",
+  "authoritySpec": "../../apis/app-api/drive/drive-app-api.openapi.json",
+  "generationInputSpec": "../../target/drive-sdk-generator-input/sdkwork-drive-app-sdk/drive-app-api.openapi.json",
   "derivedSpecs": {
-    "default": "../../target/drive-sdk-generator-input/sdkwork-drive-app-sdk/drive-app-api.head-snapshot.openapi.json"
+    "default": "../../target/drive-sdk-generator-input/sdkwork-drive-app-sdk/drive-app-api.openapi.json"
   },
   "discoverySurface": {
     "sdkTarget": "app",

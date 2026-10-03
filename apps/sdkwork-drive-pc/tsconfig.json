@@ -49,6 +49,12 @@
       "sdkwork-drive-pc-admin-storage-providers": [
         "./packages/sdkwork-drive-pc-admin-storage-providers/src"
       ],
+      "sdkwork-drive-pc-admin-storage-buckets": [
+        "./packages/sdkwork-drive-pc-admin-storage-buckets/src"
+      ],
+      "sdkwork-drive-pc-file-preview": [
+        "./packages/sdkwork-drive-pc-file-preview/src"
+      ],
       "sdkwork-drive-pc-admin-operations": [
         "./packages/sdkwork-drive-pc-admin-operations/src"
       ],

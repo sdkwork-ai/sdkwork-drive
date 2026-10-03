@@ -235,6 +235,341 @@
         "x-sdkwork-api-surface": "app-api"
       }
     },
+    "/app/v3/api/drive/changes/watch": {
+      "post": {
+        "tags": [
+          "drive"
+        ],
+        "operationId": "changes.watch",
+        "summary": "Create a push notification channel for Drive changes",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateWatchChannelRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Watch channel created.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DriveWatchChannelHttpResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "AuthToken": [],
+            "AccessToken": []
+          }
+        ],
+        "x-sdkwork-owner": "sdkwork-drive",
+        "x-sdkwork-api-authority": "sdkwork-drive-app-api",
+        "x-sdkwork-request-context": "WebRequestContext",
+        "x-sdkwork-api-surface": "app-api",
+        "parameters": []
+      }
+    },
+    "/app/v3/api/drive/download_packages": {
+      "post": {
+        "tags": [
+          "drive"
+        ],
+        "operationId": "downloadPackages.create",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateDownloadPackageRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DownloadPackageHttpResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Gone",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "AuthToken": [],
+            "AccessToken": []
+          }
+        ],
+        "x-sdkwork-owner": "sdkwork-drive",
+        "x-sdkwork-api-authority": "sdkwork-drive-app-api",
+        "x-sdkwork-request-context": "WebRequestContext",
+        "x-sdkwork-api-surface": "app-api",
+        "parameters": []
+      }
+    },
+    "/app/v3/api/drive/download_packages/{packageId}/download_url": {
+      "get": {
+        "tags": [
+          "drive"
+        ],
+        "operationId": "downloadPackages.downloadUrls.retrieve",
+        "parameters": [
+          {
+            "name": "packageId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DownloadPackageHttpResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Gone",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "AuthToken": [],
+            "AccessToken": []
+          }
+        ],
+        "x-sdkwork-owner": "sdkwork-drive",
+        "x-sdkwork-api-authority": "sdkwork-drive-app-api",
+        "x-sdkwork-request-context": "WebRequestContext",
+        "x-sdkwork-api-surface": "app-api"
+      }
+    },
     "/app/v3/api/drive/download_tokens/{token}": {
       "get": {
         "tags": [
@@ -619,26 +954,166 @@
         "parameters": []
       }
     },
-    "/app/v3/api/drive/quotas/summary": {
-      "get": {
+    "/app/v3/api/drive/nodes/files": {
+      "post": {
         "tags": [
           "drive"
         ],
-        "operationId": "quotas.retrieve",
-        "parameters": [],
+        "operationId": "nodes.files.create",
         "responses": {
-          "200": {
-            "description": "OK",
+          "201": {
+            "description": "Created",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/QuotaSummaryHttpResponse"
+                  "$ref": "#/components/schemas/CreateFileHttpResponse"
                 }
               }
             }
           },
           "400": {
             "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateFileRequest"
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "AuthToken": [],
+            "AccessToken": []
+          }
+        ],
+        "x-sdkwork-owner": "sdkwork-drive",
+        "x-sdkwork-api-authority": "sdkwork-drive-app-api",
+        "x-sdkwork-request-context": "WebRequestContext",
+        "x-sdkwork-api-surface": "app-api",
+        "parameters": []
+      }
+    },
+    "/app/v3/api/drive/nodes/folders": {
+      "post": {
+        "tags": [
+          "drive"
+        ],
+        "operationId": "nodes.folders.create",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateFolderRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DriveNodeHttpResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -677,7 +1152,110 @@
         "x-sdkwork-owner": "sdkwork-drive",
         "x-sdkwork-api-authority": "sdkwork-drive-app-api",
         "x-sdkwork-request-context": "WebRequestContext",
-        "x-sdkwork-api-surface": "app-api"
+        "x-sdkwork-api-surface": "app-api",
+        "parameters": []
+      }
+    },
+    "/app/v3/api/drive/nodes/shortcuts": {
+      "post": {
+        "tags": [
+          "drive"
+        ],
+        "summary": "Create a shortcut node",
+        "operationId": "nodes.shortcuts.create",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateShortcutRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Shortcut node created.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DriveNodeHttpResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "AuthToken": [],
+            "AccessToken": []
+          }
+        ],
+        "x-sdkwork-owner": "sdkwork-drive",
+        "x-sdkwork-api-authority": "sdkwork-drive-app-api",
+        "x-sdkwork-request-context": "WebRequestContext",
+        "x-sdkwork-api-surface": "app-api",
+        "parameters": []
       }
     },
     "/app/v3/api/drive/nodes/{nodeId}": {
@@ -908,6 +1486,216 @@
           },
           "404": {
             "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "AuthToken": [],
+            "AccessToken": []
+          }
+        ],
+        "x-sdkwork-owner": "sdkwork-drive",
+        "x-sdkwork-api-authority": "sdkwork-drive-app-api",
+        "x-sdkwork-request-context": "WebRequestContext",
+        "x-sdkwork-api-surface": "app-api"
+      }
+    },
+    "/app/v3/api/drive/nodes/{nodeId}/archive_entries": {
+      "get": {
+        "tags": [
+          "drive"
+        ],
+        "operationId": "archiveEntries.list",
+        "parameters": [
+          {
+            "name": "nodeId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ArchiveEntryListHttpResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "AuthToken": [],
+            "AccessToken": []
+          }
+        ],
+        "x-sdkwork-owner": "sdkwork-drive",
+        "x-sdkwork-api-authority": "sdkwork-drive-app-api",
+        "x-sdkwork-request-context": "WebRequestContext",
+        "x-sdkwork-api-surface": "app-api"
+      }
+    },
+    "/app/v3/api/drive/nodes/{nodeId}/archive_entries/extract": {
+      "post": {
+        "tags": [
+          "drive"
+        ],
+        "operationId": "archiveEntries.extract",
+        "parameters": [
+          {
+            "name": "nodeId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExtractArchiveEntriesRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExtractArchiveEntriesHttpResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -2176,211 +2964,6 @@
         "x-sdkwork-api-surface": "app-api"
       }
     },
-    "/app/v3/api/drive/nodes/{nodeId}/copy": {
-      "post": {
-        "tags": [
-          "drive"
-        ],
-        "operationId": "nodes.copy",
-        "parameters": [
-          {
-            "name": "nodeId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CopyNodeRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Created",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/DriveNodeHttpResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad Request",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not Found",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "Conflict",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Internal Server Error",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "AuthToken": [],
-            "AccessToken": []
-          }
-        ],
-        "x-sdkwork-owner": "sdkwork-drive",
-        "x-sdkwork-api-authority": "sdkwork-drive-app-api",
-        "x-sdkwork-request-context": "WebRequestContext",
-        "x-sdkwork-api-surface": "app-api"
-      }
-    },
-    "/app/v3/api/drive/nodes/{nodeId}/download_url": {
-      "get": {
-        "tags": [
-          "drive"
-        ],
-        "operationId": "nodes.downloadUrls.retrieve",
-        "parameters": [
-          {
-            "name": "nodeId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "requestedTtlSeconds",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "integer",
-              "minimum": 30,
-              "maximum": 300
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CreateDownloadUrlHttpResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad Request",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not Found",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Internal Server Error",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "AuthToken": [],
-            "AccessToken": []
-          }
-        ],
-        "x-sdkwork-owner": "sdkwork-drive",
-        "x-sdkwork-api-authority": "sdkwork-drive-app-api",
-        "x-sdkwork-request-context": "WebRequestContext",
-        "x-sdkwork-api-surface": "app-api"
-      }
-    },
     "/app/v3/api/drive/nodes/{nodeId}/content": {
       "get": {
         "tags": [
@@ -2562,6 +3145,116 @@
         "x-sdkwork-api-surface": "app-api"
       }
     },
+    "/app/v3/api/drive/nodes/{nodeId}/copy": {
+      "post": {
+        "tags": [
+          "drive"
+        ],
+        "operationId": "nodes.copy",
+        "parameters": [
+          {
+            "name": "nodeId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CopyNodeRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DriveNodeHttpResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "AuthToken": [],
+            "AccessToken": []
+          }
+        ],
+        "x-sdkwork-owner": "sdkwork-drive",
+        "x-sdkwork-api-authority": "sdkwork-drive-app-api",
+        "x-sdkwork-request-context": "WebRequestContext",
+        "x-sdkwork-api-surface": "app-api"
+      }
+    },
     "/app/v3/api/drive/nodes/{nodeId}/download_grants": {
       "post": {
         "tags": [
@@ -2591,6 +3284,101 @@
         "responses": {
           "201": {
             "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateDownloadUrlHttpResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "AuthToken": [],
+            "AccessToken": []
+          }
+        ],
+        "x-sdkwork-owner": "sdkwork-drive",
+        "x-sdkwork-api-authority": "sdkwork-drive-app-api",
+        "x-sdkwork-request-context": "WebRequestContext",
+        "x-sdkwork-api-surface": "app-api"
+      }
+    },
+    "/app/v3/api/drive/nodes/{nodeId}/download_url": {
+      "get": {
+        "tags": [
+          "drive"
+        ],
+        "operationId": "nodes.downloadUrls.retrieve",
+        "parameters": [
+          {
+            "name": "nodeId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "requestedTtlSeconds",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 30,
+              "maximum": 300
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
             "content": {
               "application/json": {
                 "schema": {
@@ -3663,6 +4451,126 @@
         "x-sdkwork-api-surface": "app-api"
       }
     },
+    "/app/v3/api/drive/nodes/{nodeId}/permissions/effective": {
+      "get": {
+        "tags": [
+          "drive"
+        ],
+        "operationId": "permissions.effective.list",
+        "parameters": [
+          {
+            "name": "nodeId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "int64",
+              "minimum": 1,
+              "maximum": 200,
+              "x-sdkwork-int64-string": true
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EffectivePermissionListHttpResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "AuthToken": [],
+            "AccessToken": []
+          }
+        ],
+        "x-sdkwork-owner": "sdkwork-drive",
+        "x-sdkwork-api-authority": "sdkwork-drive-app-api",
+        "x-sdkwork-request-context": "WebRequestContext",
+        "x-sdkwork-api-surface": "app-api"
+      }
+    },
     "/app/v3/api/drive/nodes/{nodeId}/permissions/{permissionId}": {
       "delete": {
         "tags": [
@@ -3909,126 +4817,6 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/DrivePermissionHttpResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad Request",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not Found",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "Conflict",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Internal Server Error",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "AuthToken": [],
-            "AccessToken": []
-          }
-        ],
-        "x-sdkwork-owner": "sdkwork-drive",
-        "x-sdkwork-api-authority": "sdkwork-drive-app-api",
-        "x-sdkwork-request-context": "WebRequestContext",
-        "x-sdkwork-api-surface": "app-api"
-      }
-    },
-    "/app/v3/api/drive/nodes/{nodeId}/permissions/effective": {
-      "get": {
-        "tags": [
-          "drive"
-        ],
-        "operationId": "permissions.effective.list",
-        "parameters": [
-          {
-            "name": "nodeId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "page_size",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "string",
-              "format": "int64",
-              "minimum": 1,
-              "maximum": 200,
-              "x-sdkwork-int64-string": true
-            }
-          },
-          {
-            "name": "cursor",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/EffectivePermissionListHttpResponse"
                 }
               }
             }
@@ -5233,232 +6021,43 @@
         "x-sdkwork-api-surface": "app-api"
       }
     },
-    "/app/v3/api/drive/nodes/files": {
+    "/app/v3/api/drive/nodes/{nodeId}/watch": {
       "post": {
         "tags": [
           "drive"
         ],
-        "operationId": "nodes.files.create",
-        "responses": {
-          "201": {
-            "description": "Created",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CreateFileHttpResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad Request",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not Found",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "Conflict",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Internal Server Error",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          }
-        },
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateFileRequest"
-              }
-            }
-          }
-        },
-        "security": [
+        "operationId": "nodes.watch",
+        "summary": "Create a push notification channel for a Drive node",
+        "parameters": [
           {
-            "AuthToken": [],
-            "AccessToken": []
+            "name": "nodeId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64,
+              "pattern": "^[A-Za-z0-9._:@-]+$"
+            }
           }
         ],
-        "x-sdkwork-owner": "sdkwork-drive",
-        "x-sdkwork-api-authority": "sdkwork-drive-app-api",
-        "x-sdkwork-request-context": "WebRequestContext",
-        "x-sdkwork-api-surface": "app-api",
-        "parameters": []
-      }
-    },
-    "/app/v3/api/drive/nodes/folders": {
-      "post": {
-        "tags": [
-          "drive"
-        ],
-        "operationId": "nodes.folders.create",
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/CreateFolderRequest"
+                "$ref": "#/components/schemas/CreateWatchChannelRequest"
               }
             }
           }
         },
         "responses": {
-          "201": {
-            "description": "Created",
+          "200": {
+            "description": "Watch channel created.",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/DriveNodeHttpResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad Request",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not Found",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "Conflict",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Internal Server Error",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "AuthToken": [],
-            "AccessToken": []
-          }
-        ],
-        "x-sdkwork-owner": "sdkwork-drive",
-        "x-sdkwork-api-authority": "sdkwork-drive-app-api",
-        "x-sdkwork-request-context": "WebRequestContext",
-        "x-sdkwork-api-surface": "app-api",
-        "parameters": []
-      }
-    },
-    "/app/v3/api/drive/nodes/shortcuts": {
-      "post": {
-        "tags": [
-          "drive"
-        ],
-        "summary": "Create a shortcut node",
-        "operationId": "nodes.shortcuts.create",
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateShortcutRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Shortcut node created.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/DriveNodeHttpResponse"
+                  "$ref": "#/components/schemas/DriveWatchChannelHttpResponse"
                 }
               }
             }
@@ -5533,8 +6132,7 @@
         "x-sdkwork-owner": "sdkwork-drive",
         "x-sdkwork-api-authority": "sdkwork-drive-app-api",
         "x-sdkwork-request-context": "WebRequestContext",
-        "x-sdkwork-api-surface": "app-api",
-        "parameters": []
+        "x-sdkwork-api-surface": "app-api"
       }
     },
     "/app/v3/api/drive/properties/{propertyKey}/nodes": {
@@ -5663,711 +6261,73 @@
         "x-sdkwork-api-surface": "app-api"
       }
     },
+    "/app/v3/api/drive/quotas/summary": {
+      "get": {
+        "tags": [
+          "drive"
+        ],
+        "operationId": "quotas.retrieve",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuotaSummaryHttpResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "AuthToken": [],
+            "AccessToken": []
+          }
+        ],
+        "x-sdkwork-owner": "sdkwork-drive",
+        "x-sdkwork-api-authority": "sdkwork-drive-app-api",
+        "x-sdkwork-request-context": "WebRequestContext",
+        "x-sdkwork-api-surface": "app-api"
+      }
+    },
     "/app/v3/api/drive/recent": {
       "get": {
         "tags": [
           "drive"
         ],
         "operationId": "recent.list",
-        "parameters": [
-          {
-            "name": "spaceId",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "page_size",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "string",
-              "format": "int64",
-              "minimum": 1,
-              "maximum": 200,
-              "x-sdkwork-int64-string": true
-            }
-          },
-          {
-            "name": "cursor",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "sortBy",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "string",
-              "enum": [
-                "name",
-                "owner",
-                "lastModified",
-                "contentLength",
-                "type"
-              ]
-            }
-          },
-          {
-            "name": "sortOrder",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "string",
-              "enum": [
-                "asc",
-                "desc"
-              ]
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/DriveNodeListHttpResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad Request",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not Found",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "Conflict",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Internal Server Error",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "AuthToken": [],
-            "AccessToken": []
-          }
-        ],
-        "x-sdkwork-owner": "sdkwork-drive",
-        "x-sdkwork-api-authority": "sdkwork-drive-app-api",
-        "x-sdkwork-request-context": "WebRequestContext",
-        "x-sdkwork-api-surface": "app-api"
-      }
-    },
-    "/app/v3/api/drive/search": {
-      "get": {
-        "tags": [
-          "drive"
-        ],
-        "operationId": "search.list",
-        "parameters": [
-          {
-            "name": "q",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "spaceId",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "page_size",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "string",
-              "format": "int64",
-              "minimum": 1,
-              "maximum": 200,
-              "x-sdkwork-int64-string": true
-            }
-          },
-          {
-            "name": "cursor",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/DriveNodeListHttpResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad Request",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not Found",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "Conflict",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Internal Server Error",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "AuthToken": [],
-            "AccessToken": []
-          }
-        ],
-        "x-sdkwork-owner": "sdkwork-drive",
-        "x-sdkwork-api-authority": "sdkwork-drive-app-api",
-        "x-sdkwork-request-context": "WebRequestContext",
-        "x-sdkwork-api-surface": "app-api"
-      }
-    },
-    "/app/v3/api/drive/share_links/{token}/claim": {
-      "post": {
-        "tags": [
-          "drive"
-        ],
-        "operationId": "shareLinks.claim",
-        "parameters": [
-          {
-            "name": "token",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ClaimShareLinkHttpResponse"
-                }
-              }
-            }
-          },
-          "201": {
-            "description": "Created",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ClaimShareLinkHttpResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad Request",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not Found",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "410": {
-            "description": "Gone",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Internal Server Error",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "AuthToken": [],
-            "AccessToken": []
-          }
-        ],
-        "x-sdkwork-owner": "sdkwork-drive",
-        "x-sdkwork-api-authority": "sdkwork-drive-app-api",
-        "x-sdkwork-request-context": "WebRequestContext",
-        "x-sdkwork-api-surface": "app-api"
-      }
-    },
-    "/app/v3/api/drive/share_links/{shareLinkId}": {
-      "delete": {
-        "tags": [
-          "drive"
-        ],
-        "operationId": "shareLinks.delete",
-        "parameters": [
-          {
-            "name": "shareLinkId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "204": {
-            "description": "No Content"
-          },
-          "400": {
-            "description": "Bad Request",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not Found",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "Conflict",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Internal Server Error",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "AuthToken": [],
-            "AccessToken": []
-          }
-        ],
-        "x-sdkwork-owner": "sdkwork-drive",
-        "x-sdkwork-api-authority": "sdkwork-drive-app-api",
-        "x-sdkwork-request-context": "WebRequestContext",
-        "x-sdkwork-api-surface": "app-api"
-      },
-      "patch": {
-        "tags": [
-          "drive"
-        ],
-        "operationId": "shareLinks.update",
-        "parameters": [
-          {
-            "name": "shareLinkId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/UpdateShareLinkRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ShareLinkHttpResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad Request",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not Found",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "Conflict",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Internal Server Error",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "AuthToken": [],
-            "AccessToken": []
-          }
-        ],
-        "x-sdkwork-owner": "sdkwork-drive",
-        "x-sdkwork-api-authority": "sdkwork-drive-app-api",
-        "x-sdkwork-request-context": "WebRequestContext",
-        "x-sdkwork-api-surface": "app-api"
-      },
-      "get": {
-        "tags": [
-          "drive"
-        ],
-        "operationId": "shareLinks.retrieve",
-        "parameters": [
-          {
-            "name": "shareLinkId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ShareLinkHttpResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad Request",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not Found",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "Conflict",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Internal Server Error",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "AuthToken": [],
-            "AccessToken": []
-          }
-        ],
-        "x-sdkwork-owner": "sdkwork-drive",
-        "x-sdkwork-api-authority": "sdkwork-drive-app-api",
-        "x-sdkwork-request-context": "WebRequestContext",
-        "x-sdkwork-api-surface": "app-api"
-      }
-    },
-    "/app/v3/api/drive/shared_with_me": {
-      "get": {
-        "tags": [
-          "drive"
-        ],
-        "operationId": "sharedWithMe.list",
         "parameters": [
           {
             "name": "spaceId",
@@ -6606,6 +6566,134 @@
         "x-sdkwork-auth-mode": "dual-token"
       }
     },
+    "/app/v3/api/drive/sandboxes/{sandboxId}/directories": {
+      "post": {
+        "tags": [
+          "drive"
+        ],
+        "operationId": "sandboxDirectories.create",
+        "description": "Creates a directory below a sandbox-relative logical path after resolving effective full access and lifecycle policy.",
+        "parameters": [
+          {
+            "name": "sandboxId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128,
+              "pattern": "^[A-Za-z0-9._:@-]+$"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "description": "Opaque caller-generated key binding retries to the same directory creation request.",
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128,
+              "pattern": "^[A-Za-z0-9._:@-]+$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateDriveSandboxDirectoryRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DriveSandboxEntryHttpResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid logical path or directory name",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sandbox full access denied or sandbox is read only",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Sandbox or parent directory not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Directory already exists",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "AuthToken": [],
+            "AccessToken": []
+          }
+        ],
+        "x-sdkwork-owner": "sdkwork-drive",
+        "x-sdkwork-api-authority": "sdkwork-drive-app-api",
+        "x-sdkwork-request-context": "WebRequestContext",
+        "x-sdkwork-api-surface": "app-api",
+        "x-sdkwork-auth-mode": "dual-token",
+        "x-sdkwork-idempotent": true
+      }
+    },
     "/app/v3/api/drive/sandboxes/{sandboxId}/entries": {
       "get": {
         "tags": [
@@ -6752,13 +6840,13 @@
         }
       }
     },
-    "/app/v3/api/drive/sandboxes/{sandboxId}/directories": {
-      "post": {
+    "/app/v3/api/drive/sandboxes/{sandboxId}/entries/{entryId}": {
+      "patch": {
         "tags": [
           "drive"
         ],
-        "operationId": "sandboxDirectories.create",
-        "description": "Creates a directory below a sandbox-relative logical path after resolving effective full access and lifecycle policy.",
+        "operationId": "sandboxEntries.update",
+        "description": "Renames or moves one sandbox entry after validating opaque entry identity and a strong If-Match revision.",
         "parameters": [
           {
             "name": "sandboxId",
@@ -6772,10 +6860,31 @@
             }
           },
           {
+            "name": "entryId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128,
+              "pattern": "^[A-Za-z0-9_-]+$"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 3,
+              "maxLength": 130,
+              "pattern": "^\"[^\"\\r\\n]+\"$"
+            }
+          },
+          {
             "name": "Idempotency-Key",
             "in": "header",
             "required": true,
-            "description": "Opaque caller-generated key binding retries to the same directory creation request.",
             "schema": {
               "type": "string",
               "minLength": 1,
@@ -6789,14 +6898,14 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/CreateDriveSandboxDirectoryRequest"
+                "$ref": "#/components/schemas/UpdateDriveSandboxEntryRequest"
               }
             }
           }
         },
         "responses": {
-          "201": {
-            "description": "Created",
+          "200": {
+            "description": "OK",
             "content": {
               "application/json": {
                 "schema": {
@@ -6806,7 +6915,7 @@
             }
           },
           "400": {
-            "description": "Invalid logical path or directory name",
+            "description": "Request validation failed.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -6816,7 +6925,7 @@
             }
           },
           "401": {
-            "description": "Authentication failed",
+            "description": "Authentication failed.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -6826,7 +6935,7 @@
             }
           },
           "403": {
-            "description": "Sandbox full access denied or sandbox is read only",
+            "description": "Sandbox access is denied.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -6836,7 +6945,7 @@
             }
           },
           "404": {
-            "description": "Sandbox or parent directory not found",
+            "description": "Sandbox or logical entry was not found.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -6846,7 +6955,27 @@
             }
           },
           "409": {
-            "description": "Directory already exists",
+            "description": "Sandbox entry state or idempotency conflict.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "The supplied revision no longer matches the entry.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "A strong If-Match revision is required.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -6856,7 +6985,7 @@
             }
           },
           "500": {
-            "description": "Internal server error",
+            "description": "Internal sandbox file-system failure.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -6878,6 +7007,176 @@
         "x-sdkwork-api-surface": "app-api",
         "x-sdkwork-auth-mode": "dual-token",
         "x-sdkwork-idempotent": true
+      }
+    },
+    "/app/v3/api/drive/sandboxes/{sandboxId}/entries/{entryId}/purge": {
+      "post": {
+        "tags": [
+          "drive"
+        ],
+        "operationId": "sandboxEntries.purge",
+        "description": "Permanently deletes one file or directory. Non-empty directory deletion requires recursive=true explicitly.",
+        "parameters": [
+          {
+            "name": "sandboxId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128,
+              "pattern": "^[A-Za-z0-9._:@-]+$"
+            }
+          },
+          {
+            "name": "entryId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128,
+              "pattern": "^[A-Za-z0-9_-]+$"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 3,
+              "maxLength": 130,
+              "pattern": "^\"[^\"\\r\\n]+\"$"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128,
+              "pattern": "^[A-Za-z0-9._:@-]+$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PurgeDriveSandboxEntryRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Deleted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DriveSandboxMutationCommandHttpResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Request validation failed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication failed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sandbox access is denied.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Sandbox or logical entry was not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Sandbox entry state or idempotency conflict.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "The supplied revision no longer matches the entry.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "A strong If-Match revision is required.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal sandbox file-system failure.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "AuthToken": [],
+            "AccessToken": []
+          }
+        ],
+        "x-sdkwork-owner": "sdkwork-drive",
+        "x-sdkwork-api-authority": "sdkwork-drive-app-api",
+        "x-sdkwork-request-context": "WebRequestContext",
+        "x-sdkwork-api-surface": "app-api",
+        "x-sdkwork-auth-mode": "dual-token",
+        "x-sdkwork-idempotent": true,
+        "x-sdkwork-audit-event": "drive.sandbox.entry.deleted"
       }
     },
     "/app/v3/api/drive/sandboxes/{sandboxId}/files": {
@@ -7335,56 +7634,238 @@
         "x-sdkwork-idempotent": true
       }
     },
-    "/app/v3/api/drive/sandboxes/{sandboxId}/entries/{entryId}": {
+    "/app/v3/api/drive/search": {
+      "get": {
+        "tags": [
+          "drive"
+        ],
+        "operationId": "search.list",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "spaceId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "int64",
+              "minimum": 1,
+              "maximum": 200,
+              "x-sdkwork-int64-string": true
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DriveNodeListHttpResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "AuthToken": [],
+            "AccessToken": []
+          }
+        ],
+        "x-sdkwork-owner": "sdkwork-drive",
+        "x-sdkwork-api-authority": "sdkwork-drive-app-api",
+        "x-sdkwork-request-context": "WebRequestContext",
+        "x-sdkwork-api-surface": "app-api"
+      }
+    },
+    "/app/v3/api/drive/share_links/{shareLinkId}": {
+      "delete": {
+        "tags": [
+          "drive"
+        ],
+        "operationId": "shareLinks.delete",
+        "parameters": [
+          {
+            "name": "shareLinkId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "AuthToken": [],
+            "AccessToken": []
+          }
+        ],
+        "x-sdkwork-owner": "sdkwork-drive",
+        "x-sdkwork-api-authority": "sdkwork-drive-app-api",
+        "x-sdkwork-request-context": "WebRequestContext",
+        "x-sdkwork-api-surface": "app-api"
+      },
       "patch": {
         "tags": [
           "drive"
         ],
-        "operationId": "sandboxEntries.update",
-        "description": "Renames or moves one sandbox entry after validating opaque entry identity and a strong If-Match revision.",
+        "operationId": "shareLinks.update",
         "parameters": [
           {
-            "name": "sandboxId",
+            "name": "shareLinkId",
             "in": "path",
             "required": true,
             "schema": {
-              "type": "string",
-              "minLength": 1,
-              "maxLength": 128,
-              "pattern": "^[A-Za-z0-9._:@-]+$"
-            }
-          },
-          {
-            "name": "entryId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "minLength": 1,
-              "maxLength": 128,
-              "pattern": "^[A-Za-z0-9_-]+$"
-            }
-          },
-          {
-            "name": "If-Match",
-            "in": "header",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "minLength": 3,
-              "maxLength": 130,
-              "pattern": "^\"[^\"\\r\\n]+\"$"
-            }
-          },
-          {
-            "name": "Idempotency-Key",
-            "in": "header",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "minLength": 1,
-              "maxLength": 128,
-              "pattern": "^[A-Za-z0-9._:@-]+$"
+              "type": "string"
             }
           }
         ],
@@ -7393,7 +7874,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/UpdateDriveSandboxEntryRequest"
+                "$ref": "#/components/schemas/UpdateShareLinkRequest"
               }
             }
           }
@@ -7404,35 +7885,20 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/DriveSandboxEntryHttpResponse"
+                  "$ref": "#/components/schemas/ShareLinkHttpResponse"
                 }
               }
             }
           },
           "400": {
-            "description": "Request validation failed.",
+            "description": "Bad Request",
             "content": {
               "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/ProblemDetail"
                 }
-              }
-            }
-          },
-          "401": {
-            "description": "Authentication failed.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Sandbox access is denied.",
-            "content": {
-              "application/problem+json": {
+              },
+              "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ProblemDetail"
                 }
@@ -7440,9 +7906,14 @@
             }
           },
           "404": {
-            "description": "Sandbox or logical entry was not found.",
+            "description": "Not Found",
             "content": {
               "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ProblemDetail"
                 }
@@ -7450,29 +7921,14 @@
             }
           },
           "409": {
-            "description": "Sandbox entry state or idempotency conflict.",
+            "description": "Conflict",
             "content": {
               "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/ProblemDetail"
                 }
-              }
-            }
-          },
-          "412": {
-            "description": "The supplied revision no longer matches the entry.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "428": {
-            "description": "A strong If-Match revision is required.",
-            "content": {
-              "application/problem+json": {
+              },
+              "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ProblemDetail"
                 }
@@ -7480,9 +7936,14 @@
             }
           },
           "500": {
-            "description": "Internal sandbox file-system failure.",
+            "description": "Internal Server Error",
             "content": {
               "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ProblemDetail"
                 }
@@ -7499,99 +7960,153 @@
         "x-sdkwork-owner": "sdkwork-drive",
         "x-sdkwork-api-authority": "sdkwork-drive-app-api",
         "x-sdkwork-request-context": "WebRequestContext",
-        "x-sdkwork-api-surface": "app-api",
-        "x-sdkwork-auth-mode": "dual-token",
-        "x-sdkwork-idempotent": true
+        "x-sdkwork-api-surface": "app-api"
+      },
+      "get": {
+        "tags": [
+          "drive"
+        ],
+        "operationId": "shareLinks.retrieve",
+        "parameters": [
+          {
+            "name": "shareLinkId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShareLinkHttpResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "AuthToken": [],
+            "AccessToken": []
+          }
+        ],
+        "x-sdkwork-owner": "sdkwork-drive",
+        "x-sdkwork-api-authority": "sdkwork-drive-app-api",
+        "x-sdkwork-request-context": "WebRequestContext",
+        "x-sdkwork-api-surface": "app-api"
       }
     },
-    "/app/v3/api/drive/sandboxes/{sandboxId}/entries/{entryId}/purge": {
+    "/app/v3/api/drive/share_links/{token}/claim": {
       "post": {
         "tags": [
           "drive"
         ],
-        "operationId": "sandboxEntries.purge",
-        "description": "Permanently deletes one file or directory. Non-empty directory deletion requires recursive=true explicitly.",
+        "operationId": "shareLinks.claim",
         "parameters": [
           {
-            "name": "sandboxId",
+            "name": "token",
             "in": "path",
             "required": true,
             "schema": {
-              "type": "string",
-              "minLength": 1,
-              "maxLength": 128,
-              "pattern": "^[A-Za-z0-9._:@-]+$"
-            }
-          },
-          {
-            "name": "entryId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "minLength": 1,
-              "maxLength": 128,
-              "pattern": "^[A-Za-z0-9_-]+$"
-            }
-          },
-          {
-            "name": "If-Match",
-            "in": "header",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "minLength": 3,
-              "maxLength": 130,
-              "pattern": "^\"[^\"\\r\\n]+\"$"
-            }
-          },
-          {
-            "name": "Idempotency-Key",
-            "in": "header",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "minLength": 1,
-              "maxLength": 128,
-              "pattern": "^[A-Za-z0-9._:@-]+$"
+              "type": "string"
             }
           }
         ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/PurgeDriveSandboxEntryRequest"
-              }
-            }
-          }
-        },
         "responses": {
           "200": {
-            "description": "Deleted",
+            "description": "OK",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/DriveSandboxMutationCommandHttpResponse"
+                  "$ref": "#/components/schemas/ClaimShareLinkHttpResponse"
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClaimShareLinkHttpResponse"
                 }
               }
             }
           },
           "400": {
-            "description": "Request validation failed.",
+            "description": "Bad Request",
             "content": {
               "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/ProblemDetail"
                 }
-              }
-            }
-          },
-          "401": {
-            "description": "Authentication failed.",
-            "content": {
-              "application/problem+json": {
+              },
+              "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ProblemDetail"
                 }
@@ -7599,9 +8114,14 @@
             }
           },
           "403": {
-            "description": "Sandbox access is denied.",
+            "description": "Forbidden",
             "content": {
               "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ProblemDetail"
                 }
@@ -7609,39 +8129,29 @@
             }
           },
           "404": {
-            "description": "Sandbox or logical entry was not found.",
+            "description": "Not Found",
             "content": {
               "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ProblemDetail"
                 }
               }
             }
           },
-          "409": {
-            "description": "Sandbox entry state or idempotency conflict.",
+          "410": {
+            "description": "Gone",
             "content": {
               "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/ProblemDetail"
                 }
-              }
-            }
-          },
-          "412": {
-            "description": "The supplied revision no longer matches the entry.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "428": {
-            "description": "A strong If-Match revision is required.",
-            "content": {
-              "application/problem+json": {
+              },
+              "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ProblemDetail"
                 }
@@ -7649,9 +8159,14 @@
             }
           },
           "500": {
-            "description": "Internal sandbox file-system failure.",
+            "description": "Internal Server Error",
             "content": {
               "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ProblemDetail"
                 }
@@ -7668,10 +8183,154 @@
         "x-sdkwork-owner": "sdkwork-drive",
         "x-sdkwork-api-authority": "sdkwork-drive-app-api",
         "x-sdkwork-request-context": "WebRequestContext",
-        "x-sdkwork-api-surface": "app-api",
-        "x-sdkwork-auth-mode": "dual-token",
-        "x-sdkwork-idempotent": true,
-        "x-sdkwork-audit-event": "drive.sandbox.entry.deleted"
+        "x-sdkwork-api-surface": "app-api"
+      }
+    },
+    "/app/v3/api/drive/shared_with_me": {
+      "get": {
+        "tags": [
+          "drive"
+        ],
+        "operationId": "sharedWithMe.list",
+        "parameters": [
+          {
+            "name": "spaceId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "int64",
+              "minimum": 1,
+              "maximum": 200,
+              "x-sdkwork-int64-string": true
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sortBy",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "name",
+                "owner",
+                "lastModified",
+                "contentLength",
+                "type"
+              ]
+            }
+          },
+          {
+            "name": "sortOrder",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "asc",
+                "desc"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DriveNodeListHttpResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "AuthToken": [],
+            "AccessToken": []
+          }
+        ],
+        "x-sdkwork-owner": "sdkwork-drive",
+        "x-sdkwork-api-authority": "sdkwork-drive-app-api",
+        "x-sdkwork-request-context": "WebRequestContext",
+        "x-sdkwork-api-surface": "app-api"
       }
     },
     "/app/v3/api/drive/spaces": {
@@ -7859,911 +8518,6 @@
         "x-sdkwork-request-context": "WebRequestContext",
         "x-sdkwork-api-surface": "app-api",
         "parameters": []
-      }
-    },
-    "/app/v3/api/drive/spaces/{spaceId}/website_roots": {
-      "get": {
-        "tags": [
-          "drive"
-        ],
-        "operationId": "websiteRoots.list",
-        "parameters": [
-          {
-            "name": "spaceId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "minLength": 1,
-              "maxLength": 64
-            }
-          },
-          {
-            "name": "page_size",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "integer",
-              "format": "int32",
-              "minimum": 1,
-              "maximum": 200,
-              "default": 20
-            }
-          },
-          {
-            "name": "cursor",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Website roots visible to the authenticated subject.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/WebsiteRootListHttpResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Invalid pagination input.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "The authenticated subject cannot read the Space.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "The Space does not exist in the request tenant.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Internal Server Error",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "AuthToken": [],
-            "AccessToken": []
-          }
-        ],
-        "x-sdkwork-owner": "sdkwork-drive",
-        "x-sdkwork-api-authority": "sdkwork-drive-app-api",
-        "x-sdkwork-request-context": "WebRequestContext",
-        "x-sdkwork-api-surface": "app-api",
-        "x-sdkwork-auth-mode": "dual-token"
-      },
-      "post": {
-        "tags": [
-          "drive"
-        ],
-        "operationId": "websiteRoots.create",
-        "parameters": [
-          {
-            "name": "spaceId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "minLength": 1,
-              "maxLength": 64
-            }
-          },
-          {
-            "name": "Idempotency-Key",
-            "in": "header",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "minLength": 1,
-              "maxLength": 128
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateWebsiteRootRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "The WebsiteRoot for this source selector already exists.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/WebsiteRootHttpResponse"
-                }
-              }
-            }
-          },
-          "201": {
-            "description": "WebsiteRoot created.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/WebsiteRootHttpResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Invalid selector, non-website Space, or reserved source namespace.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Only the Space owner can create WebsiteRoots.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "The Space or selected folder does not exist in the request tenant.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "The root key conflicts with another WebsiteRoot.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Internal Server Error",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "AuthToken": [],
-            "AccessToken": []
-          }
-        ],
-        "x-sdkwork-owner": "sdkwork-drive",
-        "x-sdkwork-api-authority": "sdkwork-drive-app-api",
-        "x-sdkwork-request-context": "WebRequestContext",
-        "x-sdkwork-api-surface": "app-api",
-        "x-sdkwork-auth-mode": "dual-token",
-        "x-sdkwork-idempotent": true,
-        "x-sdkwork-audit-event": "drive.website_root.created"
-      }
-    },
-    "/app/v3/api/drive/website_roots/{rootUuid}": {
-      "get": {
-        "tags": [
-          "drive"
-        ],
-        "operationId": "websiteRoots.retrieve",
-        "parameters": [
-          {
-            "name": "rootUuid",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "WebsiteRoot retrieved.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/WebsiteRootHttpResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "The authenticated subject cannot read the owning Space.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "WebsiteRoot not found in the request tenant.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Internal Server Error",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "AuthToken": [],
-            "AccessToken": []
-          }
-        ],
-        "x-sdkwork-owner": "sdkwork-drive",
-        "x-sdkwork-api-authority": "sdkwork-drive-app-api",
-        "x-sdkwork-request-context": "WebRequestContext",
-        "x-sdkwork-api-surface": "app-api",
-        "x-sdkwork-auth-mode": "dual-token"
-      }
-    },
-    "/app/v3/api/drive/website_roots/{rootUuid}/syncs": {
-      "post": {
-        "tags": [
-          "drive"
-        ],
-        "operationId": "websiteRoots.syncs.create",
-        "summary": "Create an isolated atomic website synchronization",
-        "parameters": [
-          {
-            "name": "rootUuid",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          },
-          {
-            "name": "Idempotency-Key",
-            "in": "header",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "minLength": 1,
-              "maxLength": 128,
-              "pattern": "^[A-Za-z0-9._:/-]+$"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateWebsiteSyncRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "The idempotent WebsiteSync already exists.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/WebsiteSyncHttpResponse"
-                }
-              }
-            }
-          },
-          "201": {
-            "description": "WebsiteSync and isolated staging folder created.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/WebsiteSyncHttpResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Invalid synchronization request.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "The subject cannot publish this WebsiteRoot.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "WebsiteRoot not found in the request tenant.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "Idempotency or WebsiteRoot version conflict.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "AuthToken": [],
-            "AccessToken": []
-          }
-        ],
-        "x-sdkwork-owner": "sdkwork-drive",
-        "x-sdkwork-api-authority": "sdkwork-drive-app-api",
-        "x-sdkwork-request-context": "WebRequestContext",
-        "x-sdkwork-api-surface": "app-api",
-        "x-sdkwork-auth-mode": "dual-token",
-        "x-sdkwork-idempotent": true,
-        "x-sdkwork-audit-event": "drive.website_sync.created"
-      }
-    },
-    "/app/v3/api/drive/website_roots/{rootUuid}/syncs/{syncId}": {
-      "get": {
-        "tags": [
-          "drive"
-        ],
-        "operationId": "websiteRoots.syncs.retrieve",
-        "summary": "Retrieve an atomic website synchronization",
-        "parameters": [
-          {
-            "name": "rootUuid",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          },
-          {
-            "name": "syncId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "WebsiteSync retrieved.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/WebsiteSyncHttpResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "The subject cannot read this WebsiteRoot.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "WebsiteRoot or WebsiteSync not found in the request tenant.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "AuthToken": [],
-            "AccessToken": []
-          }
-        ],
-        "x-sdkwork-owner": "sdkwork-drive",
-        "x-sdkwork-api-authority": "sdkwork-drive-app-api",
-        "x-sdkwork-request-context": "WebRequestContext",
-        "x-sdkwork-api-surface": "app-api",
-        "x-sdkwork-auth-mode": "dual-token"
-      }
-    },
-    "/app/v3/api/drive/website_roots/{rootUuid}/syncs/{syncId}/finalize": {
-      "post": {
-        "tags": [
-          "drive"
-        ],
-        "operationId": "websiteRoots.syncs.finalize",
-        "summary": "Validate and atomically activate a complete website tree",
-        "parameters": [
-          {
-            "name": "rootUuid",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          },
-          {
-            "name": "syncId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          },
-          {
-            "name": "Idempotency-Key",
-            "in": "header",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "minLength": 1,
-              "maxLength": 128
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/WebsiteSyncVersionRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "WebsiteSync completed or an existing completed result replayed.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/WebsiteSyncActivationHttpResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "The staged tree or manifest is invalid.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "The subject cannot publish this WebsiteRoot.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "WebsiteRoot or WebsiteSync not found.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "A root, generation, or synchronization fence changed.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "AuthToken": [],
-            "AccessToken": []
-          }
-        ],
-        "x-sdkwork-owner": "sdkwork-drive",
-        "x-sdkwork-api-authority": "sdkwork-drive-app-api",
-        "x-sdkwork-request-context": "WebRequestContext",
-        "x-sdkwork-api-surface": "app-api",
-        "x-sdkwork-auth-mode": "dual-token",
-        "x-sdkwork-idempotent": true,
-        "x-sdkwork-audit-event": "drive.website_root.generation_activated"
-      }
-    },
-    "/app/v3/api/drive/website_roots/{rootUuid}/syncs/{syncId}/abort": {
-      "post": {
-        "tags": [
-          "drive"
-        ],
-        "operationId": "websiteRoots.syncs.abort",
-        "summary": "Abort an unactivated website synchronization",
-        "parameters": [
-          {
-            "name": "rootUuid",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          },
-          {
-            "name": "syncId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          },
-          {
-            "name": "Idempotency-Key",
-            "in": "header",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "minLength": 1,
-              "maxLength": 128
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/WebsiteSyncVersionRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "WebsiteSync aborted or an existing aborted result replayed.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/WebsiteSyncHttpResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "The subject cannot publish this WebsiteRoot.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "WebsiteRoot or WebsiteSync not found.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "The synchronization cannot be aborted in its current state.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "AuthToken": [],
-            "AccessToken": []
-          }
-        ],
-        "x-sdkwork-owner": "sdkwork-drive",
-        "x-sdkwork-api-authority": "sdkwork-drive-app-api",
-        "x-sdkwork-request-context": "WebRequestContext",
-        "x-sdkwork-api-surface": "app-api",
-        "x-sdkwork-auth-mode": "dual-token",
-        "x-sdkwork-idempotent": true,
-        "x-sdkwork-audit-event": "drive.website_sync.aborted"
-      }
-    },
-    "/app/v3/api/drive/website_roots/{rootUuid}/generations/{generation}/activate": {
-      "post": {
-        "tags": [
-          "drive"
-        ],
-        "operationId": "websiteRoots.generations.activate",
-        "summary": "Activate a retained website generation as a new logical generation",
-        "parameters": [
-          {
-            "name": "rootUuid",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          },
-          {
-            "name": "generation",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "$ref": "#/components/schemas/PositiveInt64String"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ActivateWebsiteGenerationRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Retained tree activated as a new WebsiteRoot generation.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/WebsiteGenerationActivationHttpResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Invalid generation request.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "The subject cannot publish this WebsiteRoot.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "WebsiteRoot or retained generation not found.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "The WebsiteRoot version or generation changed.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "AuthToken": [],
-            "AccessToken": []
-          }
-        ],
-        "x-sdkwork-owner": "sdkwork-drive",
-        "x-sdkwork-api-authority": "sdkwork-drive-app-api",
-        "x-sdkwork-request-context": "WebRequestContext",
-        "x-sdkwork-api-surface": "app-api",
-        "x-sdkwork-auth-mode": "dual-token",
-        "x-sdkwork-audit-event": "drive.website_root.generation_rolled_back"
-      }
-    },
-    "/app/v3/api/drive/spaces/{spaceId}/move_destinations": {
-      "get": {
-        "tags": [
-          "drive"
-        ],
-        "operationId": "moveDestinations.list",
-        "parameters": [
-          {
-            "name": "spaceId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "excludeNodeIds",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "string",
-              "description": "Comma-separated node IDs to exclude from results and subtree traversal."
-            }
-          },
-          {
-            "name": "page_size",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "string",
-              "format": "int64",
-              "minimum": 1,
-              "maximum": 200,
-              "x-sdkwork-int64-string": true
-            }
-          },
-          {
-            "name": "cursor",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/DriveNodeListHttpResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad Request",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not Found",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "413": {
-            "description": "Payload Too Large",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "AuthToken": [],
-            "AccessToken": []
-          }
-        ],
-        "x-sdkwork-owner": "sdkwork-drive",
-        "x-sdkwork-api-authority": "sdkwork-drive-app-api",
-        "x-sdkwork-request-context": "WebRequestContext",
-        "x-sdkwork-api-surface": "app-api"
       }
     },
     "/app/v3/api/drive/spaces/{spaceId}": {
@@ -9050,6 +8804,105 @@
         "x-sdkwork-api-surface": "app-api"
       }
     },
+    "/app/v3/api/drive/spaces/{spaceId}/move_destinations": {
+      "get": {
+        "tags": [
+          "drive"
+        ],
+        "operationId": "moveDestinations.list",
+        "parameters": [
+          {
+            "name": "spaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "excludeNodeIds",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Comma-separated node IDs to exclude from results and subtree traversal."
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "int64",
+              "minimum": 1,
+              "maximum": 200,
+              "x-sdkwork-int64-string": true
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DriveNodeListHttpResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Payload Too Large",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "AuthToken": [],
+            "AccessToken": []
+          }
+        ],
+        "x-sdkwork-owner": "sdkwork-drive",
+        "x-sdkwork-api-authority": "sdkwork-drive-app-api",
+        "x-sdkwork-request-context": "WebRequestContext",
+        "x-sdkwork-api-surface": "app-api"
+      }
+    },
     "/app/v3/api/drive/spaces/{spaceId}/nodes": {
       "get": {
         "tags": [
@@ -9205,6 +9058,232 @@
         "x-sdkwork-api-surface": "app-api"
       }
     },
+    "/app/v3/api/drive/spaces/{spaceId}/website_roots": {
+      "get": {
+        "tags": [
+          "drive"
+        ],
+        "operationId": "websiteRoots.list",
+        "parameters": [
+          {
+            "name": "spaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 20
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Website roots visible to the authenticated subject.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WebsiteRootListHttpResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid pagination input.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The authenticated subject cannot read the Space.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The Space does not exist in the request tenant.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "AuthToken": [],
+            "AccessToken": []
+          }
+        ],
+        "x-sdkwork-owner": "sdkwork-drive",
+        "x-sdkwork-api-authority": "sdkwork-drive-app-api",
+        "x-sdkwork-request-context": "WebRequestContext",
+        "x-sdkwork-api-surface": "app-api",
+        "x-sdkwork-auth-mode": "dual-token"
+      },
+      "post": {
+        "tags": [
+          "drive"
+        ],
+        "operationId": "websiteRoots.create",
+        "parameters": [
+          {
+            "name": "spaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateWebsiteRootRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The WebsiteRoot for this source selector already exists.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WebsiteRootHttpResponse"
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "WebsiteRoot created.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WebsiteRootHttpResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid selector, non-website Space, or reserved source namespace.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Only the Space owner can create WebsiteRoots.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The Space or selected folder does not exist in the request tenant.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The root key conflicts with another WebsiteRoot.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "AuthToken": [],
+            "AccessToken": []
+          }
+        ],
+        "x-sdkwork-owner": "sdkwork-drive",
+        "x-sdkwork-api-authority": "sdkwork-drive-app-api",
+        "x-sdkwork-request-context": "WebRequestContext",
+        "x-sdkwork-api-surface": "app-api",
+        "x-sdkwork-auth-mode": "dual-token",
+        "x-sdkwork-idempotent": true,
+        "x-sdkwork-audit-event": "drive.website_root.created"
+      }
+    },
     "/app/v3/api/drive/trash": {
       "get": {
         "tags": [
@@ -9283,116 +9362,6 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/DriveNodeListHttpResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad Request",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not Found",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "Conflict",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Internal Server Error",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "AuthToken": [],
-            "AccessToken": []
-          }
-        ],
-        "x-sdkwork-owner": "sdkwork-drive",
-        "x-sdkwork-api-authority": "sdkwork-drive-app-api",
-        "x-sdkwork-request-context": "WebRequestContext",
-        "x-sdkwork-api-surface": "app-api"
-      }
-    },
-    "/app/v3/api/drive/trash/{nodeId}/restore": {
-      "post": {
-        "tags": [
-          "drive"
-        ],
-        "operationId": "trash.restore",
-        "parameters": [
-          {
-            "name": "nodeId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/NodeCommandRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/DriveNodeHttpResponse"
                 }
               }
             }
@@ -9569,6 +9538,116 @@
         "x-sdkwork-request-context": "WebRequestContext",
         "x-sdkwork-api-surface": "app-api",
         "parameters": []
+      }
+    },
+    "/app/v3/api/drive/trash/{nodeId}/restore": {
+      "post": {
+        "tags": [
+          "drive"
+        ],
+        "operationId": "trash.restore",
+        "parameters": [
+          {
+            "name": "nodeId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NodeCommandRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DriveNodeHttpResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "AuthToken": [],
+            "AccessToken": []
+          }
+        ],
+        "x-sdkwork-owner": "sdkwork-drive",
+        "x-sdkwork-api-authority": "sdkwork-drive-app-api",
+        "x-sdkwork-request-context": "WebRequestContext",
+        "x-sdkwork-api-surface": "app-api"
       }
     },
     "/app/v3/api/drive/upload_sessions": {
@@ -10097,36 +10176,35 @@
         "x-sdkwork-api-surface": "app-api"
       }
     },
-    "/app/v3/api/drive/changes/watch": {
+    "/app/v3/api/drive/uploader/uploads": {
       "post": {
         "tags": [
           "drive"
         ],
-        "operationId": "changes.watch",
-        "summary": "Create a push notification channel for Drive changes",
+        "operationId": "uploader.uploads.create",
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/CreateWatchChannelRequest"
+                "$ref": "#/components/schemas/PrepareUploaderUploadRequest"
               }
             }
           }
         },
         "responses": {
-          "200": {
-            "description": "Watch channel created.",
+          "201": {
+            "description": "Created",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/DriveWatchChannelHttpResponse"
+                  "$ref": "#/components/schemas/PrepareUploaderUploadHttpResponse"
                 }
               }
             }
           },
           "400": {
-            "description": "Validation failed.",
+            "description": "Bad Request",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -10141,7 +10219,7 @@
             }
           },
           "404": {
-            "description": "Resource not found.",
+            "description": "Not Found",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -10156,7 +10234,7 @@
             }
           },
           "409": {
-            "description": "Conflict.",
+            "description": "Conflict",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -10171,7 +10249,7 @@
             }
           },
           "500": {
-            "description": "Internal server error.",
+            "description": "Internal Server Error",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -10199,23 +10277,30 @@
         "parameters": []
       }
     },
-    "/app/v3/api/drive/nodes/{nodeId}/watch": {
-      "post": {
+    "/app/v3/api/drive/uploader/uploads/{uploadItemId}/parts/{partNo}": {
+      "put": {
         "tags": [
           "drive"
         ],
-        "operationId": "nodes.watch",
-        "summary": "Create a push notification channel for a Drive node",
+        "operationId": "uploader.uploads.parts.update",
         "parameters": [
           {
-            "name": "nodeId",
+            "name": "uploadItemId",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
-              "minLength": 1,
-              "maxLength": 64,
-              "pattern": "^[A-Za-z0-9._:@-]+$"
+              "minLength": 1
+            }
+          },
+          {
+            "name": "partNo",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 10000
             }
           }
         ],
@@ -10224,24 +10309,24 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/CreateWatchChannelRequest"
+                "$ref": "#/components/schemas/MarkUploaderPartUploadedRequest"
               }
             }
           }
         },
         "responses": {
           "200": {
-            "description": "Watch channel created.",
+            "description": "OK",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/DriveWatchChannelHttpResponse"
+                  "$ref": "#/components/schemas/UploaderUploadPartHttpResponse"
                 }
               }
             }
           },
           "400": {
-            "description": "Validation failed.",
+            "description": "Bad Request",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -10256,7 +10341,7 @@
             }
           },
           "404": {
-            "description": "Resource not found.",
+            "description": "Not Found",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -10271,7 +10356,7 @@
             }
           },
           "409": {
-            "description": "Conflict.",
+            "description": "Conflict",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -10286,7 +10371,7 @@
             }
           },
           "500": {
-            "description": "Internal server error.",
+            "description": "Internal Server Error",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -10671,42 +10756,38 @@
         "x-sdkwork-api-surface": "app-api"
       }
     },
-    "/app/v3/api/drive/download_packages": {
-      "post": {
+    "/app/v3/api/drive/website_roots/{rootUuid}": {
+      "get": {
         "tags": [
           "drive"
         ],
-        "operationId": "downloadPackages.create",
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateDownloadPackageRequest"
-              }
+        "operationId": "websiteRoots.retrieve",
+        "parameters": [
+          {
+            "name": "rootUuid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
             }
           }
-        },
+        ],
         "responses": {
-          "201": {
-            "description": "Created",
+          "200": {
+            "description": "WebsiteRoot retrieved.",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/DownloadPackageHttpResponse"
+                  "$ref": "#/components/schemas/WebsiteRootHttpResponse"
                 }
               }
             }
           },
-          "400": {
-            "description": "Bad Request",
+          "403": {
+            "description": "The authenticated subject cannot read the owning Space.",
             "content": {
               "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              },
-              "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ProblemDetail"
                 }
@@ -10714,44 +10795,9 @@
             }
           },
           "404": {
-            "description": "Not Found",
+            "description": "WebsiteRoot not found in the request tenant.",
             "content": {
               "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "Conflict",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "410": {
-            "description": "Gone",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              },
-              "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ProblemDetail"
                 }
@@ -10762,11 +10808,6 @@
             "description": "Internal Server Error",
             "content": {
               "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              },
-              "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ProblemDetail"
                 }
@@ -10784,239 +10825,137 @@
         "x-sdkwork-api-authority": "sdkwork-drive-app-api",
         "x-sdkwork-request-context": "WebRequestContext",
         "x-sdkwork-api-surface": "app-api",
-        "parameters": []
+        "x-sdkwork-auth-mode": "dual-token"
       }
     },
-    "/app/v3/api/drive/download_packages/{packageId}/download_url": {
-      "get": {
+    "/app/v3/api/drive/website_roots/{rootUuid}/generations/{generation}/activate": {
+      "post": {
         "tags": [
           "drive"
         ],
-        "operationId": "downloadPackages.downloadUrls.retrieve",
+        "operationId": "websiteRoots.generations.activate",
+        "summary": "Activate a retained website generation as a new logical generation",
         "parameters": [
           {
-            "name": "packageId",
+            "name": "rootUuid",
             "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "generation",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/PositiveInt64String"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActivateWebsiteGenerationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Retained tree activated as a new WebsiteRoot generation.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WebsiteGenerationActivationHttpResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid generation request.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The subject cannot publish this WebsiteRoot.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "WebsiteRoot or retained generation not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The WebsiteRoot version or generation changed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "AuthToken": [],
+            "AccessToken": []
+          }
+        ],
+        "x-sdkwork-owner": "sdkwork-drive",
+        "x-sdkwork-api-authority": "sdkwork-drive-app-api",
+        "x-sdkwork-request-context": "WebRequestContext",
+        "x-sdkwork-api-surface": "app-api",
+        "x-sdkwork-auth-mode": "dual-token",
+        "x-sdkwork-audit-event": "drive.website_root.generation_rolled_back"
+      }
+    },
+    "/app/v3/api/drive/website_roots/{rootUuid}/syncs": {
+      "post": {
+        "tags": [
+          "drive"
+        ],
+        "operationId": "websiteRoots.syncs.create",
+        "summary": "Create an isolated atomic website synchronization",
+        "parameters": [
+          {
+            "name": "rootUuid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
             "required": true,
             "schema": {
               "type": "string",
               "minLength": 1,
-              "maxLength": 64
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/DownloadPackageHttpResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad Request",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not Found",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "Conflict",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "410": {
-            "description": "Gone",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Internal Server Error",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "AuthToken": [],
-            "AccessToken": []
-          }
-        ],
-        "x-sdkwork-owner": "sdkwork-drive",
-        "x-sdkwork-api-authority": "sdkwork-drive-app-api",
-        "x-sdkwork-request-context": "WebRequestContext",
-        "x-sdkwork-api-surface": "app-api"
-      }
-    },
-    "/app/v3/api/drive/nodes/{nodeId}/archive_entries": {
-      "get": {
-        "tags": [
-          "drive"
-        ],
-        "operationId": "archiveEntries.list",
-        "parameters": [
-          {
-            "name": "nodeId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ArchiveEntryListHttpResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad Request",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not Found",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "Conflict",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Internal Server Error",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "AuthToken": [],
-            "AccessToken": []
-          }
-        ],
-        "x-sdkwork-owner": "sdkwork-drive",
-        "x-sdkwork-api-authority": "sdkwork-drive-app-api",
-        "x-sdkwork-request-context": "WebRequestContext",
-        "x-sdkwork-api-surface": "app-api"
-      }
-    },
-    "/app/v3/api/drive/nodes/{nodeId}/archive_entries/extract": {
-      "post": {
-        "tags": [
-          "drive"
-        ],
-        "operationId": "archiveEntries.extract",
-        "parameters": [
-          {
-            "name": "nodeId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
+              "maxLength": 128,
+              "pattern": "^[A-Za-z0-9._:/-]+$"
             }
           }
         ],
@@ -11025,131 +10964,46 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/ExtractArchiveEntriesRequest"
+                "$ref": "#/components/schemas/CreateWebsiteSyncRequest"
               }
             }
           }
         },
         "responses": {
           "200": {
-            "description": "Created",
+            "description": "The idempotent WebsiteSync already exists.",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ExtractArchiveEntriesHttpResponse"
+                  "$ref": "#/components/schemas/WebsiteSyncHttpResponse"
                 }
               }
             }
           },
-          "400": {
-            "description": "Bad Request",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not Found",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "Conflict",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Internal Server Error",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "AuthToken": [],
-            "AccessToken": []
-          }
-        ],
-        "x-sdkwork-owner": "sdkwork-drive",
-        "x-sdkwork-api-authority": "sdkwork-drive-app-api",
-        "x-sdkwork-request-context": "WebRequestContext",
-        "x-sdkwork-api-surface": "app-api"
-      }
-    },
-    "/app/v3/api/drive/uploader/uploads": {
-      "post": {
-        "tags": [
-          "drive"
-        ],
-        "operationId": "uploader.uploads.create",
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/PrepareUploaderUploadRequest"
-              }
-            }
-          }
-        },
-        "responses": {
           "201": {
-            "description": "Created",
+            "description": "WebsiteSync and isolated staging folder created.",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/PrepareUploaderUploadHttpResponse"
+                  "$ref": "#/components/schemas/WebsiteSyncHttpResponse"
                 }
               }
             }
           },
           "400": {
-            "description": "Bad Request",
+            "description": "Invalid synchronization request.",
             "content": {
               "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/ProblemDetail"
                 }
-              },
-              "application/json": {
+              }
+            }
+          },
+          "403": {
+            "description": "The subject cannot publish this WebsiteRoot.",
+            "content": {
+              "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/ProblemDetail"
                 }
@@ -11157,14 +11011,9 @@
             }
           },
           "404": {
-            "description": "Not Found",
+            "description": "WebsiteRoot not found in the request tenant.",
             "content": {
               "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              },
-              "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ProblemDetail"
                 }
@@ -11172,29 +11021,9 @@
             }
           },
           "409": {
-            "description": "Conflict",
+            "description": "Idempotency or WebsiteRoot version conflict.",
             "content": {
               "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Internal Server Error",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              },
-              "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ProblemDetail"
                 }
@@ -11212,66 +11041,53 @@
         "x-sdkwork-api-authority": "sdkwork-drive-app-api",
         "x-sdkwork-request-context": "WebRequestContext",
         "x-sdkwork-api-surface": "app-api",
-        "parameters": []
+        "x-sdkwork-auth-mode": "dual-token",
+        "x-sdkwork-idempotent": true,
+        "x-sdkwork-audit-event": "drive.website_sync.created"
       }
     },
-    "/app/v3/api/drive/uploader/uploads/{uploadItemId}/parts/{partNo}": {
-      "put": {
+    "/app/v3/api/drive/website_roots/{rootUuid}/syncs/{syncId}": {
+      "get": {
         "tags": [
           "drive"
         ],
-        "operationId": "uploader.uploads.parts.update",
+        "operationId": "websiteRoots.syncs.retrieve",
+        "summary": "Retrieve an atomic website synchronization",
         "parameters": [
           {
-            "name": "uploadItemId",
+            "name": "rootUuid",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
-              "minLength": 1
+              "format": "uuid"
             }
           },
           {
-            "name": "partNo",
+            "name": "syncId",
             "in": "path",
             "required": true,
             "schema": {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 10000
+              "type": "string",
+              "format": "uuid"
             }
           }
         ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/MarkUploaderPartUploadedRequest"
-              }
-            }
-          }
-        },
         "responses": {
           "200": {
-            "description": "OK",
+            "description": "WebsiteSync retrieved.",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/UploaderUploadPartHttpResponse"
+                  "$ref": "#/components/schemas/WebsiteSyncHttpResponse"
                 }
               }
             }
           },
-          "400": {
-            "description": "Bad Request",
+          "403": {
+            "description": "The subject cannot read this WebsiteRoot.",
             "content": {
               "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              },
-              "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ProblemDetail"
                 }
@@ -11279,44 +11095,9 @@
             }
           },
           "404": {
-            "description": "Not Found",
+            "description": "WebsiteRoot or WebsiteSync not found in the request tenant.",
             "content": {
               "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "Conflict",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Internal Server Error",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              },
-              "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ProblemDetail"
                 }
@@ -11333,7 +11114,226 @@
         "x-sdkwork-owner": "sdkwork-drive",
         "x-sdkwork-api-authority": "sdkwork-drive-app-api",
         "x-sdkwork-request-context": "WebRequestContext",
-        "x-sdkwork-api-surface": "app-api"
+        "x-sdkwork-api-surface": "app-api",
+        "x-sdkwork-auth-mode": "dual-token"
+      }
+    },
+    "/app/v3/api/drive/website_roots/{rootUuid}/syncs/{syncId}/abort": {
+      "post": {
+        "tags": [
+          "drive"
+        ],
+        "operationId": "websiteRoots.syncs.abort",
+        "summary": "Abort an unactivated website synchronization",
+        "parameters": [
+          {
+            "name": "rootUuid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "syncId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WebsiteSyncVersionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "WebsiteSync aborted or an existing aborted result replayed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WebsiteSyncHttpResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The subject cannot publish this WebsiteRoot.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "WebsiteRoot or WebsiteSync not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The synchronization cannot be aborted in its current state.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "AuthToken": [],
+            "AccessToken": []
+          }
+        ],
+        "x-sdkwork-owner": "sdkwork-drive",
+        "x-sdkwork-api-authority": "sdkwork-drive-app-api",
+        "x-sdkwork-request-context": "WebRequestContext",
+        "x-sdkwork-api-surface": "app-api",
+        "x-sdkwork-auth-mode": "dual-token",
+        "x-sdkwork-idempotent": true,
+        "x-sdkwork-audit-event": "drive.website_sync.aborted"
+      }
+    },
+    "/app/v3/api/drive/website_roots/{rootUuid}/syncs/{syncId}/finalize": {
+      "post": {
+        "tags": [
+          "drive"
+        ],
+        "operationId": "websiteRoots.syncs.finalize",
+        "summary": "Validate and atomically activate a complete website tree",
+        "parameters": [
+          {
+            "name": "rootUuid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "syncId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WebsiteSyncVersionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "WebsiteSync completed or an existing completed result replayed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WebsiteSyncActivationHttpResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The staged tree or manifest is invalid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The subject cannot publish this WebsiteRoot.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "WebsiteRoot or WebsiteSync not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "A root, generation, or synchronization fence changed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "AuthToken": [],
+            "AccessToken": []
+          }
+        ],
+        "x-sdkwork-owner": "sdkwork-drive",
+        "x-sdkwork-api-authority": "sdkwork-drive-app-api",
+        "x-sdkwork-request-context": "WebRequestContext",
+        "x-sdkwork-api-surface": "app-api",
+        "x-sdkwork-auth-mode": "dual-token",
+        "x-sdkwork-idempotent": true,
+        "x-sdkwork-audit-event": "drive.website_root.generation_activated"
       }
     }
   },

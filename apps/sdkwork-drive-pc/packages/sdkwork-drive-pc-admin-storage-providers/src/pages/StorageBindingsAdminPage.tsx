@@ -30,7 +30,7 @@ import {
 } from '../services/storageProviderAdminService';
 import type { StorageProviderBindingView, StorageProviderView } from '../types/storageProviderAdminTypes';
 import { SPACE_TYPES, getSpaceTypeMeta, resolveSpaceTypeDescription, resolveSpaceTypeLabel } from '../utils/spaceTypeConfig';
-import { getProviderKindMeta } from '../utils/providerKindConfig';
+import { getProviderKindMeta, providerDisplayName } from '../utils/providerKindConfig';
 import {
   PRIMARY_BUTTON_CLASS,
   SELECT_CLASS,
@@ -269,7 +269,7 @@ export function StorageBindingsAdminPage({
   const spaceTypeLabel = (spaceType: string) => resolveSpaceTypeLabel(getSpaceTypeMeta(spaceType), t);
   const spaceTypeDescription = (spaceType: string) => resolveSpaceTypeDescription(getSpaceTypeMeta(spaceType), t);
   const providerLabel = (provider: StorageProviderView) =>
-    `[${getProviderKindMeta(provider.providerKind).shortLabel}] ${provider.displayName}`;
+    `[${getProviderKindMeta(provider.providerKind).shortLabel}] ${providerDisplayName(t, provider)}`;
 
   // --- tenant configuration handlers ---------------------------------------
   const openTenantConfig = () => {
@@ -503,7 +503,10 @@ export function StorageBindingsAdminPage({
                       const meta = getProviderKindMeta(tenantProvider?.providerKind ?? '');
                       return (
                         <span className={`inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium ${meta.bgClass} ${meta.textClass}`}>
-                          {meta.icon} {tenantProvider?.displayName ?? tenantBinding.providerId}
+                          {meta.icon}{' '}
+                          {tenantProvider
+                            ? providerDisplayName(t, tenantProvider)
+                            : tenantBinding.providerId}
                         </span>
                       );
                     })()}
@@ -655,7 +658,7 @@ export function StorageBindingsAdminPage({
                               <span className={`inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-bold ${providerMeta.bgClass} ${providerMeta.textClass}`}>
                                 {providerMeta.icon}
                               </span>
-                              <span className="text-xs font-medium text-neutral-900 dark:text-neutral-100">{provider?.displayName}</span>
+                              <span className="text-xs font-medium text-neutral-900 dark:text-neutral-100">{provider ? providerDisplayName(t, provider) : ''}</span>
                             </div>
                           ) : binding.configured ? (
                             // The binding is active but its provider is not in the
@@ -802,7 +805,7 @@ export function StorageBindingsAdminPage({
                                 <span className={`inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-bold ${providerMeta.bgClass} ${providerMeta.textClass}`}>
                                   {providerMeta.icon}
                                 </span>
-                                <span className="text-xs font-medium">{provider.displayName}</span>
+                                <span className="text-xs font-medium">{providerDisplayName(t, provider)}</span>
                               </div>
                             ) : (
                               <span className="font-mono text-xs text-neutral-600 dark:text-neutral-300">{binding.providerId}</span>
@@ -1036,11 +1039,15 @@ export function StorageBindingsAdminPage({
       </Drawer>
 
       {/*
-        The browser is the same `StorageObjectBrowser` the bucket page mounts
-        inline, so a binding and a configuration show one file plane rather than
-        two implementations. It is keyed by binding: opening another row must
-        mount a fresh prefix and page token instead of inheriting the previous
-        one's.
+        The browser here is `StorageObjectBrowser` — the provider package's own
+        object browser. It is NOT the one the bucket page mounts: that page uses
+        `BucketObjectManagerDialog` from `sdkwork-drive-pc-admin-storage-buckets`,
+        which adds the category rail, the bucket-scoped requests and the shared
+        preview/editor surface. Two object browsers therefore exist today; this
+        one is the older, simpler plane and does not preview files.
+
+        It is keyed by binding: opening another row must mount a fresh prefix and
+        page token instead of inheriting the previous one's.
       */}
       <Modal
         open={browseTarget !== null && browseProvider !== undefined}

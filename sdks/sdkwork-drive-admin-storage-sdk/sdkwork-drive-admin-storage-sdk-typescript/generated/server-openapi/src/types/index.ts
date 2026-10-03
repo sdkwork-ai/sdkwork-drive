@@ -10,6 +10,14 @@ export type { RotateStorageProviderCredentialRequest } from './rotate-storage-pr
 export type { TestStorageProviderResponse } from './test-storage-provider-response';
 export type { ProviderBucket } from './provider-bucket';
 export type { ProviderBucketMutation } from './provider-bucket-mutation';
+export type { CreateProviderObjectMultipartUploadRequest } from './create-provider-object-multipart-upload-request';
+export type { ProviderObjectMultipartUpload } from './provider-object-multipart-upload';
+export type { PresignProviderObjectUploadPartsRequest } from './presign-provider-object-upload-parts-request';
+export type { ProviderObjectUploadPartGrant } from './provider-object-upload-part-grant';
+export type { ProviderObjectUploadPartGrants } from './provider-object-upload-part-grants';
+export type { ProviderObjectUploadPartReference } from './provider-object-upload-part-reference';
+export type { CompleteProviderObjectMultipartUploadRequest } from './complete-provider-object-multipart-upload-request';
+export type { AbortProviderObjectMultipartUploadRequest } from './abort-provider-object-multipart-upload-request';
 export type { ProviderObject } from './provider-object';
 export type { ProviderObjectMutation } from './provider-object-mutation';
 export type { CopyProviderObjectRequest } from './copy-provider-object-request';
@@ -61,6 +69,10 @@ export type { StorageProvidersBucketUpdateResponse } from './storage-providers-b
 export type { StorageProvidersObjectsListResponse } from './storage-providers-objects-list-response';
 export type { StorageProvidersObjectsRetrieveResponse } from './storage-providers-objects-retrieve-response';
 export type { StorageProvidersObjectsCopyResponse } from './storage-providers-objects-copy-response';
+export type { StorageProvidersObjectsMultipartUploadCreateResponse } from './storage-providers-objects-multipart-upload-create-response';
+export type { StorageProvidersObjectsMultipartUploadPartsPresignResponse } from './storage-providers-objects-multipart-upload-parts-presign-response';
+export type { StorageProvidersObjectsMultipartUploadCompleteResponse } from './storage-providers-objects-multipart-upload-complete-response';
+export type { StorageProvidersObjectsMultipartUploadAbortResponse } from './storage-providers-objects-multipart-upload-abort-response';
 export type { StorageProvidersBucketsListResponse } from './storage-providers-buckets-list-response';
 export type { StorageProviderBindingsListResponse } from './storage-provider-bindings-list-response';
 export type { StorageProviderKindsListResponse } from './storage-provider-kinds-list-response';

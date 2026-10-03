@@ -3,7 +3,7 @@ use std::sync::Arc;
 use crate::api::paths::custom_path;
 use crate::api::paths::append_query_string;
 use crate::http::{SdkworkError, SdkworkHttpClient};
-use crate::models::{CopyProviderObjectRequest, CreateStorageMigrationRequest, CreateStorageProviderAccountRequest, CreateStorageProviderRequest, RotateStorageProviderCredentialRequest, RunStorageMigrationRequest, SetDefaultStorageProviderBindingRequest, SetStorageProviderKindEnabledRequest, StorageMigrationsCancelResponse, StorageMigrationsCreateResponse, StorageMigrationsItemsListResponse, StorageMigrationsListResponse, StorageMigrationsRetrieveResponse, StorageMigrationsRunResponse, StorageOverviewRetrieveResponse, StorageProviderAccountDefaultsCreateResponse201, StorageProviderAccountsCreateResponse201, StorageProviderAccountsListResponse, StorageProviderBindingsDefaultRetrieveResponse, StorageProviderBindingsDefaultUpdateResponse, StorageProviderBindingsListResponse, StorageProviderKindsCreateResponse201, StorageProviderKindsListResponse, StorageProviderKindsUpdateResponse, StorageProvidersActivateResponse, StorageProvidersBucketRetrieveResponse, StorageProvidersBucketUpdateResponse, StorageProvidersBucketsListResponse, StorageProvidersCapabilitiesListResponse, StorageProvidersCreateResponse201, StorageProvidersCredentialsRotateResponse, StorageProvidersDeactivateResponse, StorageProvidersListResponse, StorageProvidersObjectsContentRetrieveResponse, StorageProvidersObjectsContentUpdateResponse, StorageProvidersObjectsCopyResponse, StorageProvidersObjectsListResponse, StorageProvidersObjectsRetrieveResponse, StorageProvidersRetrieveResponse, StorageProvidersTestResponse, StorageProvidersUpdateResponse, UpdateProviderObjectContent, UpdateStorageProviderRequest};
+use crate::models::{AbortProviderObjectMultipartUploadRequest, CompleteProviderObjectMultipartUploadRequest, CopyProviderObjectRequest, CreateProviderObjectMultipartUploadRequest, CreateStorageMigrationRequest, CreateStorageProviderAccountRequest, CreateStorageProviderRequest, PresignProviderObjectUploadPartsRequest, RotateStorageProviderCredentialRequest, RunStorageMigrationRequest, SetDefaultStorageProviderBindingRequest, SetStorageProviderKindEnabledRequest, StorageMigrationsCancelResponse, StorageMigrationsCreateResponse, StorageMigrationsItemsListResponse, StorageMigrationsListResponse, StorageMigrationsRetrieveResponse, StorageMigrationsRunResponse, StorageOverviewRetrieveResponse, StorageProviderAccountDefaultsCreateResponse201, StorageProviderAccountsCreateResponse201, StorageProviderAccountsListResponse, StorageProviderBindingsDefaultRetrieveResponse, StorageProviderBindingsDefaultUpdateResponse, StorageProviderBindingsListResponse, StorageProviderKindsCreateResponse201, StorageProviderKindsListResponse, StorageProviderKindsUpdateResponse, StorageProvidersActivateResponse, StorageProvidersBucketRetrieveResponse, StorageProvidersBucketUpdateResponse, StorageProvidersBucketsListResponse, StorageProvidersCapabilitiesListResponse, StorageProvidersCreateResponse201, StorageProvidersCredentialsRotateResponse, StorageProvidersDeactivateResponse, StorageProvidersListResponse, StorageProvidersObjectsContentRetrieveResponse, StorageProvidersObjectsContentUpdateResponse, StorageProvidersObjectsCopyResponse, StorageProvidersObjectsListResponse, StorageProvidersObjectsMultipartUploadAbortResponse, StorageProvidersObjectsMultipartUploadCompleteResponse, StorageProvidersObjectsMultipartUploadCreateResponse, StorageProvidersObjectsMultipartUploadPartsPresignResponse, StorageProvidersObjectsRetrieveResponse, StorageProvidersRetrieveResponse, StorageProvidersTestResponse, StorageProvidersUpdateResponse, UpdateProviderObjectContent, UpdateStorageProviderRequest};
 
 #[derive(Clone)]
 pub struct DriveApi {
@@ -109,29 +109,79 @@ impl DriveApi {
         self.client.delete(&path, None, None).await
     }
 
-    pub async fn storage_providers_objects_list(&self, provider_id: &str, prefix: Option<&str>, delimiter: Option<&str>, cursor: Option<&str>, page_size: Option<i64>) -> Result<StorageProvidersObjectsListResponse, SdkworkError> {
+    pub async fn storage_providers_objects_list(&self, provider_id: &str, prefix: Option<&str>, delimiter: Option<&str>, cursor: Option<&str>, page_size: Option<i64>, bucket: Option<&str>, region: Option<&str>) -> Result<StorageProvidersObjectsListResponse, SdkworkError> {
         let query = build_query_string(&[
             QueryParameterSpec::new("prefix", prefix, "form", true, false, None),
             QueryParameterSpec::new("delimiter", delimiter, "form", true, false, None),
             QueryParameterSpec::new("cursor", cursor, "form", true, false, None),
             QueryParameterSpec::new("page_size", page_size, "form", true, false, None),
+            QueryParameterSpec::new("bucket", bucket, "form", true, false, None),
+            QueryParameterSpec::new("region", region, "form", true, false, None),
         ]);
         let path = append_query_string(custom_path(&format!("/drive/storage/providers/{}/objects", serialize_path_parameter(provider_id, PathParameterSpec::new("providerId", "simple", false)))), &query);
         self.client.get(&path, None, None).await
     }
 
-    pub async fn storage_providers_objects_retrieve(&self, provider_id: &str, object_key: &str) -> Result<StorageProvidersObjectsRetrieveResponse, SdkworkError> {
-        let path = custom_path(&format!("/drive/storage/providers/{}/objects/{}", serialize_path_parameter(provider_id, PathParameterSpec::new("providerId", "simple", false)), serialize_path_parameter(object_key, PathParameterSpec::new("objectKey", "simple", false))));
+    pub async fn storage_providers_objects_retrieve(&self, provider_id: &str, object_key: &str, bucket: Option<&str>, region: Option<&str>) -> Result<StorageProvidersObjectsRetrieveResponse, SdkworkError> {
+        let query = build_query_string(&[
+            QueryParameterSpec::new("bucket", bucket, "form", true, false, None),
+            QueryParameterSpec::new("region", region, "form", true, false, None),
+        ]);
+        let path = append_query_string(custom_path(&format!("/drive/storage/providers/{}/objects/{}", serialize_path_parameter(provider_id, PathParameterSpec::new("providerId", "simple", false)), serialize_path_parameter(object_key, PathParameterSpec::new("objectKey", "simple", false)))), &query);
         self.client.get(&path, None, None).await
     }
 
-    pub async fn storage_providers_objects_delete(&self, provider_id: &str, object_key: &str) -> Result<(), SdkworkError> {
-        let path = custom_path(&format!("/drive/storage/providers/{}/objects/{}", serialize_path_parameter(provider_id, PathParameterSpec::new("providerId", "simple", false)), serialize_path_parameter(object_key, PathParameterSpec::new("objectKey", "simple", false))));
+    pub async fn storage_providers_objects_delete(&self, provider_id: &str, object_key: &str, bucket: Option<&str>, region: Option<&str>) -> Result<(), SdkworkError> {
+        let query = build_query_string(&[
+            QueryParameterSpec::new("bucket", bucket, "form", true, false, None),
+            QueryParameterSpec::new("region", region, "form", true, false, None),
+        ]);
+        let path = append_query_string(custom_path(&format!("/drive/storage/providers/{}/objects/{}", serialize_path_parameter(provider_id, PathParameterSpec::new("providerId", "simple", false)), serialize_path_parameter(object_key, PathParameterSpec::new("objectKey", "simple", false)))), &query);
         self.client.delete(&path, None, None).await
     }
 
     pub async fn storage_providers_objects_copy(&self, provider_id: &str, body: &CopyProviderObjectRequest) -> Result<StorageProvidersObjectsCopyResponse, SdkworkError> {
         let path = custom_path(&format!("/drive/storage/providers/{}/objects/copy", serialize_path_parameter(provider_id, PathParameterSpec::new("providerId", "simple", false))));
+        self.client.post(&path, Some(body), None, None, Some("application/json")).await
+    }
+
+    /// Start a provider object multipart upload
+    pub async fn storage_providers_objects_multipart_upload_create(&self, provider_id: &str, body: &CreateProviderObjectMultipartUploadRequest, bucket: Option<&str>, region: Option<&str>) -> Result<StorageProvidersObjectsMultipartUploadCreateResponse, SdkworkError> {
+        let query = build_query_string(&[
+            QueryParameterSpec::new("bucket", bucket, "form", true, false, None),
+            QueryParameterSpec::new("region", region, "form", true, false, None),
+        ]);
+        let path = append_query_string(custom_path(&format!("/drive/storage/providers/{}/objects/multipart-uploads", serialize_path_parameter(provider_id, PathParameterSpec::new("providerId", "simple", false)))), &query);
+        self.client.post(&path, Some(body), None, None, Some("application/json")).await
+    }
+
+    /// Presign provider object upload parts
+    pub async fn storage_providers_objects_multipart_upload_parts_presign(&self, provider_id: &str, body: &PresignProviderObjectUploadPartsRequest, bucket: Option<&str>, region: Option<&str>) -> Result<StorageProvidersObjectsMultipartUploadPartsPresignResponse, SdkworkError> {
+        let query = build_query_string(&[
+            QueryParameterSpec::new("bucket", bucket, "form", true, false, None),
+            QueryParameterSpec::new("region", region, "form", true, false, None),
+        ]);
+        let path = append_query_string(custom_path(&format!("/drive/storage/providers/{}/objects/multipart-uploads/parts", serialize_path_parameter(provider_id, PathParameterSpec::new("providerId", "simple", false)))), &query);
+        self.client.post(&path, Some(body), None, None, Some("application/json")).await
+    }
+
+    /// Complete a provider object multipart upload
+    pub async fn storage_providers_objects_multipart_upload_complete(&self, provider_id: &str, body: &CompleteProviderObjectMultipartUploadRequest, bucket: Option<&str>, region: Option<&str>) -> Result<StorageProvidersObjectsMultipartUploadCompleteResponse, SdkworkError> {
+        let query = build_query_string(&[
+            QueryParameterSpec::new("bucket", bucket, "form", true, false, None),
+            QueryParameterSpec::new("region", region, "form", true, false, None),
+        ]);
+        let path = append_query_string(custom_path(&format!("/drive/storage/providers/{}/objects/multipart-uploads/complete", serialize_path_parameter(provider_id, PathParameterSpec::new("providerId", "simple", false)))), &query);
+        self.client.post(&path, Some(body), None, None, Some("application/json")).await
+    }
+
+    /// Abort a provider object multipart upload
+    pub async fn storage_providers_objects_multipart_upload_abort(&self, provider_id: &str, body: &AbortProviderObjectMultipartUploadRequest, bucket: Option<&str>, region: Option<&str>) -> Result<StorageProvidersObjectsMultipartUploadAbortResponse, SdkworkError> {
+        let query = build_query_string(&[
+            QueryParameterSpec::new("bucket", bucket, "form", true, false, None),
+            QueryParameterSpec::new("region", region, "form", true, false, None),
+        ]);
+        let path = append_query_string(custom_path(&format!("/drive/storage/providers/{}/objects/multipart-uploads/abort", serialize_path_parameter(provider_id, PathParameterSpec::new("providerId", "simple", false)))), &query);
         self.client.post(&path, Some(body), None, None, Some("application/json")).await
     }
 
@@ -173,8 +223,12 @@ impl DriveApi {
     }
 
     /// Retrieve provider object content
-    pub async fn storage_providers_objects_content_retrieve(&self, provider_id: &str, object_key: &str) -> Result<StorageProvidersObjectsContentRetrieveResponse, SdkworkError> {
-        let path = custom_path(&format!("/drive/storage/providers/{}/object-contents/{}", serialize_path_parameter(provider_id, PathParameterSpec::new("providerId", "simple", false)), serialize_path_parameter(object_key, PathParameterSpec::new("objectKey", "simple", false))));
+    pub async fn storage_providers_objects_content_retrieve(&self, provider_id: &str, object_key: &str, bucket: Option<&str>, region: Option<&str>) -> Result<StorageProvidersObjectsContentRetrieveResponse, SdkworkError> {
+        let query = build_query_string(&[
+            QueryParameterSpec::new("bucket", bucket, "form", true, false, None),
+            QueryParameterSpec::new("region", region, "form", true, false, None),
+        ]);
+        let path = append_query_string(custom_path(&format!("/drive/storage/providers/{}/object-contents/{}", serialize_path_parameter(provider_id, PathParameterSpec::new("providerId", "simple", false)), serialize_path_parameter(object_key, PathParameterSpec::new("objectKey", "simple", false)))), &query);
         self.client.get(&path, None, None).await
     }
 
@@ -184,7 +238,7 @@ impl DriveApi {
         self.client.put(&path, Some(body), None, None, Some("application/json")).await
     }
 
-    pub async fn storage_provider_accounts_list(&self, vendor_code: Option<&str>, status: Option<&str>, search: Option<&str>, scope_type: Option<&str>, owner_user_id: Option<&str>, mine: Option<bool>, include_platform: Option<bool>, capability_code: Option<&str>) -> Result<StorageProviderAccountsListResponse, SdkworkError> {
+    pub async fn storage_provider_accounts_list(&self, vendor_code: Option<&str>, status: Option<&str>, search: Option<&str>, scope_type: Option<&str>, owner_user_id: Option<&str>, mine: Option<bool>, include_platform: Option<bool>, capability_code: Option<&str>, bucket: Option<&str>, region: Option<&str>) -> Result<StorageProviderAccountsListResponse, SdkworkError> {
         let query = build_query_string(&[
             QueryParameterSpec::new("vendorCode", vendor_code, "form", true, false, None),
             QueryParameterSpec::new("status", status, "form", true, false, None),
@@ -194,6 +248,8 @@ impl DriveApi {
             QueryParameterSpec::new("mine", mine, "form", true, false, None),
             QueryParameterSpec::new("includePlatform", include_platform, "form", true, false, None),
             QueryParameterSpec::new("capabilityCode", capability_code, "form", true, false, None),
+            QueryParameterSpec::new("bucket", bucket, "form", true, false, None),
+            QueryParameterSpec::new("region", region, "form", true, false, None),
         ]);
         let path = append_query_string(custom_path(&"/drive/storage/provider-accounts".to_string()), &query);
         self.client.get(&path, None, None).await

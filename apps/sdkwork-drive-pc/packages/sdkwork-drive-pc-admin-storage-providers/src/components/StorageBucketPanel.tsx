@@ -12,6 +12,7 @@ import {
 import type { StorageProviderAdminService } from '../services/storageProviderAdminService';
 import type { StorageProviderView } from '../types/storageProviderAdminTypes';
 import { formatMutationError } from '../utils/mutationError';
+import { formatDriveDate } from '../utils/formatDriveTimestamp';
 import { useTranslation } from '../hooks/useTranslation';
 import { ConfirmDialog } from './ConfirmDialog';
 import {
@@ -27,7 +28,7 @@ interface BucketInfo {
   bucket: string;
   exists: boolean;
   configured: boolean;
-  creationDate?: string;
+  creationDateIso?: string;
 }
 
 interface StorageBucketPanelProps {
@@ -36,7 +37,7 @@ interface StorageBucketPanelProps {
 }
 
 export function StorageBucketPanel({ provider, service }: StorageBucketPanelProps) {
-  const { t } = useTranslation();
+  const { t, language } = useTranslation();
   const [buckets, setBuckets] = useState<BucketInfo[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -53,7 +54,7 @@ export function StorageBucketPanel({ provider, service }: StorageBucketPanelProp
         bucket: item.bucket,
         exists: true,
         configured: item.configured,
-        creationDate: item.creationDate,
+        creationDateIso: item.creationDateIso,
       })));
       // The vendor list is authoritative for the configured bucket: when it
       // shows up the existence badge can light up without a separate HEAD.
@@ -222,7 +223,11 @@ export function StorageBucketPanel({ provider, service }: StorageBucketPanelProp
                     </span>
                   ) : null}
                 </span>
-                {bucket.creationDate && <span className="shrink-0 text-neutral-400">{bucket.creationDate}</span>}
+                {bucket.creationDateIso ? (
+                  <span className="shrink-0 text-neutral-400">
+                    {formatDriveDate(bucket.creationDateIso, language)}
+                  </span>
+                ) : null}
               </div>
             ))}
           </div>

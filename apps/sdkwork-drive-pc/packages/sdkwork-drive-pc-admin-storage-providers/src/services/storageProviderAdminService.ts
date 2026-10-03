@@ -4,17 +4,22 @@ import {
 } from 'sdkwork-drive-pc-admin-core';
 import type { SessionSnapshot } from 'sdkwork-drive-pc-core';
 import type {
+  AbortStorageProviderMultipartUploadInput,
+  CompleteStorageProviderMultipartUploadInput,
   CopyStorageProviderObjectInput,
   CreateStorageProviderAccountInput,
   CreateStorageProviderInput,
+  CreateStorageProviderMultipartUploadInput,
   GetStorageOverviewInput,
   ListStorageProviderAccountsInput,
   ListStorageProviderBindingsInput,
   ListStorageProviderBindingsPageResult,
+  ListStorageProviderAccountsPageResult,
   ListStorageProvidersInput,
   ListStorageProvidersPageResult,
   ListStorageProviderObjectsInput,
   ListStorageProviderObjectsResult,
+  PresignStorageProviderUploadPartsInput,
   SetDefaultStorageProviderBindingInput,
   StorageOverviewView,
   StorageProviderAccountDefaultView,
@@ -27,17 +32,29 @@ import type {
   StorageProviderCapabilitiesView,
   StorageProviderKindView,
   StorageProviderMutationOptions,
+  StorageProviderMultipartUploadView,
   StorageProviderObjectContentView,
   StorageProviderObjectMutationResult,
+  StorageProviderObjectScopeOptions,
   StorageProviderObjectView,
   StorageProviderVendorCapabilityDefaults,
   StorageProviderVendorCredentialFields,
   StorageProviderView,
+  StorageProviderUploadPartGrantsView,
   UpdateStorageProviderInput,
   WriteStorageProviderObjectContentInput,
 } from '../types/storageProviderAdminTypes';
 
 type JsonRecord = Record<string, unknown>;
+
+/**
+ * 服务商桶清单每页读取的窗口。
+ *
+ * `storageProviders.buckets.list` 的 `page_size` 声明是 1..=200（`PAGINATION_SPEC.md`
+ * §3），后端把厂商 ListBuckets 返回的整份清单按 200 上限截断后再做 offset 分页——超过上限
+ * 的账号直接报错，而不是给半份清单。所以按上限读一次就是「一次拿全」，续页只是兜底。
+ */
+const BUCKET_INVENTORY_PAGE_SIZE = 200;
 
 export interface StorageProviderAdminService {
   /**
@@ -119,6 +136,13 @@ export interface StorageProviderAdminService {
   listBindingsPage(
     input?: ListStorageProviderBindingsInput,
   ): Promise<ListStorageProviderBindingsPageResult>;
+  /**
+   * 该服务商账号下**全部**可见的存储桶。
+   *
+   * 厂商 ListBuckets 本来就是整份账号清单，接口的 offset 分页只是限制单次响应大小；
+   * 调用方要回答的是"这个配置下有哪些桶"，所以这里读完游标链再返回，而不是只给第一页
+   * ——那会让窗口之后的桶在页面上凭空消失，而页面（含数量徽标与搜索）把它们当成全集。
+   */
   listBuckets(providerId: string, options?: StorageProviderMutationOptions): Promise<StorageProviderBucketListItemView[]>;
   /** Idempotent initialization: ensures the configured bucket exists on the vendor. */
   initializeBucket(providerId: string, options?: StorageProviderMutationOptions): Promise<StorageProviderBucketInitializeView>;
@@ -130,19 +154,52 @@ export interface StorageProviderAdminService {
   deleteObject(
     providerId: string,
     objectKey: string,
-    options?: StorageProviderMutationOptions,
+    options?: StorageProviderObjectScopeOptions,
   ): Promise<boolean>;
   readObjectContent(
     providerId: string,
     objectKey: string,
-    options?: StorageProviderMutationOptions,
+    options?: StorageProviderObjectScopeOptions,
   ): Promise<StorageProviderObjectContentView>;
   writeObjectContent(
     providerId: string,
     objectKey: string,
     input: WriteStorageProviderObjectContentInput,
-    options?: StorageProviderMutationOptions,
+    options?: StorageProviderObjectScopeOptions,
   ): Promise<StorageProviderObjectView>;
+  /**
+   * 开启一次预签名分片上传，拿到厂商的 `uploadId`。
+   *
+   * 单次内容接口上限 8 MiB，而且内容以 base64 装在 JSON 里（请求体还会放大 1.37 倍）；
+   * 更大的对象走这条路：开启 → 逐片签发直传 URL → 完成/中止。字节不经过本服务。
+   */
+  createMultipartUpload(
+    providerId: string,
+    input: CreateStorageProviderMultipartUploadInput,
+    options?: StorageProviderObjectScopeOptions,
+  ): Promise<StorageProviderMultipartUploadView>;
+  /**
+   * 为一批分片签发直传授权。
+   *
+   * 返回的 `headers` 是签名的一部分，客户端必须原样回放；`url` 指向厂商地址。
+   */
+  presignUploadParts(
+    providerId: string,
+    input: PresignStorageProviderUploadPartsInput,
+    options?: StorageProviderObjectScopeOptions,
+  ): Promise<StorageProviderUploadPartGrantsView>;
+  /** 用已上传分片的 ETag 完成上传，返回落盘后的对象。 */
+  completeMultipartUpload(
+    providerId: string,
+    input: CompleteStorageProviderMultipartUploadInput,
+    options?: StorageProviderObjectScopeOptions,
+  ): Promise<StorageProviderObjectView>;
+  /** 中止上传：运营商取消或关闭时必须调用，否则已上传的分片会继续计费。 */
+  abortMultipartUpload(
+    providerId: string,
+    input: AbortStorageProviderMultipartUploadInput,
+    options?: StorageProviderObjectScopeOptions,
+  ): Promise<boolean>;
   copyObject(
     providerId: string,
     input: CopyStorageProviderObjectInput,
@@ -152,11 +209,33 @@ export interface StorageProviderAdminService {
     providerId: string,
     sourceObjectKey: string,
     destinationObjectKey: string,
-    options?: StorageProviderMutationOptions,
+    options?: StorageProviderObjectScopeOptions,
   ): Promise<boolean>;
+  /**
+   * The first page of account-center accounts.
+   *
+   * Convenience for a caller that renders one window and never pages; anything
+   * that has to *find* an account uses
+   * {@link StorageProviderAdminService.listProviderAccountsPage} and follows the
+   * cursor it returns.
+   */
   listProviderAccounts(
     input?: ListStorageProviderAccountsInput,
   ): Promise<StorageProviderAccountView[]>;
+  /**
+   * One page of account-center accounts, with the continuation the caller needs
+   * to read the rest.
+   *
+   * The account list is paginated and the console shows it as a pickable list
+   * scoped to one vendor, so the window has to be selected by the server from
+   * that vendor's accounts and the cursor has to travel with it: reading a
+   * single page as if it were the whole set hides every account that sorts past
+   * the window — a freshly registered one included — and the picker then offers
+   * "register a new account" for a vendor that already has one.
+   */
+  listProviderAccountsPage(
+    input?: ListStorageProviderAccountsInput,
+  ): Promise<ListStorageProviderAccountsPageResult>;
   createProviderAccount(
     input: CreateStorageProviderAccountInput,
     options?: StorageProviderMutationOptions,
@@ -451,22 +530,43 @@ export function createStorageProviderAdminService({
       };
     },
     async listBuckets(providerId, options) {
-      const response = await adminStorageSdkClient.request<unknown>({
-        operationId: 'storageProviders.buckets.list',
-        signal: options?.signal,
-        pathParams: { providerId },
-      });
-      return extractItems(response).map((item) => {
-        const record = recordOf(item);
-        const creationDateEpochMs = numberField(record, 'creationDateEpochMs');
-        return {
-          bucket: stringField(record, 'bucket') ?? '',
-          configured: booleanField(record, 'configured') ?? false,
-          creationDate: creationDateEpochMs
-            ? new Date(creationDateEpochMs).toLocaleDateString()
-            : undefined,
-        } satisfies StorageProviderBucketListItemView;
-      });
+      // 厂商清单本来就是全量的（S3 ListBuckets 一次返回账号下的所有桶），接口却按
+      // offset 分页：只读第一页会把窗口之外的桶藏起来，而调用方把返回值当成"这个账号
+      // 里所有的桶"来展示——数量徽标、客户端搜索、以及"哪个桶是配置桶"的判定都基于这
+      // 份清单。所以这里按声明上限逐页读完游标链，而不是只取一页。
+      const buckets: StorageProviderBucketListItemView[] = [];
+      // 同名桶只可能有一个：offset 窗口在并发写入后可能重叠，去重顺带保证表格 key 唯一。
+      const seenBuckets = new Set<string>();
+      // 游标如果原地打转，继续跟只会空转；记下走过的游标即可判定读完。
+      const visitedCursors = new Set<string>();
+      let pageToken: string | undefined;
+      for (;;) {
+        const response = await adminStorageSdkClient.request<unknown>({
+          operationId: 'storageProviders.buckets.list',
+          signal: options?.signal,
+          pathParams: { providerId },
+          query: {
+            page_size: BUCKET_INVENTORY_PAGE_SIZE,
+            cursor: pageToken,
+          },
+        });
+        for (const item of extractItems(response)) {
+          const bucket = responseToBucketListItem(item);
+          if (bucket.bucket === '' || seenBuckets.has(bucket.bucket)) {
+            continue;
+          }
+          seenBuckets.add(bucket.bucket);
+          buckets.push(bucket);
+        }
+        const record = recordOf(response);
+        const pageInfo = isRecord(record.pageInfo) ? record.pageInfo : {};
+        const nextPageToken = stringField(pageInfo, 'nextCursor');
+        if (!nextPageToken || visitedCursors.has(nextPageToken)) {
+          return buckets;
+        }
+        visitedCursors.add(nextPageToken);
+        pageToken = nextPageToken;
+      }
     },
     async initializeBucket(providerId, options) {
       // storageProviders.bucket.update is an idempotent ensure on the backend:
@@ -498,6 +598,10 @@ export function createStorageProviderAdminService({
         signal: input.signal,
         pathParams: { providerId },
         query: {
+          // 桶随请求走：管理端浏览的是厂商账号下真实存在的桶，缺省才回落到配置里的桶。
+          bucket: input.bucket || undefined,
+          // 地域同样随请求走：账号级桶清单跨地域，点开的桶未必在配置写的地域里。
+          region: input.region || undefined,
           prefix: input.prefix || undefined,
           delimiter: '/',
           page_size: input.pageSize ?? 100,
@@ -519,6 +623,10 @@ export function createStorageProviderAdminService({
         operationId: 'storageProviders.objects.delete',
         signal: options?.signal,
         pathParams: { providerId, objectKey },
+        query: {
+          bucket: options?.bucket || undefined,
+          region: options?.region || undefined,
+        },
       });
       // 契约返回 204 无内容：请求成功即视为已删除。
       return response === undefined || response === null
@@ -529,6 +637,10 @@ export function createStorageProviderAdminService({
         operationId: 'storageProviders.objects.content.retrieve',
         signal: options?.signal,
         pathParams: { providerId, objectKey },
+        query: {
+          bucket: options?.bucket || undefined,
+          region: options?.region || undefined,
+        },
       });
       const record = resourceRecord(response);
       return {
@@ -547,6 +659,10 @@ export function createStorageProviderAdminService({
         operationId: 'storageProviders.objects.content.update',
         signal: options?.signal,
         pathParams: { providerId, objectKey },
+        query: {
+          bucket: options?.bucket || undefined,
+          region: options?.region || undefined,
+        },
         body: {
           content: input.content,
           ...(input.encoding !== undefined ? { encoding: input.encoding } : {}),
@@ -554,6 +670,113 @@ export function createStorageProviderAdminService({
         },
       });
       return objectRecordToView(resourceRecord(response));
+    },
+    async createMultipartUpload(providerId, input, options) {
+      const response = await adminStorageSdkClient.request<unknown>({
+        operationId: 'storageProviders.objects.multipartUpload.create',
+        signal: options?.signal,
+        pathParams: { providerId },
+        query: {
+          bucket: options?.bucket || undefined,
+          region: options?.region || undefined,
+        },
+        body: {
+          objectKey: input.objectKey,
+          ...(input.contentType !== undefined ? { contentType: input.contentType } : {}),
+          ...(input.checksumSha256Hex !== undefined
+            ? { checksumSha256Hex: input.checksumSha256Hex }
+            : {}),
+        },
+      });
+      const record = resourceRecord(response);
+      const uploadId = stringField(record, 'uploadId', 'upload_id');
+      if (!uploadId) {
+        // 没有 uploadId 就没有后续任何一步：宁可在服务边界报错，也不要把空令牌传下去，
+        // 否则失败会推迟到 complete 阶段，现场只剩"分片都对但合不起来"。
+        throw new Error('multipart upload response is missing uploadId');
+      }
+      return {
+        providerId: stringField(record, 'providerId') ?? providerId,
+        bucket: stringField(record, 'bucket') ?? options?.bucket ?? '',
+        objectKey: stringField(record, 'objectKey', 'object_key') ?? input.objectKey,
+        uploadId,
+      };
+    },
+    async presignUploadParts(providerId, input, options) {
+      const response = await adminStorageSdkClient.request<unknown>({
+        operationId: 'storageProviders.objects.multipartUpload.parts.presign',
+        signal: options?.signal,
+        pathParams: { providerId },
+        query: {
+          bucket: options?.bucket || undefined,
+          region: options?.region || undefined,
+        },
+        body: {
+          objectKey: input.objectKey,
+          uploadId: input.uploadId,
+          partNumbers: input.partNumbers,
+          ...(input.expiresInSeconds !== undefined
+            ? { expiresInSeconds: input.expiresInSeconds }
+            : {}),
+        },
+      });
+      const record = resourceRecord(response);
+      const rawParts = Array.isArray(record.parts) ? record.parts : [];
+      return {
+        providerId: stringField(record, 'providerId') ?? providerId,
+        bucket: stringField(record, 'bucket') ?? options?.bucket ?? '',
+        objectKey: stringField(record, 'objectKey', 'object_key') ?? input.objectKey,
+        uploadId: stringField(record, 'uploadId', 'upload_id') ?? input.uploadId,
+        parts: rawParts.map((part) => {
+          const item = recordOf(part);
+          const headers = isRecord(item.headers) ? item.headers : {};
+          return {
+            partNumber: numberField(item, 'partNumber', 'part_number') ?? 0,
+            method: stringField(item, 'method') ?? 'PUT',
+            url: stringField(item, 'url') ?? '',
+            headers: Object.fromEntries(
+              Object.entries(headers).map(([name, value]) => [name, String(value)]),
+            ),
+            // 契约把它声明为 int64 字符串；解析不出来就当厂商没给（界面不展示到期时间）。
+            ...(numberField(item, 'expiresAtEpochMs', 'expires_at_epoch_ms') !== undefined
+              ? { expiresAtEpochMs: numberField(item, 'expiresAtEpochMs', 'expires_at_epoch_ms') }
+              : {}),
+          };
+        }),
+      };
+    },
+    async completeMultipartUpload(providerId, input, options) {
+      const response = await adminStorageSdkClient.request<unknown>({
+        operationId: 'storageProviders.objects.multipartUpload.complete',
+        signal: options?.signal,
+        pathParams: { providerId },
+        query: {
+          bucket: options?.bucket || undefined,
+          region: options?.region || undefined,
+        },
+        body: {
+          objectKey: input.objectKey,
+          uploadId: input.uploadId,
+          parts: input.parts,
+        },
+      });
+      return objectRecordToView(resourceRecord(response));
+    },
+    async abortMultipartUpload(providerId, input, options) {
+      const response = await adminStorageSdkClient.request<unknown>({
+        operationId: 'storageProviders.objects.multipartUpload.abort',
+        signal: options?.signal,
+        pathParams: { providerId },
+        query: {
+          bucket: options?.bucket || undefined,
+          region: options?.region || undefined,
+        },
+        body: {
+          objectKey: input.objectKey,
+          uploadId: input.uploadId,
+        },
+      });
+      return booleanField(resourceRecord(response), 'changed') ?? true;
     },
     async copyObject(providerId, input, options) {
       const response = await adminStorageSdkClient.request<unknown>({
@@ -563,6 +786,11 @@ export function createStorageProviderAdminService({
         body: {
           sourceObjectKey: input.sourceObjectKey,
           destinationObjectKey: input.destinationObjectKey,
+          ...(input.sourceBucket !== undefined ? { sourceBucket: input.sourceBucket } : {}),
+          ...(input.destinationBucket !== undefined
+            ? { destinationBucket: input.destinationBucket }
+            : {}),
+          ...(input.region !== undefined ? { region: input.region } : {}),
         },
       });
       const record = resourceRecord(response);
@@ -579,10 +807,28 @@ export function createStorageProviderAdminService({
      * - delete 失败：目标已复制成功但源残留（双份），调用方可重试删除源对象。
      */
     async renameObject(providerId, sourceObjectKey, destinationObjectKey, options) {
-      await service.copyObject(providerId, { sourceObjectKey, destinationObjectKey }, options);
+      await service.copyObject(
+        providerId,
+        {
+          sourceObjectKey,
+          destinationObjectKey,
+          // 同桶改名：源与目标都锁在调用方指定的那个桶上，否则 copy 会落到配置桶、
+          // delete 却删到目标桶，留下无从解释的残影。地域同理，否则复制会去配置地域的
+          // 端点找一个不在那里的桶。
+          ...(options?.bucket !== undefined
+            ? { sourceBucket: options.bucket, destinationBucket: options.bucket }
+            : {}),
+          ...(options?.region !== undefined ? { region: options.region } : {}),
+        },
+        options,
+      );
       return service.deleteObject(providerId, sourceObjectKey, options);
     },
     async listProviderAccounts(input = {}) {
+      const page = await service.listProviderAccountsPage(input);
+      return page.items;
+    },
+    async listProviderAccountsPage(input = {}) {
       const response = await adminStorageSdkClient.request<unknown>({
         operationId: 'storageProviderAccounts.list',
         signal: input.signal,
@@ -595,9 +841,23 @@ export function createStorageProviderAdminService({
           mine: input.mine,
           includePlatform: input.includePlatform,
           capabilityCode: input.capabilityCode,
+          // The window travels on the wire together with the continuation it
+          // belongs to: a caller that follows `nextPageToken` has to name the
+          // same `page_size`, or the cursor's offset and the window size
+          // disagree. Both stay absent when the caller reads one page only, and
+          // the server then applies its own default.
+          page_size: input.pageSize,
+          cursor: input.pageToken,
         },
       });
-      return extractItems(response).map(responseToStorageProviderAccount);
+      const record = recordOf(response);
+      const pageInfo = isRecord(record.pageInfo) ? record.pageInfo : {};
+      const nextPageToken = stringField(pageInfo, 'nextCursor');
+      return {
+        items: extractItems(response).map(responseToStorageProviderAccount),
+        nextPageToken,
+        hasMore: booleanField(pageInfo, 'hasMore') ?? Boolean(nextPageToken),
+      };
     },
     async createProviderAccount(input, options) {
       assertAdminWriteSession(getSession);
@@ -937,6 +1197,23 @@ function responseToBinding(response: unknown): StorageProviderBindingView {
   };
 }
 
+/** 厂商桶清单条目（list 的一行）→ 视图模型。 */
+function responseToBucketListItem(item: unknown): StorageProviderBucketListItemView {
+  const record = recordOf(item);
+  const creationDateEpochMs = numberField(record, 'creationDateEpochMs');
+  return {
+    bucket: stringField(record, 'bucket') ?? '',
+    configured: booleanField(record, 'configured') ?? false,
+    // 时间原样带走（ISO），由知道宿主语言的显示层格式化：服务层一旦调
+    // `toLocaleDateString()`，读到的是浏览器区域而不是控制台语言。
+    creationDateIso: creationDateEpochMs
+      ? new Date(creationDateEpochMs).toISOString()
+      : undefined,
+    // 地域既是"所属地域"这一列，也是后续读写这个桶时该用哪个端点的依据。
+    region: stringField(record, 'region'),
+  } satisfies StorageProviderBucketListItemView;
+}
+
 /** 对象条目响应（list / content write）→ 视图模型。 */
 function objectRecordToView(record: JsonRecord): StorageProviderObjectView {
   const objectKey = stringField(record, 'objectKey', 'object_key', 'key') ?? '';
@@ -948,8 +1225,9 @@ function objectRecordToView(record: JsonRecord): StorageProviderObjectView {
     sizeBytes: contentLength,
     contentType: stringField(record, 'contentType', 'content_type'),
     etag: stringField(record, 'etag'),
-    lastModified: lastModifiedEpochMs
-      ? new Date(lastModifiedEpochMs).toLocaleString()
+    // 同上：ISO 交给显示层，避免"本地化字符串再被 Intl 解析一次"的双重格式化。
+    lastModifiedIso: lastModifiedEpochMs
+      ? new Date(lastModifiedEpochMs).toISOString()
       : undefined,
     isFolder: objectKind === 'prefix',
   };

@@ -3,9 +3,10 @@ use crate::handlers::*;
 use crate::sandbox_handlers::{
     create_sandbox_directory, create_sandbox_file, list_sandbox_entries, list_sandboxes,
     move_sandbox_entry, purge_sandbox_entry, read_sandbox_file_content,
-    update_sandbox_file_content,
+    update_sandbox_file_content, MAX_SANDBOX_FILE_CONTENT_REQUEST_BYTES,
 };
 use crate::state::AppState;
+use axum::extract::DefaultBodyLimit;
 use axum::middleware;
 use axum::routing::{delete, get, post, put};
 use axum::Router;
@@ -70,6 +71,21 @@ fn build_business_router_layers_with_asset_surface(
     mount_asset_surface: bool,
 ) -> Router {
     let drive_routes = Router::new()
+        /*
+         * 沙箱文件内容写入单独一层：它也必须显式声明请求体上限。
+         *
+         * 与存储管理端的内容接口同一个坑：文件字节以 base64 装在 JSON 里，业务上限 4 MiB
+         * 对应约 5.6 MB 的网线体积，而 axum 的默认请求体上限是 2 MB —— 超过 1.4 MB 的文件
+         * 在业务校验之前就被拒掉，客户端只看到框架归一化后的 `Payload too large`。
+         */
+        .merge(
+            Router::new()
+                .route(
+                    "/app/v3/api/drive/sandboxes/{sandboxId}/files/{entryId}/content",
+                    get(read_sandbox_file_content).put(update_sandbox_file_content),
+                )
+                .layer(DefaultBodyLimit::max(MAX_SANDBOX_FILE_CONTENT_REQUEST_BYTES)),
+        )
         .route("/app/v3/api/drive/sandboxes", get(list_sandboxes))
         .route(
             "/app/v3/api/drive/sandboxes/{sandboxId}/entries",
@@ -82,10 +98,6 @@ fn build_business_router_layers_with_asset_surface(
         .route(
             "/app/v3/api/drive/sandboxes/{sandboxId}/files",
             post(create_sandbox_file),
-        )
-        .route(
-            "/app/v3/api/drive/sandboxes/{sandboxId}/files/{entryId}/content",
-            get(read_sandbox_file_content).put(update_sandbox_file_content),
         )
         .route(
             "/app/v3/api/drive/sandboxes/{sandboxId}/entries/{entryId}",

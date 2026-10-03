@@ -1,6 +1,7 @@
 use sdkwork_drive_storage_contract::{
-    resolve_drive_storage_credentials, validate_s3_bucket_name, DriveObjectStoreError,
-    DriveObjectStoreErrorKind, DriveStorageCredentialSnapshot, DriveStorageProviderKind,
+    resolve_drive_storage_credentials, validate_s3_bucket_name, validate_s3_region_token,
+    DriveObjectStoreError, DriveObjectStoreErrorKind, DriveStorageCredentialSnapshot,
+    DriveStorageProviderKind,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -96,6 +97,41 @@ impl S3ProviderProfile {
             | Self::IbmCos => true,
             _ => false,
         }
+    }
+
+    /// Account-level ("service") host the vendor answers its bucket inventory
+    /// on, when that is not the regional endpoint a provider configuration
+    /// stores.
+    ///
+    /// Tencent COS publishes the two separately: object operations are addressed
+    /// to `cos.<region>.myqcloud.com`, while `GetService` — the S3 `ListBuckets`
+    /// call, and the only account-level operation in the set — belongs to
+    /// `service.cos.myqcloud.com`, the host the vendor's own SDKs target for
+    /// that operation. Reading the inventory through the regional host is what
+    /// made a COS account holding buckets in several regions answer with the
+    /// single bucket that sits in the configured region.
+    ///
+    /// Vendors whose regional endpoint already answers the inventory (AWS S3,
+    /// MinIO, Aliyun OSS, ...) return `None` and keep listing unchanged.
+    pub fn service_endpoint(self) -> Option<&'static str> {
+        match self {
+            Self::TencentCos | Self::TencentCosInternational => {
+                Some("https://service.cos.myqcloud.com")
+            }
+            _ => None,
+        }
+    }
+
+    /// Whether `endpoint` is this vendor's own endpoint.
+    ///
+    /// The vendor split above may only be applied to the vendor's real domain: a
+    /// proxy, a private gateway, or a test double configured as this provider
+    /// kind answers the inventory itself, and redirecting that call to the
+    /// public service host would break a deployment that deliberately fronts
+    /// the vendor.
+    #[must_use]
+    pub fn owns_endpoint(self, endpoint: &str) -> bool {
+        Self::from_endpoint(endpoint) == Some(self)
     }
 
     pub fn from_provider_kind(provider_kind: &str, endpoint: Option<&str>) -> Self {
@@ -368,6 +404,65 @@ impl S3StoreConfig {
         };
         config.validate()?;
         Ok(config)
+    }
+
+    /// Endpoint the account-level bucket inventory (`ListBuckets`) is read from.
+    ///
+    /// Normally the configured endpoint. Vendors that publish the inventory on a
+    /// separate service host answer it there — but only when the configuration
+    /// actually points at that vendor's own domain, so a proxied or private
+    /// endpoint keeps answering the inventory itself
+    /// ([`S3ProviderProfile::owns_endpoint`]).
+    #[must_use]
+    pub fn bucket_inventory_endpoint(&self) -> Option<&str> {
+        let configured = self.endpoint.as_deref()?;
+        self.provider_profile
+            .service_endpoint()
+            .filter(|_| self.provider_profile.owns_endpoint(configured))
+            .filter(|service| *service != configured)
+            .or(Some(configured))
+    }
+
+    /// Endpoint for a bucket that lives in `region`.
+    ///
+    /// The bucket inventory is an account-level read that spans regions, so a row
+    /// the operator picked can live somewhere other than the region the provider
+    /// configuration was written for. S3-compatible vendors publish the region as
+    /// part of the endpoint host (`cos.ap-guangzhou.myqcloud.com`,
+    /// `oss-cn-hangzhou.aliyuncs.com`, `s3.us-east-1.amazonaws.com`, ...), so the
+    /// bucket's own endpoint is a host swap on the configured one.
+    ///
+    /// The derivation is refused — the configured endpoint is kept — unless the
+    /// endpoint is the vendor's own domain
+    /// ([`S3ProviderProfile::owns_endpoint`]) and the configured region is part of
+    /// its host. Proxies, private gateways, and single-endpoint vendors (Cloudflare
+    /// R2, Google Cloud Storage, MinIO, ...) therefore keep addressing exactly what
+    /// the operator configured.
+    #[must_use]
+    pub fn endpoint_for_region(&self, region: &str) -> Option<String> {
+        let configured_region = self.region.trim();
+        let region = region.trim();
+        if region.is_empty() || region == configured_region {
+            return None;
+        }
+        validate_s3_region_token(region, "region").ok()?;
+        let endpoint = self.endpoint.as_deref()?;
+        if !self.provider_profile.owns_endpoint(endpoint) {
+            return None;
+        }
+        let (scheme, rest) = endpoint.split_once("://")?;
+        let (host, path) = match rest.split_once('/') {
+            Some((host, path)) => (host, Some(path)),
+            None => (rest, None),
+        };
+        if configured_region.is_empty() || !host.contains(configured_region) {
+            return None;
+        }
+        let host = host.replacen(configured_region, region, 1);
+        Some(match path {
+            Some(path) => format!("{scheme}://{host}/{path}"),
+            None => format!("{scheme}://{host}"),
+        })
     }
 
     pub fn validate(&self) -> Result<(), DriveObjectStoreError> {

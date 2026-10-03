@@ -636,6 +636,8 @@ impl DriveObjectStore for LocalDriveObjectStore {
             items.push(ListedBucket {
                 bucket,
                 creation_date_epoch_ms: None,
+                // 目录就是目录：本地平面没有地域概念，位置由配置里的根路径决定。
+                region: None,
             });
         }
         items.sort_by(|left, right| left.bucket.cmp(&right.bucket));

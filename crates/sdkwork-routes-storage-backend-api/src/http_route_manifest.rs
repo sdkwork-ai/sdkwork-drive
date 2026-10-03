@@ -208,6 +208,30 @@ const HTTP_ROUTES: &[HttpRoute] = &[
         "storageProviders.objects.copy",
     ),
     HttpRoute::dual_token(
+        HttpMethod::Post,
+        "/backend/v3/api/drive/storage/providers/{providerId}/objects/multipart-uploads",
+        "drive-admin-storage-api",
+        "storageProviders.objects.multipartUpload.create",
+    ),
+    HttpRoute::dual_token(
+        HttpMethod::Post,
+        "/backend/v3/api/drive/storage/providers/{providerId}/objects/multipart-uploads/abort",
+        "drive-admin-storage-api",
+        "storageProviders.objects.multipartUpload.abort",
+    ),
+    HttpRoute::dual_token(
+        HttpMethod::Post,
+        "/backend/v3/api/drive/storage/providers/{providerId}/objects/multipart-uploads/complete",
+        "drive-admin-storage-api",
+        "storageProviders.objects.multipartUpload.complete",
+    ),
+    HttpRoute::dual_token(
+        HttpMethod::Post,
+        "/backend/v3/api/drive/storage/providers/{providerId}/objects/multipart-uploads/parts",
+        "drive-admin-storage-api",
+        "storageProviders.objects.multipartUpload.parts.presign",
+    ),
+    HttpRoute::dual_token(
         HttpMethod::Delete,
         "/backend/v3/api/drive/storage/providers/{providerId}/objects/{objectKey}",
         "drive-admin-storage-api",

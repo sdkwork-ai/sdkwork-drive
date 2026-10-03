@@ -5,6 +5,7 @@ import type {
   CreateStorageProviderAccountInput,
   CreateStorageProviderInput,
   ListStorageProviderAccountsInput,
+  ListStorageProviderAccountsPageResult,
   StorageProviderAccountView,
   StorageProviderKind,
   StorageProviderVendorCapabilityDefaults,
@@ -32,6 +33,41 @@ import { formatMutationError } from '../utils/mutationError';
 import { useTranslation } from '../hooks/useTranslation';
 
 type ModalNotice = { type: 'success' | 'error'; message: string };
+
+/**
+ * Rows per account page.
+ *
+ * The account center's own default, sent explicitly. The picker renders the
+ * server's continuation, so the window size is a policy this console states
+ * rather than one it silently inherits while dropping the `pageInfo` that came
+ * with it.
+ */
+const ACCOUNT_PAGE_SIZE = 20;
+
+/**
+ * Concatenate account lists, keeping the first occurrence of each id.
+ *
+ * The lists this editor stitches together overlap by construction — a pinned
+ * account that a later page also returns — and a duplicate id would both
+ * double-render the row and make the picker's "selected" state ambiguous.
+ */
+function mergeAccountsById(
+  leading: readonly StorageProviderAccountView[],
+  trailing: readonly StorageProviderAccountView[],
+): StorageProviderAccountView[] {
+  const seen = new Set<string>();
+  const merged: StorageProviderAccountView[] = [];
+  for (const account of [...leading, ...trailing]) {
+    if (account.id) {
+      if (seen.has(account.id)) {
+        continue;
+      }
+      seen.add(account.id);
+    }
+    merged.push(account);
+  }
+  return merged;
+}
 
 interface StorageProviderEditorProps {
   provider?: StorageProviderView;
@@ -71,7 +107,7 @@ interface StorageProviderEditorProps {
   /** Lists reusable platform service-provider accounts for the credential picker. */
   onListProviderAccounts?: (
     input?: ListStorageProviderAccountsInput,
-  ) => Promise<StorageProviderAccountView[]>;
+  ) => Promise<ListStorageProviderAccountsPageResult>;
   /** Registers a new reusable account + access key pair in the account center. */
   onCreateProviderAccount?: (
     input: CreateStorageProviderAccountInput,
@@ -123,8 +159,22 @@ export function StorageProviderEditor({
   const [credentialRef, setCredentialRef] = useState('');
   const [providerAccountId, setProviderAccountId] = useState('');
   const [providerAccounts, setProviderAccounts] = useState<StorageProviderAccountView[]>();
+  const [accountsNextPageToken, setAccountsNextPageToken] = useState<string | undefined>();
+  const [accountsHasMore, setAccountsHasMore] = useState(false);
   const [accountsLoading, setAccountsLoading] = useState(false);
+  const [accountsLoadingMore, setAccountsLoadingMore] = useState(false);
   const [accountsError, setAccountsError] = useState<string | undefined>();
+  /**
+   * Accounts this editor registered itself, kept in front of the server page.
+   *
+   * A create answers with the account it wrote, but the page-1 reload that
+   * follows does not necessarily contain it: a vendor that already fills a page
+   * sorts the new row past the window. Dropping it there is what makes an
+   * operator who just saved an account read "the list cannot find it" and
+   * register the same account again. The pin is the server's own projection of
+   * the created row, and the reload keeps it until the editor closes.
+   */
+  const [registeredAccounts, setRegisteredAccounts] = useState<StorageProviderAccountView[]>([]);
   const [showCredential, setShowCredential] = useState(false);
   const [status] = useState('active');
   const [sseMode, setSseMode] = useState('');
@@ -161,28 +211,87 @@ export function StorageProviderEditor({
     if (!onListProviderAccounts) {
       return;
     }
-    // The admin plane publishes platform-wide credentials: the picker lists the
-    // platform slice only, which is also the scope the dialog's inline create
-    // form registers, so a freshly created account always lands in this list.
+    // The admin plane publishes platform-wide credentials, so the picker lists
+    // the platform slice — the same scope the dialog's inline create form
+    // registers — and the provider kind's vendor travels to the server, which
+    // selects the window *from that vendor's accounts*. Filtering the returned
+    // page instead leaves a vendor-only picker empty whenever its rows sort past
+    // page 1, which is exactly the state a first-run operator fills by
+    // registering an account that then never shows up.
     setAccountsLoading(true);
     setAccountsError(undefined);
-    onListProviderAccounts({ status: 'active', scopeType: 'platform' })
-      .then((items) => setProviderAccounts(items))
+    onListProviderAccounts({
+      status: 'active',
+      scopeType: 'platform',
+      vendorCode: defaultVendorCode,
+      pageSize: ACCOUNT_PAGE_SIZE,
+    })
+      .then((page) => {
+        setProviderAccounts(page.items);
+        setAccountsNextPageToken(page.nextPageToken);
+        setAccountsHasMore(page.hasMore);
+      })
       .catch(() => setAccountsError(t('accountLoadFailed')))
       .finally(() => setAccountsLoading(false));
-  }, [onListProviderAccounts, t]);
+  }, [defaultVendorCode, onListProviderAccounts, t]);
 
-  const accountsLoadStartedRef = useRef(false);
+  /**
+   * Append the account center's next page.
+   *
+   * Continuation is the operator's own action (`PAGINATION_SPEC.md` §8: render
+   * the server's `hasMore`/`nextCursor` instead of prefetching an unbounded
+   * array), so a vendor with many accounts costs one request per page actually
+   * read.
+   */
+  const loadMoreProviderAccounts = useCallback(() => {
+    if (!onListProviderAccounts || !accountsNextPageToken || accountsLoadingMore) {
+      return;
+    }
+    setAccountsLoadingMore(true);
+    setAccountsError(undefined);
+    onListProviderAccounts({
+      status: 'active',
+      scopeType: 'platform',
+      vendorCode: defaultVendorCode,
+      pageSize: ACCOUNT_PAGE_SIZE,
+      pageToken: accountsNextPageToken,
+    })
+      .then((page) => {
+        setProviderAccounts((current) => mergeAccountsById(current ?? [], page.items));
+        setAccountsNextPageToken(page.nextPageToken);
+        setAccountsHasMore(page.hasMore);
+      })
+      .catch(() => setAccountsError(t('accountLoadFailed')))
+      .finally(() => setAccountsLoadingMore(false));
+  }, [accountsLoadingMore, accountsNextPageToken, defaultVendorCode, onListProviderAccounts, t]);
+
+  // What the picker renders: the accounts this editor just registered, then the
+  // loaded server pages, each id once.
+  const providerAccountOptions = useMemo(
+    () => mergeAccountsById(registeredAccounts, providerAccounts ?? []),
+    [providerAccounts, registeredAccounts],
+  );
+
+  /**
+   * Vendor the loaded account window was fetched for.
+   *
+   * The list is vendor-scoped server-side, so the window is only valid for the
+   * vendor that selected it: a kind change (or a `custom:<vendor>` edit) has to
+   * re-read it, or the picker keeps showing the previous vendor's accounts.
+   * Tracking the key also suppresses the duplicate initial fetch under React
+   * strict mode, which is what the old boolean guard existed for.
+   */
+  const accountsLoadKeyRef = useRef<string | undefined>(undefined);
   useEffect(() => {
     if (!accountSourceAvailable) {
       return;
     }
-    // The guard only suppresses the duplicate initial fetch under React strict mode.
-    if (!accountsLoadStartedRef.current) {
-      accountsLoadStartedRef.current = true;
-      reloadProviderAccounts();
+    if (accountsLoadKeyRef.current === defaultVendorCode) {
+      return;
     }
-  }, [accountSourceAvailable, reloadProviderAccounts]);
+    accountsLoadKeyRef.current = defaultVendorCode;
+    reloadProviderAccounts();
+  }, [accountSourceAvailable, defaultVendorCode, reloadProviderAccounts]);
 
   const existingIdSet = useMemo(() => new Set(existingProviderIds), [existingProviderIds]);
 
@@ -247,6 +356,14 @@ export function StorageProviderEditor({
       applyKindDefaults(kind, setRegion, setEndpointUrl, setPathStyle, setStrictTls, setSseMode, setStorageClass);
       setEndpointLocked(true);
       setCredentialRef('');
+      // The account picker is scoped to the kind's vendor, so an account chosen
+      // for the previous vendor is not in the new vendor's list — keeping it
+      // selected would bind a credential the operator can no longer see. Kinds
+      // that share a vendor (aliyun_oss → alibaba_cloud_international) keep the
+      // choice.
+      setProviderAccountId((current) =>
+        providerVendorCodeForKind(kind) === defaultVendorCode ? current : '',
+      );
     }
   };
 
@@ -610,20 +727,33 @@ export function StorageProviderEditor({
                       accountSourceEnabled={accountSourceAvailable}
                       providerAccountId={providerAccountId}
                       onProviderAccountIdChange={handleProviderAccountIdChange}
-                      providerAccounts={providerAccounts}
+                      providerAccounts={providerAccountOptions}
                       accountsLoading={accountsLoading}
+                      accountsHasMore={accountsHasMore}
+                      accountsLoadingMore={accountsLoadingMore}
+                      onLoadMoreProviderAccounts={loadMoreProviderAccounts}
                       accountsError={accountsError}
                       onReloadProviderAccounts={reloadProviderAccounts}
-                      onCreateProviderAccount={(input) => {
+                      onCreateProviderAccount={async (input) => {
                         if (!onCreateProviderAccount) {
-                          return Promise.reject(new Error(t('accountLoadFailed')));
+                          throw new Error(t('accountLoadFailed'));
                         }
-                        return onCreateProviderAccount(input);
+                        const created = await onCreateProviderAccount(input);
+                        // Pin the created row before the reload lands, so the
+                        // summary row and the picker can both resolve it even
+                        // when the vendor's first page does not reach it.
+                        if (created.id) {
+                          setRegisteredAccounts((current) =>
+                            mergeAccountsById([created], current),
+                          );
+                        }
+                        return created;
                       }}
                       // Kind ↔ vendor linkage: the picker only lists (and its
                       // create form only registers) accounts of the vendor this
                       // provider kind maps to, e.g. an Aliyun OSS provider sees
-                      // Aliyun accounts only.
+                      // Aliyun accounts only. The same linkage travels to the
+                      // server as the `vendorCode` window filter.
                       allowedVendorCodes={[defaultVendorCode]}
                       defaultVendorCode={defaultVendorCode}
                     />

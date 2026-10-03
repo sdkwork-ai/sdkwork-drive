@@ -6,6 +6,7 @@ use aws_sdk_s3::presigning::PresigningConfig;
 use aws_sdk_s3::types::{CompletedMultipartUpload, CompletedPart};
 use aws_sdk_s3::{Client, Config};
 use aws_types::region::Region;
+use futures_util::stream::{self, StreamExt};
 use sdkwork_drive_storage_contract::{
     AbortMultipartUploadRequest, CompleteMultipartUploadRequest, CompleteMultipartUploadResponse,
     CopyObjectRequest, CopyObjectResponse, CreateBucketRequest, CreateBucketResponse,
@@ -23,10 +24,94 @@ use std::collections::BTreeMap;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use crate::config::S3StoreConfig;
+use crate::inventory_region::{InventoryHttpClient, InventoryRegionCapture};
+
+/// How many buckets one inventory read may ask about at the same time.
+///
+/// Vendors that leave the region out of the account inventory are answered one
+/// bucket at a time (see [`S3DriveObjectStore::lookup_bucket_region`]), so the
+/// fan-out is bounded: an account with hundreds of buckets must not turn one
+/// list into hundreds of simultaneous calls.
+const BUCKET_REGION_LOOKUP_CONCURRENCY: usize = 8;
+
+/// Ceiling for one bucket's region lookup.
+///
+/// The region is enrichment and the row is not: a vendor that stalls here loses
+/// its region for that row instead of holding the whole inventory.
+const BUCKET_REGION_LOOKUP_TIMEOUT: Duration = Duration::from_secs(3);
+
+/// Normalize one vendor's `GetBucketLocation` answer into a region code.
+///
+/// S3 answers `us-east-1` with an *empty* `LocationConstraint`, and a vendor
+/// that cannot answer may send the literal `null`. Neither is a region name, so
+/// neither is written into a row: an empty 所属地域 column is honest, a row
+/// claiming the bucket lives in a region named `""` or `null` is not.
+#[must_use]
+fn normalize_bucket_location(reported: Option<&str>) -> Option<String> {
+    let reported = reported?.trim();
+    if reported.is_empty() || reported.eq_ignore_ascii_case("null") {
+        return None;
+    }
+    Some(reported.to_string())
+}
+
+/// Credentials every client of one store shares.
+fn provider_credentials(config: &S3StoreConfig) -> Credentials {
+    Credentials::new(
+        config.access_key_id.clone(),
+        config.secret_access_key.clone(),
+        config.session_token.clone(),
+        None,
+        "sdkwork-drive-storage-s3",
+    )
+}
+
+/// Build a client for one endpoint, keeping region, addressing style, and
+/// credentials identical to the store's primary client.
+fn build_client(
+    shared_config: &aws_config::SdkConfig,
+    config: &S3StoreConfig,
+    endpoint: Option<&str>,
+) -> Client {
+    Client::from_conf(build_client_config(shared_config, config, endpoint))
+}
+
+/// The same client configuration, before it is turned into a client.
+///
+/// Split out so the inventory client can be that configuration plus the
+/// body-capturing HTTP layer: one description of a client, two clients.
+fn build_client_config(
+    shared_config: &aws_config::SdkConfig,
+    config: &S3StoreConfig,
+    endpoint: Option<&str>,
+) -> Config {
+    let mut builder = Config::from(shared_config)
+        .to_builder()
+        .force_path_style(config.force_path_style)
+        .region(Region::new(config.region.clone()))
+        .credentials_provider(provider_credentials(config));
+    if let Some(endpoint) = endpoint {
+        builder = builder.endpoint_url(endpoint);
+    }
+    builder.build()
+}
 
 #[derive(Debug, Clone)]
 pub struct S3DriveObjectStore {
     client: Client,
+    /// Second client addressed to the vendor's account-level service host, for
+    /// the vendors that answer the bucket inventory on a host other than the
+    /// regional object endpoint. `None` for every provider whose configured
+    /// endpoint already serves the inventory.
+    service_client: Option<Client>,
+    /// The two clients the account inventory is read through. They differ from
+    /// the object clients by one thing: their HTTP layer keeps a copy of the
+    /// response body, which is where a vendor that does not use AWS's
+    /// `<BucketRegion>` element publishes each bucket's region. See
+    /// [`crate::inventory_region`].
+    inventory_service_client: Option<Client>,
+    inventory_client: Client,
+    inventory_capture: InventoryRegionCapture,
     config: S3StoreConfig,
 }
 
@@ -46,39 +131,116 @@ impl S3DriveObjectStore {
     pub async fn new(config: S3StoreConfig) -> Result<Self, DriveObjectStoreError> {
         config.validate()?;
 
-        let credentials = Credentials::new(
-            config.access_key_id.clone(),
-            config.secret_access_key.clone(),
-            config.session_token.clone(),
-            None,
-            "sdkwork-drive-storage-s3",
-        );
         let mut loader = aws_config::defaults(BehaviorVersion::latest())
             .region(Region::new(config.region.clone()))
-            .credentials_provider(credentials);
+            .credentials_provider(provider_credentials(&config));
         if let Some(endpoint) = config.endpoint.as_ref() {
             loader = loader.endpoint_url(endpoint);
         }
         let shared_config = loader.load().await;
 
-        let mut s3_config_builder = Config::from(&shared_config)
-            .to_builder()
-            .force_path_style(config.force_path_style)
-            .region(Region::new(config.region.clone()))
-            .credentials_provider(Credentials::new(
-                config.access_key_id.clone(),
-                config.secret_access_key.clone(),
-                config.session_token.clone(),
-                None,
-                "sdkwork-drive-storage-s3",
-            ));
+        let client = build_client(&shared_config, &config, config.endpoint.as_deref());
+        // 账号级清单（`ListBuckets`）在部分厂商走服务级域名，而配置里存的是对象操作要用的
+        // 地域域名：用地域域名读清单，回答的是该地域的桶，于是一个跨地域的账号在管理端只
+        // 剩一个桶。见 `S3ProviderProfile::service_endpoint`。
+        let inventory_endpoint = config.bucket_inventory_endpoint();
+        let inventory_service_endpoint = inventory_endpoint
+            .filter(|endpoint| Some(*endpoint) != config.endpoint.as_deref());
+        let service_client = inventory_service_endpoint
+            .map(|endpoint| build_client(&shared_config, &config, Some(endpoint)));
 
-        if let Some(endpoint) = config.endpoint.clone() {
-            s3_config_builder = s3_config_builder.endpoint_url(endpoint);
+        /*
+         * 清单客户端与对象客户端分开：清单客户端的 HTTP 层多包一层，把响应体留一份给自己解析
+         * 厂商写在 `<Location>` 里的地域（AWS 的模型里没有这个元素，SDK 会丢掉它）。底座用的是
+         * SDK 自己那套默认连接器（hyper 1.x + rustls 0.23），对象读写走 `client`，从不为这个
+         * 副本付出代价。见 `crate::inventory_region`。
+         */
+        let inventory_capture = InventoryRegionCapture::new();
+        let inventory_config = |endpoint: Option<&str>| {
+            build_client_config(&shared_config, &config, endpoint)
+                .to_builder()
+                .http_client(InventoryHttpClient::new(inventory_capture.clone()))
+                .build()
+        };
+        let inventory_client = Client::from_conf(inventory_config(config.endpoint.as_deref()));
+        let inventory_service_client = inventory_service_endpoint
+            .map(|endpoint| Client::from_conf(inventory_config(Some(endpoint))));
+
+        Ok(Self {
+            client,
+            service_client,
+            inventory_service_client,
+            inventory_client,
+            inventory_capture,
+            config,
+        })
+    }
+
+    /// Endpoint the account bucket inventory is read through.
+    ///
+    /// Exposed so the vendor split this type relies on — regional endpoint for
+    /// objects, service endpoint for the inventory — stays assertable without a
+    /// network round trip.
+    #[must_use]
+    pub fn bucket_inventory_endpoint(&self) -> Option<&str> {
+        if self.service_client.is_some() {
+            self.config.provider_profile.service_endpoint()
+        } else {
+            self.config.endpoint.as_deref()
         }
+    }
 
-        let client = Client::from_conf(s3_config_builder.build());
-        Ok(Self { client, config })
+    /// Read the account bucket inventory from the configured endpoint.
+    ///
+    /// The fallback path for [`S3DriveObjectStore::list_buckets`]: either the
+    /// store has no separate service host, or the service host did not answer
+    /// with an inventory a private network / a differently scoped account can
+    /// use.
+    async fn list_buckets_from_configured_endpoint(
+        &self,
+    ) -> Result<aws_sdk_s3::operation::list_buckets::ListBucketsOutput, DriveObjectStoreError> {
+        self.inventory_client
+            .list_buckets()
+            .send()
+            .await
+            .map_err(|error| Self::map_sdk_error(error, "list buckets failed"))
+    }
+
+    /// Ask the vendor where each of these buckets lives.
+    ///
+    /// The *last* of the three channels, after the SDK's own `<BucketRegion>` and
+    /// the inventory body's `<Location>` (see [`crate::inventory_region`]). It
+    /// only resolves a bucket that lives in the region its endpoint belongs to:
+    /// the operation is bucket-scoped, and a cross-region ask is answered
+    /// `404 NoSuchBucket` — probed against `cos.ap-guangzhou.myqcloud.com` for an
+    /// `ap-beijing` bucket — with no redirect and no region hint to follow. It
+    /// therefore exists for vendors that publish nothing on the inventory at all;
+    /// a bucket it cannot reach keeps `None`, which the console renders as an
+    /// empty cell rather than a guessed region.
+    ///
+    /// Best effort by design: bounded, timed, and never fatal. A bucket whose
+    /// region cannot be read keeps `None`.
+    async fn lookup_bucket_regions(&self, buckets: &[String]) -> Vec<(String, Option<String>)> {
+        stream::iter(buckets.iter().cloned())
+            .map(|bucket| async move {
+                let region = self.lookup_bucket_region(&bucket).await;
+                (bucket, region)
+            })
+            .buffer_unordered(BUCKET_REGION_LOOKUP_CONCURRENCY)
+            .collect()
+            .await
+    }
+
+    /// One bucket's region, or `None` when the vendor will not say.
+    async fn lookup_bucket_region(&self, bucket: &str) -> Option<String> {
+        let request = self.client.get_bucket_location().bucket(bucket).send();
+        let output = match tokio::time::timeout(BUCKET_REGION_LOOKUP_TIMEOUT, request).await {
+            Ok(Ok(output)) => output,
+            // Denied, unsupported, or slower than the budget: the row keeps no
+            // region rather than a guess, and the inventory still returns.
+            Ok(Err(_)) | Err(_) => return None,
+        };
+        normalize_bucket_location(output.location_constraint().map(|value| value.as_str()))
     }
 
     fn resolve_bucket(&self, requested_bucket: &str) -> Result<String, DriveObjectStoreError> {
@@ -486,18 +648,32 @@ impl DriveObjectStore for S3DriveObjectStore {
         &self,
         _request: ListBucketsRequest,
     ) -> Result<ListBucketsResponse, DriveObjectStoreError> {
-        let output = self
-            .client
-            .list_buckets()
-            .send()
-            .await
-            .map_err(|error| Self::map_sdk_error(error, "list buckets failed"))?;
-        let items = output
+        // 账号清单优先问厂商的服务级域名；它读不出来时退回配置端点，这样只放行地域域名的
+        // 私有网络仍然能列出该地域的桶，而不是整个清单报错。
+        let output = match self.inventory_service_client.as_ref() {
+            Some(service_client) => match service_client.list_buckets().send().await {
+                Ok(output) if !output.buckets().is_empty() => output,
+                // 空清单也可能是"问错了域名"而不是"账号没有桶"，配置端点的答案更全时以它
+                // 为准；两边都空时下面照样会返回空清单。
+                _ => self.list_buckets_from_configured_endpoint().await?,
+            },
+            None => self.list_buckets_from_configured_endpoint().await?,
+        };
+        // 厂商写在 `<Location>` 里的地域（SDK 的类型化桶里没有这个元素）。
+        let published_regions = self.inventory_capture.take_bucket_locations();
+
+        let mut items: Vec<ListedBucket> = output
             .buckets()
             .iter()
             .filter_map(|bucket| {
                 let bucket_name = bucket.name()?.to_string();
                 Some(ListedBucket {
+                    // AWS 回 `<BucketRegion>`；COS / OSS 回 `<Location>`，由清单响应体的
+                    // 副本补上；两者都没有的桶留给下面的桶级查询（只有同地域的桶能答）。
+                    region: bucket
+                        .bucket_region()
+                        .map(str::to_string)
+                        .or_else(|| published_regions.get(&bucket_name).cloned()),
                     bucket: bucket_name,
                     creation_date_epoch_ms: bucket
                         .creation_date()
@@ -505,6 +681,28 @@ impl DriveObjectStore for S3DriveObjectStore {
                 })
             })
             .collect();
+
+        let unresolved: Vec<String> = items
+            .iter()
+            .filter(|item| item.region.is_none())
+            .map(|item| item.bucket.clone())
+            .collect();
+        if !unresolved.is_empty() {
+            let resolved: BTreeMap<String, String> = self
+                .lookup_bucket_regions(&unresolved)
+                .await
+                .into_iter()
+                .filter_map(|(bucket, region)| region.map(|region| (bucket, region)))
+                .collect();
+            for item in &mut items {
+                if item.region.is_none() {
+                    if let Some(region) = resolved.get(&item.bucket) {
+                        item.region = Some(region.clone());
+                    }
+                }
+            }
+        }
+
         Ok(ListBucketsResponse { items })
     }
 
@@ -884,5 +1082,34 @@ impl DriveObjectStore for S3DriveObjectStore {
             },
             stream,
         ))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::normalize_bucket_location;
+
+    #[test]
+    fn keeps_the_region_a_vendor_reports() {
+        assert_eq!(
+            normalize_bucket_location(Some("ap-guangzhou")),
+            Some("ap-guangzhou".to_string())
+        );
+        assert_eq!(
+            normalize_bucket_location(Some("  oss-cn-hangzhou  ")),
+            Some("oss-cn-hangzhou".to_string())
+        );
+    }
+
+    #[test]
+    fn an_empty_or_null_answer_is_not_a_region() {
+        // S3 answers `us-east-1` with an empty constraint, and a vendor that
+        // cannot answer may send the literal `null`. Writing either into a row
+        // would put a region on screen that no bucket lives in.
+        assert_eq!(normalize_bucket_location(Some("")), None);
+        assert_eq!(normalize_bucket_location(Some("   ")), None);
+        assert_eq!(normalize_bucket_location(Some("null")), None);
+        assert_eq!(normalize_bucket_location(Some("NULL")), None);
+        assert_eq!(normalize_bucket_location(None), None);
     }
 }

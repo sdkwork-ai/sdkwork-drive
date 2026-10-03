@@ -112,23 +112,35 @@ pub(crate) async fn list_storage_provider_accounts(
         owner_user_id,
     };
 
-    let (accounts, _total) = list_accounts(
+    // One row beyond the window is the peek that makes the continuation honest.
+    // `list_accounts` applies `LIMIT` itself, so asking it for exactly
+    // `page.limit` rows could never prove another page exists: the page
+    // reported `hasMore: false` and no `nextCursor` for *every* window, and a
+    // console that reads one page then has no way to reach the rest — including
+    // the account an operator has just registered, whenever it sorted past the
+    // window. `PAGINATION_SPEC.md` §5.2 sanctions exactly this `page_size + 1`
+    // peek.
+    let (mut accounts, _total) = list_accounts(
         &state.pool,
         &visibility,
         None,
         query.vendor_code.as_deref(),
         query.status.as_deref(),
         query.search.as_deref(),
-        page.limit,
+        page.limit + 1,
         page.offset,
     )
     .await
     .map_err(map_provider_account_error)?;
+    // Drop the peek row *before* the capability post-filter below, so the
+    // continuation describes the server window rather than however many rows the
+    // in-memory filter happened to leave behind.
+    let next_page_token = next_page_token(&mut accounts, page);
     // The account center is business-agnostic; the storage console only binds
     // accounts that declare the object-storage capability, so the filter is
     // applied here instead of asking every consumer to post-filter.
     let capability = query.capability_code.as_deref().map(str::trim);
-    let mut items = accounts
+    let items = accounts
         .into_iter()
         .filter(|account| {
             capability.is_none_or(|wanted| {
@@ -137,7 +149,6 @@ pub(crate) async fn list_storage_provider_accounts(
         })
         .map(map_storage_provider_account)
         .collect::<Vec<_>>();
-    let next_page_token = next_page_token(&mut items, page);
     Ok(success_list_page_simple(items, page, next_page_token))
 }
 

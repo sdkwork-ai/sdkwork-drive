@@ -32,6 +32,11 @@
       "language": "go",
       "packageName": "sdkwork-drive-admin-storage-sdk-generated-go",
       "generatedOutput": "sdkwork-drive-admin-storage-sdk-go/generated/server-openapi"
+    },
+    "flutter": {
+      "language": "flutter",
+      "packageName": "sdkwork-drive-admin-storage-sdk-generated-flutter",
+      "generatedOutput": "sdkwork-drive-admin-storage-sdk-flutter/generated/server-openapi"
     }
   },
   "sdkDependencies": [
@@ -56,7 +61,7 @@
   "baseUrl": "http://127.0.0.1:18080",
   "standardProfile": "sdkwork-drive-admin-storage-v3",
   "fixedSdkVersion": "0.1.0",
-  "ownerOnlyOperationCount": 37,
+  "ownerOnlyOperationCount": 41,
   "managedBy": "tools/drive_sdk_generator_runner.mjs",
   "workspace": "sdkwork-drive-admin-storage-sdk",
   "authoritySpec": "../../apis/backend-api/drive/drive-admin-storage-api.openapi.json",
@@ -128,6 +133,17 @@
       "name": "github.com/sdkwork/sdkwork-drive-admin-storage-sdk-generated",
       "version": "0.1.0",
       "description": "Generator-owned Go transport SDK for sdkwork-drive-admin-storage-sdk."
+    },
+    {
+      "language": "flutter",
+      "workspace": "sdkwork-drive-admin-storage-sdk-flutter",
+      "generationState": "declared",
+      "releaseState": "not_published",
+      "generatedPath": "sdkwork-drive-admin-storage-sdk-flutter/generated/server-openapi",
+      "manifestPath": "sdkwork-drive-admin-storage-sdk-flutter/generated/server-openapi/pubspec.yaml",
+      "name": "sdkwork-drive-admin-storage-sdk-generated",
+      "version": "0.1.0",
+      "description": "Generator-owned Flutter/Dart transport SDK for sdkwork-drive-admin-storage-sdk."
     }
   ],
   "packageName": "@sdkwork/drive-admin-storage-sdk",
