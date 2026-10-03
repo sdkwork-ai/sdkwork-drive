@@ -356,6 +356,17 @@ impl DriveUploaderStore for SqlUploaderStore {
         Ok(session.id.clone())
     }
 
+    /// Resolve the binding chain in the documented order: space, then space
+    /// type, then tenant (`docs/schema-registry/tables/003-drive-storage.yaml`,
+    /// `dr_drive_storage_provider_binding.description`).
+    ///
+    /// The tenant step must come **after** the space-type step: the tenant
+    /// default is the least specific rule, and reading it in the same query as
+    /// the space rule (the previous shape) made a tenant with both a tenant
+    /// default and a space-type binding resolve differently depending on which
+    /// upload path ran — this store answered the tenant default while
+    /// `resolve_default_provider_target` (app upload sessions) answered the
+    /// space-type binding, so the same space's objects landed on two providers.
     async fn find_default_storage_provider(
         &self,
         tenant_id: &str,
@@ -366,11 +377,11 @@ impl DriveUploaderStore for SqlUploaderStore {
              FROM dr_drive_storage_provider_binding binding
              INNER JOIN dr_drive_storage_provider provider ON provider.id = binding.provider_id
              WHERE binding.tenant_id=$1
+               AND binding.space_id=$2
                AND binding.purpose='primary'
                AND binding.lifecycle_status='active'
                AND provider.status='active'
-               AND (binding.space_id = $2 OR binding.space_id IS NULL)
-             ORDER BY (binding.space_id IS NULL) ASC, binding.created_at ASC
+             ORDER BY binding.created_at ASC
              LIMIT 1",
         )
         .bind(tenant_id)
@@ -408,6 +419,30 @@ impl DriveUploaderStore for SqlUploaderStore {
         .map_err(|error| {
             DriveServiceError::Internal(format!(
                 "find uploader space_type storage provider binding failed: {error}"
+            ))
+        })?;
+        if let Some(row) = row {
+            return Ok(Some((row.get("id"), row.get("bucket"))));
+        }
+
+        let row = sqlx::query(
+            "SELECT provider.id AS id, provider.bucket AS bucket
+             FROM dr_drive_storage_provider_binding binding
+             INNER JOIN dr_drive_storage_provider provider ON provider.id = binding.provider_id
+             WHERE binding.tenant_id=$1
+               AND binding.space_id IS NULL
+               AND binding.purpose='primary'
+               AND binding.lifecycle_status='active'
+               AND provider.status='active'
+             ORDER BY binding.created_at ASC
+             LIMIT 1",
+        )
+        .bind(tenant_id)
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(|error| {
+            DriveServiceError::Internal(format!(
+                "find uploader tenant storage provider binding failed: {error}"
             ))
         })?;
 

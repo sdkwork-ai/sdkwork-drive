@@ -9,6 +9,103 @@ use sdkwork_drive_workspace_service::infrastructure::sql::uploader_store::SqlUpl
 use sdkwork_drive_workspace_service::{drive_share_token_hash, DriveServiceError};
 use std::time::{SystemTime, UNIX_EPOCH};
 
+/// The binding chain resolves space → space type → tenant, in that order
+/// (`docs/schema-registry/tables/003-drive-storage.yaml`,
+/// `dr_drive_storage_provider_binding`). A tenant default must NOT outrank a
+/// space-type binding: this store and the app upload session resolver
+/// (`resolve_default_provider_target`) have to answer the same provider for the
+/// same space, or the space's objects land on two providers depending on which
+/// upload path ran.
+#[tokio::test]
+async fn prepare_upload_prefers_space_type_binding_over_tenant_default() {
+    let Some((pool, _database_guard)) = sdkwork_drive_test_support::postgres_test_database().await
+    else {
+        return;
+    };
+
+    // Tenant-wide default: the least specific rule in the chain.
+    sdkwork_drive_test_support::seed_storage_provider_and_binding(
+        &pool,
+        &sdkwork_drive_test_support::StorageProviderSeed::new(
+            "provider-order-tenant-default",
+            "tenant-binding-order",
+        )
+        .with_bucket("bucket-order-tenant-default")
+        .with_actor_id("user-binding-order"),
+    )
+    .await;
+
+    // Space-type binding for `app_upload` — the type the auto upload space gets.
+    sqlx::query(
+        "INSERT INTO dr_drive_storage_provider (
+            id, provider_kind, name, endpoint_url, region, bucket, path_style,
+            credential_ref, server_side_encryption_mode, default_storage_class,
+            status, version, created_by, updated_by
+        ) VALUES (
+            'provider-order-app-upload', 's3_compatible', 'provider-order-app-upload',
+            'https://s3.example.com', 'us-east-1', 'bucket-order-app-upload', TRUE,
+            'plain:test-access-key:test-secret-key', 'AES256', 'STANDARD',
+            'active', 1, 'user-binding-order', 'user-binding-order'
+        )
+        ON CONFLICT (id) DO NOTHING",
+    )
+    .execute(&pool)
+    .await
+    .expect("seed app_upload provider should succeed");
+    sqlx::query(
+        "INSERT INTO dr_drive_storage_provider_binding (
+            id, tenant_id, space_id, provider_id, binding_scope, purpose,
+            storage_root_prefix, lifecycle_status, version, created_by, updated_by
+        ) VALUES (
+            'binding-order-app-upload', 'tenant-binding-order', NULL,
+            'provider-order-app-upload', 'space_type', 'app_upload',
+            'tenants/tenant-binding-order/space-types/app_upload',
+            'active', 1, 'user-binding-order', 'user-binding-order'
+        )
+        ON CONFLICT (id) DO NOTHING",
+    )
+    .execute(&pool)
+    .await
+    .expect("seed app_upload space-type binding should succeed");
+
+    let service = DriveUploaderService::new(SqlUploaderStore::new(pool.clone()));
+    let prepared = service
+        .prepare_upload(PrepareUploaderUploadCommand {
+            id: "upload-item-order".to_string(),
+            task_id: "task-order".to_string(),
+            tenant_id: "tenant-binding-order".to_string(),
+            organization_id: Some("org-binding-order".to_string()),
+            actor: UploaderActor::User {
+                user_id: "user-binding-order".to_string(),
+            },
+            app_id: "drive-pc".to_string(),
+            app_resource_type: "desktop-file-browser".to_string(),
+            app_resource_id: "root".to_string(),
+            scene: Some("user_document_upload".to_string()),
+            source: Some("pc_local_file".to_string()),
+            upload_profile_code: "generic".to_string(),
+            file_fingerprint: "fp-order".to_string(),
+            original_file_name: "report.txt".to_string(),
+            content_type: "text/plain".to_string(),
+            content_length: 42,
+            chunk_size_bytes: 8,
+            target: UploaderTarget::AutoUploadSpace {
+                parent_node_id: None,
+            },
+            retention: UploaderRetention::LongTerm,
+            operator_id: "user-binding-order".to_string(),
+            now_epoch_ms: 1_800_000_000_000,
+        })
+        .await
+        .expect("uploader task should be prepared");
+
+    assert_eq!(
+        prepared.object_bucket.as_deref(),
+        Some("bucket-order-app-upload"),
+        "the space-type binding must outrank the tenant default"
+    );
+}
+
 #[tokio::test]
 async fn prepare_upload_creates_logged_in_user_upload_space_and_task() {
     let Some((pool, _database_guard)) = sdkwork_drive_test_support::postgres_test_database().await

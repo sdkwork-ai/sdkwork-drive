@@ -1,4 +1,5 @@
 use async_trait::async_trait;
+use aws_config::timeout::TimeoutConfig;
 use aws_config::BehaviorVersion;
 use aws_credential_types::Credentials;
 use aws_sdk_s3::error::{ProvideErrorMetadata, SdkError};
@@ -39,6 +40,18 @@ const BUCKET_REGION_LOOKUP_CONCURRENCY: usize = 8;
 /// The region is enrichment and the row is not: a vendor that stalls here loses
 /// its region for that row instead of holding the whole inventory.
 const BUCKET_REGION_LOOKUP_TIMEOUT: Duration = Duration::from_secs(3);
+
+/// Connect timeout for every S3 client this store builds.
+///
+/// The SDK's standard mode applies a 3.1s connect timeout by default
+/// (`aws-smithy-runtime` `DEFAULT_CONNECT_TIMEOUT`), tuned for direct paths to
+/// AWS regions. A provider endpoint reached through a transparent proxy (TUN /
+/// Fake-IP DNS is common on operator desktops) pays the proxy tunnel
+/// establishment inside that window, so a healthy vendor regularly misses 3.1s
+/// — the failure the storage-provider test surfaces as an opaque `dispatch
+/// failure`. Ten seconds keeps the wait bounded while leaving room for the
+/// proxy hop; it covers connection establishment only, never object streaming.
+const S3_CONNECT_TIMEOUT: Duration = Duration::from_secs(10);
 
 /// Normalize one vendor's `GetBucketLocation` answer into a region code.
 ///
@@ -133,7 +146,12 @@ impl S3DriveObjectStore {
 
         let mut loader = aws_config::defaults(BehaviorVersion::latest())
             .region(Region::new(config.region.clone()))
-            .credentials_provider(provider_credentials(&config));
+            .credentials_provider(provider_credentials(&config))
+            .timeout_config(
+                TimeoutConfig::builder()
+                    .connect_timeout(S3_CONNECT_TIMEOUT)
+                    .build(),
+            );
         if let Some(endpoint) = config.endpoint.as_ref() {
             loader = loader.endpoint_url(endpoint);
         }
@@ -144,8 +162,8 @@ impl S3DriveObjectStore {
         // 地域域名：用地域域名读清单，回答的是该地域的桶，于是一个跨地域的账号在管理端只
         // 剩一个桶。见 `S3ProviderProfile::service_endpoint`。
         let inventory_endpoint = config.bucket_inventory_endpoint();
-        let inventory_service_endpoint = inventory_endpoint
-            .filter(|endpoint| Some(*endpoint) != config.endpoint.as_deref());
+        let inventory_service_endpoint =
+            inventory_endpoint.filter(|endpoint| Some(*endpoint) != config.endpoint.as_deref());
         let service_client = inventory_service_endpoint
             .map(|endpoint| build_client(&shared_config, &config, Some(endpoint)));
 
@@ -403,9 +421,13 @@ impl S3DriveObjectStore {
         now + i64::from(expires_in_seconds) * 1000
     }
 
+    /// How many `source()` levels a dispatch/timeout failure's cause chain is
+    /// walked before the message is cut off.
+    const SDK_ERROR_SOURCE_CHAIN_DEPTH: usize = 3;
+
     fn map_sdk_error<E>(error: SdkError<E>, default_message: &str) -> DriveObjectStoreError
     where
-        E: ProvideErrorMetadata,
+        E: ProvideErrorMetadata + std::error::Error + Send + Sync + 'static,
     {
         let code = error
             .as_service_error()
@@ -442,6 +464,14 @@ impl S3DriveObjectStore {
         } else {
             match &error {
                 SdkError::ServiceError(_) => DriveObjectStoreErrorKind::UpstreamError,
+                // A dispatch failure whose connector reports a timeout IS a
+                // timeout — the connect window closed before the vendor (or a
+                // proxy on the path) answered. Everything else that fails to
+                // leave the process (DNS, refused, TLS) is the vendor being
+                // unreachable from here.
+                SdkError::DispatchFailure(connector_error) if connector_error.is_timeout() => {
+                    DriveObjectStoreErrorKind::Timeout
+                }
                 SdkError::DispatchFailure(_) | SdkError::TimeoutError(_) => {
                     DriveObjectStoreErrorKind::Unavailable
                 }
@@ -453,7 +483,27 @@ impl S3DriveObjectStore {
             .as_service_error()
             .and_then(ProvideErrorMetadata::message)
             .map(str::to_string)
-            .unwrap_or_else(|| format!("{default_message}: {error}"));
+            .unwrap_or_else(|| {
+                // Dispatch and timeout failures carry no service metadata, and
+                // their Display is the bare words "dispatch failure" / "timeout"
+                // — which has already sent an operator chasing a vendor outage
+                // that was a local connect timeout. The connector's own source
+                // chain names the real cause (DNS, refused, TLS alert, "HTTP
+                // connect timeout occurred after 3.1s"), so walk it — bounded —
+                // and append the levels that name the failure.
+                let mut message = format!("{default_message}: {error}");
+                let mut source = std::error::Error::source(&error);
+                for depth in 0..Self::SDK_ERROR_SOURCE_CHAIN_DEPTH {
+                    match source {
+                        Some(cause) => {
+                            message.push_str(&format!(" [cause {depth}: {cause}]"));
+                            source = std::error::Error::source(cause);
+                        }
+                        None => break,
+                    }
+                }
+                message
+            });
 
         DriveObjectStoreError::new(kind, message)
     }
@@ -1088,6 +1138,8 @@ impl DriveObjectStore for S3DriveObjectStore {
 #[cfg(test)]
 mod tests {
     use super::normalize_bucket_location;
+    use super::*;
+    use aws_smithy_runtime_api::client::result::ConnectorError;
 
     #[test]
     fn keeps_the_region_a_vendor_reports() {
@@ -1111,5 +1163,49 @@ mod tests {
         assert_eq!(normalize_bucket_location(Some("null")), None);
         assert_eq!(normalize_bucket_location(Some("NULL")), None);
         assert_eq!(normalize_bucket_location(None), None);
+    }
+
+    /// A connect timeout used to surface as the bare words "dispatch failure"
+    /// and kind `unavailable`, which sent operators chasing a vendor outage
+    /// that was the local connect window closing — the storage-provider test
+    /// page's least actionable error. The mapping must name the cause and call
+    /// a timeout a timeout.
+    #[test]
+    fn a_connect_timeout_is_a_timeout_and_names_the_cause() {
+        let error =
+            SdkError::<aws_sdk_s3::operation::head_bucket::HeadBucketError>::dispatch_failure(
+                ConnectorError::timeout("HTTP connect timeout occurred after 10s".into()),
+            );
+        let mapped = S3DriveObjectStore::map_sdk_error(error, "head bucket failed");
+        assert_eq!(mapped.kind, DriveObjectStoreErrorKind::Timeout);
+        assert!(mapped.message.contains("dispatch failure"));
+        // The connector's own Display is the bare word "timeout"; the readable
+        // detail sits one `source()` level down, so the walk must pass the
+        // first level for the message to be actionable.
+        assert!(
+            mapped
+                .message
+                .contains("[cause 1: HTTP connect timeout occurred after 10s]"),
+            "the connector's second-level cause is missing from: {}",
+            mapped.message
+        );
+    }
+
+    #[test]
+    fn a_transport_failure_that_is_not_a_timeout_stays_unavailable_and_names_the_cause() {
+        let error =
+            SdkError::<aws_sdk_s3::operation::head_bucket::HeadBucketError>::dispatch_failure(
+                ConnectorError::io(Box::new(std::io::Error::new(
+                    std::io::ErrorKind::ConnectionRefused,
+                    "tcp connect error",
+                ))),
+            );
+        let mapped = S3DriveObjectStore::map_sdk_error(error, "head bucket failed");
+        assert_eq!(mapped.kind, DriveObjectStoreErrorKind::Unavailable);
+        assert!(
+            mapped.message.contains("tcp connect error"),
+            "the connector's cause is missing from: {}",
+            mapped.message
+        );
     }
 }

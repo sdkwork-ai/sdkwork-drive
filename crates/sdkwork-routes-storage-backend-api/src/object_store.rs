@@ -134,6 +134,35 @@ pub(crate) async fn build_full_s3_object_store_for_provider(
     build_aws_sdk_object_store(provider, credentials.as_ref(), None).await
 }
 
+/// Build the store the **bucket plane** (list / head / create / delete bucket)
+/// operates through.
+///
+/// Bucket administration is an account-plane operation and deliberately does
+/// not follow the selected object adapter: the optional OpenDAL S3 plugin owns
+/// object reads and writes only, and its store answers `not_supported` for
+/// every bucket call (`list_buckets` among them). Routing these routes through
+/// `build_object_store_for_provider` therefore 409s the whole bucket console
+/// whenever that adapter is selected — the regression the bucket routes guard
+/// against. The full S3 store serves the plane for S3-compatible kinds;
+/// local filesystem rows keep the on-disk protocol so bucket management stays
+/// available for every catalogued kind.
+pub(crate) async fn build_bucket_store_for_provider(
+    state: &AdminStorageState,
+    provider: &DriveStorageProvider,
+) -> Result<Box<dyn DriveObjectStore>, (StatusCode, Json<ProblemDetail>)> {
+    if matches!(
+        provider.provider_kind,
+        DriveStorageProviderKind::LocalFilesystem
+    ) {
+        let store =
+            build_local_store_for_provider(provider).map_err(map_object_store_route_error)?;
+        return Ok(Box::new(store));
+    }
+    let boxed: Box<dyn DriveObjectStore> =
+        Box::new(build_full_s3_object_store_for_provider(state, provider).await?);
+    Ok(boxed)
+}
+
 async fn build_aws_sdk_object_store(
     provider: &DriveStorageProvider,
     credentials: Option<&DriveStorageCredentialSnapshot>,

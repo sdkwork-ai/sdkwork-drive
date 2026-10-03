@@ -197,8 +197,9 @@ async fn list_buckets_resolves_each_region_from_the_channel_that_has_it() {
         "two bucket-scoped lookups are expected, got {lookups:?}"
     );
     assert!(
-        lookups.iter().all(|target| !target.contains("cos-bucket")
-            && !target.contains("modern-bucket")),
+        lookups
+            .iter()
+            .all(|target| !target.contains("cos-bucket") && !target.contains("modern-bucket")),
         "a bucket the inventory answered must not be looked up again: {lookups:?}"
     );
 }

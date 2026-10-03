@@ -3406,7 +3406,8 @@ async fn admin_storage_object_content_routes_handle_literal_percent_keys_and_dir
         )
         .await
         .expect("object content request should be handled");
-    assert_eq!(put_dir.status(), StatusCode::OK);
+    let put_dir_status = put_dir.status();
+    assert_eq!(put_dir_status, StatusCode::OK, "put_dir debug body={}", if put_dir_status == StatusCode::OK { String::new() } else { String::from_utf8_lossy(&to_bytes(put_dir.into_body(), usize::MAX).await.expect("put dir body should be read")).to_string() });
 
     let delete_dir = app
         .oneshot(

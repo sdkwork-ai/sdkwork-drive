@@ -208,3 +208,67 @@ async fn bootstrap_is_idempotent_across_runs() {
         "a second bootstrap must not create duplicate provider rows"
     );
 }
+
+/// A tenant default cleared through `DELETE /bindings/default` is soft-deleted,
+/// not removed. The bootstrap guard counts that row as a gap, so the insert has
+/// to re-create it — an `ON CONFLICT DO NOTHING` used to skip the deterministic
+/// id and answer 200 while the tenant stayed with no usable default, i.e. the
+/// console's "initialize" button reported success and uploads still failed.
+#[tokio::test]
+async fn bootstrap_restores_a_soft_deleted_tenant_default_binding() {
+    let Some((pool, _database_guard)) = sdkwork_drive_test_support::postgres_test_database().await
+    else {
+        return;
+    };
+
+    empty_the_kind_catalog(&pool).await;
+
+    // First run creates the plane and the tenant default binding.
+    let (first_status, _) = post_bootstrap(bootstrap_app(pool.clone())).await;
+    assert_eq!(first_status, StatusCode::OK);
+    assert_eq!(
+        count_active_tenant_default_bindings(&pool).await,
+        1,
+        "the first bootstrap must leave a usable tenant default"
+    );
+
+    // The operator clears the tenant default through the binding route.
+    let clear = bootstrap_app(pool.clone())
+        .oneshot(
+            Request::builder()
+                .method(Method::DELETE)
+                .uri("/backend/v3/api/drive/storage/bindings/default")
+                .body(Body::empty())
+                .expect("clear default binding request should be built"),
+        )
+        .await
+        .expect("clear default binding request should be handled");
+    assert_eq!(clear.status(), StatusCode::NO_CONTENT);
+    assert_eq!(
+        count_active_tenant_default_bindings(&pool).await,
+        0,
+        "the clear must retire the active default"
+    );
+
+    // Re-running the bootstrap must heal the gap instead of skipping the row.
+    let (second_status, body) = post_bootstrap(bootstrap_app(pool.clone())).await;
+    assert_eq!(second_status, StatusCode::OK, "re-run should succeed: {body}");
+    assert_eq!(
+        count_active_tenant_default_bindings(&pool).await,
+        1,
+        "a re-run after the default was cleared must restore a usable tenant default"
+    );
+}
+
+async fn count_active_tenant_default_bindings(pool: &PgPool) -> i64 {
+    sqlx::query_scalar::<_, i64>(
+        "SELECT COUNT(1)
+         FROM dr_drive_storage_provider_binding
+         WHERE tenant_id = 'tenant-storage'
+           AND id = 'default:tenant:tenant-storage'
+           AND lifecycle_status = 'active'",
+    )
+    .fetch_one(pool)
+    .await
+    .expect("count active tenant default bindings")
+}

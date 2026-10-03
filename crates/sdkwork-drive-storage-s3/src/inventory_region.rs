@@ -247,7 +247,10 @@ mod tests {
     fn reads_the_region_vendors_publish_as_location() {
         let locations = bucket_locations(COS_INVENTORY.as_bytes());
 
-        assert_eq!(locations.get("ai-1253947560"), Some(&"ap-beijing".to_string()));
+        assert_eq!(
+            locations.get("ai-1253947560"),
+            Some(&"ap-beijing".to_string())
+        );
         assert_eq!(
             locations.get("image2-1253947560"),
             Some(&"ap-guangzhou".to_string())

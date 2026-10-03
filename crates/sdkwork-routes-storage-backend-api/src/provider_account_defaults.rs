@@ -920,12 +920,27 @@ async fn ensure_default_binding(
         return Ok(false);
     }
 
+    // The guard above counts only rows that are not soft-deleted, so a default
+    // the operator cleared through `DELETE /bindings/default` reaches this
+    // insert as a "gap to fill". `ON CONFLICT DO NOTHING` would silently skip
+    // that row (the id is deterministic), letting the run answer 200 with no
+    // usable default written — re-create it instead, with the same upsert
+    // semantics `PUT /bindings/default` uses, so re-running the bootstrap
+    // actually leaves the plane usable.
     sqlx::query(
         "INSERT INTO dr_drive_storage_provider_binding (
             id, tenant_id, space_id, provider_id, binding_scope, purpose,
             storage_root_prefix, lifecycle_status, version, created_by, updated_by
          ) VALUES ($1, $2, NULL, $3, $4, $5, $6, 'active', 1, $7, $7)
-         ON CONFLICT(id) DO NOTHING",
+         ON CONFLICT(id) DO UPDATE SET
+            provider_id=excluded.provider_id,
+            binding_scope=excluded.binding_scope,
+            purpose=excluded.purpose,
+            storage_root_prefix=excluded.storage_root_prefix,
+            lifecycle_status='active',
+            version=dr_drive_storage_provider_binding.version + 1,
+            updated_by=excluded.updated_by,
+            updated_at=CURRENT_TIMESTAMP",
     )
     .bind(&binding_id)
     .bind(tenant_id)

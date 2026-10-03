@@ -31,7 +31,12 @@ export interface DriveUploaderBlobLike {
   readonly type?: string;
   readonly name?: string;
   arrayBuffer?(): Promise<ArrayBuffer>;
-  slice(start?: number, end?: number, contentType?: string): Blob;
+  /**
+   * Browser `File`/`Blob` byte slicing. Optional: non-Blob runtimes
+   * (mini-program, native-host adapters) feed bytes through `readRange`
+   * instead, which the uploader prefers when present.
+   */
+  slice?(start?: number, end?: number, contentType?: string): Blob;
   readRange?(offsetBytes: number, lengthBytes: number): Promise<ArrayBuffer>;
 }
 

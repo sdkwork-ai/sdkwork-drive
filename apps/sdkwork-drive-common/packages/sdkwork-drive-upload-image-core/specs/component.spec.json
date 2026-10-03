@@ -1,0 +1,54 @@
+{
+  "schemaVersion": 1,
+  "kind": "sdkwork.component.spec",
+  "component": {
+    "name": "@sdkwork/drive-upload-image-core",
+    "displayName": "SDKWork Drive Upload Image Core",
+    "version": "0.1.0",
+    "type": "library",
+    "root": ".",
+    "domain": "drive",
+    "capability": "upload-image",
+    "surface": "app",
+    "languages": ["typescript"],
+    "generated": false,
+    "manifests": ["package.json"]
+  },
+  "canonicalSpecs": [
+    { "file": "COMPONENT_SPEC.md", "path": "../../../../../sdkwork-specs/COMPONENT_SPEC.md", "purpose": "Component contract." },
+    { "file": "CODE_STYLE_SPEC.md", "path": "../../../../../sdkwork-specs/CODE_STYLE_SPEC.md", "purpose": "Source and SDK boundaries." },
+    { "file": "TYPESCRIPT_CODE_SPEC.md", "path": "../../../../../sdkwork-specs/TYPESCRIPT_CODE_SPEC.md", "purpose": "TypeScript package rules." },
+    { "file": "FRONTEND_CODE_SPEC.md", "path": "../../../../../sdkwork-specs/FRONTEND_CODE_SPEC.md", "purpose": "Frontend composition rules." },
+    { "file": "APP_SDK_INTEGRATION_SPEC.md", "path": "../../../../../sdkwork-specs/APP_SDK_INTEGRATION_SPEC.md", "purpose": "Injected app SDK rules." },
+    { "file": "TEST_SPEC.md", "path": "../../../../../sdkwork-specs/TEST_SPEC.md", "purpose": "Verification rules." }
+  ],
+  "contracts": {
+    "layerRole": "frontend-service",
+    "publicExports": ["."],
+    "providedPorts": [
+      { "name": "driveUploadImageService", "export": "." },
+      { "name": "driveUploadImageController", "export": "." }
+    ],
+    "requiredPorts": [
+      { "name": "driveAppSdk", "package": "@sdkwork/drive-app-sdk", "export": "./uploader" }
+    ],
+    "runtimeEntrypoints": [
+      "createDriveUploadImageService",
+      "createDriveNodesImagePreviewReader",
+      "DriveUploadImageController"
+    ],
+    "routeManifest": null,
+    "sdkClients": ["SdkworkDriveAppClient"],
+    "sdkDependencies": [
+      { "workspace": "sdkwork-drive-app-sdk", "role": "drive-app-capability", "required": true }
+    ],
+    "events": [],
+    "configKeys": []
+  },
+  "verification": {
+    "commands": [
+      "pnpm --filter @sdkwork/drive-upload-image-core typecheck",
+      "pnpm --filter @sdkwork/drive-upload-image-core test"
+    ]
+  }
+}
