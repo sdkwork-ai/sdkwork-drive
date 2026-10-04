@@ -1,5 +1,6 @@
 export {
   DriveUploadImage,
+  type DriveUploadImageHandle,
   type DriveUploadImageProps,
   type DriveUploadImageShape,
   type DriveUploadImageSource,
