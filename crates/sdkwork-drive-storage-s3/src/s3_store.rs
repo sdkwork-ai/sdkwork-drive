@@ -290,13 +290,21 @@ impl S3DriveObjectStore {
                 "object_key must not contain NUL bytes",
             ));
         }
-        if object_key.starts_with('/') || object_key.ends_with('/') {
+        // 路由层（`decode_path_object_key`）放行**单个**尾斜杠作为目录占位对象
+        // （如 `docs/`，S3 的标准目录约定），store 必须接受同一个形状，否则
+        // 占位对象创建/删除在 S3 上永远 400。除这一个尾斜杠之外，空段（`//`）、
+        // 前导斜杠与 `.`/`..` 段仍然拒绝。
+        let segments_key = match object_key.strip_suffix('/') {
+            Some(rest) if !rest.is_empty() && !rest.ends_with('/') => rest,
+            _ => object_key,
+        };
+        if object_key.starts_with('/') {
             return Err(DriveObjectStoreError::new(
                 DriveObjectStoreErrorKind::InvalidRequest,
-                "object_key must be a relative key without leading or trailing slash",
+                "object_key must be a relative key without leading slash",
             ));
         }
-        for segment in object_key.split('/') {
+        for segment in segments_key.split('/') {
             if segment.is_empty() || segment == "." || segment == ".." {
                 return Err(DriveObjectStoreError::new(
                     DriveObjectStoreErrorKind::InvalidRequest,

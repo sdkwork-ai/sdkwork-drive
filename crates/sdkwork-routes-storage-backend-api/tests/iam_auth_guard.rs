@@ -221,7 +221,11 @@ async fn admin_storage_routes_validate_token_derived_app_context() {
         )
         .await
         .expect("protected request should be handled");
-    assert_problem(operator_conflict, StatusCode::FORBIDDEN, 40303).await;
+    // A client-supplied operatorId that disagrees with the verified token
+    // context is rejected by the context-projection guard with the standard
+    // tenant-access-denied code (40301). The dedicated 40303 operator-conflict
+    // code was retired when operator resolution moved to the request context.
+    assert_problem(operator_conflict, StatusCode::FORBIDDEN, 40301).await;
 
     let missing_permission = app
         .clone()

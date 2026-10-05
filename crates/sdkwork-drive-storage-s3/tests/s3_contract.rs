@@ -335,11 +335,15 @@ async fn s3_store_rejects_invalid_object_keys_before_sdk_request() {
         .await
         .expect("s3 store should be created");
 
+    // `trailing-slash/` is deliberately absent from this list: a single
+    // trailing slash is the directory-placeholder convention (`docs/`) and the
+    // route layer (`decode_path_object_key`) accepts exactly that shape, so the
+    // store must accept it too. Leading slashes, empty (`//`) and period-only
+    // segments stay invalid.
     for object_key in [
         "",
         " object-key ",
         "/leading-slash",
-        "trailing-slash/",
         "objects//double-slash",
         "objects/./content",
         "objects/../content",
@@ -361,6 +365,25 @@ async fn s3_store_rejects_invalid_object_keys_before_sdk_request() {
             err.message
         );
     }
+
+    // A directory-placeholder key passes local validation and reaches the SDK:
+    // whatever comes back is a vendor/dispatch answer (MinIO 404 or a connect
+    // error on a fixture port), never the local invalid_request rejection.
+    let placeholder = store
+        .head_object(HeadObjectRequest {
+            locator: DriveObjectLocator {
+                bucket: "drive-bucket".to_string(),
+                object_key: "docs/".to_string(),
+            },
+        })
+        .await
+        .expect_err("fixture endpoint cannot answer a real head");
+    assert_ne!(
+        placeholder.code(),
+        "invalid_request",
+        "a single trailing slash is a legal placeholder key: {}",
+        placeholder.message
+    );
 
     let err = store
         .head_object(HeadObjectRequest {

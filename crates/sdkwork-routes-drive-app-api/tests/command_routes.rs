@@ -9398,6 +9398,9 @@ async fn seed_tenant_storage_provider_binding(
     provider_id: &str,
     actor_id: &str,
 ) {
+    // The tenant-default root from `default_storage_root_prefix(Tenant)`, the
+    // same derivation the admin binding route and the bootstrap write.
+    let storage_root_prefix = format!("sdkwork-drive/v1/tenants/{tenant_id}");
     sqlx::query(
         "INSERT INTO dr_drive_storage_provider_binding (
             id, tenant_id, space_id, provider_id, binding_scope, purpose,

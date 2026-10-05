@@ -134,7 +134,7 @@ async fn list_storage_providers_filters_by_kind_inside_the_window() {
 
     let cos_items = service
         .list_storage_providers(ListStorageProvidersCommand {
-            tenant_id: "tenant-storage".to_string(),
+            tenant_id: "tenant-storage-kind".to_string(),
             provider_kind: Some("tencent_cos".to_string()),
             status: None,
             offset: 0,
@@ -149,7 +149,7 @@ async fn list_storage_providers_filters_by_kind_inside_the_window() {
     // for an operator-typed value.
     let mixed_case_items = service
         .list_storage_providers(ListStorageProvidersCommand {
-            tenant_id: "tenant-storage".to_string(),
+            tenant_id: "tenant-storage-kind".to_string(),
             provider_kind: Some("Tencent_COS".to_string()),
             status: None,
             offset: 0,
@@ -163,7 +163,7 @@ async fn list_storage_providers_filters_by_kind_inside_the_window() {
     // `custom` is the family: it covers every `custom:<vendor>` row.
     let custom_items = service
         .list_storage_providers(ListStorageProvidersCommand {
-            tenant_id: "tenant-storage".to_string(),
+            tenant_id: "tenant-storage-kind".to_string(),
             provider_kind: Some("custom".to_string()),
             status: None,
             offset: 0,
@@ -178,7 +178,7 @@ async fn list_storage_providers_filters_by_kind_inside_the_window() {
     // half of the window holds one of them.
     let first_s3 = service
         .list_storage_providers(ListStorageProvidersCommand {
-            tenant_id: "tenant-storage".to_string(),
+            tenant_id: "tenant-storage-kind".to_string(),
             provider_kind: Some("s3_compatible".to_string()),
             status: None,
             offset: 0,
@@ -191,7 +191,7 @@ async fn list_storage_providers_filters_by_kind_inside_the_window() {
 
     let second_s3 = service
         .list_storage_providers(ListStorageProvidersCommand {
-            tenant_id: "tenant-storage".to_string(),
+            tenant_id: "tenant-storage-kind".to_string(),
             provider_kind: Some("s3_compatible".to_string()),
             status: None,
             offset: 1,
@@ -205,7 +205,7 @@ async fn list_storage_providers_filters_by_kind_inside_the_window() {
     // Kind and status are independent predicates.
     let active_s3 = service
         .list_storage_providers(ListStorageProvidersCommand {
-            tenant_id: "tenant-storage".to_string(),
+            tenant_id: "tenant-storage-kind".to_string(),
             provider_kind: Some("s3_compatible".to_string()),
             status: Some("active".to_string()),
             offset: 0,
@@ -219,7 +219,7 @@ async fn list_storage_providers_filters_by_kind_inside_the_window() {
     // An unknown kind selects nothing rather than failing.
     let unknown = service
         .list_storage_providers(ListStorageProvidersCommand {
-            tenant_id: "tenant-storage".to_string(),
+            tenant_id: "tenant-storage-kind".to_string(),
             provider_kind: Some("not-a-kind".to_string()),
             status: None,
             offset: 0,
@@ -232,7 +232,7 @@ async fn list_storage_providers_filters_by_kind_inside_the_window() {
     // A blank filter is not a filter.
     let blank = service
         .list_storage_providers(ListStorageProvidersCommand {
-            tenant_id: "tenant-storage".to_string(),
+            tenant_id: "tenant-storage-kind".to_string(),
             provider_kind: Some("   ".to_string()),
             status: None,
             offset: 0,

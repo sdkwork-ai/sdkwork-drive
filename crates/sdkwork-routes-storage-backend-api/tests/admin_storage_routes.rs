@@ -72,7 +72,7 @@ async fn mock_s3_endpoint(
             query: query.clone(),
         });
 
-    if method == Method::HEAD && uri.path() == "/bucket-admin/missing.txt" {
+    if method == Method::HEAD && uri.path() == "/bucket-admin/objects/missing.txt" {
         return StatusCode::NOT_FOUND.into_response();
     }
     if uri.path().trim_end_matches('/') == "/init-bucket"
@@ -96,10 +96,19 @@ async fn mock_s3_endpoint(
             StatusCode::NOT_FOUND.into_response()
         };
     }
-    if method == Method::HEAD && uri.path() == "/bucket-admin/oversized.bin" {
+    if method == Method::HEAD && uri.path() == "/bucket-admin/objects/oversized.bin" {
         return (
             StatusCode::OK,
             [("content-length", "8388609")],
+            Body::empty(),
+        )
+            .into_response();
+    }
+    // 写后读：head 报真实长度，随后的 range 读由 GET 分支应答 "hello world"。
+    if method == Method::HEAD && uri.path() == "/bucket-admin/objects/notes.txt" {
+        return (
+            StatusCode::OK,
+            [("content-length", "11")],
             Body::empty(),
         )
             .into_response();
@@ -240,11 +249,12 @@ async fn admin_storage_provider_routes_mask_credentials_and_report_capabilities(
             .expect("create provider response body should be read"),
     )
     .expect("create provider response should be json");
-    assert_eq!(create_payload["providerKind"], "tencent_cos");
-    assert_eq!(create_payload["credentialConfigured"], true);
-    assert_eq!(create_payload["credentialRef"], "plain:***");
-    assert_eq!(create_payload["pathStyle"], false);
-    assert_eq!(create_payload["strictTls"], true);
+    let create_item = &create_payload["data"]["item"];
+    assert_eq!(create_item["providerKind"], "tencent_cos");
+    assert_eq!(create_item["credentialConfigured"], true);
+    assert_eq!(create_item["credentialRef"], "plain:***");
+    assert_eq!(create_item["pathStyle"], false);
+    assert_eq!(create_item["strictTls"], true);
 
     let get_response = app
         .clone()
@@ -264,8 +274,8 @@ async fn admin_storage_provider_routes_mask_credentials_and_report_capabilities(
             .expect("get provider response body should be read"),
     )
     .expect("get provider response should be json");
-    assert_eq!(get_payload["credentialRef"], "plain:***");
-    assert_eq!(get_payload["strictTls"], true);
+    assert_eq!(get_payload["data"]["item"]["credentialRef"], "plain:***");
+    assert_eq!(get_payload["data"]["item"]["strictTls"], true);
 
     let update_response = app
         .clone()
@@ -291,7 +301,7 @@ async fn admin_storage_provider_routes_mask_credentials_and_report_capabilities(
             .expect("update provider response body should be read"),
     )
     .expect("update provider response should be json");
-    assert_eq!(update_payload["strictTls"], false);
+    assert_eq!(update_payload["data"]["item"]["strictTls"], false);
 
     let capabilities_response = app
         .oneshot(
@@ -310,9 +320,10 @@ async fn admin_storage_provider_routes_mask_credentials_and_report_capabilities(
             .expect("capabilities response body should be read"),
     )
     .expect("capabilities response should be json");
-    assert_eq!(capabilities_payload["supportsMultipartUpload"], true);
-    assert_eq!(capabilities_payload["supportsPresignedUploadPart"], true);
-    assert_eq!(capabilities_payload["supportsCredentialRotation"], true);
+    let capabilities_item = &capabilities_payload["data"]["item"];
+    assert_eq!(capabilities_item["supportsMultipartUpload"], true);
+    assert_eq!(capabilities_item["supportsPresignedUploadPart"], true);
+    assert_eq!(capabilities_item["supportsCredentialRotation"], true);
 }
 
 #[tokio::test]
@@ -384,14 +395,15 @@ async fn admin_storage_default_binding_can_mount_provider_to_tenant_or_space() {
             .expect("set binding response body should be read"),
     )
     .expect("set binding response should be json");
-    assert_eq!(binding_payload["bindingScope"], "space");
-    assert_eq!(binding_payload["spaceId"], "space-git-repositories");
+    let binding_item = &binding_payload["data"]["item"];
+    assert_eq!(binding_item["bindingScope"], "space");
+    assert_eq!(binding_item["spaceId"], "space-git-repositories");
     assert_eq!(
-        binding_payload["storageRootPrefix"],
+        binding_item["storageRootPrefix"],
         "sdkwork-drive/v1/tenants/tenant-storage/spaces/space-git-repositories"
     );
     assert_eq!(
-        binding_payload["storageProvider"]["providerKind"],
+        binding_item["storageProvider"]["providerKind"],
         "volcengine_tos"
     );
 
@@ -408,6 +420,17 @@ async fn admin_storage_default_binding_can_mount_provider_to_tenant_or_space() {
         .await
         .expect("get binding request should be handled");
     assert_eq!(get_binding.status(), StatusCode::OK);
+    let get_binding_payload: serde_json::Value = serde_json::from_slice(
+        &to_bytes(get_binding.into_body(), usize::MAX)
+            .await
+            .expect("get binding response body should be read"),
+    )
+    .expect("get binding response should be json");
+    assert_eq!(
+        get_binding_payload["data"]["item"]["bindingScope"],
+        "space",
+        "the mounted binding must read back through the default route"
+    );
 }
 
 #[tokio::test]
@@ -734,7 +757,7 @@ async fn admin_storage_binding_routes_list_and_delete_space_mounts_with_audit() 
             credential_ref, status, version, created_by, updated_by
         ) VALUES ('provider-tenant-default', 'tenant-storage', 's3_compatible', 'Tenant Default', 'https://s3.amazonaws.com', 'us-east-1', 'tenant-bucket', false, 'plain:access-key:secret-key', 'active', 1, 'admin-storage', 'admin-storage'),
             (
-                'provider-space-default', 'aliyun_oss', 'Space Default', 'https://oss-cn-hangzhou.aliyuncs.com',
+                'provider-space-default', 'tenant-storage', 'aliyun_oss', 'Space Default', 'https://oss-cn-hangzhou.aliyuncs.com',
                 'cn-hangzhou', 'space-bucket', false, 'plain:access-key:secret-key',
                 'active', 1, 'admin-storage', 'admin-storage'
             )",
@@ -927,7 +950,7 @@ async fn admin_storage_binding_list_filters_by_resolution_step() {
         "INSERT INTO dr_drive_storage_provider (
             id, tenant_id, provider_kind, name, endpoint_url, region, bucket, path_style,
             credential_ref, status, version, created_by, updated_by
-        ) VALUES ('provider-scope', 'tenant-storage', 's3_compatible', 'Scoped Provider', 'https://s3.amazonaws.com', 'us-east-1', 'scoped-bucket', false, 'plain:access-key:secret-key', 'active', 1, 'admin-storage', 'admin-storage')",
+        ) VALUES ('provider-scope', 'tenant-scope', 's3_compatible', 'Scoped Provider', 'https://s3.amazonaws.com', 'us-east-1', 'scoped-bucket', false, 'plain:access-key:secret-key', 'active', 1, 'admin-storage', 'admin-storage')",
     )
     .execute(&pool)
     .await
@@ -1022,7 +1045,7 @@ async fn admin_storage_binding_accepts_website_space_type() {
         "INSERT INTO dr_drive_storage_provider (
             id, tenant_id, provider_kind, name, endpoint_url, region, bucket, path_style,
             credential_ref, status, version, created_by, updated_by
-        ) VALUES ('provider-website', 'tenant-storage', 's3_compatible', 'Website Bucket', 'https://s3.amazonaws.com', 'us-east-1', 'sdkwork-website', false, 'plain:access-key:secret-key', 'active', 1, 'admin-storage', 'admin-storage')",
+        ) VALUES ('provider-website', 'tenant-website', 's3_compatible', 'Website Bucket', 'https://s3.amazonaws.com', 'us-east-1', 'sdkwork-website', false, 'plain:access-key:secret-key', 'active', 1, 'admin-storage', 'admin-storage')",
     )
     .execute(&pool)
     .await
@@ -1500,7 +1523,7 @@ async fn admin_storage_bucket_initialization_is_idempotent() {
     )
     .expect("bucket initialize response should be json");
     assert_eq!(first_payload["code"], 0);
-    assert_eq!(first_payload["data"]["changed"], true);
+    assert_eq!(first_payload["data"]["item"]["changed"], true);
 
     let second_response = app
         .clone()
@@ -1521,7 +1544,7 @@ async fn admin_storage_bucket_initialization_is_idempotent() {
     )
     .expect("second bucket initialize response should be json");
     assert_eq!(second_payload["code"], 0);
-    assert_eq!(second_payload["data"]["changed"], false);
+    assert_eq!(second_payload["data"]["item"]["changed"], false);
 
     let requests = captured_requests
         .lock()
@@ -2458,7 +2481,7 @@ async fn admin_storage_provider_test_route_checks_configured_s3_bucket() {
             .expect("test provider response body should be read"),
     )
     .expect("test provider response should be json");
-    assert_eq!(payload["reachable"], true);
+    assert_eq!(payload["data"]["item"]["reachable"], true);
 
     let requests = captured_requests
         .lock()
@@ -2722,12 +2745,17 @@ async fn admin_storage_bucket_and_object_mutations_audit_authenticated_actor() {
         "INSERT INTO dr_drive_storage_provider (
             id, tenant_id, provider_kind, name, endpoint_url, region, bucket, path_style,
             strict_tls, credential_ref, status, version, created_by, updated_by
-        ) VALUES ('provider-mutation-s3', 'tenant-storage', 's3_compatible', 'Mutation S3', $1, 'us-east-1', 'bucket-admin', true, false, 'plain:test-access-key:test-secret-key', 'active', 1, 'admin-storage', 'admin-storage')",
+        ) VALUES ('provider-mutation-s3', 'tenant-storage', 's3_compatible', 'Mutation S3', $1, 'us-east-1', 'init-bucket', true, false, 'plain:test-access-key:test-secret-key', 'active', 1, 'admin-storage', 'admin-storage')",
     )
     .bind(&s3_endpoint)
     .execute(&pool)
     .await
     .expect("storage provider should be seeded");
+
+    // The bucket name is `init-bucket` so the mock answers its first HEAD with
+    // 404: the create-audit fires only when the vendor CreateBucket really
+    // runs, and `bucket-admin` is served by the mock's generic always-exists
+    // HEAD.
 
     let app = build_router_with_pool_without_iam(pool.clone());
     let create_bucket = app
@@ -2807,11 +2835,14 @@ async fn admin_storage_bucket_and_object_mutations_audit_authenticated_actor() {
         .expect("bucket delete request should be handled");
     assert_no_content_response(delete_bucket).await;
 
+    // Object-plane audits name the object they touched (`provider/key`), so the
+    // rows this test reads span two resource_id shapes; select the provider
+    // prefix and keep the strict action order.
     let audit_rows: Vec<(String, String)> = sqlx::query_as(
         "SELECT action, operator_id
          FROM dr_drive_audit_event
          WHERE resource_type='storage_provider'
-           AND resource_id='provider-mutation-s3'
+           AND resource_id LIKE 'provider-mutation-s3%'
          ORDER BY id ASC",
     )
     .fetch_all(&pool)
@@ -3065,12 +3096,14 @@ async fn admin_storage_provider_kinds_list_and_initialize() {
     assert!(kinds.contains(&"aliyun_oss"));
     assert!(kinds.contains(&"tencent_cos"));
 
-    // Initialize is idempotent and preserves the catalog.
+    // Initialize is idempotent and preserves the catalog. The initialize
+    // operation is the collection's POST (`POST /provider-kinds`), the same
+    // shape `POST /provider-account-defaults` uses for the wider bootstrap.
     let init_response = app
         .oneshot(
             Request::builder()
                 .method(Method::POST)
-                .uri("/backend/v3/api/drive/storage/provider-kinds/initialize")
+                .uri("/backend/v3/api/drive/storage/provider-kinds")
                 .body(Body::empty())
                 .expect("initialize provider kinds request should be built"),
         )
@@ -3080,7 +3113,6 @@ async fn admin_storage_provider_kinds_list_and_initialize() {
     let init_body_bytes = to_bytes(init_response.into_body(), usize::MAX)
         .await
         .expect("initialize provider kinds response body should be read");
-    eprintln!("INIT DEBUG status={init_status} body={}", String::from_utf8_lossy(&init_body_bytes));
     assert_eq!(init_status, StatusCode::OK);
     let init_payload: serde_json::Value = serde_json::from_slice(
         &init_body_bytes,
@@ -3378,13 +3410,14 @@ async fn admin_storage_object_content_routes_handle_literal_percent_keys_and_dir
         .expect("object content request should be handled");
     assert_eq!(trailing_percent.status(), StatusCode::OK);
 
-    // 双斜杠 key 一律拒绝（避免幽灵空段对象）。
+    // 双斜杠 key 一律拒绝（避免幽灵空段对象）。单个尾斜杠是目录占位对象
+    // （下一个用例的 `objects/docs/`），这里必须用真正的内部空段探测。
     let double_slash = app
         .clone()
         .oneshot(
             Request::builder()
                 .method(Method::PUT)
-                .uri("/backend/v3/api/drive/storage/providers/provider-percent-keys/object-contents/objects/folder/")
+                .uri("/backend/v3/api/drive/storage/providers/provider-percent-keys/object-contents/objects//blocked.bin")
                 .header("content-type", "application/json")
                 .body(Body::from(r#"{"content":""}"#))
                 .expect("object content request should be built"),
@@ -3425,16 +3458,20 @@ async fn admin_storage_object_content_routes_handle_literal_percent_keys_and_dir
         .lock()
         .expect("captured s3 requests mutex should not be poisoned")
         .clone();
+    // The captured path is the wire form: the S3 SDK percent-encodes the key it
+    // sends, so the literal `%` of `50%20off.txt` travels as `%25`. Verbatim
+    // storage means the vendor decodes exactly one wire form back to the same
+    // literal key — not that the wire carries a raw `%`.
     assert!(
         requests.iter().any(|request| request.method == "PUT"
-            && request.path == "/bucket-admin/objects/50%20off.txt"),
+            && request.path == "/bucket-admin/objects/50%2520off.txt"),
         "literal percent key should be stored verbatim"
     );
     assert!(
         requests
             .iter()
             .any(|request| request.method == "PUT"
-                && request.path == "/bucket-admin/objects/100%.txt"),
+                && request.path == "/bucket-admin/objects/100%25.txt"),
         "trailing percent key should be stored verbatim"
     );
     assert!(

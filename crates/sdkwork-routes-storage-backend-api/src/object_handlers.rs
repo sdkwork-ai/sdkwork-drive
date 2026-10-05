@@ -352,6 +352,13 @@ pub(crate) async fn write_storage_provider_object_content(
             "object content exceeds the {MAX_OBJECT_CONTENT_BYTES} byte write limit"
         )));
     }
+    // 目录占位对象（尾斜杠 key）按约定必须是空内容：非空字节写进 `docs/` 会
+    // 得到一个对象浏览器渲染成"目录"、却读不出内容的幽灵对象。
+    if object_key.ends_with('/') && !bytes.is_empty() {
+        return Err(validation_problem(
+            "a directory placeholder object key must carry empty content",
+        ));
+    }
     let content_type = payload
         .content_type
         .map(|value| value.trim().to_string())

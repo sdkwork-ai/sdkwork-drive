@@ -161,3 +161,8 @@ apps/sdkwork-drive-pc/packages/sdkwork-drive-pc-electron/dist-electron/
 
 # One-off local diagnostic app-config experiment dump (never committed)
 sdkwork-space.tmp-diagappconfig-*.json
+
+# Stale TypeScript emit beside upload-image-core sources (build output, never committed).
+# Added by repo-commit sweep; targeted rules only.
+/apps/sdkwork-drive-common/packages/sdkwork-drive-upload-image-core/src/*.js
+/apps/sdkwork-drive-common/packages/sdkwork-drive-upload-image-core/src/*.d.ts
