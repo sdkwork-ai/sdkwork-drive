@@ -285,3 +285,14 @@ test("destroy aborts in-flight work and rejects later use", async () => {
   await assert.rejects(async () => controller.uploadPending(), /destroyed/);
   assert.equal(controller.getSnapshot().items.length, 0);
 });
+
+test("clearing a destroyed controller is a no-op (StrictMode remount cleanup)", async () => {
+  const controller = new DriveUploadImageController({
+    service: scriptedService(() => Promise.resolve(driveValue("node_clear"))),
+    previewUrls: nullPreviews,
+  });
+
+  controller.destroy();
+  assert.doesNotThrow(() => controller.clear());
+  assert.equal(controller.getSnapshot().items.length, 0);
+});

@@ -322,7 +322,13 @@ export class DriveUploadImageController {
   }
 
   clear(): void {
-    this.assertAlive();
+    if (this.destroyed) {
+      // destroy() already emptied items and reset the snapshot, so clearing a
+      // destroyed controller is a no-op. React StrictMode remounts cleanup
+      // effects after unmount destroyed the controller, and a throw here
+      // would escape the effect and tear down the whole tree.
+      return;
+    }
     for (const item of [...this.items]) {
       this.dropItem(item.id, { notify: false });
     }
