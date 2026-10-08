@@ -4,12 +4,14 @@ use crate::app_context::DriveRequestContext;
 use crate::constants::MAX_FAVORITE_CHECK_NODE_IDS;
 use crate::dto::{
     CheckFavoriteNodesRequest, FavoriteNodeCheckItem, FavoriteNodeQuery, FavoriteNodeRequest,
-    FavoriteNodeResponse, NodeViewQuery, SubjectNodeViewQuery,
+    FavoriteNodeResponse, NodeViewQuery, PageRequest, SubjectNodeViewQuery,
 };
-use crate::error::{internal_sql_error, problem, ProblemDetail, SdkWorkResultCode};
+use crate::error::{
+    internal_problem, internal_sql_error, problem, ProblemDetail, SdkWorkResultCode,
+};
 use crate::mappers::map_node_row;
 use crate::metadata_repository::present_node_list;
-use crate::node_repository::find_active_node;
+use crate::node_repository::{find_active_node, find_node_any_lifecycle};
 use crate::response::{
     current_trace_id, no_content, success_envelope, DriveListHttpResponse,
     DriveNodeListHttpResponse,
@@ -19,12 +21,17 @@ use crate::space_repository::validate_space_exists;
 use crate::state::AppState;
 use crate::time::current_epoch_ms;
 use crate::validators::{
-    normalize_optional_text, parse_page_request, resolve_aliased_node_list_order_by,
-    resolve_node_list_order_by, validate_subject_type,
+    normalize_optional_text, parse_favorite_keyset_page_request, parse_page_request,
+    resolve_aliased_node_list_order_by, resolve_node_list_order_by, validate_subject_type,
+    FavoriteKeysetPageRequest,
 };
 use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
 use axum::{Extension, Json};
+use chrono::{DateTime, Utc};
+use sdkwork_drive_contract::api::pagination_cursor::{
+    encode_favorite_updated_cursor, FavoriteUpdatedCursor,
+};
 use sdkwork_drive_contract::drive::domain_events as drive_events;
 use sdkwork_drive_workspace_service::infrastructure::sql::{
     NODE_API_SELECT_COLUMNS, NODE_API_SELECT_JOIN_COLUMNS,
@@ -326,14 +333,6 @@ pub(crate) async fn list_favorite_nodes(
 ) -> Result<DriveNodeListHttpResponse, (StatusCode, Json<ProblemDetail>)> {
     let tenant_id = ctx.resolve_tenant_id()?;
     let (subject_type, subject_id) = ctx.resolve_subject()?;
-    let page = parse_page_request(query.page_size, query.page_token)?;
-    let order_by = resolve_aliased_node_list_order_by(
-        query.sort_by.clone(),
-        query.sort_order.clone(),
-        "n",
-        "f.updated_at DESC, n.id ASC",
-    )?;
-    let order_by_for_fetch = order_by.clone();
     let space_id = normalize_optional_text(query.space_id);
     if let Some(space_id) = space_id.as_deref() {
         validate_space_exists(&state.pool, &tenant_id, space_id).await?;
@@ -347,6 +346,50 @@ pub(crate) async fn list_favorite_nodes(
         )
         .await?;
     }
+
+    // The default favorites ordering is the surface the concurrent
+    // favorite/unfavorite defect breaks: `set_favorite` bumps
+    // `dr_drive_node_favorite.updated_at`, so an OFFSET window taken between
+    // pages skipped or duplicated rows. It therefore paginates by keyset seek
+    // on `(f.updated_at DESC, n.id ASC)` (PAGINATION_SPEC.md section 6,
+    // unstable lists). Explicit sort requests keep the legacy offset window.
+    // Cursor kinds are not interchangeable, so each mode only accepts its own
+    // tokens; response shape (`items` + cursor-mode `pageInfo`) is unchanged.
+    let has_explicit_sort = query.sort_by.is_some() || query.sort_order.is_some();
+    if !has_explicit_sort {
+        let keyset_page =
+            parse_favorite_keyset_page_request(query.page_size, query.page_token)?;
+        let (items, next_page_token) = fetch_favorite_nodes_keyset_page(
+            &state.pool,
+            &tenant_id,
+            &subject_type,
+            &subject_id,
+            space_id.as_deref(),
+            &keyset_page,
+        )
+        .await?;
+        return present_node_list(
+            &state.pool,
+            &tenant_id,
+            items,
+            PageRequest {
+                limit: keyset_page.limit,
+                offset: 0,
+            },
+            next_page_token,
+            false,
+        )
+        .await;
+    }
+
+    let page = parse_page_request(query.page_size, query.page_token)?;
+    let order_by = resolve_aliased_node_list_order_by(
+        query.sort_by.clone(),
+        query.sort_order.clone(),
+        "n",
+        "f.updated_at DESC, n.id ASC",
+    )?;
+    let order_by_for_fetch = order_by.clone();
     let pool = state.pool.clone();
     let tenant_id_for_fetch = tenant_id.clone();
     let subject_type_for_fetch = subject_type.clone();
@@ -505,6 +548,209 @@ pub(crate) async fn list_favorite_nodes(
     )
     .await
 }
+/// Default-order favorites fetch: keyset seek on the favorite row's
+/// `updated_at` with the node id tiebreaker, so rows whose `updated_at` is
+/// bumped between pages neither repeat nor push later rows out of place. Rows
+/// of non-active nodes (trashed or soft-deleted) stay excluded through the
+/// `dr_drive_node` join on `lifecycle_status='active'`; favorites rows are not
+/// purged on soft delete, only hidden, while a hard node delete cascades them
+/// away via the FK `ON DELETE CASCADE`.
+async fn fetch_favorite_nodes_keyset_page(
+    pool: &sqlx::PgPool,
+    tenant_id: &str,
+    subject_type: &str,
+    subject_id: &str,
+    space_id: Option<&str>,
+    page: &FavoriteKeysetPageRequest,
+) -> Result<(Vec<crate::dto::DriveNodeResponse>, Option<String>), (StatusCode, Json<ProblemDetail>)>
+{
+    let Some(space_id) = space_id else {
+        let reader_acl_predicate = acl_sql::node_reader_visible_sql("n", "$2", "$3");
+        let (keyset_predicate, keyset_bind, limit_placeholder) =
+            favorite_keyset_predicate(4, page.keyset.as_ref())?;
+        let sql = format!(
+            "SELECT {NODE_API_SELECT_JOIN_COLUMNS},
+                    f.updated_at AS favorite_updated_at
+             FROM dr_drive_node_favorite f
+             INNER JOIN dr_drive_node n
+                ON n.tenant_id=f.tenant_id
+               AND n.id=f.node_id
+               AND n.lifecycle_status='active'
+               AND n.content_state='ready'
+             WHERE f.tenant_id=$1
+               AND f.subject_type=$2
+               AND f.subject_id=$3
+               AND f.lifecycle_status='active'
+               AND ({reader_acl_predicate}){keyset_predicate}
+             ORDER BY f.updated_at DESC, n.id ASC
+             LIMIT {limit_placeholder}"
+        );
+        let mut query = sqlx::query(sqlx::AssertSqlSafe(sql))
+            .bind(tenant_id)
+            .bind(subject_type)
+            .bind(subject_id);
+        if let Some((updated_at, node_id)) = keyset_bind {
+            query = query.bind(updated_at).bind(node_id);
+        }
+        let rows = query
+            .bind(page.limit + 1)
+            .fetch_all(pool)
+            .await
+            .map_err(internal_sql_error("list favorite dr_drive_node failed"))?;
+        return split_favorite_keyset_rows(rows, page.limit);
+    };
+
+    let is_space_owner =
+        acl::is_subject_space_owner(pool, tenant_id, space_id, subject_type, subject_id).await?;
+    if is_space_owner {
+        let (keyset_predicate, keyset_bind, limit_placeholder) =
+            favorite_keyset_predicate(5, page.keyset.as_ref())?;
+        let sql = format!(
+            "SELECT {NODE_API_SELECT_JOIN_COLUMNS},
+                    f.updated_at AS favorite_updated_at
+             FROM dr_drive_node_favorite f
+             INNER JOIN dr_drive_node n
+                ON n.tenant_id=f.tenant_id
+               AND n.id=f.node_id
+               AND n.lifecycle_status='active'
+               AND n.content_state='ready'
+             WHERE f.tenant_id=$1
+               AND n.space_id=$2
+               AND f.subject_type=$3
+               AND f.subject_id=$4
+               AND f.lifecycle_status='active'{keyset_predicate}
+             ORDER BY f.updated_at DESC, n.id ASC
+             LIMIT {limit_placeholder}"
+        );
+        let mut query = sqlx::query(sqlx::AssertSqlSafe(sql))
+            .bind(tenant_id)
+            .bind(space_id)
+            .bind(subject_type)
+            .bind(subject_id);
+        if let Some((updated_at, node_id)) = keyset_bind {
+            query = query.bind(updated_at).bind(node_id);
+        }
+        let rows = query
+            .bind(page.limit + 1)
+            .fetch_all(pool)
+            .await
+            .map_err(internal_sql_error("list favorite dr_drive_node failed"))?;
+        return split_favorite_keyset_rows(rows, page.limit);
+    }
+
+    let reader_acl_predicate = acl_sql::reader_inherited_permission_exists_sql("n", "$3", "$4");
+    let (keyset_predicate, keyset_bind, limit_placeholder) =
+        favorite_keyset_predicate(5, page.keyset.as_ref())?;
+    let sql = format!(
+        "SELECT {NODE_API_SELECT_JOIN_COLUMNS},
+                f.updated_at AS favorite_updated_at
+         FROM dr_drive_node_favorite f
+         INNER JOIN dr_drive_node n
+            ON n.tenant_id=f.tenant_id
+           AND n.id=f.node_id
+           AND n.lifecycle_status='active'
+           AND n.content_state='ready'
+         WHERE f.tenant_id=$1
+           AND n.space_id=$2
+           AND f.subject_type=$3
+           AND f.subject_id=$4
+           AND f.lifecycle_status='active'
+           AND ({reader_acl_predicate}){keyset_predicate}
+         ORDER BY f.updated_at DESC, n.id ASC
+         LIMIT {limit_placeholder}"
+    );
+    let mut query = sqlx::query(sqlx::AssertSqlSafe(sql))
+        .bind(tenant_id)
+        .bind(space_id)
+        .bind(subject_type)
+        .bind(subject_id);
+    if let Some((updated_at, node_id)) = keyset_bind {
+        query = query.bind(updated_at).bind(node_id);
+    }
+    let rows = query
+        .bind(page.limit + 1)
+        .fetch_all(pool)
+        .await
+        .map_err(internal_sql_error("list favorite dr_drive_node failed"))?;
+    split_favorite_keyset_rows(rows, page.limit)
+}
+
+/// Mixed-direction keyset seek for `ORDER BY f.updated_at DESC, n.id ASC`:
+/// rows strictly after the cursor position are those with an older
+/// `updated_at`, or the same `updated_at` with a greater node id. Returns the
+/// predicate fragment, its bind values, and the LIMIT placeholder to use.
+fn favorite_keyset_predicate(
+    first_placeholder: usize,
+    keyset: Option<&FavoriteUpdatedCursor>,
+) -> Result<
+    (
+        String,
+        Option<(DateTime<Utc>, String)>,
+        String,
+    ),
+    (StatusCode, Json<ProblemDetail>),
+> {
+    let Some(position) = keyset else {
+        return Ok((
+            String::new(),
+            None,
+            format!("${first_placeholder}"),
+        ));
+    };
+    let updated_at =
+        DateTime::<Utc>::from_timestamp_micros(position.updated_at_epoch_micros).ok_or_else(
+            || {
+                problem(
+                    StatusCode::BAD_REQUEST,
+                    "validation failed",
+                    "cursor is invalid",
+                    SdkWorkResultCode::ValidationError,
+                )
+            },
+        )?;
+    let predicate = format!(
+        " AND (f.updated_at < ${first} OR (f.updated_at = ${first} AND n.id > ${second}))",
+        first = first_placeholder,
+        second = first_placeholder + 1,
+    );
+    Ok((
+        predicate,
+        Some((updated_at, position.node_id.clone())),
+        format!("${}", first_placeholder + 2),
+    ))
+}
+
+fn split_favorite_keyset_rows(
+    rows: Vec<sqlx::postgres::PgRow>,
+    limit: i64,
+) -> Result<(Vec<crate::dto::DriveNodeResponse>, Option<String>), (StatusCode, Json<ProblemDetail>)>
+{
+    let has_more = rows.len() > limit as usize;
+    let kept = if has_more {
+        &rows[..limit as usize]
+    } else {
+        &rows[..]
+    };
+    let items = kept.iter().map(map_node_row).collect::<Vec<_>>();
+    let next_page_token = if !has_more {
+        None
+    } else {
+        let last = kept
+            .last()
+            .ok_or_else(|| internal_problem("favorites keyset page lost its last row"))?;
+        let favorite_updated_at: DateTime<Utc> = last
+            .try_get("favorite_updated_at")
+            .map_err(internal_sql_error("read favorite updated_at failed"))?;
+        let node_id: String = last
+            .try_get("id")
+            .map_err(internal_sql_error("read favorite node id failed"))?;
+        Some(
+            encode_favorite_updated_cursor(favorite_updated_at.timestamp_micros(), &node_id)
+                .ok_or_else(|| internal_problem("encode favorite keyset cursor failed"))?,
+        )
+    };
+    Ok((items, next_page_token))
+}
 pub(crate) async fn set_favorite(
     State(state): State<AppState>,
     Extension(ctx): Extension<DriveRequestContext>,
@@ -558,27 +804,40 @@ pub(crate) async fn unset_favorite(
     let tenant_id = ctx.resolve_tenant_id()?;
     let (subject_type, subject_id) = ctx.resolve_subject()?;
     let operator_id = ctx.resolve_operator_id()?;
-    let node = find_active_node(&state.pool, &tenant_id, &node_id).await?;
     validate_subject_type(&subject_type)?;
+
+    // Unsetting a favorite is idempotent, mirroring `delete_node`, which
+    // succeeds on already-deleted targets. Favorites rows of soft-deleted
+    // nodes are not purged — they are only hidden from listings by the
+    // `lifecycle_status='active'` join in `list_favorite_nodes` — and a hard
+    // node delete cascades them away via the FK `ON DELETE CASCADE`. Both
+    // cases resolve to 204: the caller's favorite is already unreachable.
+    let node = match find_node_any_lifecycle(&state.pool, &tenant_id, &node_id).await? {
+        Some(node) => node,
+        None => return Ok(no_content()),
+    };
+    if node.lifecycle_status == "deleted" {
+        clear_favorite_row(
+            &state.pool,
+            &operator_id,
+            &tenant_id,
+            &node_id,
+            &subject_type,
+            &subject_id,
+        )
+        .await?;
+        return Ok(no_content());
+    }
     acl::ensure_ctx_node_role(&state.pool, &ctx, &node.space_id, &node_id, "reader").await?;
-    let affected = sqlx::query(
-        "UPDATE dr_drive_node_favorite
-         SET lifecycle_status='deleted', updated_by=$1, updated_at=CURRENT_TIMESTAMP, version=version + 1
-         WHERE tenant_id=$2
-           AND node_id=$3
-           AND subject_type=$4
-           AND subject_id=$5
-           AND lifecycle_status='active'",
+    let affected = clear_favorite_row(
+        &state.pool,
+        &operator_id,
+        &tenant_id,
+        &node_id,
+        &subject_type,
+        &subject_id,
     )
-    .bind(&operator_id)
-    .bind(&tenant_id)
-    .bind(&node_id)
-    .bind(&subject_type)
-    .bind(&subject_id)
-    .execute(&state.pool)
-    .await
-    .map_err(internal_sql_error("delete dr_drive_node_favorite failed"))?
-    .rows_affected();
+    .await?;
     if affected > 0 {
         record_change(
             &state.pool,
@@ -591,6 +850,34 @@ pub(crate) async fn unset_favorite(
         .await?;
     }
     Ok(no_content())
+}
+
+async fn clear_favorite_row(
+    pool: &sqlx::PgPool,
+    operator_id: &str,
+    tenant_id: &str,
+    node_id: &str,
+    subject_type: &str,
+    subject_id: &str,
+) -> Result<u64, (StatusCode, Json<ProblemDetail>)> {
+    sqlx::query(
+        "UPDATE dr_drive_node_favorite
+         SET lifecycle_status='deleted', updated_by=$1, updated_at=CURRENT_TIMESTAMP, version=version + 1
+         WHERE tenant_id=$2
+           AND node_id=$3
+           AND subject_type=$4
+           AND subject_id=$5
+           AND lifecycle_status='active'",
+    )
+    .bind(operator_id)
+    .bind(tenant_id)
+    .bind(node_id)
+    .bind(subject_type)
+    .bind(subject_id)
+    .execute(pool)
+    .await
+    .map_err(internal_sql_error("delete dr_drive_node_favorite failed"))
+    .map(|result| result.rows_affected())
 }
 
 pub(crate) async fn check_favorite_nodes(

@@ -5,7 +5,8 @@ use crate::time::current_epoch_ms;
 use axum::http::StatusCode;
 use axum::Json;
 use sdkwork_drive_contract::api::pagination_cursor::{
-    decode_change_sequence_cursor, decode_offset_cursor, encode_offset_cursor,
+    decode_change_sequence_cursor, decode_favorite_updated_cursor, decode_offset_cursor,
+    encode_offset_cursor, FavoriteUpdatedCursor,
 };
 
 pub fn require_query_value(
@@ -187,6 +188,38 @@ pub fn parse_change_page_request(
         )
     })?;
     Ok(PageRequest { limit, offset })
+}
+
+/// Favorites list page request. The favorites list defaults to keyset
+/// pagination over `(favorite updated_at DESC, node id ASC)` so a concurrent
+/// favorite/unfavorite between pages can no longer skip or duplicate rows
+/// (`PAGINATION_SPEC.md` section 6, unstable lists).
+#[derive(Debug, Clone)]
+pub struct FavoriteKeysetPageRequest {
+    pub limit: i64,
+    pub keyset: Option<FavoriteUpdatedCursor>,
+}
+
+pub fn parse_favorite_keyset_page_request(
+    page_size: Option<i64>,
+    cursor: Option<String>,
+) -> Result<FavoriteKeysetPageRequest, (StatusCode, Json<ProblemDetail>)> {
+    let limit = validate_page_size_i64(
+        page_size,
+        DEFAULT_LIST_PAGE_SIZE,
+        1,
+        MAX_LIST_PAGE_SIZE,
+        "page_size",
+    )?;
+    let keyset = decode_favorite_updated_cursor(cursor.as_deref()).map_err(|_| {
+        problem(
+            StatusCode::BAD_REQUEST,
+            "validation failed",
+            "cursor is invalid",
+            SdkWorkResultCode::ValidationError,
+        )
+    })?;
+    Ok(FavoriteKeysetPageRequest { limit, keyset })
 }
 
 pub fn validate_permission_role(role: &str) -> Result<(), (StatusCode, Json<ProblemDetail>)> {

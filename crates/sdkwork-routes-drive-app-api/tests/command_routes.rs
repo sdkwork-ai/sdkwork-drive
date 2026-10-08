@@ -19789,3 +19789,412 @@ async fn drive_problem_responses_include_correlation_ids() {
         .as_str()
         .is_some_and(|value| !value.is_empty() && value != "trace-unset"));
 }
+
+async fn drive_favorites_list_response(
+    app: &Router,
+    tenant: &str,
+    user: &str,
+    uri: &str,
+) -> Response<Body> {
+    app.clone()
+        .oneshot(
+            Request::builder()
+                .header(
+                    "authorization",
+                    format!("Bearer {}", common::auth_token(tenant, user, "appbase")),
+                )
+                .header("access-token", common::access_token(tenant, user, "appbase"))
+                .method(Method::GET)
+                .uri(uri)
+                .body(Body::empty())
+                .expect("favorites list request should be built"),
+        )
+        .await
+        .expect("favorites list request should be handled")
+}
+
+async fn drive_unset_favorite_response(
+    app: &Router,
+    tenant: &str,
+    user: &str,
+    node_id: &str,
+) -> Response<Body> {
+    app.clone()
+        .oneshot(
+            Request::builder()
+                .header(
+                    "authorization",
+                    format!("Bearer {}", common::auth_token(tenant, user, "appbase")),
+                )
+                .header("access-token", common::access_token(tenant, user, "appbase"))
+                .method(Method::DELETE)
+                .uri(&format!("/app/v3/api/drive/nodes/{node_id}/favorite"))
+                .body(Body::empty())
+                .expect("unset favorite request should be built"),
+        )
+        .await
+        .expect("unset favorite request should be handled")
+}
+
+fn drive_list_page_ids(payload: &serde_json::Value) -> Vec<String> {
+    common::envelope_items(payload)
+        .as_array()
+        .expect("items should be an array")
+        .iter()
+        .map(|item| item["id"].as_str().unwrap_or_default().to_string())
+        .collect()
+}
+
+#[tokio::test]
+async fn favorites_keyset_pagination_does_not_skip_or_duplicate_when_favorite_timestamps_bump() {
+    let Some((pool, _database_guard)) = sdkwork_drive_test_support::postgres_test_database().await
+    else {
+        return;
+    };
+
+    sqlx::query(
+        "INSERT INTO dr_drive_space (
+            id, tenant_id, owner_subject_type, owner_subject_id, space_type,
+            display_name, lifecycle_status, version, created_by, updated_by
+        ) VALUES ('space-keyset', 'tenant-keyset', 'user', 'user-owner', 'personal', 'Keyset', 'active', 1, 'user-owner', 'user-owner')",
+    )
+    .execute(&pool)
+    .await
+    .expect("space should be seeded");
+
+    for (index, (node_id, favorite_updated_at)) in [
+        ("node-keyset-1", "2026-06-01 10:00:00"),
+        ("node-keyset-2", "2026-06-01 09:00:00"),
+        ("node-keyset-3", "2026-06-01 08:00:00"),
+        ("node-keyset-4", "2026-06-01 07:00:00"),
+        ("node-keyset-5", "2026-06-01 06:00:00"),
+    ]
+    .into_iter()
+    .enumerate()
+    {
+        sqlx::query(
+            "INSERT INTO dr_drive_node (
+                id, tenant_id, space_id, parent_node_id, node_type, node_name,
+                content_state, head_content_type, head_content_type_group,
+                head_content_length, head_version_no, lifecycle_status, version, created_by, updated_by
+            ) VALUES ($1, 'tenant-keyset', 'space-keyset', NULL, 'file', $2, 'ready', 'application/octet-stream', 'binary', 0, 1, 'active', 1, 'user-owner', 'user-owner')",
+        )
+        .bind(node_id)
+        .bind(format!("{node_id}.txt"))
+        .execute(&pool)
+        .await
+        .expect("node should be seeded");
+        for subject_id in ["user-owner", "user-reviewer"] {
+            sqlx::query(
+                "INSERT INTO dr_drive_node_favorite (
+                    id, tenant_id, node_id, subject_type, subject_id,
+                    lifecycle_status, version, created_by, updated_by, updated_at
+                ) VALUES ($1, 'tenant-keyset', $2, 'user', $3, 'active', 1, $3, $3, $4::timestamptz)",
+            )
+            .bind(format!(
+                "fav-keyset-{index}-{}",
+                subject_id.trim_start_matches("user-")
+            ))
+            .bind(node_id)
+            .bind(subject_id)
+            .bind(favorite_updated_at)
+            .execute(&pool)
+            .await
+            .expect("favorite should be seeded");
+            sqlx::query(
+                "INSERT INTO dr_drive_node_permission (
+                    id, tenant_id, node_id, subject_type, subject_id, role,
+                    inherited, lifecycle_status, version, created_by, updated_by
+                ) VALUES ($1, 'tenant-keyset', $2, 'user', $3, 'reader', FALSE, 'active', 1, 'user-owner', 'user-owner')",
+            )
+            .bind(format!(
+                "perm-keyset-{index}-{}",
+                subject_id.trim_start_matches("user-")
+            ))
+            .bind(node_id)
+            .bind(subject_id)
+            .execute(&pool)
+            .await
+            .expect("permission should be seeded");
+        }
+    }
+
+    let app = common::test_router_with_pool(pool.clone());
+
+    // Default ordering (favorite updated_at DESC, node id ASC) is served with
+    // keyset cursors, for both the space-owner and the reader-ACL branches.
+    for user in ["user-owner", "user-reviewer"] {
+        let first_response = drive_favorites_list_response(
+            &app,
+            "tenant-keyset",
+            user,
+            "/app/v3/api/drive/favorites?spaceId=space-keyset&page_size=2",
+        )
+        .await;
+        let first_status = first_response.status();
+        let first_body = to_bytes(first_response.into_body(), usize::MAX)
+            .await
+            .expect("favorites response should be read");
+        assert_eq!(
+            first_status, StatusCode::OK,
+            "{user} favorites list failed: {first_body:?}"
+        );
+        let first_payload: serde_json::Value =
+            serde_json::from_slice(&first_body)
+        .expect("favorites response should be valid json");
+        assert_eq!(
+            drive_list_page_ids(&first_payload),
+            ["node-keyset-1", "node-keyset-2"],
+            "{user} first page should hold the two newest favorites"
+        );
+        let first_page_info = common::envelope_page_info(&first_payload).expect("pageInfo");
+        assert_eq!(first_page_info["mode"], "cursor");
+        let cursor = common::envelope_next_page_token(&first_payload)
+            .expect("first page should expose a continuation cursor");
+        assert!(
+            !cursor.bytes().all(|byte| byte.is_ascii_digit()),
+            "cursor should be opaque"
+        );
+
+        // Concurrent re-favorite (owner branch only): a not-yet-served
+        // favorite jumps ahead. An OFFSET window would repeat node-keyset-2
+        // here; the keyset seek must return exactly the rows still behind the
+        // cursor.
+        let mut page_payloads = vec![first_payload];
+        if user == "user-owner" {
+            sqlx::query(
+                "UPDATE dr_drive_node_favorite
+                 SET updated_at='2026-06-01 11:00:00'
+                 WHERE tenant_id='tenant-keyset'
+                   AND node_id='node-keyset-3'
+                   AND subject_id='user-owner'",
+            )
+            .execute(&pool)
+            .await
+            .expect("favorite timestamp should be bumped");
+            let second_response = drive_favorites_list_response(
+                &app,
+                "tenant-keyset",
+                user,
+                &format!(
+                    "/app/v3/api/drive/favorites?spaceId=space-keyset&page_size=2&cursor={cursor}"
+                ),
+            )
+            .await;
+            assert_eq!(second_response.status(), StatusCode::OK, "{user}");
+            let second_payload: serde_json::Value = serde_json::from_slice(
+                &to_bytes(second_response.into_body(), usize::MAX)
+                    .await
+                    .expect("favorites response should be read"),
+            )
+            .expect("favorites response should be valid json");
+            assert_eq!(
+                drive_list_page_ids(&second_payload),
+                ["node-keyset-4", "node-keyset-5"],
+                "{user} second page must neither duplicate nor skip rows behind the cursor"
+            );
+            assert_eq!(
+                common::envelope_next_page_token(&second_payload),
+                None,
+                "{user} second page should be the last"
+            );
+            page_payloads.push(second_payload);
+        } else {
+            // No concurrent mutation: plain cursor walk over all five rows.
+            let mut next_cursor = Some(cursor);
+            let expected_pages: [&[&str]; 2] = [
+                &["node-keyset-3", "node-keyset-4"],
+                &["node-keyset-5"],
+            ];
+            for (page_index, expected_ids) in expected_pages.into_iter().enumerate() {
+                let cursor_value = next_cursor
+                    .expect("intermediate page should expose a continuation cursor");
+                let response = drive_favorites_list_response(
+                    &app,
+                    "tenant-keyset",
+                    user,
+                    &format!(
+                        "/app/v3/api/drive/favorites?spaceId=space-keyset&page_size=2&cursor={cursor_value}"
+                    ),
+                )
+                .await;
+                assert_eq!(response.status(), StatusCode::OK, "{user}");
+                let payload: serde_json::Value = serde_json::from_slice(
+                    &to_bytes(response.into_body(), usize::MAX)
+                        .await
+                        .expect("favorites response should be read"),
+                )
+                .expect("favorites response should be valid json");
+                assert_eq!(
+                    drive_list_page_ids(&payload),
+                    expected_ids,
+                    "{user} page {} should hold the next favorites in order",
+                    page_index + 2
+                );
+                next_cursor = common::envelope_next_page_token(&payload);
+                page_payloads.push(payload);
+            }
+            assert_eq!(
+                next_cursor, None,
+                "{user} walk should end after the final favorite"
+            );
+        }
+
+        let mut seen = Vec::new();
+        for payload in &page_payloads {
+            seen.extend(drive_list_page_ids(payload));
+        }
+        let mut distinct = seen.clone();
+        distinct.sort();
+        distinct.dedup();
+        assert_eq!(
+            seen.len(),
+            distinct.len(),
+            "{user} keyset pages must not repeat rows"
+        );
+    }
+}
+
+#[tokio::test]
+async fn unset_favorite_on_deleted_node_is_idempotent_no_content() {
+    let Some((pool, _database_guard)) = sdkwork_drive_test_support::postgres_test_database().await
+    else {
+        return;
+    };
+
+    sqlx::query(
+        "INSERT INTO dr_drive_space (
+            id, tenant_id, owner_subject_type, owner_subject_id, space_type,
+            display_name, lifecycle_status, version, created_by, updated_by
+        ) VALUES ('space-unset', 'tenant-unset', 'user', 'user-owner', 'personal', 'Unset', 'active', 1, 'user-owner', 'user-owner')",
+    )
+    .execute(&pool)
+    .await
+    .expect("space should be seeded");
+
+    for node_id in [
+        "node-unset-active",
+        "node-unset-soft-deleted",
+        "node-unset-purged",
+    ] {
+        sqlx::query(
+            "INSERT INTO dr_drive_node (
+                id, tenant_id, space_id, parent_node_id, node_type, node_name,
+                content_state, head_content_type, head_content_type_group,
+                head_content_length, head_version_no, lifecycle_status, version, created_by, updated_by
+            ) VALUES ($1, 'tenant-unset', 'space-unset', NULL, 'file', $2, 'ready', 'application/octet-stream', 'binary', 0, 1, 'active', 1, 'user-owner', 'user-owner')",
+        )
+        .bind(node_id)
+        .bind(format!("{node_id}.txt"))
+        .execute(&pool)
+        .await
+        .expect("node should be seeded");
+        sqlx::query(
+            "INSERT INTO dr_drive_node_favorite (
+                id, tenant_id, node_id, subject_type, subject_id,
+                lifecycle_status, version, created_by, updated_by
+            ) VALUES ($1, 'tenant-unset', $2, 'user', 'user-reviewer', 'active', 1, 'user-reviewer', 'user-reviewer')",
+        )
+        .bind(format!("fav-unset-{node_id}"))
+        .bind(node_id)
+        .execute(&pool)
+        .await
+        .expect("favorite should be seeded");
+        sqlx::query(
+            "INSERT INTO dr_drive_node_permission (
+                id, tenant_id, node_id, subject_type, subject_id, role,
+                inherited, lifecycle_status, version, created_by, updated_by
+            ) VALUES ($1, 'tenant-unset', $2, 'user', 'user-reviewer', 'reader', FALSE, 'active', 1, 'user-owner', 'user-owner')",
+        )
+        .bind(format!("perm-unset-{node_id}"))
+        .bind(node_id)
+        .execute(&pool)
+        .await
+        .expect("permission should be seeded");
+    }
+
+    let app = common::test_router_with_pool(pool.clone());
+
+    // Active node: unset succeeds with 204.
+    let response =
+        drive_unset_favorite_response(&app, "tenant-unset", "user-reviewer", "node-unset-active")
+            .await;
+    assert_eq!(response.status(), StatusCode::NO_CONTENT);
+    common::assert_no_content_response(response).await;
+
+    // Soft-deleted node: the favorite row is hidden by the active-node join in
+    // the favorites listing (no purge on soft delete), but unsetting it still
+    // succeeds with 204 and clears the stale row instead of returning 404.
+    sqlx::query(
+        "UPDATE dr_drive_node
+         SET lifecycle_status='deleted'
+         WHERE tenant_id='tenant-unset' AND id='node-unset-soft-deleted'",
+    )
+    .execute(&pool)
+    .await
+    .expect("node should be soft deleted");
+    for _ in 0..2 {
+        let response = drive_unset_favorite_response(
+            &app,
+            "tenant-unset",
+            "user-reviewer",
+            "node-unset-soft-deleted",
+        )
+        .await;
+        assert_eq!(
+            response.status(),
+            StatusCode::NO_CONTENT,
+            "unset on soft-deleted node must stay idempotent"
+        );
+        common::assert_no_content_response(response).await;
+    }
+    let favorite_status: String = sqlx::query_scalar(
+        "SELECT lifecycle_status
+         FROM dr_drive_node_favorite
+         WHERE tenant_id='tenant-unset'
+           AND node_id='node-unset-soft-deleted'
+           AND subject_id='user-reviewer'",
+    )
+    .fetch_one(&pool)
+    .await
+    .expect("soft-deleted favorite row should be cleared in place");
+    assert_eq!(favorite_status, "deleted");
+
+    // Hard-deleted node: the FK cascade removed the favorite row, and the
+    // unset still resolves to 204.
+    sqlx::query("DELETE FROM dr_drive_node WHERE tenant_id='tenant-unset' AND id='node-unset-purged'")
+        .execute(&pool)
+        .await
+        .expect("node should be purged");
+    let response =
+        drive_unset_favorite_response(&app, "tenant-unset", "user-reviewer", "node-unset-purged")
+            .await;
+    assert_eq!(
+        response.status(),
+        StatusCode::NO_CONTENT,
+        "unset on a purged node must be idempotent"
+    );
+    common::assert_no_content_response(response).await;
+
+    // The favorites listing joins away every favorite whose node is not
+    // active, so none of the three nodes appear anymore.
+    let list_response = drive_favorites_list_response(
+        &app,
+        "tenant-unset",
+        "user-reviewer",
+        "/app/v3/api/drive/favorites?spaceId=space-unset",
+    )
+    .await;
+    assert_eq!(list_response.status(), StatusCode::OK);
+    let list_payload: serde_json::Value = serde_json::from_slice(
+        &to_bytes(list_response.into_body(), usize::MAX)
+            .await
+            .expect("favorites response should be read"),
+    )
+    .expect("favorites response should be valid json");
+    let ids = drive_list_page_ids(&list_payload);
+    assert!(
+        !ids.iter().any(|id| id.starts_with("node-unset-")),
+        "favorites of deleted nodes must be hidden from listings, got {ids:?}"
+    );
+}

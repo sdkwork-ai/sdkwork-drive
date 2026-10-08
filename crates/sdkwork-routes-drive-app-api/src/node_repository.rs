@@ -32,6 +32,27 @@ pub async fn find_node(
     Ok(map_node_row(&row))
 }
 
+/// Loads the node row without a lifecycle filter and reports absence as
+/// `Ok(None)` so idempotent callers can distinguish "gone" from "not active"
+/// without pattern-matching on problem responses.
+pub async fn find_node_any_lifecycle(
+    pool: &PgPool,
+    tenant_id: &str,
+    node_id: &str,
+) -> Result<Option<DriveNodeResponse>, (StatusCode, Json<ProblemDetail>)> {
+    let row = sqlx::query(sqlx::AssertSqlSafe(format!(
+        "SELECT {NODE_API_SELECT_COLUMNS}
+         FROM dr_drive_node
+         WHERE tenant_id=$1 AND id=$2",
+    )))
+    .bind(tenant_id)
+    .bind(node_id)
+    .fetch_optional(pool)
+    .await
+    .map_err(internal_sql_error("find dr_drive_node failed"))?;
+    Ok(row.as_ref().map(map_node_row))
+}
+
 pub async fn find_active_node(
     pool: &PgPool,
     tenant_id: &str,
