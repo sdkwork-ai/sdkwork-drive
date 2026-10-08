@@ -93,7 +93,10 @@ pub fn decode_favorite_updated_cursor(
     else {
         return Err(DrivePaginationCursorError::InvalidToken);
     };
-    let Some(node_id) = fields.next().map(str::trim).filter(|value| !value.is_empty())
+    let Some(node_id) = fields
+        .next()
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
     else {
         return Err(DrivePaginationCursorError::InvalidToken);
     };

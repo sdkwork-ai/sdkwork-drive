@@ -357,8 +357,7 @@ pub(crate) async fn list_favorite_nodes(
     // tokens; response shape (`items` + cursor-mode `pageInfo`) is unchanged.
     let has_explicit_sort = query.sort_by.is_some() || query.sort_order.is_some();
     if !has_explicit_sort {
-        let keyset_page =
-            parse_favorite_keyset_page_request(query.page_size, query.page_token)?;
+        let keyset_page = parse_favorite_keyset_page_request(query.page_size, query.page_token)?;
         let (items, next_page_token) = fetch_favorite_nodes_keyset_page(
             &state.pool,
             &tenant_id,
@@ -682,32 +681,19 @@ async fn fetch_favorite_nodes_keyset_page(
 fn favorite_keyset_predicate(
     first_placeholder: usize,
     keyset: Option<&FavoriteUpdatedCursor>,
-) -> Result<
-    (
-        String,
-        Option<(DateTime<Utc>, String)>,
-        String,
-    ),
-    (StatusCode, Json<ProblemDetail>),
-> {
+) -> Result<(String, Option<(DateTime<Utc>, String)>, String), (StatusCode, Json<ProblemDetail>)> {
     let Some(position) = keyset else {
-        return Ok((
-            String::new(),
-            None,
-            format!("${first_placeholder}"),
-        ));
+        return Ok((String::new(), None, format!("${first_placeholder}")));
     };
-    let updated_at =
-        DateTime::<Utc>::from_timestamp_micros(position.updated_at_epoch_micros).ok_or_else(
-            || {
-                problem(
-                    StatusCode::BAD_REQUEST,
-                    "validation failed",
-                    "cursor is invalid",
-                    SdkWorkResultCode::ValidationError,
-                )
-            },
-        )?;
+    let updated_at = DateTime::<Utc>::from_timestamp_micros(position.updated_at_epoch_micros)
+        .ok_or_else(|| {
+            problem(
+                StatusCode::BAD_REQUEST,
+                "validation failed",
+                "cursor is invalid",
+                SdkWorkResultCode::ValidationError,
+            )
+        })?;
     let predicate = format!(
         " AND (f.updated_at < ${first} OR (f.updated_at = ${first} AND n.id > ${second}))",
         first = first_placeholder,
