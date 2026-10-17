@@ -52,7 +52,8 @@
     "@sdkwork/drive-app-sdk": "workspace:*",
     "@sdkwork/sdk-common": "workspace:*",
     "@sdkwork/iam-credential-entry": "workspace:*",
-    "@sdkwork/utils": "workspace:*"
+    "@sdkwork/utils": "workspace:*",
+    "sdkwork-drive-pc-commons": "workspace:*"
   },
   "peerDependencies": {
     "react": "^19.0.0",
