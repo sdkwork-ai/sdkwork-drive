@@ -26,7 +26,7 @@
     }
   },
   "dependencies": {
-    "@sdkwork/sdk-common": "^1.0.3",
+    "@sdkwork/sdk-common": "workspace:*",
     "@sdkwork/utils": "^0.11.0"
   },
   "peerDependencies": {
@@ -41,7 +41,7 @@
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
-    "typescript": "^5.8.2"
+    "typescript": "^5.9.3"
   },
   "keywords": [
     "sdkwork",

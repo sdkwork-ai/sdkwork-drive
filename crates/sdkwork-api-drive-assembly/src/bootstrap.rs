@@ -98,14 +98,25 @@ pub async fn assemble_business_routes_from_env() -> Result<BusinessRouterAssembl
 
 /// Builds the raw Drive App API for a gateway-owned Web Framework layer.
 pub async fn assemble_app_api_contribution() -> Result<ApiAssemblyContribution, String> {
-    sdkwork_drive_security::ensure_drive_auth_policy_refresh_task();
-    ensure_production_download_token_signing_configured()
-        .map_err(|error| format!("download token signing config invalid: {error}"))?;
     let database_config = DatabaseConfig::from_env()
         .map_err(|error| format!("resolve drive database config failed: {error}"))?;
     let pool = connect_postgres_database_and_install_schema(&database_config)
         .await
         .map_err(|error| format!("create drive database pool failed: {error}"))?;
+    assemble_app_api_contribution_with_pool(pool).await
+}
+
+/// Builds the federated Drive App API contribution on a caller-owned pool.
+///
+/// The federated host merges the sdkwork-assets capability workspace, which
+/// owns the mounted `/app/v3/api/assets` surface; drive mounts only its own
+/// `/app/v3/api/drive` namespace here to keep axum route registration unique.
+pub async fn assemble_app_api_contribution_with_pool(
+    pool: sqlx::PgPool,
+) -> Result<ApiAssemblyContribution, String> {
+    sdkwork_drive_security::ensure_drive_auth_policy_refresh_task();
+    ensure_production_download_token_signing_configured()
+        .map_err(|error| format!("download token signing config invalid: {error}"))?;
     ensure_domain_outbox_dispatcher(pool.clone());
 
     if let Some(config) = sdkwork_routes_drive_app_api::deploy_sandbox_config_from_env() {
@@ -115,9 +126,6 @@ pub async fn assemble_app_api_contribution() -> Result<ApiAssemblyContribution, 
     }
 
     let route_manifest = sdkwork_routes_drive_app_api::app_route_manifest();
-    // The federated host merges the sdkwork-assets capability workspace, which
-    // owns the mounted /app/v3/api/assets surface; drive mounts only its own
-    // /app/v3/api/drive namespace here to keep axum route registration unique.
     let router =
         sdkwork_routes_drive_app_api::build_app_business_router_without_asset_surface(pool.clone());
     ApiAssemblyContribution::from_manifest(
@@ -288,7 +296,20 @@ pub async fn ensure_database_lifecycle_with_pool(
     bootstrap_drive_database(pool).await.map(|_| ())
 }
 
-pub async fn assemble_api_router(pool: sqlx::PgPool) -> Result<ApiAssembly, String> {
+/// Which owner mounts the `/app/v3/api/assets` surface.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum DriveAssetSurface {
+    /// Standalone Drive mounts the asset routes itself.
+    Standalone,
+    /// The composing host mounts the sdkwork-assets capability that owns the
+    /// asset surface, so Drive keeps only its `/app/v3/api/drive` namespace.
+    Federated,
+}
+
+async fn assemble_drive_module(
+    pool: sqlx::PgPool,
+    asset_surface: DriveAssetSurface,
+) -> Result<ApiAssembly, String> {
     sdkwork_drive_security::ensure_drive_auth_policy_refresh_task();
     ensure_production_download_token_signing_configured()
         .map_err(|error| format!("download token signing config invalid: {error}"))?;
@@ -297,10 +318,18 @@ pub async fn assemble_api_router(pool: sqlx::PgPool) -> Result<ApiAssembly, Stri
     let admin_storage_config =
         sdkwork_routes_storage_backend_api::AdminStorageConfig::from_env()
             .map_err(|error| format!("resolve admin storage config failed: {error}"))?;
+    let app_router = match asset_surface {
+        DriveAssetSurface::Standalone => {
+            sdkwork_routes_drive_app_api::build_app_business_router(pool.clone())
+        }
+        DriveAssetSurface::Federated => {
+            sdkwork_routes_drive_app_api::build_app_business_router_without_asset_surface(
+                pool.clone(),
+            )
+        }
+    };
     let router = Router::new()
-        .merge(sdkwork_routes_drive_app_api::build_app_business_router(
-            pool.clone(),
-        ))
+        .merge(app_router)
         .merge(sdkwork_routes_drive_backend_api::build_backend_business_router(pool.clone()))
         .merge(sdkwork_routes_drive_internal_api::build_internal_business_router(pool.clone()))
         .merge(sdkwork_routes_drive_open_api::build_open_business_router(
@@ -348,6 +377,18 @@ pub async fn assemble_api_router(pool: sqlx::PgPool) -> Result<ApiAssembly, Stri
     )
 }
 
+/// Standalone Drive module: mounts every route this owner serves, including the
+/// asset surface.
+pub async fn assemble_api_router(pool: sqlx::PgPool) -> Result<ApiAssembly, String> {
+    assemble_drive_module(pool, DriveAssetSurface::Standalone).await
+}
+
+/// Federated Drive module for a host that mounts the sdkwork-assets capability:
+/// every Drive surface except `/app/v3/api/assets`, which that capability owns.
+pub async fn assemble_federated_api_router(pool: sqlx::PgPool) -> Result<ApiAssembly, String> {
+    assemble_drive_module(pool, DriveAssetSurface::Federated).await
+}
+
 pub async fn assemble_api_router_from_env() -> Result<ApiAssembly, String> {
     let database_config = DatabaseConfig::from_env()
         .map_err(|error| format!("resolve drive database config failed: {error}"))?;
@@ -372,8 +413,14 @@ pub async fn web_module() -> Result<WebModule, String> {
 /// Drive's authoritative storage server is PostgreSQL-only, so the platform
 /// cloud gateway hands it the process-shared PostgreSQL pool rather than
 /// letting the module open a second connection pool from the environment.
+///
+/// The platform gateway is a federated host: it mounts the sdkwork-assets
+/// capability that owns `/app/v3/api/assets`. This module therefore installs
+/// the federated Drive router (drive namespace only) instead of the standalone
+/// router, which would re-mount the asset surface and make axum reject the
+/// merged route table.
 pub async fn web_module_with_postgres_pool(pool: sqlx::PgPool) -> Result<WebModule, String> {
     Ok(WebModule::from_contribution(
-        assemble_api_router(pool).await?,
+        assemble_federated_api_router(pool).await?,
     ))
 }
