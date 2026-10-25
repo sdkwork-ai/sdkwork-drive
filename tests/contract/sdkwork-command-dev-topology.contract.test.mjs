@@ -16,10 +16,10 @@ const commandPath = path.join(repoRoot, 'scripts/sdkwork-command.mjs');
 const appCommandPath = path.resolve(repoRoot, '..', 'sdkwork-app-topology', 'scripts', 'sdkwork-app.mjs');
 
 const applicationManifestPaths = [
-  path.join(repoRoot, 'sdkwork.app.config.json'),
+  path.join(repoRoot, 'agent.app.config.json'),
   ...readdirSync(path.join(repoRoot, 'apps'), { withFileTypes: true })
     .filter((entry) => entry.isDirectory())
-    .map((entry) => path.join(repoRoot, 'apps', entry.name, 'sdkwork.app.config.json')),
+    .map((entry) => path.join(repoRoot, 'apps', entry.name, 'agent.app.config.json')),
 ];
 
 for (const manifestPath of applicationManifestPaths) {

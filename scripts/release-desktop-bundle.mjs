@@ -19,7 +19,7 @@
  *
  * Installers are staged as-is. Wrapping a `.msi` back into `app.zip` (the
  * previous behaviour) produced an artifact whose format disagreed with the
- * `packageFormat` recorded in `sdkwork.app.config.json`, so downstream
+ * `packageFormat` recorded in `agent.app.config.json`, so downstream
  * consumers had no way to know what they were downloading.
  *
  * The renderer bundle (`apps/sdkwork-drive-pc/dist`) is built here because it is
@@ -63,7 +63,7 @@ function run(command, args, options = {}) {
 }
 
 async function resolveVersion() {
-  const manifestPath = path.join(repoRoot, 'sdkwork.app.config.json');
+  const manifestPath = path.join(repoRoot, 'agent.app.config.json');
   const manifest = JSON.parse(await readFile(manifestPath, 'utf8'));
   return manifest.release?.currentVersion ?? '0.1.0';
 }
@@ -153,7 +153,7 @@ async function stageWindowsBundle({ version, channel }) {
   });
 
   // `windows-x64-standalone-desktop-zip` stays the canonical Windows package id
-  // (it is the id `sdkwork.app.config.json` and release notes reference), so the
+  // (it is the id `agent.app.config.json` and release notes reference), so the
   // MSI acts as its primary artifact.
   return {
     records: [msiRecord, exeRecord],

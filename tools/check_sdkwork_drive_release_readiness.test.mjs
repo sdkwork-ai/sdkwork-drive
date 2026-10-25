@@ -12,7 +12,7 @@ const toolPath = path.join(repoRoot, 'tools/check_sdkwork_drive_release_readines
 function baseManifest(packagePatch, manifestPatch = {}) {
   return {
     schemaVersion: 3,
-    kind: 'sdkwork.app',
+    kind: 'agent.app',
     app: {},
     backend: {},
     runtime: {},
@@ -57,7 +57,7 @@ async function createTempWorkspace(manifest) {
   await writeFile(path.join(tempRoot, 'sdkwork.workflow.json'), '{}\n', 'utf8');
   await writeFile(path.join(tempRoot, 'tools/generate_release_sbom.mjs'), '#!/usr/bin/env node\n', 'utf8');
   await writeFile(
-    path.join(tempRoot, 'sdkwork.app.config.json'),
+    path.join(tempRoot, 'agent.app.config.json'),
     `${JSON.stringify(manifest, null, 2)}\n`,
     'utf8',
   );

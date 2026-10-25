@@ -27,7 +27,7 @@ Promote SDKWork Drive from controlled Beta to commercial GA with signed artifact
 | Catalog media CDN | Product / release | Upload icon, screenshots, preview; clear `generatedPlaceholder` |
 | Kubernetes digest | Platform ops | Replace `REPLACE_WITH_RELEASE_DIGEST` from release evidence |
 | Staging E2E | QA / platform | Mandatory workflow with staging secrets configured |
-| Publish status | Product | Set `sdkwork.app.config.json` `publish.status` to `ACTIVE` only after all gates pass |
+| Publish status | Product | Set `agent.app.config.json` `publish.status` to `ACTIVE` only after all gates pass |
 
 ## Execution sequence
 

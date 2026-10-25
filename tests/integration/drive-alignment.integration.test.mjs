@@ -429,7 +429,7 @@ assert.match(releaseCatalogMedia, /catalog-media-evidence\.json/);
 assert.match(releaseCatalogMedia, /sdkwork-drive-catalog-preview/);
 const catalogMediaEvidence = read('tools/materialize_catalog_media_evidence.mjs');
 assert.match(catalogMediaEvidence, /stagedArtifactPath/);
-assert.match(catalogMediaEvidence, /apps\/sdkwork-drive-pc\/sdkwork.app.config.json/);
+assert.match(catalogMediaEvidence, /apps\/sdkwork-drive-pc\/agent.app.config.json/);
 assert.match(catalogMediaEvidence, /MEDIA_ID_ALIASES/);
 assert.match(uploaderStore, /state='aborted'/);
 assert.match(maintenanceStore, /drive_events::uploader::CONTENT_EXPIRED/);
@@ -538,7 +538,7 @@ assert.ok(!existsSync(join(repoRoot, 'apps/sdkwork-drive-pc/pnpm-lock.yaml')), '
 const verifyWorkflow = read('.github/workflows/verify.yml');
 const prepareCiDeps = read('scripts/prepare-ci-dependencies.mjs');
 const packageJson = read('package.json');
-const appConfigManifest = read('sdkwork.app.config.json');
+const appConfigManifest = read('agent.app.config.json');
 assert.match(verifyWorkflow, /Drive Commercial Gates/);
 assert.match(verifyWorkflow, /pnpm verify/);
 assert.match(verifyWorkflow, /prepare-ci-dependencies/);

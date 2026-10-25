@@ -71,7 +71,7 @@ Contract tests in `src/__tests__/desktop-architecture.contract.test.ts` enforce 
 ## 7. Deployment And Runtime Topology
 
 - **Browser**: Vite dev server on `127.0.0.1:5183`; production static assets from app manifest build targets.
-- **Desktop**: Tauri bundles Windows/macOS/Linux artifacts declared in `sdkwork.app.config.json`.
+- **Desktop**: Tauri bundles Windows/macOS/Linux artifacts declared in `agent.app.config.json`.
 - Runtime config keys use `VITE_DRIVE_PC_*` surfaces documented in application `README.md`.
 
 ## 8. Architecture Decision Index

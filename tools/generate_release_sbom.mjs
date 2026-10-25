@@ -45,7 +45,7 @@ function main() {
   );
   const packageJsonPath = path.join(WORKSPACE_ROOT, 'package.json');
   const cargoLockPath = path.join(WORKSPACE_ROOT, 'Cargo.lock');
-  const appManifestPath = path.join(WORKSPACE_ROOT, 'sdkwork.app.config.json');
+  const appManifestPath = path.join(WORKSPACE_ROOT, 'agent.app.config.json');
 
   if (!existsSync(packageJsonPath) || !existsSync(cargoLockPath)) {
     throw new Error('package.json and Cargo.lock are required to generate SBOM');

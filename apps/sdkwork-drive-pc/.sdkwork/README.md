@@ -16,6 +16,6 @@ This directory is not runtime state. Do not store generated SDK transport output
 ## Execution References
 
 - Agent entrypoint: `AGENTS.md`
-- App manifest: `sdkwork.app.config.json`
+- App manifest: `agent.app.config.json`
 - Shared execution soul: `../../../sdkwork-specs/SOUL.md`
 - Workspace metadata standard: `../../../sdkwork-specs/SDKWORK_WORKSPACE_SPEC.md`

@@ -58,7 +58,7 @@ async function sha256File(filePath) {
 }
 
 async function resolveVersion() {
-  const manifestPath = path.join(repoRoot, 'sdkwork.app.config.json');
+  const manifestPath = path.join(repoRoot, 'agent.app.config.json');
   const manifest = JSON.parse(await readFile(manifestPath, 'utf8'));
   return manifest.release?.currentVersion ?? '0.1.0';
 }

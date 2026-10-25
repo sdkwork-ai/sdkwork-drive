@@ -20,7 +20,7 @@ bodies locally.
 ## Application Identity
 
 This is the SDKWork PC application root for `sdkwork-drive-pc`.
-`sdkwork.app.config.json` owns its application declaration. Repository-level
+`agent.app.config.json` owns its application declaration. Repository-level
 source profiles and deployment values are owned by `../../etc/`.
 
 ## Local Dictionary Structure

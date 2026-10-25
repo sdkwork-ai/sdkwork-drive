@@ -21,7 +21,7 @@ function createWorkspace() {
 function createApp(workspaceRoot, relativeRoot, { packageJson = {}, source = "" } = {}) {
   const appRoot = path.join(workspaceRoot, relativeRoot);
   mkdirSync(path.join(appRoot, "src"), { recursive: true });
-  writeJson(path.join(appRoot, "sdkwork.app.config.json"), {
+  writeJson(path.join(appRoot, "agent.app.config.json"), {
     schemaVersion: 3,
     app: {
       key: relativeRoot.replaceAll(/[\\/]/g, "-"),

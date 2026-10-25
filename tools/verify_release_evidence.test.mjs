@@ -12,7 +12,7 @@ const toolPath = path.join(repoRoot, 'tools/verify_release_evidence.mjs');
 function baseManifest(packagePatch) {
   return {
     schemaVersion: 3,
-    kind: 'sdkwork.app',
+    kind: 'agent.app',
     security: {
       checksumRequired: true,
       sbomRequired: true,
@@ -40,7 +40,7 @@ async function createTempWorkspace(manifest) {
   const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'sdkwork-drive-release-verify-'));
   await mkdir(path.join(tempRoot, 'target', 'release'), { recursive: true });
   await writeFile(
-    path.join(tempRoot, 'sdkwork.app.config.json'),
+    path.join(tempRoot, 'agent.app.config.json'),
     `${JSON.stringify(manifest, null, 2)}\n`,
     'utf8',
   );

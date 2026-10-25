@@ -31,7 +31,7 @@ function run(command, args, options = {}) {
 }
 
 async function resolveVersion() {
-  const manifestPath = path.join(repoRoot, 'sdkwork.app.config.json');
+  const manifestPath = path.join(repoRoot, 'agent.app.config.json');
   if (!existsSync(manifestPath)) {
     return '0.1.0';
   }

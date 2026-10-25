@@ -368,8 +368,8 @@ async function createTempWorkspace(imageRefs, options = {}) {
     'utf8',
   );
   await writeFile(
-    path.join(tempRoot, 'sdkwork.app.config.json'),
-    `${JSON.stringify({ schemaVersion: 3, kind: 'sdkwork.app' }, null, 2)}\n`,
+    path.join(tempRoot, 'agent.app.config.json'),
+    `${JSON.stringify({ schemaVersion: 3, kind: 'agent.app' }, null, 2)}\n`,
     'utf8',
   );
   await writeFile(

@@ -114,7 +114,7 @@ function requireValue(argv, index, flag) {
 }
 
 async function createPackageContext(options) {
-  const appManifestPath = path.join(repoRoot, 'sdkwork.app.config.json');
+  const appManifestPath = path.join(repoRoot, 'agent.app.config.json');
   const appManifest = existsSync(appManifestPath)
     ? JSON.parse(await readFile(appManifestPath, 'utf8'))
     : null;

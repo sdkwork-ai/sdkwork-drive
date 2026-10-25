@@ -86,7 +86,7 @@ function walk(directory, visitor) {
 function findAppManifestPaths(workspaceRoot) {
   const manifestPaths = [];
   walk(workspaceRoot, (absolutePath) => {
-    if (path.basename(absolutePath) === "sdkwork.app.config.json") {
+    if (path.basename(absolutePath) === "agent.app.config.json") {
       manifestPaths.push(absolutePath);
     }
   });

@@ -137,12 +137,12 @@ fn root_app_manifest_and_component_spec_do_not_keep_migration_baggage() {
     root.pop();
     root.pop();
 
-    let app_manifest_path = root.join("sdkwork.app.config.json");
+    let app_manifest_path = root.join("agent.app.config.json");
     let app_manifest_raw = std::fs::read_to_string(&app_manifest_path).unwrap_or_else(|error| {
         panic!("{} must be readable: {error}", app_manifest_path.display())
     });
     let app_manifest: serde_json::Value =
-        serde_json::from_str(&app_manifest_raw).expect("root sdkwork.app.config.json must be JSON");
+        serde_json::from_str(&app_manifest_raw).expect("root agent.app.config.json must be JSON");
 
     assert_eq!(
         app_manifest

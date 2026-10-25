@@ -7,7 +7,7 @@ import type { StorageProviderAccountScope } from '../types/storageProviderAdminT
  * `crates/sdkwork-iam-provider-account-service/src/model.rs`, which is the value
  * the account centre stamps on a `platform`-scope row and compares against
  * before it accepts one. It is also the tenant this application's backend-admin
- * profile runs as (`sdkwork.app.config.json` → `backend.profileKey`
+ * profile runs as (`agent.app.config.json` → `backend.profileKey`
  * `backend-root-admin`, `backend.tenantId`). No shared front-end package exports
  * it, so it is restated once here rather than repeated per component.
  */

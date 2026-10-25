@@ -17,10 +17,10 @@ function isPlaceholderChecksum(checksum) {
 
 async function withTempRepo(run) {
   const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'sdkwork-drive-release-evidence-'));
-  const manifestPath = path.join(tempRoot, 'sdkwork.app.config.json');
+  const manifestPath = path.join(tempRoot, 'agent.app.config.json');
   const manifest = {
     schemaVersion: 3,
-    kind: 'sdkwork.app',
+    kind: 'agent.app',
     security: { checksumRequired: false, signatureRequired: false, sbomRequired: true },
     artifacts: {
       installConfig: {
@@ -107,10 +107,10 @@ await withTempRepo(async ({ tempRoot, manifestPath }) => {
 {
   const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'sdkwork-drive-release-evidence-deferred-'));
   await writeFile(
-    path.join(tempRoot, 'sdkwork.app.config.json'),
+    path.join(tempRoot, 'agent.app.config.json'),
     `${JSON.stringify({
       schemaVersion: 3,
-      kind: 'sdkwork.app',
+      kind: 'agent.app',
       security: { checksumRequired: true, signatureRequired: false, sbomRequired: true },
       artifacts: {
         installConfig: {

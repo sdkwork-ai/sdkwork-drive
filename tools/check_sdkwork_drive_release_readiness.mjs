@@ -49,14 +49,14 @@ function strictFail(message) {
 function validateEnvironmentAuthority(manifest) {
   if (manifest.environments !== undefined) {
     if (!manifest.environments || typeof manifest.environments !== 'object' || Array.isArray(manifest.environments)) {
-      fail('sdkwork.app.config.json environments must be an object when present');
+      fail('agent.app.config.json environments must be an object when present');
     }
     return;
   }
 
   const deploymentConfig = manifest.metadata?.deploymentConfig;
   if (typeof deploymentConfig !== 'string' || deploymentConfig.trim() === '') {
-    fail('sdkwork.app.config.json must include environments or metadata.deploymentConfig');
+    fail('agent.app.config.json must include environments or metadata.deploymentConfig');
     return;
   }
 
@@ -126,18 +126,18 @@ function collectDeferredCatalogMedia(manifest, repoRoot) {
 }
 
 function main() {
-  const manifest = readJson('sdkwork.app.config.json');
+  const manifest = readJson('agent.app.config.json');
   if (!manifest) {
     reportAndExit();
   }
 
-  if (manifest.schemaVersion !== 3 || manifest.kind !== 'sdkwork.app') {
-    fail('sdkwork.app.config.json must use schemaVersion 3 and kind sdkwork.app');
+  if (manifest.schemaVersion !== 3 || manifest.kind !== 'agent.app') {
+    fail('agent.app.config.json must use schemaVersion 3 and kind agent.app');
   }
 
   for (const section of ['app', 'backend', 'runtime', 'media', 'publish', 'artifacts', 'release', 'security']) {
     if (!manifest[section] || typeof manifest[section] !== 'object') {
-      fail(`sdkwork.app.config.json must include required section ${section}`);
+      fail(`agent.app.config.json must include required section ${section}`);
     }
   }
   validateEnvironmentAuthority(manifest);

@@ -585,7 +585,7 @@ describe('desktop architecture contract', () => {
 
     // Both host architectures are declared in the app runtime contract.
     const appConfig = JSON.parse(
-      readFileSync(path.join(repoRoot, 'sdkwork.app.config.json'), 'utf8'),
+      readFileSync(path.join(repoRoot, 'agent.app.config.json'), 'utf8'),
     ) as {
       runtime: { runtimes: string[] };
       artifacts: {

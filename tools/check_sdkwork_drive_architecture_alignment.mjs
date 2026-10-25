@@ -102,7 +102,7 @@ for (const directory of requiredDirectories) {
   assertDirectory(directory);
 }
 
-assert(fs.existsSync(path.join(repoRoot, 'sdkwork.app.config.json')), 'sdkwork.app.config.json must exist');
+assert(fs.existsSync(path.join(repoRoot, 'agent.app.config.json')), 'agent.app.config.json must exist');
 assert(fs.existsSync(path.join(repoRoot, 'sdkwork.workflow.json')), 'sdkwork.workflow.json must exist');
 assert(
   fs.existsSync(path.join(repoRoot, '.github/workflows/package.yml')),

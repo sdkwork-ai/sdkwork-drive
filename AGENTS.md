@@ -29,7 +29,7 @@ broken workspace layout if these relative paths do not resolve.
 
 ## Application Identity
 
-`sdkwork.app.config.json` owns Drive identity, runtime declarations, release
+`agent.app.config.json` owns Drive identity, runtime declarations, release
 metadata, and package inventory. `etc/sdkwork.deployment.config.json` owns the
 source profile index; concrete URLs, binds, ports, and runtime values live
 under `etc/`.
@@ -55,7 +55,7 @@ Documentation entrypoints are `docs/README.md`, `docs/product/prd/PRD.md`, and
 Use dynamic progressive loading before implementation files:
 
 1. Read this file and any nearer `AGENTS.md`.
-2. Read `sdkwork.app.config.json`, `etc/`, local `specs/`, or `.sdkwork/` only when the task reaches that contract.
+2. Read `agent.app.config.json`, `etc/`, local `specs/`, or `.sdkwork/` only when the task reaches that contract.
 3. Use the relevant row in `../sdkwork-specs/README.md` to select global authorities.
 4. Inspect implementation only after resolving ownership and vocabulary.
 

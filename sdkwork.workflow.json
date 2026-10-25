@@ -6,7 +6,7 @@
     "name": "SDKWork Drive",
     "repository": "sdkwork-ai/sdkwork-drive",
     "sourcePath": ".",
-    "configPath": "sdkwork.app.config.json"
+    "configPath": "agent.app.config.json"
   },
   "release": {
     "artifactPrefix": "sdkwork-drive",

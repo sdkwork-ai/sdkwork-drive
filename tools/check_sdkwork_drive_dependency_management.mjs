@@ -232,7 +232,7 @@ function assertDocumentation() {
     assertNativeDependencyFile(relativePath);
   }
   const agents = readText('AGENTS.md');
-  assert(!agents.includes('No `sdkwork.app.config.json` is present at this root'), 'AGENTS.md must reflect root sdkwork.app.config.json presence');
+  assert(!agents.includes('No `agent.app.config.json` is present at this root'), 'AGENTS.md must reflect root agent.app.config.json presence');
 }
 
 assertDependencyDeclaration();

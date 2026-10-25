@@ -194,9 +194,9 @@ function assertNoTrackedBuildArtifacts() {
 }
 
 function assertDevAppBuildCommands() {
-  const manifestPath = path.join(appRoot, 'sdkwork.app.config.json');
+  const manifestPath = path.join(appRoot, 'agent.app.config.json');
   if (!existsSync(manifestPath)) {
-    fail('apps/sdkwork-drive-pc/sdkwork.app.config.json is required for devApp build alignment');
+    fail('apps/sdkwork-drive-pc/agent.app.config.json is required for devApp build alignment');
     return;
   }
 
@@ -213,7 +213,7 @@ function assertDevAppBuildCommands() {
     const scriptName = command.startsWith('pnpm ') ? command.slice('pnpm '.length).split(/\s+/)[0] : null;
     if (scriptName && !availableScripts.has(scriptName)) {
       fail(
-        `apps/sdkwork-drive-pc/sdkwork.app.config.json devApp target ${target.id ?? 'unknown'} references missing script ${scriptName}`,
+        `apps/sdkwork-drive-pc/agent.app.config.json devApp target ${target.id ?? 'unknown'} references missing script ${scriptName}`,
       );
     }
   }
@@ -386,7 +386,7 @@ for (const relativePath of [
   'apps/sdkwork-drive-pc/CLAUDE.md',
   'apps/sdkwork-drive-pc/GEMINI.md',
   'apps/sdkwork-drive-pc/CODEX.md',
-  'apps/sdkwork-drive-pc/sdkwork.app.config.json',
+  'apps/sdkwork-drive-pc/agent.app.config.json',
   'apps/sdkwork-drive-pc/.sdkwork/README.md',
   'apps/sdkwork-drive-pc/.sdkwork/.gitignore',
   'apps/sdkwork-drive-pc/.sdkwork/skills/README.md',

@@ -38,12 +38,12 @@ function isPlaceholderChecksum(checksum) {
 }
 
 async function main() {
-  const manifestPath = path.join(workspaceRoot, 'sdkwork.app.config.json');
+  const manifestPath = path.join(workspaceRoot, 'agent.app.config.json');
   const evidencePath = path.join(workspaceRoot, 'target', 'release', 'release-evidence.json');
   const catalogEvidencePath = path.join(workspaceRoot, 'target', 'release', 'catalog-media-evidence.json');
 
   if (!existsSync(manifestPath)) {
-    fail('sdkwork.app.config.json must exist');
+    fail('agent.app.config.json must exist');
     report();
   }
 

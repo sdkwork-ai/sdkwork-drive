@@ -112,9 +112,9 @@ Remaining GA blockers (CI/ops only):
 
 Only after Phase 3–4 evidence is recorded:
 
-1. Upload catalog media to CDN; clear `catalogMediaDeferred` in `sdkwork.app.config.json`.
+1. Upload catalog media to CDN; clear `catalogMediaDeferred` in `agent.app.config.json`.
 2. Set immutable K8s digests (replace `REPLACE_WITH_RELEASE_DIGEST`).
-3. Set `publish.status=ACTIVE` in `sdkwork.app.config.json`.
+3. Set `publish.status=ACTIVE` in `agent.app.config.json`.
 4. Re-run strict deployment and release readiness with zero blocking failures:
 
 ```bash

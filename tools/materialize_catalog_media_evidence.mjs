@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Materialize staged catalog media checksum evidence into sdkwork.app.config.json.
+ * Materialize staged catalog media checksum evidence into agent.app.config.json.
  * CDN publication remains a separate protected upload step.
  */
 
@@ -11,8 +11,8 @@ import { fileURLToPath } from 'node:url';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const MANIFEST_RELATIVE_PATHS = [
-  'sdkwork.app.config.json',
-  'apps/sdkwork-drive-pc/sdkwork.app.config.json',
+  'agent.app.config.json',
+  'apps/sdkwork-drive-pc/agent.app.config.json',
 ];
 const MEDIA_ID_ALIASES = {
   'sdkwork-drive-pc-primary-icon': 'sdkwork-drive-primary-icon',

@@ -26,7 +26,7 @@ Use this checklist before promoting Drive from controlled pilot to commercial GA
 - [ ] **required** Artifact signing is enabled and release CI produces signed binaries for all shipped platforms.
 - [ ] **required** Desktop release checksums are real (not placeholders) for Windows, macOS, and Linux where those platforms ship.
 - [ ] **required** Catalog media assets are uploaded to CDN; `generatedPlaceholder` is false in release metadata.
-- [ ] **required** `sdkwork.app.config.json` `publish.status` is `ACTIVE` only after signing and catalog gates pass.
+- [ ] **required** `agent.app.config.json` `publish.status` is `ACTIVE` only after signing and catalog gates pass.
 
 ## Verification Commands
 

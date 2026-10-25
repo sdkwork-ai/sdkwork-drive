@@ -28,7 +28,7 @@ Pilot deployment steps: [pilot-deployment.md](../guides/operator/pilot-deploymen
 
 ## GA promotion checklist
 
-Before setting `publish.status` to `ACTIVE` in `sdkwork.app.config.json`:
+Before setting `publish.status` to `ACTIVE` in `agent.app.config.json`:
 
 1. Run `pnpm verify` and `pnpm deploy:validate` on the release commit.
 2. Materialize signed release artifacts for every enabled install package.
@@ -41,4 +41,4 @@ See [pre-launch-checklist.md](../guides/operator/pre-launch-checklist.md) for th
 
 ## Version history
 
-Release notes are recorded in `sdkwork.app.config.json` → `release.notes` until a tagged GA train publishes dedicated notes in this directory.
+Release notes are recorded in `agent.app.config.json` → `release.notes` until a tagged GA train publishes dedicated notes in this directory.

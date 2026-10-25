@@ -6,7 +6,7 @@
  * Electron ship the same renderer artifact.
  *
  * Bundle metadata (productName, appId, artifactName, icon) mirrors
- * `src-tauri/tauri.conf.json` and `sdkwork.app.config.json`.
+ * `src-tauri/tauri.conf.json` and `agent.app.config.json`.
  */
 
 import { existsSync, readdirSync } from 'node:fs';

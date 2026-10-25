@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Materialize release checksum evidence into sdkwork.app.config.json from local build outputs.
+ * Materialize release checksum evidence into agent.app.config.json from local build outputs.
  * Follows RELEASE_SPEC.md and SUPPLY_CHAIN_SECURITY_SPEC.md.
  */
 
@@ -19,7 +19,7 @@ function resolveWorkspaceRoot() {
   if (rootFlagIndex >= 0) {
     return path.resolve(process.argv[rootFlagIndex + 1]);
   }
-  const cwdManifest = path.join(process.cwd(), 'sdkwork.app.config.json');
+  const cwdManifest = path.join(process.cwd(), 'agent.app.config.json');
   if (existsSync(cwdManifest)) {
     return process.cwd();
   }
@@ -129,7 +129,7 @@ async function resolvePackageArtifact(workspaceRoot, packageId, extraGlobs = [])
 async function main() {
   const strict = process.argv.includes('--strict');
   const workspaceRoot = resolveWorkspaceRoot();
-  const manifestPath = path.join(workspaceRoot, 'sdkwork.app.config.json');
+  const manifestPath = path.join(workspaceRoot, 'agent.app.config.json');
   const evidencePath = path.join(workspaceRoot, 'target', 'release', 'release-evidence.json');
   const existingEvidence = loadExistingEvidence(evidencePath);
   const manifest = JSON.parse(await readFile(manifestPath, 'utf8'));
@@ -137,7 +137,7 @@ async function main() {
   const evidence = {
     schemaVersion: 1,
     generatedAt: new Date().toISOString(),
-    manifestPath: 'sdkwork.app.config.json',
+    manifestPath: 'agent.app.config.json',
     packages: [],
     auxiliaryArtifacts: [],
     warnings: [],

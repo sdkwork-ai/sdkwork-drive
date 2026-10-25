@@ -668,7 +668,7 @@ async function main() {
     const devServerProcess = createDevServerProcess({
       env: mergeRepoDevBootstrapAccessTokenEnv({
         repoRoot,
-        manifestPath: 'apps/sdkwork-drive-pc/sdkwork.app.config.json',
+        manifestPath: 'apps/sdkwork-drive-pc/agent.app.config.json',
         env: {
           ...baseEnv,
           VITE_DRIVE_PC_DEV_SAME_ORIGIN_API: 'true',
