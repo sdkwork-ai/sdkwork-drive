@@ -142,8 +142,8 @@ function main() {
   }
   validateEnvironmentAuthority(manifest);
 
-  if (!fs.existsSync(path.join(workspaceRoot, 'sdkwork.workflow.json'))) {
-    fail('sdkwork.workflow.json must exist for release governance');
+  if (!fs.existsSync(path.join(workspaceRoot, 'agent.workflow.json'))) {
+    fail('agent.workflow.json must exist for release governance');
   }
 
   if (!fs.existsSync(path.join(workspaceRoot, 'tools/generate_release_sbom.mjs'))) {

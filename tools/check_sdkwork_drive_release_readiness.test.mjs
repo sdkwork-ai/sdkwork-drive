@@ -54,7 +54,7 @@ async function createTempWorkspace(manifest) {
     await mkdir(path.dirname(deploymentConfigPath), { recursive: true });
     await writeFile(deploymentConfigPath, '{}\n', 'utf8');
   }
-  await writeFile(path.join(tempRoot, 'sdkwork.workflow.json'), '{}\n', 'utf8');
+  await writeFile(path.join(tempRoot, 'agent.workflow.json'), '{}\n', 'utf8');
   await writeFile(path.join(tempRoot, 'tools/generate_release_sbom.mjs'), '#!/usr/bin/env node\n', 'utf8');
   await writeFile(
     path.join(tempRoot, 'agent.app.config.json'),

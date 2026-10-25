@@ -14,7 +14,7 @@ Package and multi-platform artifacts via GitHub Actions:
 
 1. Open **Actions → Package Application** (`.github/workflows/package.yml`).
 2. Run **workflow_dispatch** with platform/architecture filters, or push a semver tag (`v*`).
-3. Workflow uses `sdkwork.workflow.json` targets (web, Windows zip, macOS dmg, Linux appimage, container OCI).
+3. Workflow uses `agent.workflow.json` targets (web, Windows zip, macOS dmg, Linux appimage, container OCI).
 4. After CI success, materialize evidence locally or in CI:
 
 ```bash

@@ -134,7 +134,7 @@
     "configKeys": [
       "Cargo.toml#workspace",
       "package.json#scripts",
-      "sdkwork.workflow.json",
+      "agent.workflow.json",
       "SDKWORK_DRIVE_ROOT_SCOPE_EVENT_CALLER_APP_ID",
       "SDKWORK_DRIVE_KNOWLEDGEBASE_EVENT_CALLBACK_URL",
       "SDKWORK_DRIVE_KNOWLEDGEBASE_EVENT_INGRESS_TOKEN_FILE"

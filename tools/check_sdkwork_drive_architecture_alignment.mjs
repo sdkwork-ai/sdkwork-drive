@@ -103,7 +103,7 @@ for (const directory of requiredDirectories) {
 }
 
 assert(fs.existsSync(path.join(repoRoot, 'agent.app.config.json')), 'agent.app.config.json must exist');
-assert(fs.existsSync(path.join(repoRoot, 'sdkwork.workflow.json')), 'sdkwork.workflow.json must exist');
+assert(fs.existsSync(path.join(repoRoot, 'agent.workflow.json')), 'agent.workflow.json must exist');
 assert(
   fs.existsSync(path.join(repoRoot, '.github/workflows/package.yml')),
   '.github/workflows/package.yml must exist',
@@ -257,7 +257,7 @@ assert(
   'providerKindConfig must not re-export formatBytes; use formatDriveBytes from sdkwork-drive-pc-commons',
 );
 
-const workflow = JSON.parse(readText('sdkwork.workflow.json'));
+const workflow = JSON.parse(readText('agent.workflow.json'));
 const dependencyIds = new Set((workflow.dependencies || []).map((dependency) => dependency.id));
 for (const dependencyId of [
   'sdkwork-appbase',
@@ -270,7 +270,7 @@ for (const dependencyId of [
   'sdkwork-utils',
   'sdkwork-app-topology',
 ]) {
-  assert(dependencyIds.has(dependencyId), `sdkwork.workflow.json must declare ${dependencyId}`);
+  assert(dependencyIds.has(dependencyId), `agent.workflow.json must declare ${dependencyId}`);
 }
 
 const routerCrates = [

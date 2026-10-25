@@ -13,7 +13,7 @@
  * `bundle.targets = ["msi", "nsis"]`, which only exist on Windows. The Tauri CLI
  * refuses to emit a DMG or an AppImage from that configuration, so the previous
  * per-platform branches could never produce the `macos/.../app.dmg` and
- * `linux/.../app.AppImage` paths that `sdkwork.workflow.json` declared.
+ * `linux/.../app.AppImage` paths that `agent.workflow.json` declared.
  * electron-builder ships all three target types and runs them from a
  * per-OS GitHub runner, so every declared artifact is reproducible.
  *

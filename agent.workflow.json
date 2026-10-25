@@ -1,6 +1,6 @@
 {
-  "$schema": "../sdkwork-github-workflow/schemas/sdkwork-workflow.schema.json",
-  "schemaVersion": "2026-06-06.sdkwork.workflow.v1",
+  "$schema": "../sdkwork-github-workflow/schemas/agent-workflow.schema.json",
+  "schemaVersion": "2026-06-06.agent.workflow.v1",
   "app": {
     "id": "sdkwork-drive",
     "name": "SDKWork Drive",
@@ -341,7 +341,7 @@
       {
         "name": "Create canonical artifact evidence",
         "shell": "bash",
-        "run": "node \"$SDKWORK_WORKFLOW_CLI\" evidence:create --config sdkwork.workflow.json --sbom \".sdkwork/evidence/${SDKWORK_PACKAGE_ID}.sbom.json\" --provenance \"git:${GITHUB_SHA:-local}\" --signature \"unsigned:signing-not-required\""
+        "run": "node \"$SDKWORK_WORKFLOW_CLI\" evidence:create --config agent.workflow.json --sbom \".sdkwork/evidence/${SDKWORK_PACKAGE_ID}.sbom.json\" --provenance \"git:${GITHUB_SHA:-local}\" --signature \"unsigned:signing-not-required\""
       }
     ],
     "sbom": [

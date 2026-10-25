@@ -166,3 +166,13 @@ sdkwork-space.tmp-diagappconfig-*.json
 # Added by repo-commit sweep; targeted rules only.
 /apps/sdkwork-drive-common/packages/sdkwork-drive-upload-image-core/src/*.js
 /apps/sdkwork-drive-common/packages/sdkwork-drive-upload-image-core/src/*.d.ts
+
+# ---- auto-audited: local artifacts that must never be committed ----
+*.key
+*.pem
+*.p12
+*.pfx
+*.keystore
+temp/
+*.temp
+.next/
