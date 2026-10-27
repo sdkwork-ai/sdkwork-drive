@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::models::{CompletedUploadPart};
+use crate::models::CompletedUploadPart;
 
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]
 pub struct CompleteUploadSessionRequest {

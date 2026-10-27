@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::models::{DownloadPackageItem};
+use crate::models::DownloadPackageItem;
 
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]
 pub struct DownloadPackageResponse {

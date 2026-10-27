@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::models::{DriveSandboxEntry};
+use crate::models::DriveSandboxEntry;
 
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]
 pub struct DriveSandboxFileContent {

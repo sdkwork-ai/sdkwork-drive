@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::models::{UploaderRetentionRequest};
+use crate::models::UploaderRetentionRequest;
 
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]
 pub struct PrepareUploaderUploadRequest {

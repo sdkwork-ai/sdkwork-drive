@@ -34,8 +34,12 @@ impl<'de> Deserialize<'de> for WebsiteRootSelector {
             .to_owned();
 
         match kind.as_str() {
-            "SPACE_ROOT" => Ok(Self::WebsiteRootSpaceSelector(serde_json::from_value(value).map_err(de::Error::custom)?)),
-            "FOLDER" => Ok(Self::WebsiteRootFolderSelector(serde_json::from_value(value).map_err(de::Error::custom)?)),
+            "SPACE_ROOT" => Ok(Self::WebsiteRootSpaceSelector(
+                serde_json::from_value(value).map_err(de::Error::custom)?,
+            )),
+            "FOLDER" => Ok(Self::WebsiteRootFolderSelector(
+                serde_json::from_value(value).map_err(de::Error::custom)?,
+            )),
             other => Err(de::Error::unknown_variant(other, VARIANTS)),
         }
     }

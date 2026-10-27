@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::models::{WebsiteRootSelector};
+use crate::models::WebsiteRootSelector;
 
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]
 pub struct CreateWebsiteRootRequest {

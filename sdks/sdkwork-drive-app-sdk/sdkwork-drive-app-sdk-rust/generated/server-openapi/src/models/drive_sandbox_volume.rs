@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::models::{DriveSandboxCapabilities};
+use crate::models::DriveSandboxCapabilities;
 
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]
 pub struct DriveSandboxVolume {
