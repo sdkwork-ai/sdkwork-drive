@@ -228,7 +228,7 @@ pub(crate) async fn delete_default_storage_provider_binding(
             "storage_provider_binding",
             audit_resource_id.as_str(),
             &operator_id,
-        &tenant_id,
+            &tenant_id,
         )
         .await?;
     }

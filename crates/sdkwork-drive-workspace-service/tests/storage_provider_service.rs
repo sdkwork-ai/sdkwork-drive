@@ -101,9 +101,21 @@ async fn list_storage_providers_filters_by_kind_inside_the_window() {
 
     let service = DriveStorageProviderService::new(SqlStorageProviderStore::new(pool));
     for (id, provider_kind, status) in [
-        ("provider-001", DriveStorageProviderKind::S3Compatible, "active"),
-        ("provider-002", DriveStorageProviderKind::S3Compatible, "disabled"),
-        ("provider-003", DriveStorageProviderKind::TencentCos, "active"),
+        (
+            "provider-001",
+            DriveStorageProviderKind::S3Compatible,
+            "active",
+        ),
+        (
+            "provider-002",
+            DriveStorageProviderKind::S3Compatible,
+            "disabled",
+        ),
+        (
+            "provider-003",
+            DriveStorageProviderKind::TencentCos,
+            "active",
+        ),
         (
             "provider-004",
             DriveStorageProviderKind::Custom("custom:acme".to_string()),

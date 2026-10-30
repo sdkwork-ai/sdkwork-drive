@@ -587,7 +587,8 @@ mod object_bucket_tests {
     #[test]
     fn a_missing_or_blank_override_keeps_the_configured_bucket() {
         assert_eq!(
-            resolve_object_bucket("bucket-admin", None, "bucket").expect("absent override resolves"),
+            resolve_object_bucket("bucket-admin", None, "bucket")
+                .expect("absent override resolves"),
             "bucket-admin"
         );
         assert_eq!(
@@ -600,8 +601,12 @@ mod object_bucket_tests {
     #[test]
     fn an_explicit_override_wins_and_is_trimmed() {
         assert_eq!(
-            resolve_object_bucket("bucket-admin", Some("  image2-1253947560 ".to_string()), "bucket")
-                .expect("valid override resolves"),
+            resolve_object_bucket(
+                "bucket-admin",
+                Some("  image2-1253947560 ".to_string()),
+                "bucket"
+            )
+            .expect("valid override resolves"),
             "image2-1253947560"
         );
     }
@@ -609,8 +614,9 @@ mod object_bucket_tests {
     #[test]
     fn an_invalid_override_is_rejected_before_any_vendor_call() {
         for invalid in ["Drive_Bucket", "ab", "bucket_admin"] {
-            let error = resolve_object_bucket("bucket-admin", Some(invalid.to_string()), "sourceBucket")
-                .expect_err("invalid bucket must be rejected");
+            let error =
+                resolve_object_bucket("bucket-admin", Some(invalid.to_string()), "sourceBucket")
+                    .expect_err("invalid bucket must be rejected");
             assert_eq!(error.0, StatusCode::BAD_REQUEST);
             let body = serde_json::to_value(&error.1 .0).expect("problem detail should serialize");
             assert!(
@@ -624,7 +630,8 @@ mod object_bucket_tests {
 
     /// 地域覆盖会参与端点主机的推导，所以它按厂商地域码的形状校验：缺省就是"用配置里的
     /// 地域"，非法值必须在任何厂商调用之前被拒掉。
-    #[test]    fn region_override_requires_a_vendor_region_code() {
+    #[test]
+    fn region_override_requires_a_vendor_region_code() {
         assert_eq!(
             resolve_object_region(None, "region").expect("absent override resolves"),
             None
@@ -677,8 +684,7 @@ mod multipart_part_tests {
 
         let zero = validate_upload_part_numbers(&[0]).expect_err("part 0 is rejected");
         assert_eq!(zero.0, StatusCode::BAD_REQUEST);
-        let too_high =
-            validate_upload_part_numbers(&[10_001]).expect_err("part 10001 is rejected");
+        let too_high = validate_upload_part_numbers(&[10_001]).expect_err("part 10001 is rejected");
         assert_eq!(too_high.0, StatusCode::BAD_REQUEST);
 
         let duplicate =
@@ -717,8 +723,8 @@ mod multipart_part_tests {
             .expect_err("a duplicate part is rejected");
         assert!(detail_of(&duplicate).contains("twice"));
 
-        let zero = validate_completed_upload_parts(&[(0, "a".into())])
-            .expect_err("part 0 is rejected");
+        let zero =
+            validate_completed_upload_parts(&[(0, "a".into())]).expect_err("part 0 is rejected");
         assert_eq!(zero.0, StatusCode::BAD_REQUEST);
     }
 }

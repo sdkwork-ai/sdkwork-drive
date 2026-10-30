@@ -1246,8 +1246,14 @@ async fn quota_summary_route_counts_active_storage_objects() {
         .await
         .expect("node should be inserted");
     }
-    seed_storage_metadata_provider_fixture(&pool, "tenant-quota", "provider-quota", "bucket-quota", "user-001")
-        .await;
+    seed_storage_metadata_provider_fixture(
+        &pool,
+        "tenant-quota",
+        "provider-quota",
+        "bucket-quota",
+        "user-001",
+    )
+    .await;
 
     for (object_id, node_id, content_length, lifecycle_status, checksum) in [
         (
@@ -11775,7 +11781,14 @@ async fn app_drive_collaboration_and_version_governance_routes_update_and_emit_c
     .execute(&pool)
     .await
     .expect("node should be seeded");
-    seed_storage_metadata_provider_fixture(&pool, "tenant-gov", "provider-gov", "bucket-gov", "user-owner").await;
+    seed_storage_metadata_provider_fixture(
+        &pool,
+        "tenant-gov",
+        "provider-gov",
+        "bucket-gov",
+        "user-owner",
+    )
+    .await;
     sqlx::query(
         "INSERT INTO dr_drive_node_permission (
             id, tenant_id, node_id, subject_type, subject_id, role,
@@ -13867,8 +13880,14 @@ async fn app_drive_list_routes_support_standard_page_tokens() {
     .execute(&pool)
     .await
     .expect("space should be seeded");
-    seed_storage_metadata_provider_fixture(&pool, "tenant-page", "provider-page", "bucket-page", "user-page")
-        .await;
+    seed_storage_metadata_provider_fixture(
+        &pool,
+        "tenant-page",
+        "provider-page",
+        "bucket-page",
+        "user-page",
+    )
+    .await;
     for (id, node_name, updated_at) in [
         ("node-page-a", "a.txt", "2026-06-04 10:00:00"),
         ("node-page-b", "b.txt", "2026-06-04 11:00:00"),
@@ -19803,7 +19822,10 @@ async fn drive_favorites_list_response(
                     "authorization",
                     format!("Bearer {}", common::auth_token(tenant, user, "appbase")),
                 )
-                .header("access-token", common::access_token(tenant, user, "appbase"))
+                .header(
+                    "access-token",
+                    common::access_token(tenant, user, "appbase"),
+                )
                 .method(Method::GET)
                 .uri(uri)
                 .body(Body::empty())
@@ -19826,7 +19848,10 @@ async fn drive_unset_favorite_response(
                     "authorization",
                     format!("Bearer {}", common::auth_token(tenant, user, "appbase")),
                 )
-                .header("access-token", common::access_token(tenant, user, "appbase"))
+                .header(
+                    "access-token",
+                    common::access_token(tenant, user, "appbase"),
+                )
                 .method(Method::DELETE)
                 .uri(&format!("/app/v3/api/drive/nodes/{node_id}/favorite"))
                 .body(Body::empty())
@@ -19936,12 +19961,12 @@ async fn favorites_keyset_pagination_does_not_skip_or_duplicate_when_favorite_ti
             .await
             .expect("favorites response should be read");
         assert_eq!(
-            first_status, StatusCode::OK,
+            first_status,
+            StatusCode::OK,
             "{user} favorites list failed: {first_body:?}"
         );
         let first_payload: serde_json::Value =
-            serde_json::from_slice(&first_body)
-        .expect("favorites response should be valid json");
+            serde_json::from_slice(&first_body).expect("favorites response should be valid json");
         assert_eq!(
             drive_list_page_ids(&first_payload),
             ["node-keyset-1", "node-keyset-2"],
@@ -20002,13 +20027,11 @@ async fn favorites_keyset_pagination_does_not_skip_or_duplicate_when_favorite_ti
         } else {
             // No concurrent mutation: plain cursor walk over all five rows.
             let mut next_cursor = Some(cursor);
-            let expected_pages: [&[&str]; 2] = [
-                &["node-keyset-3", "node-keyset-4"],
-                &["node-keyset-5"],
-            ];
+            let expected_pages: [&[&str]; 2] =
+                [&["node-keyset-3", "node-keyset-4"], &["node-keyset-5"]];
             for (page_index, expected_ids) in expected_pages.into_iter().enumerate() {
-                let cursor_value = next_cursor
-                    .expect("intermediate page should expose a continuation cursor");
+                let cursor_value =
+                    next_cursor.expect("intermediate page should expose a continuation cursor");
                 let response = drive_favorites_list_response(
                     &app,
                     "tenant-keyset",
@@ -20162,10 +20185,12 @@ async fn unset_favorite_on_deleted_node_is_idempotent_no_content() {
 
     // Hard-deleted node: the FK cascade removed the favorite row, and the
     // unset still resolves to 204.
-    sqlx::query("DELETE FROM dr_drive_node WHERE tenant_id='tenant-unset' AND id='node-unset-purged'")
-        .execute(&pool)
-        .await
-        .expect("node should be purged");
+    sqlx::query(
+        "DELETE FROM dr_drive_node WHERE tenant_id='tenant-unset' AND id='node-unset-purged'",
+    )
+    .execute(&pool)
+    .await
+    .expect("node should be purged");
     let response =
         drive_unset_favorite_response(&app, "tenant-unset", "user-reviewer", "node-unset-purged")
             .await;

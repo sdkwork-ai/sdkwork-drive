@@ -48,12 +48,14 @@ impl DriveStorageMigrationCopier for AdminStorageMigrationCopier<'_> {
         // The source is resolved with a `Read` intent so a `disabled` provider
         // can still be drained — draining a retired provider is the main reason
         // to migrate at all.
-        let source_provider = get_provider_for_read(self.state, &self.tenant_id, &request.source_provider_id)
-            .await
-            .map_err(map_route_error_to_service)?;
-        let target_provider = get_provider_for_read(self.state, &self.tenant_id, &request.target_provider_id)
-            .await
-            .map_err(map_route_error_to_service)?;
+        let source_provider =
+            get_provider_for_read(self.state, &self.tenant_id, &request.source_provider_id)
+                .await
+                .map_err(map_route_error_to_service)?;
+        let target_provider =
+            get_provider_for_read(self.state, &self.tenant_id, &request.target_provider_id)
+                .await
+                .map_err(map_route_error_to_service)?;
 
         let source_store = build_object_store_for_provider(self.state, &source_provider, None)
             .await

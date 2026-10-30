@@ -84,7 +84,9 @@ fn build_business_router_layers_with_asset_surface(
                     "/app/v3/api/drive/sandboxes/{sandboxId}/files/{entryId}/content",
                     get(read_sandbox_file_content).put(update_sandbox_file_content),
                 )
-                .layer(DefaultBodyLimit::max(MAX_SANDBOX_FILE_CONTENT_REQUEST_BYTES)),
+                .layer(DefaultBodyLimit::max(
+                    MAX_SANDBOX_FILE_CONTENT_REQUEST_BYTES,
+                )),
         )
         .route("/app/v3/api/drive/sandboxes", get(list_sandboxes))
         .route(

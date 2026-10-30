@@ -90,7 +90,6 @@ pub(crate) async fn plan_storage_migration(
     let tenant_id = ctx.resolve_tenant_id()?;
     let operator_id = ctx.resolve_operator_id()?;
 
-
     let migration = build_engine(&state, &tenant_id)
         .service()
         .plan_storage_migration(PlanStorageMigrationCommand {
@@ -135,7 +134,6 @@ pub(crate) async fn run_storage_migration(
     let Json(payload) = payload.map_err(invalid_json_problem)?;
     let tenant_id = ctx.resolve_tenant_id()?;
     let operator_id = ctx.resolve_operator_id()?;
-
 
     let report = build_engine(&state, &tenant_id)
         .run_storage_migration(RunStorageMigrationCommand {
@@ -281,7 +279,6 @@ pub(crate) async fn cancel_storage_migration(
     }
     let tenant_id = ctx.resolve_tenant_id()?;
     let operator_id = ctx.resolve_operator_id()?;
-
 
     let migration = build_engine(&state, &tenant_id)
         .service()
