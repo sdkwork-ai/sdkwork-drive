@@ -1662,7 +1662,10 @@ mod tests {
 
     #[test]
     fn instants_match_rejects_unparseable_values() {
-        assert!(!instants_match("not-a-timestamp", "2026-09-29T08:13:51.157Z"));
+        assert!(!instants_match(
+            "not-a-timestamp",
+            "2026-09-29T08:13:51.157Z"
+        ));
         assert!(!instants_match(
             "2026-09-29T08:13:51.157Z",
             "also-not-a-timestamp"

@@ -106,12 +106,7 @@ async fn mock_s3_endpoint(
     }
     // 写后读：head 报真实长度，随后的 range 读由 GET 分支应答 "hello world"。
     if method == Method::HEAD && uri.path() == "/bucket-admin/objects/notes.txt" {
-        return (
-            StatusCode::OK,
-            [("content-length", "11")],
-            Body::empty(),
-        )
-            .into_response();
+        return (StatusCode::OK, [("content-length", "11")], Body::empty()).into_response();
     }
     if method == Method::HEAD {
         return (StatusCode::OK, [("content-length", "0")], Body::empty()).into_response();
@@ -185,7 +180,8 @@ async fn mock_s3_endpoint(
     if method == Method::DELETE && query.contains("uploadId=") {
         return StatusCode::NO_CONTENT.into_response();
     }
-    if method == Method::GET && query.contains("list-type=2") {        return (
+    if method == Method::GET && query.contains("list-type=2") {
+        return (
             StatusCode::OK,
             [("content-type", "application/xml")],
             r#"<?xml version="1.0" encoding="UTF-8"?>
@@ -427,8 +423,7 @@ async fn admin_storage_default_binding_can_mount_provider_to_tenant_or_space() {
     )
     .expect("get binding response should be json");
     assert_eq!(
-        get_binding_payload["data"]["item"]["bindingScope"],
-        "space",
+        get_binding_payload["data"]["item"]["bindingScope"], "space",
         "the mounted binding must read back through the default route"
     );
 }
@@ -1318,7 +1313,10 @@ async fn admin_storage_object_routes_honor_the_bucket_override() {
             .expect("object list response body should be read"),
     )
     .expect("object list response should be json");
-    assert_eq!(list_payload["data"]["items"][0]["objectKey"], "objects/file-a.bin");
+    assert_eq!(
+        list_payload["data"]["items"][0]["objectKey"],
+        "objects/file-a.bin"
+    );
     assert_eq!(list_payload["data"]["items"][0]["bucket"], override_bucket);
 
     let head_response = app
@@ -1928,7 +1926,8 @@ async fn admin_storage_multipart_upload_routes_open_presign_complete_and_abort()
     .expect("storage provider should be seeded");
 
     let app = build_router_with_pool_without_iam(pool);
-    let base = "/backend/v3/api/drive/storage/providers/provider-multipart/objects/multipart-uploads";
+    let base =
+        "/backend/v3/api/drive/storage/providers/provider-multipart/objects/multipart-uploads";
 
     let create = app
         .clone()
@@ -2075,7 +2074,8 @@ async fn admin_storage_multipart_upload_routes_open_presign_complete_and_abort()
 /// 它同时证明了四个路由确实挂上了（没挂上会是 404/405，而不是 400）。
 #[tokio::test]
 async fn admin_storage_multipart_upload_routes_reject_malformed_part_lists() {
-    let app = build_router_with_pool_without_iam(sdkwork_drive_test_support::lazy_postgres_test_pool());
+    let app =
+        build_router_with_pool_without_iam(sdkwork_drive_test_support::lazy_postgres_test_pool());
     let base =
         "/backend/v3/api/drive/storage/providers/provider-multipart-invalid/objects/multipart-uploads";
 
@@ -3027,10 +3027,7 @@ async fn admin_storage_provider_list_filters_by_kind_before_paging() {
         "/backend/v3/api/drive/storage/providers?provider_kind=custom",
     )
     .await;
-    assert_eq!(
-        provider_ids(&custom),
-        vec!["provider-c-custom".to_string()]
-    );
+    assert_eq!(provider_ids(&custom), vec!["provider-c-custom".to_string()]);
 
     // An unknown kind selects nothing instead of failing: `custom:<vendor>` is
     // open-ended, so the filter value space cannot be closed.
@@ -3114,10 +3111,8 @@ async fn admin_storage_provider_kinds_list_and_initialize() {
         .await
         .expect("initialize provider kinds response body should be read");
     assert_eq!(init_status, StatusCode::OK);
-    let init_payload: serde_json::Value = serde_json::from_slice(
-        &init_body_bytes,
-    )
-    .expect("initialize provider kinds response should be json");
+    let init_payload: serde_json::Value = serde_json::from_slice(&init_body_bytes)
+        .expect("initialize provider kinds response should be json");
     assert_eq!(
         init_payload["data"]["items"]
             .as_array()
@@ -3440,7 +3435,21 @@ async fn admin_storage_object_content_routes_handle_literal_percent_keys_and_dir
         .await
         .expect("object content request should be handled");
     let put_dir_status = put_dir.status();
-    assert_eq!(put_dir_status, StatusCode::OK, "put_dir debug body={}", if put_dir_status == StatusCode::OK { String::new() } else { String::from_utf8_lossy(&to_bytes(put_dir.into_body(), usize::MAX).await.expect("put dir body should be read")).to_string() });
+    assert_eq!(
+        put_dir_status,
+        StatusCode::OK,
+        "put_dir debug body={}",
+        if put_dir_status == StatusCode::OK {
+            String::new()
+        } else {
+            String::from_utf8_lossy(
+                &to_bytes(put_dir.into_body(), usize::MAX)
+                    .await
+                    .expect("put dir body should be read"),
+            )
+            .to_string()
+        }
+    );
 
     let delete_dir = app
         .oneshot(
@@ -3588,7 +3597,6 @@ async fn admin_storage_object_content_routes_reject_oversized_reads() {
     );
 }
 
-
 #[tokio::test]
 async fn admin_storage_provider_routes_reject_cross_tenant_access() {
     let Some((pool, _database_guard)) = sdkwork_drive_test_support::postgres_test_database().await
@@ -3709,7 +3717,10 @@ fn provider_account_rows(payload: &serde_json::Value) -> Vec<(String, String)> {
         .iter()
         .map(|item| {
             (
-                item["id"].as_str().expect("account id should be a string").to_string(),
+                item["id"]
+                    .as_str()
+                    .expect("account id should be a string")
+                    .to_string(),
                 item["vendorCode"]
                     .as_str()
                     .expect("account vendorCode should be a string")
@@ -3786,7 +3797,8 @@ async fn admin_storage_provider_account_list_reports_a_real_continuation() {
     // which is also the slice its credential picker lists.
     let app = build_router_with_pool_without_iam_and_test_tenant(pool.clone(), "100001");
     let vendor_code = unique_vendor_code();
-    let account_ids = ["one", "two", "three"].map(|suffix| format!("iampacct-{vendor_code}-{suffix}"));
+    let account_ids =
+        ["one", "two", "three"].map(|suffix| format!("iampacct-{vendor_code}-{suffix}"));
     for account_id in &account_ids {
         seed_provider_account(
             &pool,

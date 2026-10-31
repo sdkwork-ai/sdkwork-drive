@@ -115,9 +115,12 @@ async fn prepare_upload_creates_logged_in_user_upload_space_and_task() {
 
     sdkwork_drive_test_support::seed_storage_provider_and_binding(
         &pool,
-        &sdkwork_drive_test_support::StorageProviderSeed::new("provider-tenant-user", "tenant-user")
-            .with_bucket("bucket-uploader")
-            .with_actor_id("user-001"),
+        &sdkwork_drive_test_support::StorageProviderSeed::new(
+            "provider-tenant-user",
+            "tenant-user",
+        )
+        .with_bucket("bucket-uploader")
+        .with_actor_id("user-001"),
     )
     .await;
     let service = DriveUploaderService::new(SqlUploaderStore::new(pool.clone()));
@@ -228,9 +231,12 @@ async fn prepare_upload_allocates_unique_name_when_file_already_exists() {
 
     sdkwork_drive_test_support::seed_storage_provider_and_binding(
         &pool,
-        &sdkwork_drive_test_support::StorageProviderSeed::new("provider-tenant-user", "tenant-user")
-            .with_bucket("bucket-uploader")
-            .with_actor_id("user-001"),
+        &sdkwork_drive_test_support::StorageProviderSeed::new(
+            "provider-tenant-user",
+            "tenant-user",
+        )
+        .with_bucket("bucket-uploader")
+        .with_actor_id("user-001"),
     )
     .await;
     let service = DriveUploaderService::new(SqlUploaderStore::new(pool.clone()));
@@ -296,9 +302,12 @@ async fn prepare_upload_allocates_unique_name_for_stale_uploading_node() {
 
     sdkwork_drive_test_support::seed_storage_provider_and_binding(
         &pool,
-        &sdkwork_drive_test_support::StorageProviderSeed::new("provider-tenant-stale", "tenant-stale")
-            .with_bucket("bucket-uploader")
-            .with_actor_id("user-001"),
+        &sdkwork_drive_test_support::StorageProviderSeed::new(
+            "provider-tenant-stale",
+            "tenant-stale",
+        )
+        .with_bucket("bucket-uploader")
+        .with_actor_id("user-001"),
     )
     .await;
     let service = DriveUploaderService::new(SqlUploaderStore::new(pool.clone()));
@@ -375,9 +384,12 @@ async fn prepare_anonymous_upload_uses_app_owned_upload_space() {
 
     sdkwork_drive_test_support::seed_storage_provider_and_binding(
         &pool,
-        &sdkwork_drive_test_support::StorageProviderSeed::new("provider-tenant-anon", "tenant-anon")
-            .with_bucket("bucket-uploader")
-            .with_actor_id("app-001"),
+        &sdkwork_drive_test_support::StorageProviderSeed::new(
+            "provider-tenant-anon",
+            "tenant-anon",
+        )
+        .with_bucket("bucket-uploader")
+        .with_actor_id("app-001"),
     )
     .await;
     let service = DriveUploaderService::new(SqlUploaderStore::new(pool.clone()));
@@ -662,9 +674,12 @@ async fn prepare_upload_to_target_space_requires_owner_or_writer_permission() {
 
     sdkwork_drive_test_support::seed_storage_provider_and_binding(
         &pool,
-        &sdkwork_drive_test_support::StorageProviderSeed::new("provider-tenant-target-permission", "tenant-target-permission")
-            .with_bucket("bucket-uploader")
-            .with_actor_id("user-owner"),
+        &sdkwork_drive_test_support::StorageProviderSeed::new(
+            "provider-tenant-target-permission",
+            "tenant-target-permission",
+        )
+        .with_bucket("bucket-uploader")
+        .with_actor_id("user-owner"),
     )
     .await;
     seed_space(
@@ -792,9 +807,12 @@ async fn prepare_anonymous_upload_to_explicit_space_requires_public_writer_share
 
     sdkwork_drive_test_support::seed_storage_provider_and_binding(
         &pool,
-        &sdkwork_drive_test_support::StorageProviderSeed::new("provider-tenant-public-upload", "tenant-public-upload")
-            .with_bucket("bucket-uploader")
-            .with_actor_id("app-001"),
+        &sdkwork_drive_test_support::StorageProviderSeed::new(
+            "provider-tenant-public-upload",
+            "tenant-public-upload",
+        )
+        .with_bucket("bucket-uploader")
+        .with_actor_id("app-001"),
     )
     .await;
     seed_space(
@@ -918,9 +936,12 @@ async fn prepare_video_upload_selects_video_profile_and_temporary_retention() {
 
     sdkwork_drive_test_support::seed_storage_provider_and_binding(
         &pool,
-        &sdkwork_drive_test_support::StorageProviderSeed::new("provider-tenant-video", "tenant-video")
-            .with_bucket("bucket-uploader")
-            .with_actor_id("user-001"),
+        &sdkwork_drive_test_support::StorageProviderSeed::new(
+            "provider-tenant-video",
+            "tenant-video",
+        )
+        .with_bucket("bucket-uploader")
+        .with_actor_id("user-001"),
     )
     .await;
     let service = DriveUploaderService::new(SqlUploaderStore::new(pool));
@@ -1092,9 +1113,12 @@ async fn mark_part_uploaded_is_idempotent_and_updates_upload_item_counters() {
 
     sdkwork_drive_test_support::seed_storage_provider_and_binding(
         &pool,
-        &sdkwork_drive_test_support::StorageProviderSeed::new("provider-tenant-part", "tenant-part")
-            .with_bucket("bucket-uploader")
-            .with_actor_id("user-001"),
+        &sdkwork_drive_test_support::StorageProviderSeed::new(
+            "provider-tenant-part",
+            "tenant-part",
+        )
+        .with_bucket("bucket-uploader")
+        .with_actor_id("user-001"),
     )
     .await;
     let service = DriveUploaderService::new(SqlUploaderStore::new(pool.clone()));
@@ -1179,9 +1203,12 @@ async fn complete_stored_upload_marks_generated_object_ready_and_is_idempotent()
 
     sdkwork_drive_test_support::seed_storage_provider_and_binding(
         &pool,
-        &sdkwork_drive_test_support::StorageProviderSeed::new("provider-tenant-ai-complete", "tenant-ai-complete")
-            .with_bucket("bucket-uploader")
-            .with_actor_id("user-001"),
+        &sdkwork_drive_test_support::StorageProviderSeed::new(
+            "provider-tenant-ai-complete",
+            "tenant-ai-complete",
+        )
+        .with_bucket("bucket-uploader")
+        .with_actor_id("user-001"),
     )
     .await;
     let service = DriveUploaderService::new(SqlUploaderStore::new(pool.clone()));
@@ -1393,9 +1420,12 @@ async fn upload_bytes_writes_object_and_completes_ai_generated_upload() {
 
     sdkwork_drive_test_support::seed_storage_provider_and_binding(
         &pool,
-        &sdkwork_drive_test_support::StorageProviderSeed::new("provider-tenant-ai-bytes", "tenant-ai-bytes")
-            .with_bucket("bucket-uploader")
-            .with_actor_id("user-001"),
+        &sdkwork_drive_test_support::StorageProviderSeed::new(
+            "provider-tenant-ai-bytes",
+            "tenant-ai-bytes",
+        )
+        .with_bucket("bucket-uploader")
+        .with_actor_id("user-001"),
     )
     .await;
     let service = DriveUploaderService::new(SqlUploaderStore::new(pool.clone()));
@@ -1497,9 +1527,12 @@ async fn complete_stored_upload_quarantine_trashes_node_records_sensitive_operat
 
     sdkwork_drive_test_support::seed_storage_provider_and_binding(
         &pool,
-        &sdkwork_drive_test_support::StorageProviderSeed::new("provider-tenant-quarantine", "tenant-quarantine")
-            .with_bucket("bucket-uploader")
-            .with_actor_id("user-001"),
+        &sdkwork_drive_test_support::StorageProviderSeed::new(
+            "provider-tenant-quarantine",
+            "tenant-quarantine",
+        )
+        .with_bucket("bucket-uploader")
+        .with_actor_id("user-001"),
     )
     .await;
     let service = DriveUploaderService::new(SqlUploaderStore::new(pool.clone()));

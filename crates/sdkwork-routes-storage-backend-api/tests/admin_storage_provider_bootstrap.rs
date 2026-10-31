@@ -16,7 +16,7 @@ use axum::body::{to_bytes, Body};
 use axum::Router;
 use http::{Method, Request, StatusCode};
 use sdkwork_drive_workspace_service::application::storage_provider_kind_service::{
-    STORAGE_PROVIDER_KIND_TABLE, BUILTIN_STORAGE_PROVIDER_KIND_CATALOG,
+    BUILTIN_STORAGE_PROVIDER_KIND_CATALOG, STORAGE_PROVIDER_KIND_TABLE,
 };
 use sdkwork_routes_storage_backend_api::build_router_with_pool_without_iam;
 use sqlx::PgPool;
@@ -163,7 +163,11 @@ async fn bootstrap_does_not_reenable_a_vendor_the_operator_disabled() {
     .expect("disable wasabi");
 
     let (second_status, body) = post_bootstrap(bootstrap_app(pool.clone())).await;
-    assert_eq!(second_status, StatusCode::OK, "re-run should succeed: {body}");
+    assert_eq!(
+        second_status,
+        StatusCode::OK,
+        "re-run should succeed: {body}"
+    );
 
     let wasabi_enabled = sqlx::query_scalar::<_, bool>(sqlx::AssertSqlSafe(format!(
         "SELECT enabled FROM \"{STORAGE_PROVIDER_KIND_TABLE}\" WHERE provider_kind = 'wasabi'"
@@ -252,7 +256,11 @@ async fn bootstrap_restores_a_soft_deleted_tenant_default_binding() {
 
     // Re-running the bootstrap must heal the gap instead of skipping the row.
     let (second_status, body) = post_bootstrap(bootstrap_app(pool.clone())).await;
-    assert_eq!(second_status, StatusCode::OK, "re-run should succeed: {body}");
+    assert_eq!(
+        second_status,
+        StatusCode::OK,
+        "re-run should succeed: {body}"
+    );
     assert_eq!(
         count_active_tenant_default_bindings(&pool).await,
         1,

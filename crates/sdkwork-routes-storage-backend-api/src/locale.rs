@@ -121,15 +121,24 @@ mod tests {
 
     #[test]
     fn unsupported_tags_fall_back_to_default_locale() {
-        assert_eq!(resolve_accept_language(Some("fr-FR,de-DE")).as_str(), "zh-CN");
+        assert_eq!(
+            resolve_accept_language(Some("fr-FR,de-DE")).as_str(),
+            "zh-CN"
+        );
         assert_eq!(resolve_accept_language(Some("*")).as_str(), "zh-CN");
     }
 
     #[test]
     fn language_prefixes_normalize_onto_supported_locales() {
         assert_eq!(resolve_accept_language(Some("zh")).as_str(), "zh-CN");
-        assert_eq!(resolve_accept_language(Some("zh-Hans-CN")).as_str(), "zh-CN");
-        assert_eq!(resolve_accept_language(Some("en-GB,en;q=0.9")).as_str(), "en-US");
+        assert_eq!(
+            resolve_accept_language(Some("zh-Hans-CN")).as_str(),
+            "zh-CN"
+        );
+        assert_eq!(
+            resolve_accept_language(Some("en-GB,en;q=0.9")).as_str(),
+            "en-US"
+        );
     }
 
     #[test]

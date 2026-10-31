@@ -829,7 +829,11 @@ impl DriveUploaderStore for SqlUploaderStore {
             )
             .bind(sensitive_operation_id)
             .bind(tenant_id)
-            .bind(row.get::<Option<String>, _>("organization_id").as_deref().unwrap_or("0"))
+            .bind(
+                row.get::<Option<String>, _>("organization_id")
+                    .as_deref()
+                    .unwrap_or("0"),
+            )
             .bind(row.get::<Option<String>, _>("user_id"))
             .bind(&space_id)
             .bind(&node_id)

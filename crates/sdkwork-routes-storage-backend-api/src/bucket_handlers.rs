@@ -127,7 +127,7 @@ pub(crate) async fn create_storage_provider_bucket(
             admin_audit::storage_provider::BUCKET_CREATED,
             &provider_id,
             &operator_id,
-        &tenant_id,
+            &tenant_id,
         )
         .await?;
     }

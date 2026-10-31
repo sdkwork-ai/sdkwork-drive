@@ -1863,4 +1863,3 @@ pub(crate) struct AssetRelationResponse {
     pub(crate) metadata: Option<serde_json::Value>,
     pub(crate) lifecycle_status: String,
 }
-

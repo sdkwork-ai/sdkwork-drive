@@ -5,9 +5,8 @@ use crate::dto::{
     CopyProviderObjectRequest, CreateProviderObjectMultipartUploadRequest,
     ListProviderObjectsQuery, PresignProviderObjectUploadPartsRequest, ProviderObjectBucketQuery,
     ProviderObjectContentResponse, ProviderObjectMultipartUploadResponse,
-    ProviderObjectMutationResponse, ProviderObjectResponse,
-    ProviderObjectUploadPartGrantResponse, ProviderObjectUploadPartGrantsResponse,
-    UpdateProviderObjectContentRequest,
+    ProviderObjectMutationResponse, ProviderObjectResponse, ProviderObjectUploadPartGrantResponse,
+    ProviderObjectUploadPartGrantsResponse, UpdateProviderObjectContentRequest,
 };
 use crate::error::{
     invalid_json_problem, map_object_store_route_error, payload_too_large_problem,
@@ -35,8 +34,7 @@ use sdkwork_drive_storage_contract::{
     AbortMultipartUploadRequest, CompleteMultipartUploadRequest, CompletedMultipartPart,
     CopyObjectRequest, CreateMultipartUploadRequest, DeleteObjectRequest, DriveByteRange,
     DriveObjectLocator, DriveObjectStoreError, DriveObjectStoreErrorKind, HeadObjectRequest,
-    ListObjectsRequest,
-    PresignUploadPartRequest, PutObjectRequest, ReadObjectRangeRequest,
+    ListObjectsRequest, PresignUploadPartRequest, PutObjectRequest, ReadObjectRangeRequest,
 };
 use sdkwork_utils_rust::{DEFAULT_LIST_PAGE_SIZE, MAX_LIST_PAGE_SIZE};
 
@@ -123,10 +121,7 @@ pub(crate) async fn head_storage_provider_object(
     let object_key = decode_path_object_key(&object_key)?;
     let result = object_store
         .head_object(HeadObjectRequest {
-            locator: DriveObjectLocator {
-                bucket,
-                object_key,
-            },
+            locator: DriveObjectLocator { bucket, object_key },
         })
         .await
         .map_err(map_object_store_route_error)?;
@@ -197,7 +192,8 @@ pub(crate) async fn copy_storage_provider_object(
     let tenant_id = ctx.resolve_tenant_id()?;
 
     let provider = get_active_provider(&state, &tenant_id, &provider_id).await?;
-    let source_bucket = resolve_object_bucket(&provider.bucket, payload.source_bucket, "sourceBucket")?;
+    let source_bucket =
+        resolve_object_bucket(&provider.bucket, payload.source_bucket, "sourceBucket")?;
     let destination_bucket = resolve_object_bucket(
         &provider.bucket,
         payload.destination_bucket,
@@ -396,10 +392,7 @@ pub(crate) async fn write_storage_provider_object_content(
     .await?;
     let head = object_store
         .head_object(HeadObjectRequest {
-            locator: DriveObjectLocator {
-                bucket,
-                object_key,
-            },
+            locator: DriveObjectLocator { bucket, object_key },
         })
         .await
         .map_err(map_object_store_route_error)?;
@@ -427,8 +420,10 @@ pub(crate) async fn create_storage_provider_object_multipart_upload(
     Path(provider_id): Path<String>,
     Query(query): Query<ProviderObjectBucketQuery>,
     payload: Result<Json<CreateProviderObjectMultipartUploadRequest>, JsonRejection>,
-) -> Result<StorageItemHttpResponse<ProviderObjectMultipartUploadResponse>, (StatusCode, Json<ProblemDetail>)>
-{
+) -> Result<
+    StorageItemHttpResponse<ProviderObjectMultipartUploadResponse>,
+    (StatusCode, Json<ProblemDetail>),
+> {
     let Json(payload) = payload.map_err(invalid_json_problem)?;
     let object_key = validate_object_key(payload.object_key, "objectKey")?;
     let content_type = payload
@@ -486,8 +481,10 @@ pub(crate) async fn presign_storage_provider_object_upload_parts(
     Path(provider_id): Path<String>,
     Query(query): Query<ProviderObjectBucketQuery>,
     payload: Result<Json<PresignProviderObjectUploadPartsRequest>, JsonRejection>,
-) -> Result<StorageItemHttpResponse<ProviderObjectUploadPartGrantsResponse>, (StatusCode, Json<ProblemDetail>)>
-{
+) -> Result<
+    StorageItemHttpResponse<ProviderObjectUploadPartGrantsResponse>,
+    (StatusCode, Json<ProblemDetail>),
+> {
     let Json(payload) = payload.map_err(invalid_json_problem)?;
     let object_key = validate_object_key(payload.object_key, "objectKey")?;
     let upload_id = validate_upload_id(&payload.upload_id)?;
@@ -614,7 +611,10 @@ pub(crate) async fn abort_storage_provider_object_multipart_upload(
     Path(provider_id): Path<String>,
     Query(query): Query<ProviderObjectBucketQuery>,
     payload: Result<Json<AbortProviderObjectMultipartUploadRequest>, JsonRejection>,
-) -> Result<StorageItemHttpResponse<ProviderObjectMutationResponse>, (StatusCode, Json<ProblemDetail>)> {
+) -> Result<
+    StorageItemHttpResponse<ProviderObjectMutationResponse>,
+    (StatusCode, Json<ProblemDetail>),
+> {
     let Json(payload) = payload.map_err(invalid_json_problem)?;
     let object_key = validate_object_key(payload.object_key, "objectKey")?;
     let upload_id = validate_upload_id(&payload.upload_id)?;
@@ -657,8 +657,7 @@ pub(crate) async fn abort_storage_provider_object_multipart_upload(
 #[cfg(test)]
 mod tests {
     use super::{
-        MAX_OBJECT_CONTENT_BASE64_CHARS, MAX_OBJECT_CONTENT_BYTES,
-        MAX_OBJECT_CONTENT_REQUEST_BYTES,
+        MAX_OBJECT_CONTENT_BASE64_CHARS, MAX_OBJECT_CONTENT_BYTES, MAX_OBJECT_CONTENT_REQUEST_BYTES,
     };
 
     /// 请求体上限必须容得下"合法对象 + base64 放大 + 信封"。

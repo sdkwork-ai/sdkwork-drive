@@ -119,7 +119,8 @@ pub(crate) async fn set_storage_provider_kind_enabled(
     } else {
         admin_audit::storage_provider_kind::DISABLED
     };
-    record_storage_provider_kind_audit(&state, action, &provider_kind, &operator_id, &tenant_id).await?;
+    record_storage_provider_kind_audit(&state, action, &provider_kind, &operator_id, &tenant_id)
+        .await?;
     let summary = kind_service(&state)
         .list_storage_provider_kinds(Some(locale.as_str()))
         .await

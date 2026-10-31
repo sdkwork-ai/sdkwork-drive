@@ -1234,7 +1234,13 @@ pub(crate) async fn record_uploader_upload_completed_operation(
         &operation.storage_object.id,
     ))
     .bind(operation.tenant_id)
-    .bind(operation.upload_item.organization_id.as_deref().unwrap_or("0"))
+    .bind(
+        operation
+            .upload_item
+            .organization_id
+            .as_deref()
+            .unwrap_or("0"),
+    )
     .bind(&operation.upload_item.user_id)
     .bind(&operation.upload_item.space_id)
     .bind(&operation.upload_item.node_id)
