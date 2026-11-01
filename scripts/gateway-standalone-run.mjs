@@ -39,7 +39,7 @@ function parseArgs(argv) {
   const settings = {
     environment: DEFAULT_ENVIRONMENT,
     config: undefined,
-    devEnvFile: '.env.postgres',
+    devEnvFile: 'config/host/postgres.env',
     release: false,
     dryRun: false,
     help: false,
@@ -99,7 +99,7 @@ Use this for local/standalone deployment. Cloud composition is platform-owned.
 Options:
   --environment <development|production>  Config profile (default: development)
   --config <path>                       Explicit TOML config path
-  --dev-env-file <path>                 Env file for IAM/database (default: .env.postgres)
+  --dev-env-file <path>                 Env file for IAM/database (default: config/host/postgres.env)
   --release                             Build/run release profile
   --dry-run                             Print command without executing
   --help, -h                            Show this help

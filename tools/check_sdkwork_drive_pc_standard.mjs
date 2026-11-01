@@ -447,7 +447,7 @@ for (const requiredIgnore of [
   '.env.test.local',
   '.env.staging.local',
   '.env.production.local',
-  '.env.postgres',
+  'config/host/postgres.env',
   '.env.release.local',
   'config/*.local.toml',
 ]) {

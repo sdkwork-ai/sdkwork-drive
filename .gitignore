@@ -52,7 +52,7 @@ Thumbs.db
 .env.test.local
 .env.staging.local
 .env.production.local
-.env.postgres
+config/host/postgres.env
 .env.release.local
 config/*.local.toml
 configs/*.local.toml
@@ -78,7 +78,7 @@ _tmp_*
 # SDKWork local runtime state
 .runtime/
 **/.runtime/
-!.env.postgres.example
+!config/host/postgres.env.example
 **/dist/
 **/.pnpm-store/
 **/.sdkwork/local/

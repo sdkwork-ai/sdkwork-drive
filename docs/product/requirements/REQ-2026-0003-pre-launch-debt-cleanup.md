@@ -16,7 +16,7 @@ goals:
   - Keep Drive OpenAPI authorities owner-only, consume IAM through declared SDK/runtime dependencies, and eliminate operationId/tag duplication before first release.
   - Provide an operator pre-launch checklist linked from deployment validation.
   - Remove legacy `sdkwork-drive-http` envelope modules (`response.rs`, `problem_detail.rs`); keep `api_problem.rs` as the sole ProblemDetail authority.
-  - Keep `.env.postgres.example` on the unified `SDKWORK_DATABASE_*` identity only; application-specific database connection prefixes are forbidden.
+  - Keep `config/host/postgres.env.example` on the unified `SDKWORK_DATABASE_*` identity only; application-specific database connection prefixes are forbidden.
   - Route App SDK uploader composed helpers through `@sdkwork/utils` (`hexEncode`, `uuid`).
   - Align `pnpm-workspace.yaml` and PC `peerDependencies` with sdkwork-specs workspace registry (`verify-repo`).
   - Remove retired service-layout tokens from public `package.json#scripts` and document standard dev command examples only.
@@ -38,7 +38,7 @@ acceptance_criteria:
   - `node --test tools/check_drive_deployments.test.mjs` proves default-mode digest warnings, strict-mode placeholder rejection, strict-mode real digest acceptance, Redis rate-limit enforcement, and legacy topology profile rejection.
   - `docs/guides/operator/pre-launch-checklist.md` exists and is referenced by deployment checks.
   - `crates/sdkwork-drive-http/src/response.rs` and `problem_detail.rs` do not exist; `lib.rs` exposes only `api_problem`.
-  - `.env.postgres.example` uses only the unified `SDKWORK_DATABASE_*` connection identity and contains no legacy application-specific database connection prefix.
+  - `config/host/postgres.env.example` uses only the unified `SDKWORK_DATABASE_*` connection identity and contains no legacy application-specific database connection prefix.
   - `@sdkwork/drive-app-sdk` depends on `@sdkwork/utils`; `uploaderClient.ts` does not inline hex formatting.
   - `pnpm check:app-composition` (`verify-repo`) passes for workspace package wiring.
   - Drive App and Backend authorities contain no dependency-owned routes or composed-operation markers; generated SDKs are rebuilt from owner-only OpenAPI inputs.

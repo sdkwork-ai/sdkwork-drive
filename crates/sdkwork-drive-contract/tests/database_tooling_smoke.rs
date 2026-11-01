@@ -167,8 +167,8 @@ fn package_scripts_use_the_shared_lifecycle_without_sqlite_server_aliases() {
 #[test]
 fn postgres_and_toml_examples_use_standard_drive_config_keys() {
     let root = workspace_root();
-    let postgres_example = std::fs::read_to_string(root.join(".env.postgres.example"))
-        .expect(".env.postgres.example should exist");
+    let postgres_example = std::fs::read_to_string(root.join("config/host/postgres.env.example"))
+        .expect("config/host/postgres.env.example should exist");
 
     for required in [
         "SDKWORK_DATABASE_ENGINE=postgresql",
@@ -185,13 +185,13 @@ fn postgres_and_toml_examples_use_standard_drive_config_keys() {
     ] {
         assert!(
             postgres_example.contains(required),
-            ".env.postgres.example must include standard key {required}"
+            "config/host/postgres.env.example must include standard key {required}"
         );
     }
     for forbidden in ["SDKWORK_DATABASE_PROVIDER", "SDKWORK_DATABASE_SSLMODE"] {
         assert!(
             !postgres_example.contains(forbidden),
-            ".env.postgres.example must not include legacy key {forbidden}"
+            "config/host/postgres.env.example must not include legacy key {forbidden}"
         );
     }
 
@@ -220,7 +220,7 @@ fn drive_launch_plan_reports_database_engine_without_leaking_secrets() {
             root.join("scripts/run-drive-standalone-gateway.mjs"),
             PathBuf::from("plan"),
             PathBuf::from("--dev-env-file"),
-            root.join(".env.postgres.example"),
+            root.join("config/host/postgres.env.example"),
         ],
     )
     .expect("drive product runner should start");

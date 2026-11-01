@@ -354,8 +354,8 @@ function formatGatewayStartupError(exitCode, iamDatabaseTarget) {
   return new Error(
     `${exitDetail}\n`
       + `IAM database target: ${iamDatabaseTarget}\n`
-      + 'Ensure PostgreSQL is running and .env.postgres matches your local instance '
-      + '(copy from .env.postgres.example if needed).',
+      + 'Ensure PostgreSQL is running and config/host/postgres.env matches your local instance '
+      + '(copy from config/host/postgres.env.example if needed).',
   );
 }
 
@@ -611,7 +611,7 @@ Deployment policy (standalone default for dev):
   Profiles load from etc/topology according to deployment profile and environment.
   Standalone dev uses the local Drive standalone gateway on ${DEFAULT_SDKWORK_API_CLOUD_GATEWAY_BIND}.
   Cloud dev consumes the deployed platform.api-gateway surface and starts no local API process.
-  IAM login requires PostgreSQL (copy .env.postgres.example to .env.postgres and start PostgreSQL).
+  IAM login requires PostgreSQL (copy config/host/postgres.env.example to config/host/postgres.env and start PostgreSQL).
   Vite/desktop starts only after the gateway health check passes.
   Set SDKWORK_DRIVE_GATEWAY_AUTOSTART=false to skip gateway autostart.
 
@@ -633,7 +633,7 @@ async function main() {
       process.exit(0);
     }
 
-    const postgresEnvFile = '.env.postgres';
+    const postgresEnvFile = 'config/host/postgres.env';
     const envFile = settings.devEnvFile || postgresEnvFile;
     const profileId = resolveDevProfileId(settings.deploymentProfile);
     const profileEnv = loadProfile(profileId);

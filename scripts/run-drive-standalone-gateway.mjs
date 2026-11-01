@@ -295,10 +295,10 @@ function spawnPlan(plan) {
 }
 
 function printHelp() {
-  console.log(`Usage: node scripts/run-drive-standalone-gateway.mjs [server|plan] [--dev-env-file .env.postgres] [-- --database-url <url>]
+  console.log(`Usage: node scripts/run-drive-standalone-gateway.mjs [server|plan] [--dev-env-file config/host/postgres.env] [-- --database-url <url>]
 
 Database policy:
-  pnpm dev          uses PostgreSQL via .env.postgres
+  pnpm dev          uses PostgreSQL via config/host/postgres.env
   Public application-server development profiles reject SQLite.
 
 Runtime policy:

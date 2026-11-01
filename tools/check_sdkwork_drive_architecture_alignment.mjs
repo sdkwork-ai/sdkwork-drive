@@ -645,7 +645,7 @@ const canonicalWorkspaceDatabaseKeys = [
   'SDKWORK_DATABASE_MAX_CONNECTIONS',
 ];
 for (const relativePath of [
-  '.env.postgres.example',
+  'config/host/postgres.env.example',
   'etc/topology/standalone.production.env',
 ]) {
   const text = readText(relativePath);
@@ -662,8 +662,8 @@ for (const relativePath of [
   );
 }
 assert(
-  readText('.env.postgres.example').includes('SDKWORK_DATABASE_PASSWORD='),
-  '.env.postgres.example must declare a local-only placeholder database password',
+  readText('config/host/postgres.env.example').includes('SDKWORK_DATABASE_PASSWORD='),
+  'config/host/postgres.env.example must declare a local-only placeholder database password',
 );
 assert(
   readText('etc/topology/standalone.production.env').includes(
