@@ -442,13 +442,12 @@ if (openSdkManifest && !Array.isArray(openSdkManifest.sdkDependencies)) {
 const gitignore = existsSync(path.join(appRoot, '.gitignore'))
   ? readFileSync(path.join(appRoot, '.gitignore'), 'utf8')
   : '';
+// `ENVIRONMENT_SPEC.md` section 5.1.7 retires every composed local overlay, so
+// the only env files a checkout may still hold locally are the base layer and
+// the host configuration; both stay ignored.
 for (const requiredIgnore of [
-  '.env.development.local',
-  '.env.test.local',
-  '.env.staging.local',
-  '.env.production.local',
+  '.env',
   'config/host/postgres.env',
-  '.env.release.local',
   'config/*.local.toml',
 ]) {
   if (!gitignore.includes(requiredIgnore)) {
