@@ -1,6 +1,6 @@
 /* @vitest-environment jsdom */
 
-import { act } from "react";
+import { act, StrictMode } from "react";
 import { cleanup, fireEvent, render, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type {
@@ -118,5 +118,53 @@ describe("DriveUploadImage persist-first handle (PC shell)", () => {
     await waitFor(() =>
       expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ uri: uploadedValue.uri })),
     );
+  });
+
+  it("reports upload activity so hosts can block save while the new value is in flight", async () => {
+    const recording = createDeferredRecordingService();
+    const onUploadingChange = vi.fn();
+
+    render(
+      <DriveUploadImage
+        appResourceId="organization-1"
+        onUploadingChange={onUploadingChange}
+        service={recording.service}
+      />,
+    );
+
+    await pickAvatarFile();
+    await waitFor(() => expect(onUploadingChange).toHaveBeenLastCalledWith(true));
+
+    await act(async () => {
+      recording.settle();
+    });
+    await waitFor(() => expect(onUploadingChange).toHaveBeenLastCalledWith(false));
+  });
+
+  /**
+   * React StrictMode mounts, cleans up, and remounts while keeping state. The
+   * shared field must not destroy its controller during the simulated unmount
+   * or the remounted tree drives an already-destroyed controller
+   * ("This controller has been destroyed").
+   */
+  it("keeps a live controller across React StrictMode's simulated remount", async () => {
+    const recording = createDeferredRecordingService();
+
+    render(
+      <StrictMode>
+        <DriveUploadImage
+          appResourceId="organization-1"
+          service={recording.service}
+          value={null}
+        />
+      </StrictMode>,
+    );
+
+    await pickAvatarFile();
+
+    await waitFor(() => expect(recording.anchors).toEqual(["organization-1"]));
+    await act(async () => {
+      recording.settle();
+    });
   });
 });

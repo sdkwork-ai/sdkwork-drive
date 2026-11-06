@@ -90,6 +90,12 @@ export interface DriveUploadImageProps {
    * persist-first hosts wire it to their submit-button state.
    */
   onPendingChange?: (hasPending: boolean) => void;
+  /**
+   * Fires whenever an upload starts or settles. Hosts that persist the value
+   * on submit use it to keep the submit action disabled until the fresh value
+   * exists, so a save cannot race the upload.
+   */
+  onUploadingChange?: (uploading: boolean) => void;
   onFileRejected?: (rejection: { code: DriveUploadImageRejectionCode }) => void;
   onUploadError?: (error: DriveUploadImageError) => void;
 }
@@ -128,6 +134,7 @@ export const DriveUploadImage = forwardRef<DriveUploadImageHandle, DriveUploadIm
       copy: copyOverride,
       className,
       onPendingChange,
+      onUploadingChange,
       onFileRejected,
       onUploadError,
     } = props;
@@ -137,6 +144,8 @@ export const DriveUploadImage = forwardRef<DriveUploadImageHandle, DriveUploadIm
     const [dragOver, setDragOver] = useState(false);
     const onPendingChangeRef = useRef(onPendingChange);
     onPendingChangeRef.current = onPendingChange;
+    const onUploadingChangeRef = useRef(onUploadingChange);
+    onUploadingChangeRef.current = onUploadingChange;
 
     const resolveAppResourceId = useMemo(() => {
       if (typeof appResourceId === "function") {
@@ -178,6 +187,11 @@ export const DriveUploadImage = forwardRef<DriveUploadImageHandle, DriveUploadIm
     useEffect(() => {
       onPendingChangeRef.current?.(hasPending);
     }, [hasPending]);
+
+    const uploadingAny = snapshot.isUploading;
+    useEffect(() => {
+      onUploadingChangeRef.current?.(uploadingAny);
+    }, [uploadingAny]);
 
     const displayed = snapshot.items[snapshot.items.length - 1] ?? null;
     const previewSrc = displayed?.previewUrl ?? null;

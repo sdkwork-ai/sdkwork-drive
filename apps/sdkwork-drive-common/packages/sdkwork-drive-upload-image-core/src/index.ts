@@ -38,6 +38,7 @@ export {
   type DriveUploadImageValue,
 } from "./types";
 export {
+  formatDriveUploadImageBytes,
   resolveDriveUploadImageConstraints,
   validateDriveUploadImageFile,
 } from "./validation";

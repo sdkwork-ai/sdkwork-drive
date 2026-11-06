@@ -18,6 +18,12 @@ export function useDriveUploadImageController(
 ): DriveUploadImageController {
   const latest = useRef(options);
   latest.current = options;
+  // Deferred destruction. React StrictMode mounts, destroys, and remounts a
+  // component while keeping its state, so destroying synchronously in the
+  // effect cleanup would leave the remounted tree holding a dead controller
+  // ("This controller has been destroyed"). A zero-delay timer is cancelled by
+  // the remount's effect when it runs first; a real unmount lets it fire.
+  const destroyTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [controller] = useState(() => {
     if (externalController !== undefined) {
@@ -36,8 +42,15 @@ export function useDriveUploadImageController(
     if (externalController !== undefined) {
       return undefined;
     }
+    if (destroyTimer.current !== null) {
+      clearTimeout(destroyTimer.current);
+      destroyTimer.current = null;
+    }
     return () => {
-      controller.destroy();
+      destroyTimer.current = setTimeout(() => {
+        destroyTimer.current = null;
+        controller.destroy();
+      }, 0);
     };
   }, [controller, externalController]);
 
