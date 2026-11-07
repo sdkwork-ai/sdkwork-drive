@@ -35,6 +35,40 @@ test("rejects single-segment appResourceType", () => {
   );
 });
 
+test("accepts underscore and hyphen segments in appResourceType", () => {
+  for (const appResourceType of [
+    "profile.avatar",
+    "mcp.server_icon",
+    "site.settings_brand_asset",
+    "cloudrouter.temporary_object",
+    "mall.after-sales-evidence",
+    "appstore.listing.media",
+  ]) {
+    assert.doesNotThrow(
+      () => assertDriveUploadImageDeclaration({ ...avatarDeclaration, appResourceType }),
+      appResourceType,
+    );
+  }
+});
+
+test("rejects malformed appResourceType shapes", () => {
+  for (const appResourceType of [
+    "profile_icon",
+    "Profile.avatar",
+    ".avatar",
+    "profile.",
+    "profile..avatar",
+    "1profile.avatar",
+    "profile.avatar image",
+  ]) {
+    assert.throws(
+      () => assertDriveUploadImageDeclaration({ ...avatarDeclaration, appResourceType }),
+      /dotted business type/,
+      appResourceType,
+    );
+  }
+});
+
 test("rejects uppercase or slashed source labels", () => {
   assert.throws(
     () => assertDriveUploadImageDeclaration({ ...avatarDeclaration, source: "@sdkwork/test-app" }),

@@ -164,7 +164,10 @@ void validateDriveUploadImageDeclaration(DriveUploadImageDeclaration declaration
     );
   }
 
-  final resourceTypePattern = RegExp(r'^[a-z][a-z0-9-]*(\.[a-z][a-z0-9-]*)+$');
+  // `<domain>.<resource>` per DRIVE_SPEC.md section 18.2: lowercase, dotted,
+  // at least two segments; digits, `_`, and `-` are allowed after the leading
+  // letter of each segment (`mcp.server_icon`, `mall.after-sales-evidence`).
+  final resourceTypePattern = RegExp(r'^[a-z][a-z0-9_-]*(\.[a-z][a-z0-9_-]*)+$');
   final labelPattern = RegExp(r'^[a-z0-9]+(-[a-z0-9]+)*$');
 
   if (!resourceTypePattern.hasMatch(declaration.appResourceType)) {

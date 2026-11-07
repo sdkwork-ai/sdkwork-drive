@@ -10,7 +10,16 @@ import { DriveUploadImageError } from "./types";
  * value narrows to {@linkcode DriveUploadImageDeclaration}.
  */
 
-const APP_RESOURCE_TYPE_PATTERN = /^[a-z][a-z0-9-]*(\.[a-z][a-z0-9-]*)+$/;
+/**
+ * `<domain>.<resource>`, lowercase, dot-separated, at least two segments
+ * (`DRIVE_SPEC.md` §18.2). Digits, `_`, and `-` are allowed after the leading
+ * lowercase letter of each segment: the fleet's declared business types use
+ * both separators (`mcp.server_icon`, `site.settings_brand_asset`,
+ * `mall.after-sales-evidence`), and the repository gates
+ * (`check-upload-declaration-standard.mjs`, `upload-declaration.test.mjs`)
+ * accept them, so this runtime validator must not be narrower than those.
+ */
+const APP_RESOURCE_TYPE_PATTERN = /^[a-z][a-z0-9_-]*(\.[a-z][a-z0-9_-]*)+$/;
 const KEKBEL_LABEL_PATTERN = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 const PROFILES: ReadonlySet<string> = new Set(["image", "avatar", "thumbnail"]);
 const DECLARATION_FIELDS: ReadonlySet<string> = new Set([

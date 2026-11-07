@@ -71,6 +71,33 @@ class _ScriptedService implements DriveUploadImageService {
 
 void main() {
   group('DriveUploaderImageService', () {
+    test('accepts declared business types with underscore or hyphen segments',
+        () {
+      for (final appResourceType in <String>[
+        'profile.avatar',
+        'mcp.server_icon',
+        'site.settings_brand_asset',
+        'mall.after-sales-evidence',
+      ]) {
+        expect(
+          () => DriveUploaderImageService(
+            uploader: _FakeUploader(),
+            declaration: DriveUploadImageDeclaration(
+              appResourceType: appResourceType,
+              appResourceIdKind: 'entity',
+              scene: 'avatar',
+              source: 'sdkwork-test-app',
+              uploadProfileCode: DriveUploadImageProfile.avatar,
+              retention: 'long_term',
+              purpose: 'Declared business types must pass validation.',
+            ),
+          ),
+          returnsNormally,
+          reason: appResourceType,
+        );
+      }
+    });
+
     test('rejects a non-conforming declaration up front', () {
       expect(
         () => DriveUploaderImageService(
