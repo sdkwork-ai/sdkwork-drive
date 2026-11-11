@@ -854,8 +854,28 @@ async fn ensure_provider(
     bucket: &str,
     provider_account_id: Option<&str>,
 ) -> Result<bool, (StatusCode, Json<ProblemDetail>)> {
-    if provider_exists(state, provider_id).await? {
-        return Ok(false);
+    // Built-in provider ids are global, while the bootstrap can target any
+    // tenant. Reusing an existing id across tenants would create a binding that
+    // points at another tenant's row, so refuse loudly instead.
+    match provider_service(state)
+        .get_storage_provider(GetStorageProviderCommand {
+            provider_id: provider_id.to_owned(),
+        })
+        .await
+    {
+        Ok(existing) => {
+            if existing.tenant_id != tenant_id {
+                return Err(map_service_error(DriveServiceError::Conflict(format!(
+                    "built-in storage provider {provider_id} already belongs to tenant {}; \
+                     set SDKWORK_DRIVE_BOOTSTRAP_TENANT_ID to that tenant or initialize this \
+                     tenant from the storage console",
+                    existing.tenant_id
+                ))));
+            }
+            return Ok(false);
+        }
+        Err(DriveServiceError::NotFound(_)) => {}
+        Err(error) => return Err(map_service_error(error)),
     }
     let kind = parse_storage_provider_kind(provider_kind).map_err(map_service_error)?;
     // A bootstrapped provider must be *usable as it stands*, not merely present:
