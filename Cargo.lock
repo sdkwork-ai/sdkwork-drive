@@ -3471,18 +3471,21 @@ dependencies = [
  "sdkwork-drive-config",
  "sdkwork-drive-http",
  "sdkwork-drive-security",
+ "sdkwork-drive-test-support",
  "sdkwork-drive-workspace-service",
  "sdkwork-routes-drive-app-api",
  "sdkwork-routes-drive-backend-api",
  "sdkwork-routes-drive-internal-api",
  "sdkwork-routes-drive-open-api",
  "sdkwork-routes-storage-backend-api",
+ "sdkwork-web-axum",
  "sdkwork-web-bootstrap",
  "sdkwork-web-contract",
  "sdkwork-web-core",
  "serde_json",
  "sqlx",
  "tokio",
+ "tower",
 ]
 
 [[package]]
@@ -4202,6 +4205,7 @@ dependencies = [
  "sdkwork-web-core",
  "serde_json",
  "sqlx",
+ "tracing",
 ]
 
 [[package]]

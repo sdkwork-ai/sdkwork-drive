@@ -336,7 +336,18 @@ async fn assemble_drive_module(
             pool.clone(),
         ))
         .merge(
-            sdkwork_routes_storage_backend_api::build_admin_storage_business_router(
+            // The admin-storage handlers extract `DriveRequestContext`, and this
+            // module's only registered domain injector is the Drive *app*
+            // injector, which inserts the app-api context type. A composing host
+            // (platform cloud gateway, Manager standalone gateway, Drive
+            // standalone gateway) owns the Web Framework layer, so the storage
+            // routes must derive their own context from the host-injected
+            // `WebRequestContext`; mounting the plain business router leaves the
+            // extension missing and turns every `/backend/v3/api/drive/storage/*`
+            // request into the host-normalized `50001 "An internal error
+            // occurred"` (the Storage Center outage). The derivation middleware
+            // is a no-op when a drive-owned injector already inserted the context.
+            sdkwork_routes_storage_backend_api::build_admin_storage_business_router_for_host_framework(
                 pool.clone(),
                 admin_storage_config,
             ),
