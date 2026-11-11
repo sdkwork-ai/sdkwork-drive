@@ -31,18 +31,22 @@
 //!    operational error instead of a misleading "not found".
 
 use std::collections::HashMap;
+#[cfg(feature = "backend-fs")]
 use std::path::PathBuf;
 use std::sync::Arc;
 
 use sqlx::PgPool;
 use tokio::sync::RwLock;
+#[cfg(feature = "backend-fs")]
 use url::Url;
 
 use sdkwork_drive_storage_contract::{
     DriveObjectStore, DriveObjectStoreError, DriveObjectStoreErrorKind,
     DriveStorageCredentialSnapshot, DriveStorageProviderKind,
 };
+#[cfg(feature = "backend-fs")]
 use sdkwork_drive_storage_local::LocalDriveObjectStore;
+#[cfg(feature = "backend-s3")]
 use sdkwork_drive_storage_s3::{S3DriveObjectStore, S3StoreConfig};
 use sdkwork_drive_workspace_service::domain::storage_provider::DriveStorageProvider;
 use sdkwork_drive_workspace_service::infrastructure::sql::storage_provider_store::SqlStorageProviderStore;
@@ -333,6 +337,10 @@ pub fn ensure_provider_state_allows(
 /// Branching is on the *protocol*, not on a vendor list: every catalog kind
 /// except the local filesystem speaks the S3 API, so a newly catalogued vendor
 /// is served here automatically instead of silently falling through.
+///
+/// A backend that this build did not compile in (see the crate's `backend-*`
+/// features) fails closed with [`DriveObjectStoreErrorKind::NotSupported`]
+/// instead of silently degrading to another transport.
 pub async fn build_store(
     provider: &DriveStorageProvider,
     credentials: Option<&ResolvedProviderCredentials>,
@@ -341,32 +349,70 @@ pub async fn build_store(
         provider.provider_kind,
         DriveStorageProviderKind::LocalFilesystem
     ) {
-        let store: Arc<dyn DriveObjectStore> = Arc::new(build_local_store_for_provider(provider)?);
-        return Ok(store);
+        #[cfg(feature = "backend-fs")]
+        {
+            let store: Arc<dyn DriveObjectStore> =
+                Arc::new(build_local_store_for_provider(provider)?);
+            return Ok(store);
+        }
+        #[cfg(not(feature = "backend-fs"))]
+        {
+            return Err(backend_not_compiled(
+                DriveStorageProviderKind::LocalFilesystem.as_str(),
+                "backend-fs",
+            ));
+        }
     }
 
-    let config = match credentials {
-        Some(credentials) => S3StoreConfig::from_provider_parts_with_credentials(
+    #[cfg(feature = "backend-s3")]
+    {
+        let config = match credentials {
+            Some(credentials) => S3StoreConfig::from_provider_parts_with_credentials(
+                provider.provider_kind.as_str(),
+                &provider.endpoint_url,
+                provider.region.as_deref(),
+                &provider.bucket,
+                provider.path_style,
+                credentials.snapshot.clone(),
+                Some(provider.strict_tls),
+            )?,
+            None => S3StoreConfig::from_provider_parts(
+                provider.provider_kind.as_str(),
+                &provider.endpoint_url,
+                provider.region.as_deref(),
+                &provider.bucket,
+                provider.path_style,
+                provider.credential_ref.as_deref(),
+                Some(provider.strict_tls),
+            )?,
+        };
+        let store: Arc<dyn DriveObjectStore> = Arc::new(S3DriveObjectStore::new(config).await?);
+        Ok(store)
+    }
+    #[cfg(not(feature = "backend-s3"))]
+    {
+        let _ = credentials;
+        Err(backend_not_compiled(
             provider.provider_kind.as_str(),
-            &provider.endpoint_url,
-            provider.region.as_deref(),
-            &provider.bucket,
-            provider.path_style,
-            credentials.snapshot.clone(),
-            Some(provider.strict_tls),
-        )?,
-        None => S3StoreConfig::from_provider_parts(
-            provider.provider_kind.as_str(),
-            &provider.endpoint_url,
-            provider.region.as_deref(),
-            &provider.bucket,
-            provider.path_style,
-            provider.credential_ref.as_deref(),
-            Some(provider.strict_tls),
-        )?,
-    };
-    let store: Arc<dyn DriveObjectStore> = Arc::new(S3DriveObjectStore::new(config).await?);
-    Ok(store)
+            "backend-s3",
+        ))
+    }
+}
+
+/// The error a build returns when a provider kind needs a backend this crate
+/// was not compiled with.
+///
+/// `NotSupported` rather than `Internal`: the deployment is missing a compiled
+/// capability, not an internal invariant, and the message names the exact
+/// feature that has to be enabled.
+#[cfg(any(not(feature = "backend-fs"), not(feature = "backend-s3")))]
+fn backend_not_compiled(provider_kind: &str, feature: &str) -> DriveObjectStoreError {
+    DriveObjectStoreError::new(
+        DriveObjectStoreErrorKind::NotSupported,
+        format!(
+            "storage provider kind {provider_kind} needs the `{feature}` feature of sdkwork-drive-object-runtime, which this build does not enable"
+        ),
+    )
 }
 
 /// Whether this provider kind is served by the S3 object store.
@@ -382,6 +428,7 @@ pub fn provider_supports_s3_object_store(provider_kind: &DriveStorageProviderKin
 /// Admin bucket/object management routes reuse this so they share one
 /// root-resolution rule with the runtime: the provider endpoint must be a
 /// local `file://` URL.
+#[cfg(feature = "backend-fs")]
 pub fn build_local_store_for_provider(
     provider: &DriveStorageProvider,
 ) -> Result<LocalDriveObjectStore, DriveObjectStoreError> {
@@ -389,6 +436,7 @@ pub fn build_local_store_for_provider(
     Ok(LocalDriveObjectStore::new(root))
 }
 
+#[cfg(feature = "backend-fs")]
 fn local_root_from_endpoint(endpoint_url: &str) -> Result<PathBuf, DriveObjectStoreError> {
     let url = Url::parse(endpoint_url).map_err(|_| {
         DriveObjectStoreError::new(
@@ -514,11 +562,44 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "backend-fs")]
     fn local_endpoint_rejects_non_file_and_remote_file_urls() {
         assert!(local_root_from_endpoint("https://example.test/storage").is_err());
         assert!(local_root_from_endpoint("file://remote-host/storage").is_err());
         let local_url = Url::from_directory_path(std::env::temp_dir())
             .expect("system temp directory should convert to a file URL");
         assert!(local_root_from_endpoint(local_url.as_str()).is_ok());
+    }
+
+    /// A build without the S3 backend must refuse an S3-compatible provider
+    /// instead of falling through to another transport or panicking.
+    #[tokio::test]
+    #[cfg(not(feature = "backend-s3"))]
+    async fn s3_provider_fails_closed_when_the_backend_is_not_compiled_in() {
+        let error = build_store(&provider("active"), None)
+            .await
+            .err()
+            .expect("an S3 provider needs the `backend-s3` feature");
+        assert_eq!(error.kind, DriveObjectStoreErrorKind::NotSupported);
+        assert!(
+            error.message.contains("backend-s3"),
+            "the error must name the feature to enable, got: {}",
+            error.message
+        );
+    }
+
+    /// Symmetric case for the local-filesystem backend.
+    #[tokio::test]
+    #[cfg(not(feature = "backend-fs"))]
+    async fn local_provider_fails_closed_when_the_backend_is_not_compiled_in() {
+        let mut local = provider("active");
+        local.provider_kind = DriveStorageProviderKind::LocalFilesystem;
+        local.endpoint_url = "file:///tmp/sdkwork-drive".to_string();
+        let error = build_store(&local, None)
+            .await
+            .err()
+            .expect("a local provider needs the `backend-fs` feature");
+        assert_eq!(error.kind, DriveObjectStoreErrorKind::NotSupported);
+        assert!(error.message.contains("backend-fs"));
     }
 }

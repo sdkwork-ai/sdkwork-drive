@@ -7,16 +7,36 @@ edition.workspace = true
 
 [lints]
 workspace = true
+[features]
+# Storage backends are opt-in dependency sets, not unconditional ones: the
+# `aws-sdk-s3` transport (with its `aws-lc-sys`, hyper and smithy stack) is ~400
+# packages that only a caller which actually resolves S3-compatible providers
+# compiles. The in-memory / local-filesystem path is the default backend.
+#
+# `backend-s3` is still part of `default` because every consumer shipped today
+# resolves S3-compatible providers at runtime: sdkwork-appstore (put_object and
+# presign via `DriveObjectStoreRuntime::resolve`), and sdkwork-notes,
+# sdkwork-canvas, sdkwork-webserver and sdkwork-deployments (locator reads and
+# multipart uploads). They must keep compiling and behaving unchanged, so the
+# feature is enabled for them here. A consumer that only addresses
+# local-filesystem providers opts out with
+# `default-features = false, features = ["backend-fs"]` and drops the S3 stack
+# from its build graph entirely.
+default = ["backend-fs", "backend-s3"]
+backend-fs = ["dep:sdkwork-drive-storage-local", "dep:url"]
+backend-s3 = ["dep:sdkwork-drive-storage-s3"]
+
 [dependencies]
 sdkwork-drive-storage-contract.workspace = true
-sdkwork-drive-storage-local.workspace = true
-sdkwork-drive-storage-s3.workspace = true
+sdkwork-drive-storage-local = { workspace = true, optional = true }
+sdkwork-drive-storage-s3 = { workspace = true, optional = true }
 sdkwork-drive-workspace-service.workspace = true
 sdkwork-iam-provider-account-service.workspace = true
 async-trait.workspace = true
 sqlx.workspace = true
 tokio.workspace = true
-url.workspace = true
+# Only the local-filesystem backend parses a `file://` endpoint.
+url = { workspace = true, optional = true }
 
 [dev-dependencies]
 sdkwork-drive-config.workspace = true
