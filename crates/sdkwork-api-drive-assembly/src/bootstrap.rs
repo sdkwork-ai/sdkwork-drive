@@ -21,6 +21,70 @@ use sdkwork_web_core::HttpRouteManifest;
 
 pub type ApiAssembly = ApiAssemblyContribution;
 
+/// One-shot, best-effort bootstrap of the built-in storage plane.
+///
+/// A fresh deployment should come up with a usable default storage provider
+/// without an operator clicking through the console. The run is idempotent and
+/// deliberately fail-open: a bootstrap problem must not stop the dependency from
+/// serving traffic, so it is logged and the request path continues.
+///
+/// Configuration is environment driven (`StorageBootstrapEnv`); the default
+/// vendor is Tencent Cloud COS. The Tencent row is only created when its
+/// SecretId, SecretKey and bucket are all configured — a placeholder cloud
+/// binding would silently point uploads at a credential that cannot work.
+static STORAGE_PROVIDER_BOOTSTRAP_STARTED: std::sync::atomic::AtomicBool =
+    std::sync::atomic::AtomicBool::new(false);
+
+async fn bootstrap_storage_providers_once(pool: sqlx::PgPool) {
+    if STORAGE_PROVIDER_BOOTSTRAP_STARTED.swap(true, std::sync::atomic::Ordering::AcqRel) {
+        return;
+    }
+    let config = match sdkwork_routes_storage_backend_api::AdminStorageConfig::from_env() {
+        Ok(config) => config,
+        Err(error) => {
+            tracing::warn!(
+                target: "sdkwork.drive",
+                event = "drive.storage.bootstrap.skipped",
+                error = %error,
+                "storage provider bootstrap skipped: invalid admin storage config"
+            );
+            return;
+        }
+    };
+    let started_at = std::time::Instant::now();
+    match tokio::time::timeout(
+        std::time::Duration::from_secs(120),
+        sdkwork_routes_storage_backend_api::bootstrap_storage_provider_defaults_from_env(
+            pool, config,
+        ),
+    )
+    .await
+    {
+        Ok(Ok(outcome)) => tracing::info!(
+            target: "sdkwork.drive",
+            event = "drive.storage.bootstrap.completed",
+            providers_created = outcome.providers_created,
+            accounts_created = outcome.accounts_created,
+            credentials_seeded = outcome.credentials_seeded,
+            default_provider_id = ?outcome.default_provider_id,
+            tencent_skipped = ?outcome.tencent_skipped,
+            elapsed_ms = started_at.elapsed().as_millis() as u64,
+            "built-in storage providers bootstrapped"
+        ),
+        Ok(Err(error)) => tracing::warn!(
+            target: "sdkwork.drive",
+            event = "drive.storage.bootstrap.failed",
+            error = %error,
+            "storage provider bootstrap failed; continuing without it"
+        ),
+        Err(_) => tracing::warn!(
+            target: "sdkwork.drive",
+            event = "drive.storage.bootstrap.timeout",
+            "storage provider bootstrap timed out; continuing without it"
+        ),
+    }
+}
+
 /// Drive App API route manifest for host gateway composition.
 ///
 /// Host gateways that merge the unwrapped App surface contribution compose
@@ -189,6 +253,7 @@ pub async fn assemble_backend_admin_storage_contribution_with_pool(
 ) -> Result<ApiAssemblyContribution, String> {
     bootstrap_drive_database(pool.clone()).await?;
     let pg_pool = postgres_pool_from_database_pool(pool)?;
+    bootstrap_storage_providers_once(pg_pool.clone()).await;
     let admin_storage_config =
         sdkwork_routes_storage_backend_api::AdminStorageConfig::from_env()
             .map_err(|error| format!("resolve admin storage config failed: {error}"))?;
@@ -235,6 +300,7 @@ pub async fn assemble_same_origin_contribution_with_pool(
     bootstrap_drive_database(pool.clone()).await?;
     let pg_pool = postgres_pool_from_database_pool(pool)?;
     ensure_domain_outbox_dispatcher(pg_pool.clone());
+    bootstrap_storage_providers_once(pg_pool.clone()).await;
 
     if let Some(config) = sdkwork_routes_drive_app_api::deploy_sandbox_config_from_env() {
         sdkwork_routes_drive_app_api::ensure_deploy_sandbox_volume(&pg_pool, &config)
@@ -314,6 +380,7 @@ async fn assemble_drive_module(
     ensure_production_download_token_signing_configured()
         .map_err(|error| format!("download token signing config invalid: {error}"))?;
     ensure_domain_outbox_dispatcher(pool.clone());
+    bootstrap_storage_providers_once(pool.clone()).await;
 
     let admin_storage_config =
         sdkwork_routes_storage_backend_api::AdminStorageConfig::from_env()

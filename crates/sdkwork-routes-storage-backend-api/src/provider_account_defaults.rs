@@ -42,6 +42,7 @@
 
 use crate::app_context::DriveRequestContext;
 use crate::audit::record_audit_event;
+use crate::config::AdminStorageConfig;
 use crate::dto::{
     OffsetPage, StorageProviderAccountDefaultResponse, VendorCapabilityDefaultsResponse,
     VendorCredentialFieldResponse,
@@ -743,6 +744,7 @@ async fn ensure_vendor_account(
     tenant_id: &str,
     operator_id: &str,
     builtin: &BuiltinCloudProvider,
+    credentials: Option<(&str, &str)>,
 ) -> Result<(String, bool, bool), (StatusCode, Json<ProblemDetail>)> {
     // A platform-scope account is resolvable from every tenant, which is what
     // makes one placeholder account reusable across the whole installation; it
@@ -812,14 +814,20 @@ async fn ensure_vendor_account(
     .await
     .map_err(map_provider_account_error)?;
 
+    // A deployment that configured real keys for this vendor gets them sealed
+    // instead of the placeholder pair, so a fresh plane is commercial-ready from
+    // its environment alone. Everything else keeps the unmistakable placeholder.
+    let (access_key_id, secret_access_key) =
+        credentials.unwrap_or((builtin.access_key_id, builtin.secret_access_key));
+
     upsert_active_credential(
         &state.pool,
         &NewProviderCredential {
             provider_account_id: account.id.clone(),
             credential_kind: CREDENTIAL_KIND_ACCESS_KEY_PAIR.to_owned(),
             credential_name: DEFAULT_CREDENTIAL_NAME.to_owned(),
-            access_key_id: Some(builtin.access_key_id.to_owned()),
-            secret_access_key: Some(builtin.secret_access_key.to_owned()),
+            access_key_id: Some(access_key_id.to_owned()),
+            secret_access_key: Some(secret_access_key.to_owned()),
             session_token: None,
             secret_text: None,
             expires_at: None,
@@ -1038,7 +1046,7 @@ pub(crate) async fn initialize_storage_provider_account_defaults(
         // never disagree about what this vendor accepts.
         let kind = parse_storage_provider_kind(builtin.provider_kind).map_err(map_service_error)?;
         let (account_id, account_created, credential_seeded) =
-            ensure_vendor_account(&state, &tenant_id, &operator_id, builtin).await?;
+            ensure_vendor_account(&state, &tenant_id, &operator_id, builtin, None).await?;
         let provider_created = ensure_provider(
             &state,
             &tenant_id,
@@ -1128,9 +1136,315 @@ pub(crate) async fn initialize_storage_provider_account_defaults(
     ))
 }
 
+// =============================================================================
+// Deployment-time bootstrap (environment driven)
+// =============================================================================
+
+/// Opt-out switch for the startup bootstrap. Absent means enabled: a fresh
+/// deployment should come up with a usable default storage plane.
+const BOOTSTRAP_STORAGE_PROVIDERS_ENV: &str = "SDKWORK_DRIVE_BOOTSTRAP_STORAGE_PROVIDERS";
+/// Cloud vendor a fresh plane binds as its tenant default (`tencent_cos`).
+const DEFAULT_STORAGE_PROVIDER_ENV: &str = "SDKWORK_DRIVE_DEFAULT_STORAGE_PROVIDER";
+const TENCENT_COS_SECRET_ID_ENV: &str = "SDKWORK_DRIVE_TENCENT_COS_SECRET_ID";
+const TENCENT_COS_SECRET_KEY_ENV: &str = "SDKWORK_DRIVE_TENCENT_COS_SECRET_KEY";
+const TENCENT_COS_BUCKET_ENV: &str = "SDKWORK_DRIVE_TENCENT_COS_BUCKET";
+const TENCENT_COS_REGION_ENV: &str = "SDKWORK_DRIVE_TENCENT_COS_REGION";
+const TENCENT_COS_ENDPOINT_ENV: &str = "SDKWORK_DRIVE_TENCENT_COS_ENDPOINT";
+
+const TENCENT_COS_PROVIDER_KIND: &str = "tencent_cos";
+const STORAGE_BOOTSTRAP_OPERATOR_ID: &str = "sdkwork-storage-bootstrap";
+/// Tenant the bootstrap seeds. Defaults to the platform tenant; a deployment
+/// whose console administrators belong to a different tenant (the first tenant
+/// created at signup) sets this once so the console sees its own providers.
+const BOOTSTRAP_TENANT_ID_ENV: &str = "SDKWORK_DRIVE_BOOTSTRAP_TENANT_ID";
+
+/// Environment inputs for the fresh-deployment storage bootstrap.
+///
+/// Parsing is separate from the database work so a deployment can assert its
+/// effective configuration in a unit test, and so the startup hook can report
+/// exactly what it is about to do before it writes anything.
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
+pub struct StorageBootstrapEnv {
+    pub enabled: bool,
+    pub tenant_id: String,
+    pub default_provider_kind: String,
+    pub tencent_cos_secret_id: Option<String>,
+    pub tencent_cos_secret_key: Option<String>,
+    pub tencent_cos_bucket: Option<String>,
+    pub tencent_cos_region: Option<String>,
+    pub tencent_cos_endpoint: Option<String>,
+}
+
+impl StorageBootstrapEnv {
+    pub fn from_env() -> Self {
+        Self::from_lookup(|key| std::env::var(key).ok())
+    }
+
+    pub fn from_lookup(mut lookup: impl FnMut(&str) -> Option<String>) -> Self {
+        let enabled = lookup(BOOTSTRAP_STORAGE_PROVIDERS_ENV)
+            .map(|raw| {
+                !matches!(
+                    raw.trim().to_ascii_lowercase().as_str(),
+                    "0" | "false" | "no" | "off"
+                )
+            })
+            .unwrap_or(true);
+        let mut text = |key: &str| {
+            lookup(key)
+                .map(|value| value.trim().to_owned())
+                .filter(|value| !value.is_empty())
+        };
+        Self {
+            enabled,
+            tenant_id: text(BOOTSTRAP_TENANT_ID_ENV)
+                .unwrap_or_else(|| PLATFORM_TENANT_ID.to_owned()),
+            default_provider_kind: text(DEFAULT_STORAGE_PROVIDER_ENV)
+                .unwrap_or_else(|| DEFAULT_PROVIDER_KIND.to_owned()),
+            tencent_cos_secret_id: text(TENCENT_COS_SECRET_ID_ENV),
+            tencent_cos_secret_key: text(TENCENT_COS_SECRET_KEY_ENV),
+            tencent_cos_bucket: text(TENCENT_COS_BUCKET_ENV),
+            tencent_cos_region: text(TENCENT_COS_REGION_ENV),
+            tencent_cos_endpoint: text(TENCENT_COS_ENDPOINT_ENV),
+        }
+    }
+
+    /// The real Tencent Cloud key pair, only when both halves are configured.
+    pub fn tencent_cos_credentials(&self) -> Option<(&str, &str)> {
+        match (
+            self.tencent_cos_secret_id.as_deref(),
+            self.tencent_cos_secret_key.as_deref(),
+        ) {
+            (Some(secret_id), Some(secret_key)) => Some((secret_id, secret_key)),
+            _ => None,
+        }
+    }
+
+    /// Whether a fresh plane can bind Tencent COS as a *working* default.
+    pub fn tencent_cos_ready(&self) -> bool {
+        self.tencent_cos_credentials().is_some() && self.tencent_cos_bucket.is_some()
+    }
+}
+
+/// What one bootstrap run did, for the startup log line.
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
+pub struct StorageBootstrapOutcome {
+    pub providers_created: usize,
+    pub accounts_created: usize,
+    pub credentials_seeded: usize,
+    pub default_provider_id: Option<String>,
+    /// Why the Tencent COS default was not created, when it was requested.
+    pub tencent_skipped: Option<String>,
+}
+
+/// Bootstrap the built-in storage plane from the process environment.
+///
+/// This is the startup hook a composing host (platform cloud gateway, Manager,
+/// Drive standalone) calls once per process. It is safe on a live installation:
+/// it creates only what is missing and never rewrites an existing account or
+/// provider, so re-running it after an upgrade is a no-op.
+pub async fn bootstrap_storage_provider_defaults_from_env(
+    pool: sqlx::PgPool,
+    config: AdminStorageConfig,
+) -> Result<StorageBootstrapOutcome, String> {
+    let env = StorageBootstrapEnv::from_env();
+    bootstrap_storage_provider_defaults(&pool, config, &env).await
+}
+
+/// Bootstrap the built-in storage plane using an explicit configuration.
+pub async fn bootstrap_storage_provider_defaults(
+    pool: &sqlx::PgPool,
+    config: AdminStorageConfig,
+    env: &StorageBootstrapEnv,
+) -> Result<StorageBootstrapOutcome, String> {
+    let mut outcome = StorageBootstrapOutcome::default();
+    if !env.enabled {
+        return Ok(outcome);
+    }
+
+    let state = AdminStorageState::new(pool.clone(), config);
+    let tenant_id = env.tenant_id.as_str();
+    let operator_id = STORAGE_BOOTSTRAP_OPERATOR_ID;
+
+    // Seed the kind catalog first: the provider service validates the kind
+    // against it, and a fresh database starts with an empty catalog.
+    DriveStorageProviderKindService::new(SqlStorageProviderKindStore::new(pool.clone()))
+        .initialize_storage_provider_kinds()
+        .await
+        .map_err(|error| format!("initialize storage provider kinds failed: {error:?}"))?;
+
+    // The credential-free provider always exists first: it is the fallback the
+    // default binding drops back to when no cloud credential is configured.
+    let local_created = ensure_provider(
+        &state,
+        tenant_id,
+        operator_id,
+        LOCAL_PROVIDER_ID,
+        LOCAL_PROVIDER_KIND,
+        LOCAL_PROVIDER_NAME,
+        LOCAL_PROVIDER_ENDPOINT,
+        None,
+        LOCAL_PROVIDER_BUCKET,
+        None,
+    )
+    .await
+    .map_err(bootstrap_problem)?;
+    outcome.providers_created += if local_created { 1 } else { 0 };
+
+    let mut default_provider_id = LOCAL_PROVIDER_ID.to_owned();
+    if env.default_provider_kind == TENCENT_COS_PROVIDER_KIND {
+        if env.tencent_cos_ready() {
+            let builtin = BUILTIN_CLOUD_PROVIDERS
+                .iter()
+                .find(|builtin| builtin.provider_kind == TENCENT_COS_PROVIDER_KIND)
+                .ok_or_else(|| {
+                    "tencent_cos is missing from the built-in provider table".to_owned()
+                })?;
+            let credentials = env.tencent_cos_credentials().ok_or_else(|| {
+                "tencent_cos credentials disappeared between readiness and creation".to_owned()
+            })?;
+            let bucket = env.tencent_cos_bucket.as_deref().ok_or_else(|| {
+                "tencent_cos bucket disappeared between readiness and creation".to_owned()
+            })?;
+            let region = env.tencent_cos_region.as_deref().unwrap_or(builtin.region);
+            let endpoint = env
+                .tencent_cos_endpoint
+                .as_deref()
+                .unwrap_or(builtin.endpoint_url);
+
+            let (account_id, account_created, credential_seeded) =
+                ensure_vendor_account(&state, tenant_id, operator_id, builtin, Some(credentials))
+                    .await
+                    .map_err(bootstrap_problem)?;
+
+            let provider_id = provider_id_for(TENCENT_COS_PROVIDER_KIND);
+            let provider_created = ensure_provider(
+                &state,
+                tenant_id,
+                operator_id,
+                &provider_id,
+                TENCENT_COS_PROVIDER_KIND,
+                builtin.provider_name,
+                endpoint,
+                Some(region),
+                bucket,
+                Some(&account_id),
+            )
+            .await
+            .map_err(bootstrap_problem)?;
+
+            outcome.providers_created += if provider_created { 1 } else { 0 };
+            outcome.accounts_created += if account_created { 1 } else { 0 };
+            outcome.credentials_seeded += if credential_seeded { 1 } else { 0 };
+            default_provider_id = provider_id;
+        } else {
+            outcome.tencent_skipped = Some(
+                "SDKWORK_DRIVE_TENCENT_COS_SECRET_ID, SDKWORK_DRIVE_TENCENT_COS_SECRET_KEY and \
+                 SDKWORK_DRIVE_TENCENT_COS_BUCKET are not all configured"
+                    .to_owned(),
+            );
+        }
+    }
+
+    // A local-file binding is only meaningful when the fallback exists; the
+    // Tencent branch is existence-checked by the successful create above.
+    if default_provider_id != LOCAL_PROVIDER_ID || !local_created {
+        ensure_default_binding(&state, tenant_id, operator_id, &default_provider_id)
+            .await
+            .map_err(bootstrap_problem)?;
+    }
+    outcome.default_provider_id = Some(default_provider_id);
+    Ok(outcome)
+}
+
+fn bootstrap_problem((status, _problem): (StatusCode, Json<ProblemDetail>)) -> String {
+    format!(
+        "storage provider bootstrap request failed with HTTP {}",
+        status.as_u16()
+    )
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::collections::HashMap;
+
+    fn env_map(pairs: &[(&str, &str)]) -> impl FnMut(&str) -> Option<String> {
+        let map = pairs
+            .iter()
+            .map(|(key, value)| ((*key).to_owned(), (*value).to_owned()))
+            .collect::<HashMap<String, String>>();
+        move |key: &str| map.get(key).cloned()
+    }
+
+    #[test]
+    fn storage_bootstrap_defaults_to_tencent_cos_and_enabled() {
+        let env = StorageBootstrapEnv::from_lookup(env_map(&[]));
+        assert!(env.enabled, "a fresh deployment bootstraps by default");
+        assert_eq!(env.tenant_id, PLATFORM_TENANT_ID);
+        assert_eq!(env.default_provider_kind, TENCENT_COS_PROVIDER_KIND);
+        assert!(env.tencent_cos_credentials().is_none());
+        assert!(
+            !env.tencent_cos_ready(),
+            "no credentials means no cloud default"
+        );
+    }
+
+    #[test]
+    fn storage_bootstrap_reads_the_tencent_commercial_configuration() {
+        let env = StorageBootstrapEnv::from_lookup(env_map(&[
+            ("SDKWORK_DRIVE_TENCENT_COS_SECRET_ID", " AKIDREAL "),
+            ("SDKWORK_DRIVE_TENCENT_COS_SECRET_KEY", "REALSECRET"),
+            (
+                "SDKWORK_DRIVE_TENCENT_COS_BUCKET",
+                "sdkwork-prod-1250000000",
+            ),
+            ("SDKWORK_DRIVE_TENCENT_COS_REGION", "ap-shanghai"),
+            (
+                "SDKWORK_DRIVE_TENCENT_COS_ENDPOINT",
+                "https://cos.ap-shanghai.myqcloud.com",
+            ),
+        ]));
+        assert!(env.tencent_cos_ready());
+        assert_eq!(
+            env.tencent_cos_credentials(),
+            Some(("AKIDREAL", "REALSECRET"))
+        );
+        assert_eq!(
+            env.tencent_cos_bucket.as_deref(),
+            Some("sdkwork-prod-1250000000")
+        );
+        assert_eq!(env.tencent_cos_region.as_deref(), Some("ap-shanghai"));
+        assert_eq!(
+            env.tencent_cos_endpoint.as_deref(),
+            Some("https://cos.ap-shanghai.myqcloud.com")
+        );
+    }
+
+    #[test]
+    fn storage_bootstrap_can_be_disabled_and_retargeted() {
+        let env = StorageBootstrapEnv::from_lookup(env_map(&[
+            ("SDKWORK_DRIVE_BOOTSTRAP_STORAGE_PROVIDERS", "false"),
+            ("SDKWORK_DRIVE_DEFAULT_STORAGE_PROVIDER", "aliyun_oss"),
+            ("SDKWORK_DRIVE_BOOTSTRAP_TENANT_ID", "100001"),
+        ]));
+        assert!(!env.enabled);
+        assert_eq!(env.default_provider_kind, "aliyun_oss");
+        assert_eq!(
+            env.tenant_id, "100001",
+            "a deployment seeds the tenant its console administrators belong to"
+        );
+    }
+
+    #[test]
+    fn storage_bootstrap_requires_both_halves_of_the_key_pair() {
+        let env = StorageBootstrapEnv::from_lookup(env_map(&[
+            ("SDKWORK_DRIVE_TENCENT_COS_SECRET_ID", "AKIDREAL"),
+            ("SDKWORK_DRIVE_TENCENT_COS_BUCKET", "bucket-1250000000"),
+        ]));
+        assert!(env.tencent_cos_credentials().is_none());
+        assert!(!env.tencent_cos_ready());
+        assert!(env.tencent_cos_secret_key.is_none());
+    }
 
     /// The placeholder must be recognisable *as* a placeholder by the operator who
     /// opens the account in the console. A value that merely happens to be fake is

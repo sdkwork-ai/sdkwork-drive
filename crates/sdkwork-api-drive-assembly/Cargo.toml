@@ -30,6 +30,7 @@ sdkwork-routes-drive-backend-api.workspace = true
 sdkwork-routes-drive-internal-api.workspace = true
 sdkwork-routes-drive-open-api.workspace = true
 sdkwork-routes-storage-backend-api.workspace = true
+tracing.workspace = true
 
 [dev-dependencies]
 sdkwork-drive-test-support.workspace = true

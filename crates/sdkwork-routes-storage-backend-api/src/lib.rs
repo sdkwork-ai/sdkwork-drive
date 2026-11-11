@@ -32,6 +32,10 @@ mod web_bootstrap;
 
 pub use config::{AdminStorageConfig, DriveAdminStorageObjectStoreAdapter};
 pub use http_route_manifest::storage_route_manifest;
+pub use provider_account_defaults::{
+    bootstrap_storage_provider_defaults, bootstrap_storage_provider_defaults_from_env,
+    StorageBootstrapEnv, StorageBootstrapOutcome,
+};
 pub use routes::*;
 pub use state::AdminStorageState;
 pub use web_bootstrap::{
