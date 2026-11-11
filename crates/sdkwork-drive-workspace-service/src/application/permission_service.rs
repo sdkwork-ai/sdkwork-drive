@@ -1,9 +1,11 @@
 use sqlx::PgPool;
+use std::collections::HashMap;
 
 use crate::infrastructure::sql::permission_store::SqlDrivePermissionStore;
 use crate::ports::permission_store::DrivePermissionStore;
 use crate::DriveServiceError;
 
+pub use crate::infrastructure::sql::permission_store::MAX_NODE_ACCESS_BATCH;
 pub use crate::ports::permission_store::{
     CheckDriveNodePermissionCommand, DriveEffectiveNodeAccess, DriveNodePermissionCheck,
     DriveNodePermissionGrant, DriveNodePermissionList, GrantDriveNodePermissionCommand,
@@ -66,6 +68,34 @@ impl SqlDrivePermissionService {
         command: ResolveEffectiveNodeAccessCommand,
     ) -> Result<DriveEffectiveNodeAccess, DriveServiceError> {
         self.store.resolve_effective_node_access(command).await
+    }
+
+    /// Resolve effective access for many nodes in one set-based query.
+    ///
+    /// Use this instead of calling [`Self::resolve_effective_node_access`] in a
+    /// loop when a caller already holds the node ids (the material-save path).
+    /// Each entry equals the single-node answer for that node.
+    ///
+    /// # Contract
+    ///
+    /// * `tenant_id` scopes every read; ids from another tenant are absent.
+    /// * At most [`MAX_NODE_ACCESS_BATCH`] ids per call.
+    /// * An id missing from the result has no resolvable access (deleted node or
+    ///   broken ancestry); treat it as no access.
+    ///
+    /// # Errors
+    ///
+    /// `Validation` for an over-sized batch and `Internal` when the query fails.
+    pub async fn resolve_node_access_batch(
+        &self,
+        tenant_id: &str,
+        node_ids: &[String],
+        subject_type: &str,
+        subject_id: &str,
+    ) -> Result<HashMap<String, DriveEffectiveNodeAccess>, DriveServiceError> {
+        self.store
+            .resolve_node_access_batch(tenant_id, node_ids, subject_type, subject_id)
+            .await
     }
 
     pub async fn is_space_owner(

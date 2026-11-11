@@ -2,7 +2,16 @@ use async_trait::async_trait;
 use sdkwork_drive_contract::api::pagination_cursor::{decode_offset_cursor, encode_offset_cursor};
 use sdkwork_utils_rust::{DEFAULT_LIST_PAGE_SIZE, MAX_LIST_PAGE_SIZE};
 use sqlx::{PgPool, Row};
+use std::collections::HashMap;
 use uuid::Uuid;
+
+/// Upper bound on one batch ACL resolution.
+///
+/// The batch exists to remove an N+1 from material-save paths, which resolve a
+/// handful to a few hundred nodes. A caller that resolves thousands of nodes in
+/// one call is not saving materials; it is enumerating the space and should page.
+/// The bound also keeps the recursive CTE's row count predictable.
+pub const MAX_NODE_ACCESS_BATCH: usize = 1_000;
 
 use crate::ports::permission_store::{
     CheckDriveNodePermissionCommand, DriveEffectiveNodeAccess, DriveNodePermissionCheck,
@@ -82,6 +91,168 @@ impl SqlDrivePermissionStore {
             current = parent_node_id;
         }
         Ok(path)
+    }
+
+    /// Resolve effective node access for many nodes in one set-based query.
+    ///
+    /// The result for each requested node is the same decision
+    /// [`DrivePermissionStore::resolve_effective_node_access`] makes for that
+    /// node: space owner wins over any grant, otherwise the nearest ancestor
+    /// (including the node itself) with an active grant for the subject decides,
+    /// otherwise `none`. Both use the same predicates - active space owner,
+    /// `dr_drive_node_permission` filtered on `lifecycle_status = 'active'`,
+    /// and a recursive walk over `dr_drive_node.parent_node_id` that skips
+    /// `deleted` nodes.
+    ///
+    /// # Contract
+    ///
+    /// * `tenant_id` scopes every row read; a node of another tenant is never
+    ///   returned.
+    /// * `node_ids` must contain at most [`MAX_NODE_ACCESS_BATCH`] entries. Ids
+    ///   are deduplicated.
+    /// * Only nodes that exist, are not `deleted`, and whose ancestry is
+    ///   resolvable are placed in the map. An id absent from the result has no
+    ///   access answer and callers must treat it as no access - the single-node
+    ///   API reports `NotFound` for the same condition.
+    ///
+    /// # Errors
+    ///
+    /// `Validation` when the batch is empty of usable ids or exceeds the bound,
+    /// and `Internal` when the query fails.
+    pub async fn resolve_node_access_batch(
+        &self,
+        tenant_id: &str,
+        node_ids: &[String],
+        subject_type: &str,
+        subject_id: &str,
+    ) -> Result<HashMap<String, DriveEffectiveNodeAccess>, DriveServiceError> {
+        if node_ids.len() > MAX_NODE_ACCESS_BATCH {
+            return Err(DriveServiceError::Validation(format!(
+                "node_ids must contain at most {MAX_NODE_ACCESS_BATCH} items"
+            )));
+        }
+        let mut access_by_node = HashMap::with_capacity(node_ids.len());
+        if node_ids.is_empty() {
+            return Ok(access_by_node);
+        }
+
+        // One recursive walk over all requested nodes at once. `depth` orders the
+        // ancestors so the nearest grant wins, exactly like the per-node loop's
+        // node -> root iteration.
+        let rows = sqlx::query(
+            "WITH RECURSIVE requested(node_id) AS (
+                SELECT DISTINCT CAST(requested_id AS TEXT)
+                FROM unnest($2::text[]) AS requested_id
+             ),
+             ancestry(root_id, node_id, depth) AS (
+                SELECT requested.node_id, requested.node_id, 0
+                FROM requested
+                INNER JOIN dr_drive_node node
+                    ON node.tenant_id = $1
+                   AND node.id = requested.node_id
+                   AND node.lifecycle_status != 'deleted'
+                UNION ALL
+                SELECT ancestry.root_id, CAST(parent.id AS TEXT), ancestry.depth + 1
+                FROM ancestry
+                INNER JOIN dr_drive_node current_node
+                    ON current_node.tenant_id = $1
+                   AND current_node.id = ancestry.node_id
+                   AND current_node.lifecycle_status != 'deleted'
+                INNER JOIN dr_drive_node parent
+                    ON parent.tenant_id = $1
+                   AND parent.id = current_node.parent_node_id
+                   AND parent.lifecycle_status != 'deleted'
+                WHERE ancestry.depth < 256
+             ),
+             nearest_permission AS (
+                SELECT DISTINCT ON (ancestry.root_id)
+                       ancestry.root_id,
+                       ancestry.node_id AS matched_node_id,
+                       ancestry.depth,
+                       permission.id AS permission_id,
+                       permission.role
+                FROM ancestry
+                INNER JOIN dr_drive_node_permission permission
+                    ON permission.tenant_id = $1
+                   AND permission.node_id = ancestry.node_id
+                   AND permission.subject_type = $3
+                   AND permission.subject_id = $4
+                   AND permission.lifecycle_status = 'active'
+                ORDER BY ancestry.root_id, ancestry.depth ASC
+             )
+             SELECT requested.node_id AS requested_node_id,
+                    (owner.space_id IS NOT NULL) AS is_space_owner,
+                    nearest_permission.matched_node_id AS matched_node_id,
+                    nearest_permission.permission_id AS permission_id,
+                    nearest_permission.role AS role
+             FROM requested
+             INNER JOIN dr_drive_node node
+                 ON node.tenant_id = $1
+                AND node.id = requested.node_id
+                AND node.lifecycle_status != 'deleted'
+             LEFT JOIN LATERAL (
+                 SELECT space.id AS space_id
+                 FROM dr_drive_space space
+                 WHERE space.tenant_id = $1
+                   AND space.id = node.space_id
+                   AND space.lifecycle_status = 'active'
+                   AND space.owner_subject_type = $3
+                   AND space.owner_subject_id = $4
+             ) owner ON TRUE
+             LEFT JOIN nearest_permission
+                 ON nearest_permission.root_id = requested.node_id",
+        )
+        .bind(tenant_id)
+        .bind(node_ids.to_vec())
+        .bind(subject_type)
+        .bind(subject_id)
+        .fetch_all(&self.pool)
+        .await
+        .map_err(|error| {
+            DriveServiceError::Internal(format!(
+                "resolve batch dr_drive_node_permission access failed: {error}"
+            ))
+        })?;
+
+        for row in rows {
+            let requested_node_id: String = row.get("requested_node_id");
+            let is_space_owner: bool = row.get("is_space_owner");
+            let matched_node_id: Option<String> = row.get("matched_node_id");
+            let permission_id: Option<String> = row.get("permission_id");
+            let role: Option<String> = row.get("role");
+
+            let access = if is_space_owner {
+                DriveEffectiveNodeAccess {
+                    role: "owner".to_string(),
+                    source: "space_owner".to_string(),
+                    permission_id: None,
+                    inherited: false,
+                    inherited_from_node_id: None,
+                }
+            } else if let Some(role) = role {
+                let inherited = matched_node_id
+                    .as_deref()
+                    .is_some_and(|matched| matched != requested_node_id);
+                DriveEffectiveNodeAccess {
+                    role,
+                    source: "permission".to_string(),
+                    permission_id,
+                    inherited,
+                    inherited_from_node_id: inherited.then(|| matched_node_id).flatten(),
+                }
+            } else {
+                DriveEffectiveNodeAccess {
+                    role: "none".to_string(),
+                    source: "none".to_string(),
+                    permission_id: None,
+                    inherited: false,
+                    inherited_from_node_id: None,
+                }
+            };
+            access_by_node.insert(requested_node_id, access);
+        }
+
+        Ok(access_by_node)
     }
 }
 

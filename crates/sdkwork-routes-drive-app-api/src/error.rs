@@ -2,7 +2,7 @@ use axum::http::StatusCode;
 use axum::Json;
 use sdkwork_drive_http::api_problem::{problem as shared_problem, SdkWorkProblemDetail};
 use sdkwork_drive_observability::error_kinds;
-use sdkwork_drive_storage_contract::{DriveObjectStoreError, DriveObjectStoreErrorKind};
+use sdkwork_drive_storage_contract::DriveObjectStoreError;
 use sdkwork_drive_workspace_service::DriveServiceError;
 
 pub use sdkwork_drive_http::api_problem::SdkWorkResultCode;
@@ -276,15 +276,8 @@ pub fn problem(
 }
 
 pub fn map_object_store_error(error: DriveObjectStoreError) -> DriveServiceError {
-    match error.kind {
-        DriveObjectStoreErrorKind::NotFound => DriveServiceError::NotFound(error.message),
-        DriveObjectStoreErrorKind::InvalidRequest => DriveServiceError::Validation(error.message),
-        DriveObjectStoreErrorKind::Conflict => DriveServiceError::Conflict(error.message),
-        DriveObjectStoreErrorKind::PermissionDenied => {
-            DriveServiceError::PermissionDenied(error.message)
-        }
-        _ => DriveServiceError::Internal(error.message),
-    }
+    // One kind mapping for the HTTP surface and every in-process adapter.
+    sdkwork_drive_workspace_service::ports::upload_multipart_storage::map_object_store_error(error)
 }
 
 pub fn map_object_store_route_error(

@@ -15,12 +15,8 @@ use sdkwork_drive_workspace_service::domain::storage_provider::{
     DriveStorageProvider, DriveStorageProviderKind,
 };
 use sdkwork_drive_workspace_service::infrastructure::sql::storage_object_store::SqlStorageObjectStore;
-use sdkwork_drive_workspace_service::infrastructure::sql::storage_provider_store::SqlStorageProviderStore;
 use sdkwork_drive_workspace_service::ports::storage_object_store::{
     DownloadSignCommand, DriveDownloadSigner, SignedDownloadPayload,
-};
-use sdkwork_drive_workspace_service::ports::storage_provider_store::{
-    DriveStorageProviderLookup, DriveStorageProviderStore,
 };
 use sdkwork_drive_workspace_service::DriveServiceError;
 use sqlx::PgPool;
@@ -192,52 +188,6 @@ pub(crate) struct ActiveStorageProviderRecord {
     pub(crate) tenant_id: String,
 }
 
-/// Resolve the active provider a bucket name refers to for one tenant.
-///
-/// Delegates to the canonical tenant-scoped resolver rather than carrying a
-/// local `SELECT ... LIMIT 1`. Two defects used to live in that local query:
-/// it filtered on `bucket` without `tenant_id` (buckets are a storage-level
-/// namespace, so a foreign tenant's provider could be picked up), and it broke
-/// ties on `updated_at DESC` (a provider rename could silently repoint writes).
-pub(crate) async fn find_active_storage_provider_by_bucket(
-    pool: &PgPool,
-    tenant_id: &str,
-    bucket: &str,
-) -> Result<Option<ActiveStorageProviderRecord>, DriveServiceError> {
-    let store = SqlStorageProviderStore::new(pool.clone());
-    match store
-        .find_active_storage_provider_by_bucket(tenant_id, bucket)
-        .await?
-    {
-        DriveStorageProviderLookup::Found(provider) => Ok(Some(
-            ActiveStorageProviderRecord::from_domain_provider(provider),
-        )),
-        DriveStorageProviderLookup::Missing => Ok(None),
-        DriveStorageProviderLookup::Ambiguous(provider_ids) => {
-            Err(ambiguous_provider_error(tenant_id, bucket, &provider_ids))
-        }
-    }
-}
-
-/// Report a `(tenant, bucket)` pair that resolves to more than one provider.
-///
-/// Failing loudly is the point: silently choosing one would publish objects
-/// under a key that another active provider also claims, producing two copies
-/// of the same logical object and a read that depends on which row happened to
-/// sort first.
-pub(crate) fn ambiguous_provider_error(
-    tenant_id: &str,
-    bucket: &str,
-    provider_ids: &[String],
-) -> DriveServiceError {
-    DriveServiceError::Conflict(format!(
-        "bucket {bucket} of tenant {tenant_id} is addressed by {} active storage providers ({}); \
-         disable or repoint all but one before writing to this bucket",
-        provider_ids.len(),
-        provider_ids.join(", ")
-    ))
-}
-
 pub(crate) async fn find_storage_provider_by_id(
     pool: &PgPool,
     provider_id: &str,
@@ -291,27 +241,6 @@ fn map_active_provider_row(
 }
 
 impl ActiveStorageProviderRecord {
-    /// Project a domain provider onto this app-local record.
-    ///
-    /// The canonical resolver returns the domain type; the app surface keeps
-    /// its own record so the row decoders stay in one place, so the two have to
-    /// meet here instead of every caller re-deriving the fields.
-    pub(crate) fn from_domain_provider(provider: DriveStorageProvider) -> Self {
-        Self {
-            id: provider.id,
-            provider_kind: provider.provider_kind,
-            endpoint_url: provider.endpoint_url,
-            region: provider.region,
-            bucket: provider.bucket,
-            status: provider.status,
-            path_style: provider.path_style,
-            strict_tls: provider.strict_tls,
-            credential_ref: provider.credential_ref,
-            provider_account_id: provider.provider_account_id,
-            tenant_id: provider.tenant_id,
-        }
-    }
-
     /// Project the record into the domain provider the shared runtime consumes.
     ///
     /// The runtime keys its adapter cache and its location check on provider

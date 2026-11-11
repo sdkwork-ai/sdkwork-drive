@@ -1,5 +1,6 @@
 mod provider_store;
 mod runtime;
+mod upload_storage;
 
 pub use provider_store::{
     build_local_store_for_provider, build_store, ensure_provider_state_allows,
@@ -8,3 +9,7 @@ pub use provider_store::{
     ResolvedProviderCredentials,
 };
 pub use runtime::DriveObjectStoreRuntime;
+/// In-process `DriveUploadMultipartStorage` adapter for the upload-session
+/// service; siblings that finalise Drive uploads use this instead of writing
+/// their own provider resolution.
+pub use upload_storage::DriveObjectRuntimeUploadStorage;

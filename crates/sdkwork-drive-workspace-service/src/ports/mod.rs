@@ -19,6 +19,8 @@ pub mod storage_migration_store;
 pub mod storage_object_store;
 pub mod storage_provider_kind_store;
 pub mod storage_provider_store;
+pub mod stored_version_store;
+pub mod upload_multipart_storage;
 pub mod upload_session_store;
 pub mod uploader_store;
 pub mod website_publishing_maintenance;

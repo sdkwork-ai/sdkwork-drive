@@ -591,7 +591,7 @@ pub(crate) async fn create_file(
     )
     .await?;
 
-    let upload_session_state = upload_session_state_as_str(&created.state).to_string();
+    let upload_session_state = created.state.as_str().to_string();
     let node = present_drive_node(
         &state.pool,
         &tenant_id,

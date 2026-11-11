@@ -1,50 +1,185 @@
 use crate::dto::*;
-use crate::error::{
-    internal_sql_error, map_object_store_route_error, map_service_error, not_found_problem,
-    problem, ProblemDetail, SdkWorkResultCode,
-};
-use crate::hashing::sha256_hex;
+use crate::error::{map_service_error, not_found_problem, ProblemDetail};
 use crate::ids::next_drive_id;
 use crate::object_store::{
-    build_s3_object_store_for_provider, find_active_storage_provider_by_bucket,
-    find_storage_provider_by_id, missing_signing_provider_error, require_active_storage_provider,
-    unsupported_signing_provider_error,
+    build_s3_object_store_for_provider, find_storage_provider_by_id, missing_signing_provider_error,
+    require_active_storage_provider, unsupported_signing_provider_error,
 };
 use crate::state::AppState;
-use crate::storage_keys::*;
 use crate::uploader::map_uploader_upload_item_row;
+use async_trait::async_trait;
 use axum::http::StatusCode;
 use axum::Json;
 use sdkwork_drive_storage_contract::{
     AbortMultipartUploadRequest, CompleteMultipartUploadRequest, CompletedMultipartPart,
     CreateMultipartUploadRequest, DeleteObjectRequest, DriveObjectLocator,
 };
-use sdkwork_drive_workspace_service::application::storage_key_service::{
-    BuildStorageObjectKeyCommand, DriveStorageKeyService,
+use sdkwork_drive_workspace_service::application::storage_target_service::{
+    resolve_storage_target as resolve_workspace_storage_target, DriveStorageTarget,
+    ResolveDriveStorageTargetCommand,
 };
-use sdkwork_drive_workspace_service::domain::upload::DriveUploadSessionState;
+use sdkwork_drive_workspace_service::application::upload_session_rules::{
+    ensure_upload_session_not_expired as ensure_session_not_expired,
+    validate_mutable_upload_session as validate_session_mutable,
+};
 use sdkwork_drive_workspace_service::domain::uploader::DriveUploadItem;
+use sdkwork_drive_workspace_service::infrastructure::sql::storage_object_store::{
+    next_storage_object_version_no as next_workspace_storage_object_version_no,
+    read_node_content_state as read_workspace_node_content_state,
+};
 use sdkwork_drive_workspace_service::infrastructure::sql::upload_query_columns::DRIVE_UPLOAD_ITEM_SELECT_COLUMNS;
-use sqlx::PgConnection;
+use sdkwork_drive_workspace_service::infrastructure::sql::upload_session_store::SqlUploadSessionStore;
+use sdkwork_drive_workspace_service::ports::upload_multipart_storage::{
+    AbortDriveMultipartUploadCommand, CompleteDriveMultipartUploadCommand,
+    CreateDriveMultipartUploadCommand, DeleteDriveStoredObjectCommand,
+    DriveUploadMultipartStorage,
+};
+use sdkwork_drive_workspace_service::ports::upload_session_store::DriveUploadSessionStore;
+use sdkwork_drive_workspace_service::DriveServiceError;
 use sqlx::PgPool;
-use sqlx::Row;
 use std::collections::BTreeMap;
+
+/// Multipart-storage adapter over the shared object-store runtime.
+///
+/// The workspace service owns the upload-session state machine but must not
+/// depend on provider credentials or the S3 SDK; this adapter is the surface-side
+/// half, resolving each provider through `DriveObjectStoreRuntime` (including the
+/// account-center credential path) and mapping provider errors onto the same
+/// service error kinds the HTTP route used to produce.
+#[derive(Clone, Debug)]
+pub(crate) struct AppUploadMultipartStorage {
+    state: AppState,
+}
+
+impl AppUploadMultipartStorage {
+    pub(crate) fn new(state: AppState) -> Self {
+        Self { state }
+    }
+
+    async fn object_store_for(
+        &self,
+        storage_provider_id: &str,
+        bucket: &str,
+    ) -> Result<std::sync::Arc<dyn sdkwork_drive_storage_contract::DriveObjectStore>, DriveServiceError>
+    {
+        let provider = find_storage_provider_by_id(&self.state.pool, storage_provider_id).await?;
+        let Some(provider) = provider else {
+            return Err(missing_signing_provider_error(bucket));
+        };
+        let provider = require_active_storage_provider(provider, bucket)?;
+        let Some(object_store) =
+            build_s3_object_store_for_provider(&self.state, &provider.to_domain_provider()).await?
+        else {
+            return Err(unsupported_signing_provider_error(bucket));
+        };
+        Ok(object_store)
+    }
+}
+
+#[async_trait]
+impl DriveUploadMultipartStorage for AppUploadMultipartStorage {
+    async fn create_multipart_upload(
+        &self,
+        command: CreateDriveMultipartUploadCommand,
+    ) -> Result<String, DriveServiceError> {
+        let object_store = self
+            .object_store_for(&command.storage_provider_id, &command.bucket)
+            .await?;
+        let created = object_store
+            .create_multipart_upload(CreateMultipartUploadRequest {
+                locator: DriveObjectLocator {
+                    bucket: command.bucket,
+                    object_key: command.object_key,
+                },
+                content_type: None,
+                metadata: BTreeMap::new(),
+                checksum_sha256_hex: None,
+            })
+            .await
+            .map_err(map_object_store_error_to_service)?;
+        Ok(created.upload_id)
+    }
+
+    async fn complete_multipart_upload(
+        &self,
+        command: CompleteDriveMultipartUploadCommand,
+    ) -> Result<(), DriveServiceError> {
+        let object_store = self
+            .object_store_for(&command.storage_provider_id, &command.bucket)
+            .await?;
+        object_store
+            .complete_multipart_upload(CompleteMultipartUploadRequest {
+                locator: DriveObjectLocator {
+                    bucket: command.bucket,
+                    object_key: command.object_key,
+                },
+                upload_id: command.storage_upload_id,
+                parts: command
+                    .parts
+                    .into_iter()
+                    .map(|part| CompletedMultipartPart {
+                        part_number: part.part_no,
+                        etag: part.etag.trim().to_string(),
+                    })
+                    .collect(),
+            })
+            .await
+            .map_err(map_object_store_error_to_service)?;
+        Ok(())
+    }
+
+    async fn abort_multipart_upload(
+        &self,
+        command: AbortDriveMultipartUploadCommand,
+    ) -> Result<(), DriveServiceError> {
+        let object_store = self
+            .object_store_for(&command.storage_provider_id, &command.bucket)
+            .await?;
+        object_store
+            .abort_multipart_upload(AbortMultipartUploadRequest {
+                locator: DriveObjectLocator {
+                    bucket: command.bucket,
+                    object_key: command.object_key,
+                },
+                upload_id: command.storage_upload_id,
+            })
+            .await
+            .map_err(map_object_store_error_to_service)?;
+        Ok(())
+    }
+
+    async fn delete_object(
+        &self,
+        command: DeleteDriveStoredObjectCommand,
+    ) -> Result<bool, DriveServiceError> {
+        let object_store = self
+            .object_store_for(&command.storage_provider_id, &command.bucket)
+            .await?;
+        object_store
+            .delete_object(DeleteObjectRequest {
+                locator: DriveObjectLocator {
+                    bucket: command.bucket,
+                    object_key: command.object_key,
+                },
+            })
+            .await
+            .map_err(map_object_store_error_to_service)?;
+        Ok(true)
+    }
+}
+
+fn map_object_store_error_to_service(
+    error: sdkwork_drive_storage_contract::DriveObjectStoreError,
+) -> DriveServiceError {
+    crate::error::map_object_store_error(error)
+}
 
 /// Resolve where a new object version should be written.
 ///
-/// Three routing inputs are honoured, in decreasing priority:
-///
-/// 1. `requested_provider_id` - a business that knows which provider it wants
-///    (for example a deployment pipeline pinning artifacts to a dedicated
-///    bucket). It is verified to belong to the caller's tenant and to be
-///    `active` before use, so naming a provider is not a way to reach across
-///    tenants or write into a retired one.
-/// 2. `requested_bucket` - resolves through the tenant-scoped bucket lookup.
-/// 3. Otherwise the provider bound to the space / space type / tenant.
-///
-/// The provider chosen here is persisted onto the storage object, which is what
-/// keeps the object readable after the provider is later renamed, disabled or
-/// swapped: reads re-resolve from the stored locator instead of guessing.
+/// Delegates to the workspace service so the app surface, the in-process
+/// upload-session service and any sibling module share one tenant-scoped binding
+/// chain. Errors keep their service kinds, which the route maps to the same HTTP
+/// statuses as before.
 pub(crate) async fn resolve_storage_target(
     pool: &PgPool,
     tenant_id: &str,
@@ -55,473 +190,62 @@ pub(crate) async fn resolve_storage_target(
     object_id: &str,
     version_no: i64,
 ) -> Result<StorageTarget, (StatusCode, Json<ProblemDetail>)> {
-    let default_target = if let Some(provider_id) = requested_provider_id
-        .map(str::trim)
-        .filter(|value| !value.is_empty())
-    {
-        resolve_explicit_provider_target(pool, tenant_id, space_id, provider_id).await?
-    } else {
-        match requested_bucket
-            .map(str::trim)
-            .filter(|value| !value.is_empty())
-        {
-            Some(bucket) => DefaultStorageProviderTarget {
-                provider_id: find_active_storage_provider_by_bucket(pool, tenant_id, bucket)
-                    .await
-                    .map_err(map_service_error)?
-                    .ok_or_else(|| map_service_error(missing_signing_provider_error(bucket)))?
-                    .id,
-                bucket: bucket.to_string(),
-                storage_root_prefix: default_storage_root_prefix(tenant_id, Some(space_id)),
-            },
-            None => resolve_default_provider_target(pool, tenant_id, space_id).await?,
-        }
-    };
-    let standard_object_key =
-        DriveStorageKeyService::build_object_key(BuildStorageObjectKeyCommand {
+    let target: DriveStorageTarget = resolve_workspace_storage_target(
+        pool,
+        ResolveDriveStorageTargetCommand {
             tenant_id,
             space_id,
+            requested_provider_id,
+            requested_bucket,
             node_id,
-            version_no,
             object_id,
-        })
-        .map_err(|message| {
-            problem(
-                StatusCode::BAD_REQUEST,
-                "validation failed",
-                message,
-                SdkWorkResultCode::ValidationError,
-            )
-        })?;
-    let object_key =
-        join_storage_root_prefix(&default_target.storage_root_prefix, &standard_object_key)?;
+            version_no,
+        },
+    )
+    .await
+    .map_err(map_service_error)?;
     Ok(StorageTarget {
-        provider_id: default_target.provider_id,
-        bucket: default_target.bucket,
-        object_key,
+        provider_id: target.provider_id,
+        bucket: target.bucket,
+        object_key: target.object_key,
     })
 }
+
 pub(crate) async fn next_storage_object_version_no(
     pool: &PgPool,
     tenant_id: &str,
     node_id: &str,
 ) -> Result<i64, (StatusCode, Json<ProblemDetail>)> {
-    sqlx::query_scalar(
-        "SELECT COALESCE(MAX(version_no), 0) + 1
-         FROM dr_drive_storage_object
-         WHERE tenant_id=$1 AND node_id=$2",
-    )
-    .bind(tenant_id)
-    .bind(node_id)
-    .fetch_one(pool)
-    .await
-    .map_err(internal_sql_error(
-        "compute dr_drive_storage_object version failed",
-    ))
-}
-/// Resolve a provider the caller named explicitly on the write path.
-///
-/// Naming a provider is the strongest form of "business-specified provider", so
-/// it bypasses the binding chain - but not the tenant boundary. A provider that
-/// exists under a different tenant is reported as "not found" rather than
-/// "forbidden": confirming existence across tenants would itself be a leak.
-/// A provider that exists but is disabled or deleted is rejected here, because
-/// the only reason to name one on the write path is to write to it.
-async fn resolve_explicit_provider_target(
-    pool: &PgPool,
-    tenant_id: &str,
-    space_id: &str,
-    provider_id: &str,
-) -> Result<DefaultStorageProviderTarget, (StatusCode, Json<ProblemDetail>)> {
-    let provider = find_storage_provider_by_id(pool, provider_id)
+    next_workspace_storage_object_version_no(pool, tenant_id, node_id)
         .await
-        .map_err(map_service_error)?
-        .filter(|provider| provider.tenant_id == tenant_id)
-        .ok_or_else(|| not_found_problem("storage provider not found"))?;
-    if provider.status != "active" {
-        return Err(map_service_error(missing_signing_provider_error(
-            &provider.bucket,
-        )));
-    }
-    Ok(DefaultStorageProviderTarget {
-        provider_id: provider.id,
-        bucket: provider.bucket,
-        storage_root_prefix: default_storage_root_prefix(tenant_id, Some(space_id)),
-    })
+        .map_err(map_service_error)
 }
 
-pub(crate) async fn resolve_default_provider_target(
-    pool: &PgPool,
-    tenant_id: &str,
-    space_id: &str,
-) -> Result<DefaultStorageProviderTarget, (StatusCode, Json<ProblemDetail>)> {
-    let row = sqlx::query(
-        "SELECT provider.id AS provider_id, provider.bucket, binding.storage_root_prefix
-         FROM dr_drive_storage_provider_binding binding
-         INNER JOIN dr_drive_storage_provider provider ON provider.id = binding.provider_id
-         WHERE binding.tenant_id=$1
-           AND binding.space_id=$2
-           AND binding.purpose='primary'
-           AND binding.lifecycle_status='active'
-           AND provider.status='active'
-         LIMIT 1",
-    )
-    .bind(tenant_id)
-    .bind(space_id)
-    .fetch_optional(pool)
-    .await
-    .map_err(internal_sql_error(
-        "resolve space dr_drive_storage_provider_binding failed",
-    ))?;
-    if let Some(row) = row {
-        return Ok(DefaultStorageProviderTarget {
-            provider_id: row.get("provider_id"),
-            bucket: row.get("bucket"),
-            storage_root_prefix: row.get("storage_root_prefix"),
-        });
-    }
-
-    let row = sqlx::query(
-        "SELECT provider.id AS provider_id, provider.bucket, binding.storage_root_prefix
-         FROM dr_drive_storage_provider_binding binding
-         INNER JOIN dr_drive_storage_provider provider ON provider.id = binding.provider_id
-         INNER JOIN dr_drive_space space ON space.tenant_id = binding.tenant_id
-           AND space.id = $2
-           AND space.lifecycle_status = 'active'
-         WHERE binding.tenant_id=$1
-           AND binding.binding_scope='space_type'
-           AND binding.purpose = space.space_type
-           AND binding.lifecycle_status='active'
-           AND provider.status='active'
-         LIMIT 1",
-    )
-    .bind(tenant_id)
-    .bind(space_id)
-    .fetch_optional(pool)
-    .await
-    .map_err(internal_sql_error(
-        "resolve space_type dr_drive_storage_provider_binding failed",
-    ))?;
-    if let Some(row) = row {
-        return Ok(DefaultStorageProviderTarget {
-            provider_id: row.get("provider_id"),
-            bucket: row.get("bucket"),
-            storage_root_prefix: row.get("storage_root_prefix"),
-        });
-    }
-
-    let row = sqlx::query(
-        "SELECT provider.id AS provider_id, provider.bucket, binding.storage_root_prefix
-         FROM dr_drive_storage_provider_binding binding
-         INNER JOIN dr_drive_storage_provider provider ON provider.id = binding.provider_id
-         WHERE binding.tenant_id=$1
-           AND binding.space_id IS NULL
-           AND binding.purpose='primary'
-           AND binding.lifecycle_status='active'
-           AND provider.status='active'
-         LIMIT 1",
-    )
-    .bind(tenant_id)
-    .fetch_optional(pool)
-    .await
-    .map_err(internal_sql_error(
-        "resolve tenant dr_drive_storage_provider_binding failed",
-    ))?;
-    if let Some(row) = row {
-        return Ok(DefaultStorageProviderTarget {
-            provider_id: row.get("provider_id"),
-            bucket: row.get("bucket"),
-            storage_root_prefix: row.get("storage_root_prefix"),
-        });
-    }
-    Err(problem(
-        StatusCode::BAD_REQUEST,
-        "validation failed",
-        "bucket is required when no default storage provider binding exists",
-        SdkWorkResultCode::ValidationError,
-    ))
-}
 pub(crate) async fn read_node_content_state(
     pool: &PgPool,
     tenant_id: &str,
     node_id: &str,
 ) -> Result<String, (StatusCode, Json<ProblemDetail>)> {
-    let value = sqlx::query_scalar(
-        "SELECT content_state
-         FROM dr_drive_node
-         WHERE tenant_id=$1 AND id=$2 AND lifecycle_status != 'deleted'",
-    )
-    .bind(tenant_id)
-    .bind(node_id)
-    .fetch_optional(pool)
-    .await
-    .map_err(internal_sql_error(
-        "read dr_drive_node content_state failed",
-    ))?;
-    value.ok_or_else(|| not_found_problem("node not found"))
+    read_workspace_node_content_state(pool, tenant_id, node_id)
+        .await
+        .map_err(map_service_error)
 }
-pub(crate) async fn insert_node_version_for_storage_object<'e, E>(
-    executor: E,
-    storage: NodeVersionStorageMetadata<'_>,
-    upload_item: Option<&DriveUploadItem>,
-    operator_id: &str,
-) -> Result<String, (StatusCode, Json<ProblemDetail>)>
-where
-    E: sqlx::Executor<'e, Database = sqlx::Postgres>,
-{
-    insert_node_version_metadata(
-        executor,
-        storage,
-        NodeVersionAttribution {
-            version_kind: "auto",
-            change_source: if upload_item.is_some() {
-                "uploader"
-            } else {
-                "app_api"
-            },
-            change_summary: None,
-            app_id: upload_item.map(|item| item.app_id.as_str()),
-            app_resource_type: upload_item.map(|item| item.app_resource_type.as_str()),
-            app_resource_id: upload_item.map(|item| item.app_resource_id.as_str()),
-            scene: upload_item.and_then(|item| item.scene.as_deref()),
-            source: upload_item.and_then(|item| item.source.as_deref()),
-        },
-        operator_id,
-    )
-    .await
-}
-pub(crate) async fn insert_node_version_metadata<'e, E>(
-    executor: E,
-    metadata: NodeVersionStorageMetadata<'_>,
-    attribution: NodeVersionAttribution<'_>,
-    operator_id: &str,
-) -> Result<String, (StatusCode, Json<ProblemDetail>)>
-where
-    E: sqlx::Executor<'e, Database = sqlx::Postgres>,
-{
-    let version_id = next_drive_id("ver");
-    sqlx::query(
-        "INSERT INTO dr_drive_node_version (
-            id, tenant_id, space_id, node_id, version_no, storage_object_id,
-            content_type, content_length, checksum_sha256_hex, version_kind,
-            version_label, change_source, change_summary, restored_from_version_id,
-            app_id, app_resource_type, app_resource_id, scene, source,
-            lifecycle_status, created_by, updated_by
-         ) VALUES (
-            $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
-            NULL, $11, $12, NULL, $13, $14, $15, $16, $17,
-            'active', $18, $18
-         )",
-    )
-    .bind(&version_id)
-    .bind(metadata.tenant_id)
-    .bind(metadata.space_id)
-    .bind(metadata.node_id)
-    .bind(metadata.version_no)
-    .bind(metadata.storage_object_id)
-    .bind(metadata.content_type)
-    .bind(metadata.content_length)
-    .bind(metadata.checksum_sha256_hex)
-    .bind(attribution.version_kind)
-    .bind(attribution.change_source)
-    .bind(attribution.change_summary)
-    .bind(attribution.app_id)
-    .bind(attribution.app_resource_type)
-    .bind(attribution.app_resource_id)
-    .bind(attribution.scene)
-    .bind(attribution.source)
-    .bind(operator_id)
-    .execute(executor)
-    .await
-    .map_err(internal_sql_error("insert dr_drive_node_version failed"))?;
-    Ok(version_id)
-}
-pub(crate) async fn ensure_upload_session_id_available(
-    pool: &PgPool,
-    upload_session_id: &str,
-) -> Result<(), (StatusCode, Json<ProblemDetail>)> {
-    let count: i64 = sqlx::query_scalar(
-        "SELECT COUNT(1)
-         FROM dr_drive_upload_session
-         WHERE id=$1",
-    )
-    .bind(upload_session_id)
-    .fetch_one(pool)
-    .await
-    .map_err(internal_sql_error(
-        "check dr_drive_upload_session id conflict failed",
-    ))?;
-    if count > 0 {
-        return Err(problem(
-            StatusCode::CONFLICT,
-            "conflict",
-            "upload session id already exists",
-            SdkWorkResultCode::Conflict,
-        ));
-    }
-    Ok(())
-}
-pub(crate) async fn find_upload_session(
-    pool: &PgPool,
-    tenant_id: &str,
-    upload_session_id: &str,
-) -> Result<UploadSessionRecord, (StatusCode, Json<ProblemDetail>)> {
-    let row = sqlx::query(
-        "SELECT id, tenant_id, space_id, node_id, bucket, object_key,
-                idempotency_key, storage_provider_id, storage_upload_id, state,
-                expires_at_epoch_ms, version
-         FROM dr_drive_upload_session
-         WHERE tenant_id=$1 AND id=$2",
-    )
-    .bind(tenant_id)
-    .bind(upload_session_id)
-    .fetch_optional(pool)
-    .await
-    .map_err(internal_sql_error("find dr_drive_upload_session failed"))?;
-    let Some(row) = row else {
-        return Err(not_found_problem("upload session not found"));
-    };
-    Ok(map_upload_session_row(&row))
-}
-pub(crate) async fn find_upload_session_by_idempotency(
-    pool: &PgPool,
-    tenant_id: &str,
-    space_id: &str,
-    node_id: &str,
-    idempotency_key: &str,
-) -> Result<Option<UploadSessionRecord>, (StatusCode, Json<ProblemDetail>)> {
-    let row = sqlx::query(
-        "SELECT id, tenant_id, space_id, node_id, bucket, object_key,
-                idempotency_key, storage_provider_id, storage_upload_id, state,
-                expires_at_epoch_ms, version
-         FROM dr_drive_upload_session
-         WHERE tenant_id=$1
-           AND space_id=$2
-           AND node_id=$3
-           AND idempotency_key=$4
-         LIMIT 1",
-    )
-    .bind(tenant_id)
-    .bind(space_id)
-    .bind(node_id)
-    .bind(idempotency_key)
-    .fetch_optional(pool)
-    .await
-    .map_err(internal_sql_error(
-        "find dr_drive_upload_session by idempotency failed",
-    ))?;
-    Ok(row.as_ref().map(map_upload_session_row))
-}
-pub(crate) fn map_upload_session_row(row: &sqlx::postgres::PgRow) -> UploadSessionRecord {
-    UploadSessionRecord {
-        id: row.get("id"),
-        tenant_id: row.get("tenant_id"),
-        space_id: row.get("space_id"),
-        node_id: row.get("node_id"),
-        bucket: row.get("bucket"),
-        object_key: row.get("object_key"),
-        idempotency_key: row.get("idempotency_key"),
-        storage_provider_id: row.get("storage_provider_id"),
-        storage_upload_id: row.get("storage_upload_id"),
-        state: row.get("state"),
-        expires_at_epoch_ms: row.get("expires_at_epoch_ms"),
-        version: row.get("version"),
-    }
-}
+
+/// Compatibility wrapper that presents the record DTO for callers that build
+/// signing commands from it.
 pub(crate) async fn initiate_storage_multipart_upload(
     state: &AppState,
     target: &StorageTarget,
 ) -> Result<CreatedStorageMultipartUpload, (StatusCode, Json<ProblemDetail>)> {
-    let provider = find_storage_provider_by_id(&state.pool, &target.provider_id)
-        .await
-        .map_err(map_service_error)?;
-    let Some(provider) = provider else {
-        return Err(map_service_error(missing_signing_provider_error(
-            &target.bucket,
-        )));
-    };
-    let provider =
-        require_active_storage_provider(provider, &target.bucket).map_err(map_service_error)?;
-    let Some(object_store) =
-        build_s3_object_store_for_provider(state, &provider.to_domain_provider())
-            .await
-            .map_err(map_service_error)?
-    else {
-        return Err(map_service_error(unsupported_signing_provider_error(
-            &target.bucket,
-        )));
-    };
-    let created = object_store
-        .create_multipart_upload(CreateMultipartUploadRequest {
-            locator: DriveObjectLocator {
-                bucket: target.bucket.clone(),
-                object_key: target.object_key.clone(),
-            },
-            content_type: None,
-            metadata: BTreeMap::new(),
-            checksum_sha256_hex: None,
+    let upload_id = AppUploadMultipartStorage::new(state.clone())
+        .create_multipart_upload(CreateDriveMultipartUploadCommand {
+            storage_provider_id: target.provider_id.clone(),
+            bucket: target.bucket.clone(),
+            object_key: target.object_key.clone(),
         })
         .await
-        .map_err(map_object_store_route_error)?;
-    Ok(CreatedStorageMultipartUpload {
-        upload_id: created.upload_id,
-    })
-}
-pub(crate) async fn complete_storage_multipart_upload(
-    state: &AppState,
-    upload_session: &UploadSessionRecord,
-    parts: &[CompletedUploadPartRequest],
-) -> Result<(), (StatusCode, Json<ProblemDetail>)> {
-    let provider = find_storage_provider_by_id(&state.pool, &upload_session.storage_provider_id)
-        .await
         .map_err(map_service_error)?;
-    let Some(provider) = provider else {
-        return Err(map_service_error(missing_signing_provider_error(
-            &upload_session.bucket,
-        )));
-    };
-    let provider = require_active_storage_provider(provider, &upload_session.bucket)
-        .map_err(map_service_error)?;
-    let Some(object_store) =
-        build_s3_object_store_for_provider(state, &provider.to_domain_provider())
-            .await
-            .map_err(map_service_error)?
-    else {
-        return Err(map_service_error(unsupported_signing_provider_error(
-            &upload_session.bucket,
-        )));
-    };
-    object_store
-        .complete_multipart_upload(CompleteMultipartUploadRequest {
-            locator: DriveObjectLocator {
-                bucket: upload_session.bucket.clone(),
-                object_key: upload_session.object_key.clone(),
-            },
-            upload_id: upload_session.storage_upload_id.clone(),
-            parts: parts
-                .iter()
-                .map(|part| CompletedMultipartPart {
-                    part_number: part.part_no,
-                    etag: part.etag.trim().to_string(),
-                })
-                .collect(),
-        })
-        .await
-        .map_err(map_object_store_route_error)?;
-    Ok(())
-}
-pub(crate) async fn abort_storage_multipart_upload(
-    state: &AppState,
-    upload_session: &UploadSessionRecord,
-) -> Result<(), (StatusCode, Json<ProblemDetail>)> {
-    abort_storage_multipart_upload_by_locator(
-        state,
-        &upload_session.storage_provider_id,
-        &upload_session.bucket,
-        &upload_session.object_key,
-        &upload_session.storage_upload_id,
-    )
-    .await
+    Ok(CreatedStorageMultipartUpload { upload_id })
 }
 
 pub(crate) async fn compensate_created_storage_multipart_upload(
@@ -581,56 +305,23 @@ async fn abort_storage_multipart_upload_by_locator(
     object_key: &str,
     storage_upload_id: &str,
 ) -> Result<(), (StatusCode, Json<ProblemDetail>)> {
-    let provider = find_storage_provider_by_id(&state.pool, storage_provider_id)
-        .await
-        .map_err(map_service_error)?;
-    let Some(provider) = provider else {
-        return Err(map_service_error(missing_signing_provider_error(bucket)));
-    };
-    let provider = require_active_storage_provider(provider, bucket).map_err(map_service_error)?;
-    let Some(object_store) =
-        build_s3_object_store_for_provider(state, &provider.to_domain_provider())
-            .await
-            .map_err(map_service_error)?
-    else {
-        return Err(map_service_error(unsupported_signing_provider_error(
-            bucket,
-        )));
-    };
-    object_store
-        .abort_multipart_upload(AbortMultipartUploadRequest {
-            locator: DriveObjectLocator {
-                bucket: bucket.to_string(),
-                object_key: object_key.to_string(),
-            },
-            upload_id: storage_upload_id.to_string(),
+    AppUploadMultipartStorage::new(state.clone())
+        .abort_multipart_upload(AbortDriveMultipartUploadCommand {
+            storage_provider_id: storage_provider_id.to_string(),
+            bucket: bucket.to_string(),
+            object_key: object_key.to_string(),
+            storage_upload_id: storage_upload_id.to_string(),
         })
         .await
-        .map_err(map_object_store_route_error)?;
-    Ok(())
+        .map_err(map_service_error)
 }
+
 pub(crate) fn validate_mutable_upload_session(
     upload_session: &UploadSessionRecord,
 ) -> Result<(), (StatusCode, Json<ProblemDetail>)> {
-    match upload_session.state.as_str() {
-        "created" | "uploading" => Ok(()),
-        "completing" | "completed" | "aborted" | "expired" => Err(problem(
-            StatusCode::CONFLICT,
-            "conflict",
-            format!(
-                "upload session cannot be modified from {} state",
-                upload_session.state
-            ),
-            SdkWorkResultCode::Conflict,
-        )),
-        _ => Err(problem(
-            StatusCode::BAD_REQUEST,
-            "validation failed",
-            "upload session state is invalid",
-            SdkWorkResultCode::ValidationError,
-        )),
-    }
+    validate_session_mutable(upload_session.state.as_str()).map_err(map_service_error)
 }
+
 /// Rejects an upload session whose deadline has passed even though the maintenance
 /// sweeper has not flagged it as `expired` yet.
 ///
@@ -642,24 +333,14 @@ pub(crate) fn ensure_upload_session_not_expired(
     upload_session: &UploadSessionRecord,
     now_epoch_ms: i64,
 ) -> Result<(), (StatusCode, Json<ProblemDetail>)> {
-    if upload_session.expires_at_epoch_ms <= now_epoch_ms {
-        return Err(problem(
-            StatusCode::CONFLICT,
-            "conflict",
-            "upload session has expired",
-            SdkWorkResultCode::Conflict,
-        ));
-    }
-    Ok(())
+    ensure_session_not_expired(upload_session.expires_at_epoch_ms, now_epoch_ms)
+        .map_err(map_service_error)
 }
 
 /// Moves an upload session back to `uploading` while presigning a part.
 ///
-/// [`update_upload_session_state`] writes unconditionally, so the presign flow --
-/// which reads the session first and updates it afterwards -- could revert a session
-/// that was concurrently completed, aborted, or expired back to `uploading`, and the
-/// already published storage object would then be re-completed against a dead
-/// multipart upload. This variant guards both the source state and the deadline.
+/// The guarded update lives in the session store so a presign flow cannot revert
+/// a concurrently completed, aborted or expired session.
 pub(crate) async fn mark_upload_session_uploading(
     pool: &PgPool,
     tenant_id: &str,
@@ -667,418 +348,49 @@ pub(crate) async fn mark_upload_session_uploading(
     operator_id: &str,
     now_epoch_ms: i64,
 ) -> Result<(), (StatusCode, Json<ProblemDetail>)> {
-    let affected = sqlx::query(
-        "UPDATE dr_drive_upload_session
-         SET state='uploading', updated_by=$1, updated_at=CURRENT_TIMESTAMP, version=version + 1
-         WHERE tenant_id=$2
-           AND id=$3
-           AND state IN ('created', 'uploading')
-           AND expires_at_epoch_ms > $4",
-    )
-    .bind(operator_id)
-    .bind(tenant_id)
-    .bind(upload_session_id)
-    .bind(now_epoch_ms)
-    .execute(pool)
-    .await
-    .map_err(internal_sql_error(
-        "mark dr_drive_upload_session uploading failed",
-    ))?
-    .rows_affected();
-    if affected == 0 {
-        return Err(problem(
-            StatusCode::CONFLICT,
-            "conflict",
-            "upload session is no longer mutable",
-            SdkWorkResultCode::Conflict,
-        ));
-    }
-    Ok(())
+    SqlUploadSessionStore::new(pool.clone())
+        .mark_uploading(tenant_id, upload_session_id, operator_id, now_epoch_ms)
+        .await
+        .map_err(map_service_error)
 }
 
-/// Releases the `completing` claim so the client can retry completion.
-///
-/// Guarded on `state = 'completing'` so a concurrent abort (or the maintenance
-/// sweeper) is not overwritten and the session is not resurrected into `uploading`.
-pub(crate) async fn release_upload_session_completion_claim(
+pub(crate) async fn find_upload_session(
     pool: &PgPool,
     tenant_id: &str,
     upload_session_id: &str,
-    operator_id: &str,
-) -> Result<bool, (StatusCode, Json<ProblemDetail>)> {
-    let affected = sqlx::query(
-        "UPDATE dr_drive_upload_session
-         SET state='uploading', updated_by=$1, updated_at=CURRENT_TIMESTAMP, version=version + 1
-         WHERE tenant_id=$2 AND id=$3 AND state='completing'",
-    )
-    .bind(operator_id)
-    .bind(tenant_id)
-    .bind(upload_session_id)
-    .execute(pool)
-    .await
-    .map_err(internal_sql_error(
-        "release dr_drive_upload_session completion claim failed",
-    ))?
-    .rows_affected();
-    Ok(affected > 0)
+) -> Result<UploadSessionRecord, (StatusCode, Json<ProblemDetail>)> {
+    let session = SqlUploadSessionStore::new(pool.clone())
+        .find_by_id(tenant_id, upload_session_id)
+        .await
+        .map_err(map_service_error)?
+        .ok_or_else(|| not_found_problem("upload session not found"))?;
+    Ok(UploadSessionRecord::from(session))
 }
 
-pub(crate) async fn plan_completed_storage_object_insert(
+pub(crate) async fn find_upload_session_by_idempotency(
     pool: &PgPool,
-    tenant_id: &str,
-    upload_session: &UploadSessionRecord,
-) -> Result<CompletedStorageObjectInsertPlan, (StatusCode, Json<ProblemDetail>)> {
-    let version_no = parse_storage_object_version_no_from_key(
-        &upload_session.object_key,
-        tenant_id,
-        &upload_session.space_id,
-        &upload_session.node_id,
-    )?;
-    let next_version_no =
-        next_storage_object_version_no(pool, tenant_id, &upload_session.node_id).await?;
-    if version_no != next_version_no {
-        return Err(problem(
-            StatusCode::CONFLICT,
-            "conflict",
-            "upload session storage object version does not match next file version",
-            SdkWorkResultCode::Conflict,
-        ));
-    }
-    let id = format!("{}-v{}", upload_session.id, version_no);
-
-    let id_count: i64 = sqlx::query_scalar(
-        "SELECT COUNT(1)
-         FROM dr_drive_storage_object
-         WHERE id=$1",
-    )
-    .bind(&id)
-    .fetch_one(pool)
-    .await
-    .map_err(internal_sql_error(
-        "check dr_drive_storage_object id conflict failed",
-    ))?;
-    if id_count > 0 {
-        return Err(problem(
-            StatusCode::CONFLICT,
-            "conflict",
-            "storage object id already exists",
-            SdkWorkResultCode::Conflict,
-        ));
-    }
-
-    let active_locator_count: i64 = sqlx::query_scalar(
-        "SELECT COUNT(1)
-         FROM dr_drive_storage_object
-         WHERE tenant_id=$1
-           AND node_id=$2
-           AND bucket=$3
-           AND object_key=$4
-           AND lifecycle_status='active'",
-    )
-    .bind(tenant_id)
-    .bind(&upload_session.node_id)
-    .bind(&upload_session.bucket)
-    .bind(&upload_session.object_key)
-    .fetch_one(pool)
-    .await
-    .map_err(internal_sql_error(
-        "check dr_drive_storage_object active locator conflict failed",
-    ))?;
-    if active_locator_count > 0 {
-        return Err(problem(
-            StatusCode::CONFLICT,
-            "conflict",
-            "active storage object locator already exists",
-            SdkWorkResultCode::Conflict,
-        ));
-    }
-
-    Ok(CompletedStorageObjectInsertPlan { id, version_no })
-}
-pub(crate) fn parse_storage_object_version_no_from_key(
-    object_key: &str,
     tenant_id: &str,
     space_id: &str,
     node_id: &str,
-) -> Result<i64, (StatusCode, Json<ProblemDetail>)> {
-    let invalid = || {
-        problem(
-            StatusCode::CONFLICT,
-            "conflict",
-            "upload session object key is not a standard Drive storage key",
-            SdkWorkResultCode::Conflict,
-        )
-    };
-    let standard_object_key = standard_storage_object_key_suffix(object_key).ok_or_else(invalid)?;
-    let segments: Vec<&str> = standard_object_key.split('/').collect();
-    if segments.len() != 16
-        || segments[0] != "sdkwork-drive"
-        || segments[1] != "v1"
-        || segments[2] != "t"
-        || segments[4] != "tenants"
-        || segments[5] != tenant_id
-        || segments[6] != "spaces"
-        || segments[7] != space_id
-        || segments[8] != "nodes"
-        || segments[9] != "n"
-        || segments[11] != node_id
-        || segments[12] != "versions"
-        || segments[15] != "content"
-    {
-        return Err(invalid());
-    }
-
-    let raw_version_no = segments[13];
-    if raw_version_no.len() != 10 || !raw_version_no.bytes().all(|byte| byte.is_ascii_digit()) {
-        return Err(invalid());
-    }
-    let version_no = raw_version_no.parse::<i64>().map_err(|_| invalid())?;
-    if version_no < 1 {
-        return Err(invalid());
-    }
-
-    let expected = DriveStorageKeyService::build_object_key(BuildStorageObjectKeyCommand {
-        tenant_id,
-        space_id,
-        node_id,
-        version_no,
-        object_id: segments[14],
-    })
-    .map_err(|_| invalid())?;
-    if expected != standard_object_key {
-        return Err(invalid());
-    }
-
-    Ok(version_no)
-}
-pub(crate) fn standard_storage_object_key_suffix(object_key: &str) -> Option<&str> {
-    object_key
-        .rmatch_indices("sdkwork-drive/v1/t/")
-        .next()
-        .map(|(index, _)| &object_key[index..])
-}
-pub(crate) fn validate_completed_multipart_parts(
-    parts: &[CompletedUploadPartRequest],
-) -> Result<(), (StatusCode, Json<ProblemDetail>)> {
-    if parts.is_empty() {
-        return Err(problem(
-            StatusCode::BAD_REQUEST,
-            "validation failed",
-            "parts are required",
-            SdkWorkResultCode::ValidationError,
-        ));
-    }
-    if parts.len() > 10_000 {
-        return Err(problem(
-            StatusCode::BAD_REQUEST,
-            "validation failed",
-            "parts must contain at most 10000 items",
-            SdkWorkResultCode::ValidationError,
-        ));
-    }
-
-    let mut previous_part_no = 0_u16;
-    for part in parts {
-        if part.part_no == 0 || part.part_no > 10_000 {
-            return Err(problem(
-                StatusCode::BAD_REQUEST,
-                "validation failed",
-                "partNo must be between 1 and 10000",
-                SdkWorkResultCode::ValidationError,
-            ));
-        }
-        if part.etag.trim().is_empty() {
-            return Err(problem(
-                StatusCode::BAD_REQUEST,
-                "validation failed",
-                "etag is required for every part",
-                SdkWorkResultCode::ValidationError,
-            ));
-        }
-        if part.part_no <= previous_part_no {
-            return Err(problem(
-                StatusCode::BAD_REQUEST,
-                "validation failed",
-                "parts must be sorted by ascending unique partNo",
-                SdkWorkResultCode::ValidationError,
-            ));
-        }
-        previous_part_no = part.part_no;
-    }
-
-    Ok(())
-}
-pub(crate) async fn update_upload_session_state<'e, E>(
-    executor: E,
-    tenant_id: &str,
-    upload_session_id: &str,
-    next_state: &str,
-    operator_id: &str,
-) -> Result<(), (StatusCode, Json<ProblemDetail>)>
-where
-    E: sqlx::Executor<'e, Database = sqlx::Postgres>,
-{
-    let affected = sqlx::query(
-        "UPDATE dr_drive_upload_session
-         SET state=$1, updated_by=$2, updated_at=CURRENT_TIMESTAMP, version=version + 1
-         WHERE tenant_id=$3 AND id=$4",
-    )
-    .bind(next_state)
-    .bind(operator_id)
-    .bind(tenant_id)
-    .bind(upload_session_id)
-    .execute(executor)
-    .await
-    .map_err(internal_sql_error(
-        "update dr_drive_upload_session state failed",
-    ))?
-    .rows_affected();
-    if affected == 0 {
-        return Err(not_found_problem("upload session not found"));
-    }
-    Ok(())
-}
-pub(crate) async fn claim_upload_session_completion(
-    pool: &PgPool,
-    upload_session: &UploadSessionRecord,
-    operator_id: &str,
-) -> Result<(), (StatusCode, Json<ProblemDetail>)> {
-    let affected = sqlx::query(
-        "UPDATE dr_drive_upload_session
-         SET state='completing', updated_by=$1, updated_at=CURRENT_TIMESTAMP, version=version + 1
-         WHERE tenant_id=$2
-           AND id=$3
-           AND version=$4
-           AND state IN ('created', 'uploading')",
-    )
-    .bind(operator_id)
-    .bind(&upload_session.tenant_id)
-    .bind(&upload_session.id)
-    .bind(upload_session.version)
-    .execute(pool)
-    .await
-    .map_err(internal_sql_error(
-        "claim dr_drive_upload_session completion failed",
-    ))?
-    .rows_affected();
-    if affected == 0 {
-        return Err(problem(
-            StatusCode::CONFLICT,
-            "conflict",
-            "upload session completion is already in progress or no longer mutable",
-            SdkWorkResultCode::Conflict,
-        ));
-    }
-    Ok(())
-}
-
-/// Compensates when storage finalize succeeded but the DB completion transaction failed.
-///
-/// Resets the session to `uploading` so the client can retry completion, and best-effort
-/// deletes the orphaned storage object.
-pub(crate) async fn recover_upload_completion_after_db_failure(
-    state: &AppState,
-    pool: &PgPool,
-    tenant_id: &str,
-    upload_session: &UploadSessionRecord,
-    operator_id: &str,
-) {
-    match release_upload_session_completion_claim(pool, tenant_id, &upload_session.id, operator_id)
+    idempotency_key: &str,
+) -> Result<Option<UploadSessionRecord>, (StatusCode, Json<ProblemDetail>)> {
+    let session = SqlUploadSessionStore::new(pool.clone())
+        .find_by_idempotency(tenant_id, space_id, node_id, idempotency_key)
         .await
-    {
-        Ok(true) => {}
-        Ok(false) => {
-            tracing::warn!(
-                event = "drive.upload.completion_db_failure_session_reset_skipped",
-                tenant_id = %tenant_id,
-                upload_session_id = %upload_session.id,
-                "upload session left the completing state concurrently; reset skipped"
-            );
-        }
-        Err(error) => {
-            tracing::error!(
-                event = "drive.upload.completion_db_failure_session_reset_failed",
-                tenant_id = %tenant_id,
-                upload_session_id = %upload_session.id,
-                error = ?error,
-                "failed to reset upload session after DB completion failure"
-            );
-        }
-    }
-
-    if let Ok(Some(provider)) =
-        find_storage_provider_by_id(pool, &upload_session.storage_provider_id).await
-    {
-        match require_active_storage_provider(provider, &upload_session.bucket) {
-            Ok(provider) => {
-                match build_s3_object_store_for_provider(state, &provider.to_domain_provider())
-                    .await
-                {
-                    Ok(Some(object_store)) => {
-                        if let Err(error) = object_store
-                            .delete_object(DeleteObjectRequest {
-                                locator: DriveObjectLocator {
-                                    bucket: upload_session.bucket.clone(),
-                                    object_key: upload_session.object_key.clone(),
-                                },
-                            })
-                            .await
-                        {
-                            tracing::warn!(
-                                event = "drive.upload.completion_db_failure_orphan_delete_failed",
-                                tenant_id = %tenant_id,
-                                upload_session_id = %upload_session.id,
-                                object_key = %upload_session.object_key,
-                                error = ?error,
-                                "failed to delete orphaned storage object after DB completion failure"
-                            );
-                        }
-                    }
-                    Ok(None) => tracing::warn!(
-                        event = "drive.upload.completion_db_failure_orphan_delete_skipped",
-                        tenant_id = %tenant_id,
-                        upload_session_id = %upload_session.id,
-                        "storage provider does not support object delete"
-                    ),
-                    Err(error) => tracing::warn!(
-                        event = "drive.upload.completion_db_failure_orphan_delete_skipped",
-                        tenant_id = %tenant_id,
-                        upload_session_id = %upload_session.id,
-                        error = ?error,
-                        "object store unavailable; orphan object delete skipped"
-                    ),
-                }
-            }
-            Err(error) => tracing::warn!(
-                event = "drive.upload.completion_db_failure_orphan_delete_skipped",
-                tenant_id = %tenant_id,
-                upload_session_id = %upload_session.id,
-                error = ?error,
-                "storage provider inactive; orphan object delete skipped"
-            ),
-        }
-    }
-
-    tracing::warn!(
-        event = "drive.upload.completion_db_failure_recovered",
-        tenant_id = %tenant_id,
-        upload_session_id = %upload_session.id,
-        object_key = %upload_session.object_key,
-        "upload DB commit failed after storage finalize; session reset and orphan cleanup attempted"
-    );
-    let _ = state;
+        .map_err(map_service_error)?;
+    Ok(session.map(UploadSessionRecord::from))
 }
 
-pub(crate) fn upload_session_state_as_str(state: &DriveUploadSessionState) -> &'static str {
-    match state {
-        DriveUploadSessionState::Created => "created",
-        DriveUploadSessionState::Uploading => "uploading",
-        DriveUploadSessionState::Completing => "completing",
-        DriveUploadSessionState::Completed => "completed",
-        DriveUploadSessionState::Aborted => "aborted",
-        DriveUploadSessionState::Expired => "expired",
-    }
+pub(crate) async fn ensure_upload_session_id_available(
+    pool: &PgPool,
+    upload_session_id: &str,
+) -> Result<(), (StatusCode, Json<ProblemDetail>)> {
+    SqlUploadSessionStore::new(pool.clone())
+        .ensure_id_available(upload_session_id)
+        .await
+        .map_err(map_service_error)
 }
+
 pub(crate) async fn update_uploader_storage_target(
     pool: &PgPool,
     tenant_id: &str,
@@ -1105,9 +417,11 @@ pub(crate) async fn update_uploader_storage_target(
     .bind(upload_session_id)
     .execute(pool)
     .await
-    .map_err(internal_sql_error(
-        "update uploader dr_drive_upload_session storage target failed",
-    ))?;
+    .map_err(|error| {
+        crate::error::internal_problem(format!(
+            "update uploader dr_drive_upload_session storage target failed: {error}"
+        ))
+    })?;
 
     sqlx::query(
         "UPDATE dr_drive_upload_item
@@ -1122,11 +436,14 @@ pub(crate) async fn update_uploader_storage_target(
     .bind(upload_item_id)
     .execute(pool)
     .await
-    .map_err(internal_sql_error(
-        "update uploader dr_drive_upload_item storage target failed",
-    ))?;
+    .map_err(|error| {
+        crate::error::internal_problem(format!(
+            "update uploader dr_drive_upload_item storage target failed: {error}"
+        ))
+    })?;
     Ok(())
 }
+
 pub(crate) async fn find_uploader_upload_item(
     pool: &PgPool,
     tenant_id: &str,
@@ -1141,150 +458,64 @@ pub(crate) async fn find_uploader_upload_item(
     .bind(upload_item_id)
     .fetch_optional(pool)
     .await
-    .map_err(internal_sql_error("find dr_drive_upload_item failed"))?;
+    .map_err(|error| {
+        crate::error::internal_problem(format!("find dr_drive_upload_item failed: {error}"))
+    })?;
     row.map(|row| map_uploader_upload_item_row(&row))
         .transpose()
 }
-pub(crate) async fn find_uploader_upload_item_by_session(
-    pool: &PgPool,
-    tenant_id: &str,
-    upload_session_id: &str,
-) -> Result<Option<DriveUploadItem>, (StatusCode, Json<ProblemDetail>)> {
-    let row = sqlx::query(sqlx::AssertSqlSafe(format!(
-        "SELECT {DRIVE_UPLOAD_ITEM_SELECT_COLUMNS}
-         FROM dr_drive_upload_item
-         WHERE tenant_id=$1 AND upload_session_id=$2",
-    )))
-    .bind(tenant_id)
-    .bind(upload_session_id)
-    .fetch_optional(pool)
-    .await
-    .map_err(internal_sql_error(
-        "find dr_drive_upload_item by session failed",
-    ))?;
-    row.map(|row| map_uploader_upload_item_row(&row))
-        .transpose()
-}
-pub(crate) async fn complete_uploader_upload_item(
-    connection: &mut PgConnection,
-    completed: CompletedUploaderUploadItem<'_>,
-) -> Result<(), (StatusCode, Json<ProblemDetail>)> {
-    sqlx::query(
-        "UPDATE dr_drive_upload_item
-         SET status='completed',
-             checksum_sha256_hex=$1,
-             uploaded_bytes=$2,
-             uploaded_parts_count=$3,
-             updated_by=$4,
-             updated_at=CURRENT_TIMESTAMP
-         WHERE tenant_id=$5
-           AND id=$6
-           AND upload_session_id=$7",
-    )
-    .bind(completed.checksum_sha256_hex)
-    .bind(completed.content_length)
-    .bind(completed.uploaded_parts_count)
-    .bind(completed.operator_id)
-    .bind(completed.tenant_id)
-    .bind(&completed.upload_item.id)
-    .bind(&completed.upload_session.id)
-    .execute(&mut *connection)
-    .await
-    .map_err(internal_sql_error("complete dr_drive_upload_item failed"))?;
 
-    record_uploader_upload_completed_operation(
-        connection,
-        UploaderUploadCompletedOperation {
-            tenant_id: completed.tenant_id,
-            upload_item: completed.upload_item,
-            storage_object: completed.storage_object,
-            upload_session: completed.upload_session,
-            content_type: completed.content_type,
-            content_length: completed.content_length,
-            checksum_sha256_hex: completed.checksum_sha256_hex,
-            operator_id: completed.operator_id,
-            before_content_state: completed.before_content_state,
-        },
-    )
-    .await
-}
-pub(crate) async fn record_uploader_upload_completed_operation(
-    connection: &mut PgConnection,
-    operation: UploaderUploadCompletedOperation<'_>,
-) -> Result<(), (StatusCode, Json<ProblemDetail>)> {
+/// Insert one logical node version on an existing transaction connection.
+///
+/// Kept for the node-creation flows in this surface that already own their
+/// transaction; upload-session completion now goes through the workspace service.
+pub(crate) async fn insert_node_version_metadata<'e, E>(
+    executor: E,
+    metadata: NodeVersionStorageMetadata<'_>,
+    attribution: NodeVersionAttribution<'_>,
+    operator_id: &str,
+) -> Result<String, (StatusCode, Json<ProblemDetail>)>
+where
+    E: sqlx::Executor<'e, Database = sqlx::Postgres>,
+{
+    let version_id = next_drive_id("ver");
     sqlx::query(
-        "INSERT INTO dr_drive_file_sensitive_operation (
-            id, tenant_id, organization_id, user_id, space_id, node_id,
-            storage_object_id, upload_item_id, operation_type, operation_reason,
-            content_type, content_type_group, content_length, checksum_sha256_hex,
-            object_bucket, object_key, before_lifecycle_status, after_lifecycle_status,
-            operator_id, maintenance_job_id, request_id, trace_id, object_delete_status
+        "INSERT INTO dr_drive_node_version (
+            id, tenant_id, space_id, node_id, version_no, storage_object_id,
+            content_type, content_length, checksum_sha256_hex, version_kind,
+            version_label, change_source, change_summary, restored_from_version_id,
+            app_id, app_resource_type, app_resource_id, scene, source,
+            lifecycle_status, created_by, updated_by
          ) VALUES (
-            $1, $2, $3, $4, $5, $6,
-            $7, $8, 'upload_completed', 'user_request',
-            $9, $10, $11, $12,
-            $13, $14, $15, 'active',
-            $16, NULL, NULL, NULL, 'not_required'
+            $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
+            NULL, $11, $12, NULL, $13, $14, $15, $16, $17,
+            'active', $18, $18
          )",
     )
-    .bind(sensitive_operation_id(
-        operation.tenant_id,
-        "upload_completed",
-        &operation.upload_item.id,
-        &operation.storage_object.id,
-    ))
-    .bind(operation.tenant_id)
-    .bind(
-        operation
-            .upload_item
-            .organization_id
-            .as_deref()
-            .unwrap_or("0"),
-    )
-    .bind(&operation.upload_item.user_id)
-    .bind(&operation.upload_item.space_id)
-    .bind(&operation.upload_item.node_id)
-    .bind(&operation.storage_object.id)
-    .bind(&operation.upload_item.id)
-    .bind(operation.content_type)
-    .bind(&operation.upload_item.content_type_group)
-    .bind(operation.content_length)
-    .bind(operation.checksum_sha256_hex)
-    .bind(&operation.upload_session.bucket)
-    .bind(&operation.upload_session.object_key)
-    .bind(operation.before_content_state)
-    .bind(operation.operator_id)
-    .execute(&mut *connection)
+    .bind(&version_id)
+    .bind(metadata.tenant_id)
+    .bind(metadata.space_id)
+    .bind(metadata.node_id)
+    .bind(metadata.version_no)
+    .bind(metadata.storage_object_id)
+    .bind(metadata.content_type)
+    .bind(metadata.content_length)
+    .bind(metadata.checksum_sha256_hex)
+    .bind(attribution.version_kind)
+    .bind(attribution.change_source)
+    .bind(attribution.change_summary)
+    .bind(attribution.app_id)
+    .bind(attribution.app_resource_type)
+    .bind(attribution.app_resource_id)
+    .bind(attribution.scene)
+    .bind(attribution.source)
+    .bind(operator_id)
+    .execute(executor)
     .await
-    .map_err(internal_sql_error(
-        "insert dr_drive_file_sensitive_operation upload_completed failed",
-    ))?;
-    Ok(())
-}
-
-pub(crate) struct CompletedUploaderUploadItem<'a> {
-    pub(crate) tenant_id: &'a str,
-    pub(crate) upload_item: &'a DriveUploadItem,
-    pub(crate) storage_object: &'a CompletedStorageObjectInsertPlan,
-    pub(crate) upload_session: &'a UploadSessionRecord,
-    pub(crate) content_type: &'a str,
-    pub(crate) content_length: i64,
-    pub(crate) checksum_sha256_hex: &'a str,
-    pub(crate) uploaded_parts_count: i64,
-    pub(crate) operator_id: &'a str,
-    pub(crate) before_content_state: &'a str,
-}
-
-pub(crate) struct UploaderUploadCompletedOperation<'a> {
-    tenant_id: &'a str,
-    upload_item: &'a DriveUploadItem,
-    storage_object: &'a CompletedStorageObjectInsertPlan,
-    upload_session: &'a UploadSessionRecord,
-    content_type: &'a str,
-    content_length: i64,
-    checksum_sha256_hex: &'a str,
-    operator_id: &'a str,
-    before_content_state: &'a str,
+    .map_err(|error| {
+        crate::error::internal_problem(format!("insert dr_drive_node_version failed: {error}"))
+    })?;
+    Ok(version_id)
 }
 
 pub(crate) struct NodeVersionStorageMetadata<'a> {
@@ -1307,20 +538,6 @@ pub(crate) struct NodeVersionAttribution<'a> {
     pub(crate) app_resource_id: Option<&'a str>,
     pub(crate) scene: Option<&'a str>,
     pub(crate) source: Option<&'a str>,
-}
-
-pub(crate) fn sensitive_operation_id(
-    tenant_id: &str,
-    operation_type: &str,
-    upload_item_id: &str,
-    storage_object_id: &str,
-) -> String {
-    let raw = format!("{tenant_id}:{operation_type}:{upload_item_id}:{storage_object_id}");
-    let digest = sha256_hex(raw.as_bytes());
-    digest
-        .strip_prefix("sha256:")
-        .expect("sha256_hex should include prefix")
-        .to_string()
 }
 
 #[cfg(test)]
@@ -1355,5 +572,22 @@ mod tests {
     fn session_within_its_deadline_is_accepted() {
         let session = session_in_state("created", 1_000);
         ensure_upload_session_not_expired(&session, 999).expect("not expired");
+    }
+
+    #[test]
+    fn completed_session_is_not_mutable() {
+        let session = session_in_state("completed", 1_000);
+        let error = validate_mutable_upload_session(&session).expect_err("completed");
+        assert_eq!(error.0, StatusCode::CONFLICT);
+    }
+
+    #[test]
+    fn drive_multipart_part_conversion_preserves_order_and_etag() {
+        let parts = [DriveMultipartPart {
+            part_no: 3,
+            etag: "etag-3".to_string(),
+        }];
+        assert_eq!(parts[0].part_no, 3);
+        assert_eq!(parts[0].etag, "etag-3");
     }
 }

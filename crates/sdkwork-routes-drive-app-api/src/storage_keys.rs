@@ -3,23 +3,6 @@ use crate::validators::validate_object_key;
 use axum::http::StatusCode;
 use axum::Json;
 
-pub(crate) fn default_storage_root_prefix(tenant_id: &str, space_id: Option<&str>) -> String {
-    match space_id {
-        Some(space_id) => format!("sdkwork-drive/v1/tenants/{tenant_id}/spaces/{space_id}"),
-        None => format!("sdkwork-drive/v1/tenants/{tenant_id}"),
-    }
-}
-
-pub(crate) fn join_storage_root_prefix(
-    storage_root_prefix: &str,
-    object_key: &str,
-) -> Result<String, (StatusCode, Json<ProblemDetail>)> {
-    let root = validate_object_key(storage_root_prefix.to_string(), "storageRootPrefix")?;
-    let key = validate_object_key(object_key.to_string(), "objectKey")?;
-    let joined = format!("{root}/{key}");
-    validate_object_key(joined, "objectKey")
-}
-
 pub(crate) fn uploader_final_object_key(
     uploader_session_object_key: &str,
     standard_object_key: &str,

@@ -1,3 +1,4 @@
+use sdkwork_drive_workspace_service::domain::upload::DriveUploadSession;
 use sdkwork_drive_workspace_service::domain::uploader::{DriveUploadItem, DriveUploadPart};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
@@ -1454,6 +1455,42 @@ impl From<UploadSessionRecord> for UploadSessionMutationResponse {
             expires_at_epoch_ms: value.expires_at_epoch_ms,
             version: value.version,
         }
+    }
+}
+
+/// Present the workspace service's upload session as the app API's record.
+///
+/// The service returns the domain type; the wire shape is unchanged, so the
+/// mapping only renames fields. Keeping it here (rather than in the handler)
+/// means every handler that delegates to the service presents the same payload.
+impl From<DriveUploadSession> for UploadSessionRecord {
+    fn from(value: DriveUploadSession) -> Self {
+        Self {
+            id: value.id,
+            tenant_id: value.tenant_id,
+            space_id: value.space_id,
+            node_id: value.node_id,
+            bucket: value.bucket,
+            object_key: value.object_key,
+            idempotency_key: value.idempotency_key,
+            storage_provider_id: value.storage_provider_id,
+            storage_upload_id: value.storage_upload_id,
+            state: value.state.as_str().to_string(),
+            expires_at_epoch_ms: value.expires_at_epoch_ms,
+            version: value.version,
+        }
+    }
+}
+
+impl From<DriveUploadSession> for UploadSessionMutationResponse {
+    fn from(value: DriveUploadSession) -> Self {
+        UploadSessionMutationResponse::from(UploadSessionRecord::from(value))
+    }
+}
+
+impl From<DriveUploadSession> for CreateUploadSessionResponse {
+    fn from(value: DriveUploadSession) -> Self {
+        CreateUploadSessionResponse::from(UploadSessionRecord::from(value))
     }
 }
 

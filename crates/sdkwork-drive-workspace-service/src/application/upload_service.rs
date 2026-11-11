@@ -1,7 +1,11 @@
+use crate::domain::node_version::DriveNodeVersion;
 use crate::domain::upload::{DriveUploadSession, DriveUploadSessionState};
+use crate::ports::stored_version_store::DriveStoredVersionStore;
 use crate::ports::upload_session_store::{DriveUploadSessionStore, NewDriveUploadSession};
 use crate::DriveServiceError;
 use std::time::{SystemTime, UNIX_EPOCH};
+
+pub use crate::ports::stored_version_store::CompleteStoredVersionUploadCommand;
 
 #[derive(Debug, Clone)]
 pub struct CreateUploadSessionCommand {
@@ -95,6 +99,49 @@ where
             updated_by: command.operator_id,
         };
         self.store.insert_upload_session(&new_session).await
+    }
+
+    /// Publish an already-stored object as the next version of an existing node.
+    ///
+    /// This is the in-process replacement for the app API's upload-session
+    /// finalisation when the caller wrote the bytes itself (a document renderer
+    /// publishing a page body, for example): it records the
+    /// `dr_drive_storage_object` row, the `dr_drive_node_version` row and the
+    /// node head snapshot in one transaction and emits the
+    /// `node.version_committed` change/outbox event.
+    ///
+    /// # Caller contract
+    ///
+    /// * `tenant_id` scopes the node/space lookup; a node of another tenant is
+    ///   `NotFound` and is never written.
+    /// * The caller MUST have enforced at least `writer` on the node through
+    ///   Drive's permission service before calling. This method performs no
+    ///   authorization and no session bookkeeping.
+    /// * `storage_provider_id`/`bucket`/`object_key` must be the locator the
+    ///   bytes already occupy; the object is not read or verified against
+    ///   `checksum_sha256_hex`.
+    /// * `idempotency_key` makes the call replay-safe: replaying the same locator
+    ///   returns the version registered the first time (or `Conflict` when the
+    ///   same locator was completed with different content metadata).
+    ///
+    /// # Errors
+    ///
+    /// - `Validation` for a blank identifier, invalid content type, negative
+    ///   length, malformed checksum, or an invalid object key.
+    /// - `NotFound` when the node or its space is absent or inactive in this
+    ///   tenant.
+    /// - `Conflict` when the locator was already completed with different
+    ///   metadata, when the version number raced another writer, or when the
+    ///   managed-website guard rejects the mutation.
+    /// - `Internal` when a database operation fails.
+    pub async fn complete_stored_version(
+        &self,
+        command: CompleteStoredVersionUploadCommand,
+    ) -> Result<DriveNodeVersion, DriveServiceError>
+    where
+        S: DriveStoredVersionStore,
+    {
+        self.store.complete_stored_version(&command).await
     }
 }
 

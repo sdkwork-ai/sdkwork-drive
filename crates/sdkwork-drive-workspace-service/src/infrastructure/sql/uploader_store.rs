@@ -29,6 +29,44 @@ impl SqlUploaderStore {
     pub fn new(pool: PgPool) -> Self {
         Self { pool }
     }
+
+    /// Find the upload item a session belongs to, if the session was opened
+    /// through the uploader pipeline.
+    ///
+    /// Upload-session completion uses this to decide whether it also has to
+    /// finalise an `dr_drive_upload_item` and record the sensitive-operation
+    /// audit row; a session opened directly by the app API has no item.
+    ///
+    /// # Errors
+    ///
+    /// `Internal` when the read fails.
+    pub async fn find_upload_item_by_session(
+        &self,
+        tenant_id: &str,
+        upload_session_id: &str,
+    ) -> Result<Option<DriveUploadItem>, DriveServiceError> {
+        let row = sqlx::query(sqlx::AssertSqlSafe(format!(
+            "SELECT {DRIVE_UPLOAD_ITEM_UI_SELECT_COLUMNS},
+                    us.bucket AS object_bucket,
+                    us.object_key AS object_key
+             FROM dr_drive_upload_item ui
+             LEFT JOIN dr_drive_upload_session us
+               ON us.tenant_id=ui.tenant_id
+              AND us.id=ui.upload_session_id
+             WHERE ui.tenant_id=$1 AND ui.upload_session_id=$2",
+        )))
+        .bind(tenant_id)
+        .bind(upload_session_id)
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(|error| {
+            DriveServiceError::Internal(format!(
+                "find dr_drive_upload_item by session failed: {error}"
+            ))
+        })?;
+
+        row.as_ref().map(map_row_to_upload_item).transpose()
+    }
 }
 
 #[async_trait]
@@ -905,12 +943,14 @@ struct StoredUploadCompletionTarget {
     node_content_state: String,
 }
 
-struct StoredUploadObject {
-    id: String,
-    version_no: i64,
-    content_type: String,
-    content_length: i64,
-    checksum_sha256_hex: String,
+/// One active storage object found by its locator, plus the metadata a replay
+/// must match before it may be treated as the same completion.
+pub(crate) struct StoredUploadObject {
+    pub(crate) id: String,
+    pub(crate) version_no: i64,
+    pub(crate) content_type: String,
+    pub(crate) content_length: i64,
+    pub(crate) checksum_sha256_hex: String,
 }
 
 async fn complete_stored_upload_in_transaction(
@@ -958,7 +998,12 @@ async fn complete_stored_upload_in_transaction(
                 "completed upload item is missing active storage object".to_string(),
             )
         })?;
-        ensure_stored_object_matches_completion(&stored_object, completion)?;
+        ensure_stored_object_matches(
+        &stored_object,
+        &completion.content_type,
+        completion.content_length,
+        &completion.checksum_sha256_hex,
+    )?;
         return read_upload_item_by_id(connection, &completion.tenant_id, &target.item.id).await;
     }
 
@@ -1019,7 +1064,12 @@ async fn complete_stored_upload_in_transaction(
     .await?
     {
         Some(stored_object) => {
-            ensure_stored_object_matches_completion(&stored_object, completion)?;
+            ensure_stored_object_matches(
+        &stored_object,
+        &completion.content_type,
+        completion.content_length,
+        &completion.checksum_sha256_hex,
+    )?;
             stored_object
         }
         None => {
@@ -1242,7 +1292,14 @@ async fn read_upload_item_by_id(
         .ok_or_else(|| DriveServiceError::NotFound("upload item not found".to_string()))
 }
 
-async fn find_active_stored_upload_object(
+/// Find the active storage object a `(tenant, node, bucket, object_key)` locator
+/// already points at.
+///
+/// This is the idempotency predicate for every stored-object completion: the
+/// unique index `ux_dr_drive_storage_object_active_locator` guarantees at most
+/// one active row per locator, so a hit means this exact write was already
+/// published.
+pub(crate) async fn find_active_stored_upload_object(
     connection: &mut PgConnection,
     tenant_id: &str,
     node_id: &str,
@@ -1360,13 +1417,21 @@ async fn read_recorded_upload_part_totals(
     Ok((row.get("part_count"), row.get("total_bytes")))
 }
 
-fn ensure_stored_object_matches_completion(
+/// Whether an already-registered storage object describes the same content.
+///
+/// A replay of a completion must be a no-op only when it repeats the exact same
+/// content metadata. Different metadata under the same locator means a second,
+/// different write is hiding behind the first one; that is a conflict, not a
+/// successful replay.
+pub(crate) fn ensure_stored_object_matches(
     object: &StoredUploadObject,
-    completion: &CompleteDriveStoredUpload,
+    content_type: &str,
+    content_length: i64,
+    checksum_sha256_hex: &str,
 ) -> Result<(), DriveServiceError> {
-    if object.content_type != completion.content_type
-        || object.content_length != completion.content_length
-        || object.checksum_sha256_hex != completion.checksum_sha256_hex
+    if object.content_type != content_type
+        || object.content_length != content_length
+        || object.checksum_sha256_hex != checksum_sha256_hex
     {
         return Err(DriveServiceError::Conflict(
             "stored upload was already completed with different content metadata".to_string(),
@@ -1430,7 +1495,11 @@ async fn insert_upload_completed_sensitive_operation(
     Ok(())
 }
 
-fn sensitive_operation_id(
+/// Stable identifier for a sensitive-operation audit row.
+///
+/// Deterministic in `(tenant, operation, upload item, storage object)` so a
+/// retried completion cannot insert a second audit row for the same action.
+pub(crate) fn sensitive_operation_id(
     tenant_id: &str,
     operation_type: &str,
     upload_item_id: &str,
