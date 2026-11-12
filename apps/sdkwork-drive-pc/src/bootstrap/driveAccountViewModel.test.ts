@@ -84,4 +84,48 @@ describe('drive account view model', () => {
     expect(session.getSnapshot()).toEqual({});
   });
 
+  it('clears every account-scoped storage key and keeps device preferences', async () => {
+    const originalWindow = globalThis.window;
+    const backing = new Map<string, string>([
+      ['sdkwork-drive-pc-session', '{"accessToken":"token"}'],
+      ['sdkwork.drive.pc.transfer.jobs.v1', '[]'],
+      ['sdkwork.drive.pc.transfer.jobs.v1.tenant-001.user-a', '[]'],
+      ['sdkwork.drive.pc.uploader.state.v1.tenant-001.user-a', '{}'],
+      ['sdkwork.drive.pc.preferences.v1', '{"compactMode":true}'],
+      ['sdkwork-ui-theme', 'dark'],
+    ]);
+    const storage = {
+      get length(): number {
+        return backing.size;
+      },
+      key: (index: number): string | null => [...backing.keys()][index] ?? null,
+      getItem: (key: string): string | null => backing.get(key) ?? null,
+      setItem: (key: string, value: string): void => {
+        backing.set(key, value);
+      },
+      removeItem: (key: string): void => {
+        backing.delete(key);
+      },
+    };
+    Object.defineProperty(globalThis, 'window', {
+      configurable: true,
+      value: { localStorage: storage, sessionStorage: storage },
+    });
+
+    try {
+      await signOutDriveAccount(createSessionStore());
+
+      expect([...backing.keys()].filter((key) => key.startsWith('sdkwork.drive.pc.'))).toEqual([
+        'sdkwork.drive.pc.preferences.v1',
+      ]);
+      expect(backing.has('sdkwork-drive-pc-session')).toBe(false);
+      expect(backing.get('sdkwork-ui-theme')).toBe('dark');
+      expect(backing.get('sdkwork.drive.pc.preferences.v1')).toContain('compactMode');
+    } finally {
+      Object.defineProperty(globalThis, 'window', {
+        configurable: true,
+        value: originalWindow,
+      });
+    }
+  });
 });

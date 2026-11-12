@@ -35,6 +35,7 @@ import {
   type KnowledgeBaseSpace,
   type SharedSpace,
 } from 'sdkwork-drive-pc-core';
+import { useDriveAccountScope } from '../state/useDriveAccountScope';
 
 const TransferPage = React.lazy(() =>
   import('sdkwork-drive-pc-transfer').then((module) => ({ default: module.TransferPage })),
@@ -146,7 +147,9 @@ export function DrivePage({
   onShareClaimDismiss,
 }: DrivePageProps) {
   const { t } = useTranslation();
-  const { host } = useDriveRuntime();
+  const runtime = useDriveRuntime();
+  const { host } = runtime;
+  const session = runtime.session;
   const hostDownloadStream = createHostDownloadStreamAdapter(host);
   const shareClaimAttemptRef = useRef<string | null>(null);
   const shareClaimDeclinedRef = useRef<string | null>(null);
@@ -163,7 +166,33 @@ export function DrivePage({
     }
   }, [activeSection, openRequest, setActiveSection]);
   
-  const [downloadJobs, setDownloadJobs] = useState<DownloadJob[]>(() => loadPersistedTransferJobs());
+  const {
+    scope: storageScope,
+    scopeKey: storageScopeKey,
+    canPersist: canPersistTransferJobs,
+  } = useDriveAccountScope(session, fileService);
+  const storageScopeRef = useRef(storageScope);
+  storageScopeRef.current = storageScope;
+  const storageScopeKeyRef = useRef(storageScopeKey);
+  storageScopeKeyRef.current = storageScopeKey;
+
+  const [downloadJobs, setDownloadJobs] = useState<DownloadJob[]>(
+    () => (canPersistTransferJobs ? loadPersistedTransferJobs(storageScope) : []),
+  );
+  // A different account must not inherit the previous account's transfer list:
+  // reload from its own key before any state is written back, and show nothing
+  // while signed out (or while the account has no tenant/user owner) instead of
+  // falling back to a list no account owns.
+  const previousScopeKeyRef = useRef(storageScopeKey);
+  useEffect(() => {
+    if (previousScopeKeyRef.current === storageScopeKey) {
+      return;
+    }
+    previousScopeKeyRef.current = storageScopeKey;
+    setDownloadJobs(
+      canPersistTransferJobs ? loadPersistedTransferJobs(storageScopeRef.current) : [],
+    );
+  }, [canPersistTransferJobs, storageScopeKey]);
   const [sharedSpaces, setSharedSpaces] = useState<SharedSpace[]>([]);
   const [knowledgeBaseSpaces, setKnowledgeBaseSpaces] = useState<KnowledgeBaseSpace[]>([]);
   const [isCreateSpaceOpen, setIsCreateSpaceOpen] = useState(false);
@@ -258,11 +287,22 @@ export function DrivePage({
   };
 
   useEffect(() => {
+    if (!canPersistTransferJobs) {
+      return;
+    }
+    const scheduledScopeKey = storageScopeKey;
     const timer = window.setTimeout(() => {
-      persistTransferJobs(downloadJobs);
+      // The debounce must never write into an account that is no longer current,
+      // even if it was scheduled with the previous account's scope.
+      if (storageScopeKeyRef.current !== scheduledScopeKey) {
+        return;
+      }
+      persistTransferJobs(downloadJobs, storageScopeRef.current);
     }, 500);
     return () => window.clearTimeout(timer);
-  }, [downloadJobs]);
+    // `storageScopeKey` restarts the debounce so a pending write for the previous
+    // account cannot land under the new account's key.
+  }, [canPersistTransferJobs, downloadJobs, storageScopeKey]);
 
   useEffect(() => {
     isMountedRef.current = true;
@@ -315,7 +355,10 @@ export function DrivePage({
         sharedSpaceListAbortControllerRef.current = null;
       }
     };
-  }, [fileService]);
+    // `storageScopeKey` re-reads the space catalogue for the new account: the
+    // caches were just invalidated, and the previous account's spaces must not
+    // survive the switch.
+  }, [fileService, storageScopeKey]);
 
   // Initialize and load Knowledge Base Spaces
   useEffect(() => {
@@ -352,7 +395,8 @@ export function DrivePage({
         knowledgeBaseSpaceListAbortControllerRef.current = null;
       }
     };
-  }, [fileService]);
+    // See the shared-space effect: the new account owns a different catalogue.
+  }, [fileService, storageScopeKey]);
 
   // Handler to submit new space
   const handleCreateSpaceSubmit = (name: string, icon: string, color: string, description: string) => {
@@ -835,6 +879,7 @@ export function DrivePage({
         <FileBrowser 
           activeSection={activeSection} 
           fileService={fileService}
+          accountScopeKey={storageScopeKey}
           openRequest={openRequest}
           downloadJobs={downloadJobs}
           setDownloadJobs={setDownloadJobs}

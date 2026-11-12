@@ -7,7 +7,9 @@ import {
 } from 'sdkwork-drive-pc-commons';
 import {
   DriveRuntimeProvider,
+  driveStorageScopeKey,
   isDriveAbortError,
+  resolveDriveStorageScope,
   type DriveStorageSummary,
 } from 'sdkwork-drive-pc-core';
 import {
@@ -67,6 +69,10 @@ export const DriveView: React.FC<DriveViewProps> = ({
   const [activeSection, setActiveSection] = useState<DriveSection>('my-storage');
   const [storageSummary, setStorageSummary] = useState<DriveStorageSummary | undefined>();
   const [sessionSnapshot, setSessionSnapshot] = useState(() => runtime.session.getSnapshot());
+  // A host can swap the signed-in account without remounting this view. Keying
+  // the workspace by account drops every piece of per-account component state
+  // (transfer list, space catalogue, file browser folder and page cursor).
+  const accountScopeKey = driveStorageScopeKey(resolveDriveStorageScope(sessionSnapshot));
 
   useEffect(() => {
     const unbindHostSession = bindHostSessionToDriveStore(runtime.session);
@@ -124,6 +130,7 @@ export const DriveView: React.FC<DriveViewProps> = ({
           <div className="flex h-full w-full flex-1 min-h-0 min-w-0 overflow-hidden bg-[#f5f5f5] text-[#333] dark:bg-[#111] dark:text-[#eee]">
             <React.Suspense fallback={<DriveWorkspaceFallback />}>
               <DrivePage
+                key={accountScopeKey}
                 activeSection={activeSection}
                 fileService={runtime.services.fileService}
                 openRequest={openRequest}

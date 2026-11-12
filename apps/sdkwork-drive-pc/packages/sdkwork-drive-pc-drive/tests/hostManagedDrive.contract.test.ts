@@ -88,6 +88,49 @@ describe('sdkwork-drive-pc-drive host module contract', () => {
     expect(fileBrowser).not.toContain('openRequest.signedSourceUrl');
   });
 
+  it('resets account-scoped state when the host swaps the signed-in account', () => {
+    const driveView = readFileSync(path.join(packageRoot, 'src', 'DriveView.tsx'), 'utf8');
+    const filePackageRoot = path.resolve(packageRoot, '..', 'sdkwork-drive-pc-file');
+    const drivePage = readFileSync(
+      path.join(filePackageRoot, 'src', 'pages', 'DrivePage.tsx'),
+      'utf8',
+    );
+    const fileBrowser = readFileSync(
+      path.join(filePackageRoot, 'src', 'components', 'FileBrowser.tsx'),
+      'utf8',
+    );
+    const accountScope = readFileSync(
+      path.join(filePackageRoot, 'src', 'state', 'useDriveAccountScope.ts'),
+      'utf8',
+    );
+    const cutClipboard = readFileSync(
+      path.join(filePackageRoot, 'src', 'state', 'driveCutClipboard.ts'),
+      'utf8',
+    );
+    const hostRuntime = readFileSync(
+      path.join(packageRoot, 'src', 'createHostManagedDriveRuntime.ts'),
+      'utf8',
+    );
+
+    // The host can swap accounts without remounting this view, so the workspace
+    // is keyed by the account and the file service invalidates its caches.
+    expect(driveView).toContain('resolveDriveStorageScope');
+    expect(driveView).toContain('key={accountScopeKey}');
+    expect(accountScope).toContain('fileService.syncAccountScope(scopeKey)');
+    expect(accountScope).toContain('setDriveCutClipboardScope(scopeKey)');
+    expect(accountScope).toContain('canPersist: signedIn && scopeKey !== \'\'');
+    expect(cutClipboard).toContain('export function setDriveCutClipboardScope');
+    expect(hostRuntime).toContain('resolveUploaderStorageScope');
+
+    // DrivePage persists only for an account that owns the data, and the browser
+    // reloads when the account changes.
+    expect(drivePage).toContain('useDriveAccountScope');
+    expect(drivePage).toContain('if (!canPersistTransferJobs)');
+    expect(drivePage).toContain('accountScopeKey={storageScopeKey}');
+    expect(drivePage).toContain('[fileService, storageScopeKey]');
+    expect(fileBrowser).toContain('accountScopeKey');
+  });
+
   it('ships workspace chrome layout rules through driveSurface.css', () => {
     const driveSurface = readFileSync(
       path.join(packageRoot, 'src', 'driveSurface.css'),

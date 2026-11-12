@@ -16,8 +16,10 @@ import {
 import {
   DriveAuthGate,
   DriveRuntimeProvider,
+  driveStorageScopeKey,
   isDriveAbortError,
   isDriveAuthRoute,
+  resolveDriveStorageScope,
   useDriveHostEffects,
   type DriveStorageSummary,
 } from 'sdkwork-drive-pc-core';
@@ -208,6 +210,13 @@ export default function App({ runtime }: { runtime: DriveRuntime }) {
     () => createDriveAccountViewModel(sessionSnapshot, storageSummary),
     [sessionSnapshot, storageSummary],
   );
+  // Signing in as another account (token expiry, a second login in the same
+  // profile) must drop the previous account's workspace state instead of
+  // reusing its transfer list, space catalogue and open folder.
+  const accountScopeKey = useMemo(
+    () => driveStorageScopeKey(resolveDriveStorageScope(sessionSnapshot)),
+    [sessionSnapshot],
+  );
   const adminSectionAccess = useMemo(
     () => resolveDriveAdminSectionAccess(sessionSnapshot),
     [sessionSnapshot],
@@ -369,6 +378,7 @@ export default function App({ runtime }: { runtime: DriveRuntime }) {
                   />
                 ) : (
                   <DrivePage
+                    key={accountScopeKey}
                     activeSection={activeSection}
                     fileService={runtime.services.fileService}
                     storageSummary={storageSummary}

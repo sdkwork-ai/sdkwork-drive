@@ -165,4 +165,36 @@ describe('createDrivePcRuntime', () => {
       });
     }
   });
+
+  it('keeps browser-session sessions in session storage and clears the durable copy', async () => {
+    const originalWindow = globalThis.window;
+    const localStorage = new MemoryStorage();
+    const sessionStorage = new MemoryStorage();
+    vi.stubEnv('VITE_DRIVE_PC_TOKEN_STORAGE', 'browser-session');
+    localStorage.setItem(
+      DEFAULT_SESSION_STORAGE_KEY,
+      JSON.stringify({
+        authToken: 'auth-token',
+        accessToken: 'access-token',
+        context: { tenantId: 'tenant-001', userId: 'user-001' },
+      }),
+    );
+    Object.defineProperty(globalThis, 'window', {
+      configurable: true,
+      value: { localStorage, sessionStorage },
+    });
+
+    try {
+      const runtime = await createDrivePcRuntime();
+
+      expect(hasDriveIamSession(runtime.session.getSnapshot())).toBe(true);
+      expect(sessionStorage.getItem(DEFAULT_SESSION_STORAGE_KEY)).toContain('auth-token');
+      expect(localStorage.getItem(DEFAULT_SESSION_STORAGE_KEY)).toBeNull();
+    } finally {
+      Object.defineProperty(globalThis, 'window', {
+        configurable: true,
+        value: originalWindow,
+      });
+    }
+  });
 });

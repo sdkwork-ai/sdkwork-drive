@@ -89,11 +89,6 @@ async function clearPersistedDriveRuntimeState(
   if (tokenStorage === 'os-secure-storage') {
     await clearOsSecureSessionStorage();
   }
-  const keys = [
-    'sdkwork-drive-pc-session',
-    'sdkwork.drive.pc.transfer.jobs.v1',
-    'sdkwork.drive.pc.uploader.state.v1',
-  ];
   const storages: Array<Storage | undefined> = [
     window.localStorage,
     window.sessionStorage,
@@ -102,12 +97,59 @@ async function clearPersistedDriveRuntimeState(
     if (!storage) {
       continue;
     }
-    for (const key of keys) {
-      try {
-        storage.removeItem(key);
-      } catch {
-        // Ignore storage cleanup errors to keep logout resilient.
+    clearDriveStorageKeys(storage);
+  }
+}
+
+/** Device preferences that hold no account data and survive sign-out. */
+const PRESERVED_STORAGE_KEYS = new Set<string>([
+  'sdkwork.drive.pc.preferences.v1',
+]);
+
+/** Keys written before account scoping existed; removed even if enumeration fails. */
+const LEGACY_DRIVE_STORAGE_KEYS = [
+  'sdkwork-drive-pc-session',
+  'sdkwork.drive.pc.transfer.jobs.v1',
+  'sdkwork.drive.pc.uploader.state.v1',
+];
+
+/** Every account-scoped key this app writes is namespaced below this prefix. */
+const ACCOUNT_SCOPED_STORAGE_KEY_PREFIX = 'sdkwork.drive.pc.';
+
+function isAccountScopedStorageKey(key: string): boolean {
+  if (PRESERVED_STORAGE_KEYS.has(key)) {
+    return false;
+  }
+  return key === 'sdkwork-drive-pc-session' || key.startsWith(ACCOUNT_SCOPED_STORAGE_KEY_PREFIX);
+}
+
+/**
+ * Remove every account-scoped key, including the `...<tenant>.<user>` variants.
+ *
+ * A sign-out has to be exhaustive: the scoped transfer/uploader keys name files,
+ * space ids and server-side upload sessions, and a fixed key list silently misses
+ * every key a later build adds. Device preferences are kept.
+ */
+function clearDriveStorageKeys(storage: Storage): void {
+  const keys = new Set<string>(LEGACY_DRIVE_STORAGE_KEYS);
+  try {
+    for (let index = 0; index < storage.length; index += 1) {
+      const key = storage.key(index);
+      if (key && isAccountScopedStorageKey(key)) {
+        keys.add(key);
       }
+    }
+  } catch {
+    // Fall back to the known keys when the storage cannot be enumerated.
+  }
+  for (const key of keys) {
+    if (!isAccountScopedStorageKey(key)) {
+      continue;
+    }
+    try {
+      storage.removeItem(key);
+    } catch {
+      // Ignore storage cleanup errors to keep logout resilient.
     }
   }
 }

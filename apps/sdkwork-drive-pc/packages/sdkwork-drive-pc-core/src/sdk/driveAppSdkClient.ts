@@ -1,5 +1,4 @@
 import {
-  createInMemoryUploaderStateStore,
   createDriveUploaderClient,
   createGeneratedDriveAppClient,
   operations,
@@ -10,6 +9,11 @@ import {
   type DriveUploaderTransport,
 } from '@sdkwork/drive-app-sdk';
 import type { DriveRuntimeConfig } from '../config/runtimeConfig';
+import {
+  driveStorageScopeKey,
+  scopeDriveStorageKey,
+  type DriveStorageScope,
+} from '../session/driveStorageScope';
 import type { SessionStorageLike } from '../session/sessionStore';
 import type { DriveSessionTokenManager } from '../session/sessionTokenManager';
 import { omitAuthProjectionBody, omitAuthProjectionQuery } from './authProjection';
@@ -46,6 +50,14 @@ export interface DriveAppSdkClientOptions {
   sdkClient?: TokenManagerAwareGeneratedSdkClient;
   tokenManager: DriveSessionTokenManager;
   uploaderStateStorage?: SessionStorageLike;
+  /**
+   * Resolves the account that owns persisted uploader state.
+   *
+   * Returning undefined (signed out, or a session without tenant/user context)
+   * keeps uploader state in memory. An unscoped key would otherwise let the next
+   * account on the same device resume the previous account's upload sessions.
+   */
+  resolveUploaderStorageScope?: () => DriveStorageScope | undefined;
 }
 
 const DRIVE_UPLOADER_STATE_STORAGE_KEY = 'sdkwork.drive.pc.uploader.state.v1';
@@ -64,16 +76,61 @@ function isUploaderStateSnapshot(value: unknown): value is DriveUploaderStateSna
   );
 }
 
-function createPersistentDriveUploaderStateStore(
-  storage?: SessionStorageLike,
+/**
+ * Uploader resume state: `taskId` -> server-side upload session and uploaded parts.
+ *
+ * The SDK looks a snapshot up by task id, so the owning account has to be
+ * resolved on every call - one renderer outlives a sign-in. Entries that belong
+ * to no account (or to a runtime without browser storage) live in memory only
+ * and are dropped as soon as the owner changes.
+ */
+export function createScopedDriveUploaderStateStore(
+  storage: SessionStorageLike | undefined,
+  resolveScope?: () => DriveStorageScope | undefined,
 ): DriveUploaderStateStore {
-  if (!storage) {
-    return createInMemoryUploaderStateStore();
-  }
+  let memory: Record<string, DriveUploaderStateSnapshot> = {};
+  let memoryOwnerKey: string | null = null;
+  let legacyUnscopedKeyDropped = false;
 
-  const readAll = (): Record<string, DriveUploaderStateSnapshot> => {
+  const resolveOwner = (): { ownerKey: string; storageKey: string | null } => {
+    const scope = resolveScope?.();
+    return {
+      ownerKey: driveStorageScopeKey(scope),
+      storageKey: scope && storage
+        ? scopeDriveStorageKey(DRIVE_UPLOADER_STATE_STORAGE_KEY, scope)
+        : null,
+    };
+  };
+
+  const syncOwner = (ownerKey: string): void => {
+    if (memoryOwnerKey === ownerKey) {
+      return;
+    }
+    // A different account (or sign-out) must not resume the previous owner's
+    // in-memory sessions either.
+    memoryOwnerKey = ownerKey;
+    memory = {};
+  };
+
+  /** Older builds wrote one unscoped record for every account; it has no owner. */
+  const dropLegacyUnscopedState = (): void => {
+    if (legacyUnscopedKeyDropped || !storage) {
+      return;
+    }
+    legacyUnscopedKeyDropped = true;
     try {
-      const raw = storage.getItem(DRIVE_UPLOADER_STATE_STORAGE_KEY);
+      storage.removeItem(DRIVE_UPLOADER_STATE_STORAGE_KEY);
+    } catch {
+      // Best-effort cleanup; a failed removal only leaves unread legacy bytes.
+    }
+  };
+
+  const readAll = (storageKey: string | null): Record<string, DriveUploaderStateSnapshot> => {
+    if (!storageKey || !storage) {
+      return memory;
+    }
+    try {
+      const raw = storage.getItem(storageKey);
       if (!raw) {
         return {};
       }
@@ -90,31 +147,54 @@ function createPersistentDriveUploaderStateStore(
     }
   };
 
-  const writeAll = (snapshots: Record<string, DriveUploaderStateSnapshot>): void => {
+  const writeAll = (
+    storageKey: string | null,
+    snapshots: Record<string, DriveUploaderStateSnapshot>,
+  ): void => {
+    if (!storageKey || !storage) {
+      return;
+    }
     try {
-      storage.setItem(DRIVE_UPLOADER_STATE_STORAGE_KEY, JSON.stringify(snapshots));
+      storage.setItem(storageKey, JSON.stringify(snapshots));
     } catch {
       // Ignore storage persistence failures and keep uploads running in-memory.
     }
   };
 
+  const cloneSnapshot = (snapshot: DriveUploaderStateSnapshot): DriveUploaderStateSnapshot => ({
+    ...snapshot,
+    uploadedParts: snapshot.uploadedParts.map((part) => ({ ...part })),
+  });
+
   return {
     async get(taskId) {
-      return readAll()[taskId];
+      const { ownerKey, storageKey } = resolveOwner();
+      syncOwner(ownerKey);
+      if (storageKey) {
+        dropLegacyUnscopedState();
+      }
+      return readAll(storageKey)[taskId];
     },
     async put(snapshot) {
-      const snapshots = readAll();
-      snapshots[snapshot.taskId] = {
-        ...snapshot,
-        uploadedParts: snapshot.uploadedParts.map((part) => ({ ...part })),
-      };
-      writeAll(snapshots);
+      const { ownerKey, storageKey } = resolveOwner();
+      syncOwner(ownerKey);
+      if (storageKey) {
+        dropLegacyUnscopedState();
+      }
+      const snapshots = readAll(storageKey);
+      snapshots[snapshot.taskId] = cloneSnapshot(snapshot);
+      writeAll(storageKey, snapshots);
     },
     async clear(taskId) {
-      const snapshots = readAll();
+      const { ownerKey, storageKey } = resolveOwner();
+      syncOwner(ownerKey);
+      if (storageKey) {
+        dropLegacyUnscopedState();
+      }
+      const snapshots = readAll(storageKey);
       if (taskId in snapshots) {
         delete snapshots[taskId];
-        writeAll(snapshots);
+        writeAll(storageKey, snapshots);
       }
     },
   };
@@ -199,6 +279,7 @@ export function createDriveAppSdkClient({
   sdkClient,
   tokenManager,
   uploaderStateStorage,
+  resolveUploaderStorageScope,
 }: DriveAppSdkClientOptions): DriveAppSdkClient {
   const generatedClient = sdkClient ?? createGeneratedDriveAppClient({
     authMode: 'dual-token',
@@ -247,8 +328,9 @@ export function createDriveAppSdkClient({
   };
   client.uploader = createDriveUploaderClient({
     transport: createDriveUploaderTransport(client),
-    stateStore: createPersistentDriveUploaderStateStore(
+    stateStore: createScopedDriveUploaderStateStore(
       uploaderStateStorage ?? resolveDefaultUploaderStateStorage(config.auth.tokenStorage),
+      resolveUploaderStorageScope,
     ),
   });
   return client;

@@ -9,6 +9,12 @@
  * files owned by Drive that have no local path at all. When the selection also
  * has local paths, the host adapter additionally writes the OS cut marker so an
  * external Explorer / Finder paste behaves as a move.
+ *
+ * The pending cut belongs to the account that created it. A shared renderer can
+ * serve a second sign-in, so the clipboard records the owning account and drops
+ * itself as soon as the signed-in account changes - otherwise the next account's
+ * paste would move nodes it cannot access (403/404) or, within one tenant, move
+ * another user's files.
  */
 
 import type { DriveFile } from 'sdkwork-drive-pc-types';
@@ -23,6 +29,8 @@ export interface DriveCutSelection {
 }
 
 let pendingCut: DriveCutSelection | null = null;
+let pendingCutScopeKey: string | undefined;
+let currentScopeKey: string | undefined;
 const listeners = new Set<(selection: DriveCutSelection | null) => void>();
 
 function notify(): void {
@@ -31,14 +39,57 @@ function notify(): void {
   }
 }
 
-/** Reads the current pending cut, or null when nothing is cut. */
+/**
+ * Publish a reset after the caller's render pass.
+ *
+ * `setDriveCutClipboardScope` runs while a component renders; notifying
+ * subscribers synchronously would update other components from inside their
+ * sibling's render.
+ */
+function scheduleNotify(): void {
+  if (typeof queueMicrotask === 'function') {
+    queueMicrotask(notify);
+    return;
+  }
+  notify();
+}
+
+/**
+ * Declare which account is signed in.
+ *
+ * Idempotent for an unchanged key, so it is safe to call on every render before
+ * any reader asks for the pending cut.
+ */
+export function setDriveCutClipboardScope(scopeKey: string | undefined): void {
+  if (currentScopeKey === scopeKey) {
+    return;
+  }
+  currentScopeKey = scopeKey;
+  if (pendingCut !== null && pendingCutScopeKey !== scopeKey) {
+    pendingCut = null;
+    pendingCutScopeKey = undefined;
+    scheduleNotify();
+  }
+}
+
+/** The account key the pending cut belongs to, or undefined when nothing is cut. */
+export function getDriveCutClipboardScopeKey(): string | undefined {
+  return pendingCut === null ? undefined : pendingCutScopeKey;
+}
+
+/** Reads the current pending cut, or null when nothing is cut for this account. */
 export function getDriveCutSelection(): DriveCutSelection | null {
+  if (pendingCut !== null && pendingCutScopeKey !== currentScopeKey) {
+    // Defensive: a reader must never observe another account's cut.
+    return null;
+  }
   return pendingCut;
 }
 
 /** Records a pending cut and notifies subscribers. */
 export function setDriveCutSelection(selection: DriveCutSelection | null): void {
   pendingCut = selection;
+  pendingCutScopeKey = selection === null ? undefined : currentScopeKey;
   notify();
 }
 
@@ -48,6 +99,7 @@ export function clearDriveCutSelection(): void {
     return;
   }
   pendingCut = null;
+  pendingCutScopeKey = undefined;
   notify();
 }
 

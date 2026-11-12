@@ -170,6 +170,14 @@ export interface DriveFileService {
   /** Returns files cached from the latest workspace page request (not a full workspace export). */
   /** Returns in-memory node metadata accumulated from prior list/detail SDK calls (no network). */
   listCachedWorkspaceFiles(options?: DriveFileReadOptions): Promise<DriveFile[]>;
+  /**
+   * Invalidate the caches owned by the previously signed-in account.
+   *
+   * The service outlives a sign-in, so without this a shared renderer hands the
+   * previous account's space names, node metadata and favorites to the next one.
+   * Passing the current `tenant:user` key keeps the call idempotent.
+   */
+  syncAccountScope(scopeKey: string): void;
   listMoveCopyDestinationFolders(
     sourceFiles: Array<Pick<DriveFile, 'id' | 'spaceId'>>,
     section: string,
@@ -894,6 +902,25 @@ function createSdkBackedDriveFileService(
   let sharedSpacesCache: SharedSpace[] = [];
   let knowledgeBaseSpacesCache: KnowledgeBaseSpace[] = [];
   let spacesCatalogFetch: Promise<void> | null = null;
+  let accountScopeKey: string | null = null;
+
+  /**
+   * Drop everything cached for the previous account.
+   *
+   * These caches hold space names, node names/space ids and favorites, so a
+   * renderer that serves a second sign-in must not reuse them: a stale space id
+   * turns every follow-up request into a 403/404.
+   */
+  const resetAccountScopedCaches = (): void => {
+    favoriteNodeIds.clear();
+    folderColorCache.clear();
+    knownFiles.clear();
+    personalSpaceIds.clear();
+    gitRepositorySpaceIds.clear();
+    sharedSpacesCache = [];
+    knowledgeBaseSpacesCache = [];
+    spacesCatalogFetch = null;
+  };
 
   const rememberFolderColor = (folderId: string, color: string | null | undefined): void => {
     // Evict oldest entry when at capacity.
@@ -1684,6 +1711,13 @@ function createSdkBackedDriveFileService(
   };
 
   const service: DriveFileService = {
+    syncAccountScope(scopeKey) {
+      if (accountScopeKey === scopeKey) {
+        return;
+      }
+      accountScopeKey = scopeKey;
+      resetAccountScopedCaches();
+    },
     async listCachedWorkspaceFiles() {
       return Array.from(knownFiles.values());
     },

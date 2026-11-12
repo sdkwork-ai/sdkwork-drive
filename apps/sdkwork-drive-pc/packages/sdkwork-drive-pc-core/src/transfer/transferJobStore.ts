@@ -1,3 +1,4 @@
+import { scopeDriveStorageKey, type DriveStorageScope } from '../session/driveStorageScope';
 import {
   applyTransferFailure,
   isActiveTransferStatus,
@@ -15,6 +16,29 @@ function isLocalStorageAvailable(): boolean {
   return typeof window !== 'undefined' && Boolean(window.localStorage);
 }
 
+function transferJobsStorageKey(scope?: DriveStorageScope): string {
+  return scope
+    ? scopeDriveStorageKey(DRIVE_TRANSFER_JOBS_STORAGE_KEY, scope)
+    : DRIVE_TRANSFER_JOBS_STORAGE_KEY;
+}
+
+/**
+ * Drop the list written before transfers were account-scoped.
+ *
+ * Those jobs carry no owner, so keeping them would either be dead bytes or, if
+ * adopted, show one account's file names and space ids to the next one.
+ */
+function discardUnscopedTransferJobs(scope: DriveStorageScope | undefined): void {
+  if (!scope || !isLocalStorageAvailable()) {
+    return;
+  }
+  try {
+    window.localStorage.removeItem(DRIVE_TRANSFER_JOBS_STORAGE_KEY);
+  } catch {
+    // Best-effort cleanup; a failed removal only leaves unread legacy bytes.
+  }
+}
+
 function sanitizeJobForStorage(job: DownloadJob): DownloadJob {
   const withoutBlob = {
     ...job,
@@ -30,12 +54,13 @@ function sanitizeJobForStorage(job: DownloadJob): DownloadJob {
   };
 }
 
-export function loadPersistedTransferJobs(): DownloadJob[] {
+export function loadPersistedTransferJobs(scope?: DriveStorageScope): DownloadJob[] {
   if (!isLocalStorageAvailable()) {
     return [];
   }
+  discardUnscopedTransferJobs(scope);
   try {
-    const raw = window.localStorage.getItem(DRIVE_TRANSFER_JOBS_STORAGE_KEY);
+    const raw = window.localStorage.getItem(transferJobsStorageKey(scope));
     if (!raw) {
       return [];
     }
@@ -61,14 +86,15 @@ export function loadPersistedTransferJobs(): DownloadJob[] {
     return [];
   }
 }
-export function persistTransferJobs(jobs: DownloadJob[]): void {
+export function persistTransferJobs(jobs: DownloadJob[], scope?: DriveStorageScope): void {
   if (!isLocalStorageAvailable()) {
     return;
   }
+  discardUnscopedTransferJobs(scope);
   try {
     const serializableJobs = jobs.map(sanitizeJobForStorage);
     window.localStorage.setItem(
-      DRIVE_TRANSFER_JOBS_STORAGE_KEY,
+      transferJobsStorageKey(scope),
       JSON.stringify(serializableJobs),
     );
   } catch {

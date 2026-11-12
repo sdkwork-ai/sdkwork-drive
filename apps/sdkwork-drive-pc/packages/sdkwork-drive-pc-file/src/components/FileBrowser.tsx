@@ -79,6 +79,13 @@ import { driveFileBrowserCommandRegistry } from "../state/driveFileBrowserComman
 interface FileBrowserProps {
   activeSection: DriveSection;
   fileService: DriveFileService;
+  /**
+   * `tenant:user` of the signed-in account.
+   *
+   * Part of the load scope so a renderer that serves a second sign-in reloads
+   * instead of showing the previous account's nodes.
+   */
+  accountScopeKey?: string;
   openRequest?: DriveOpenRequest;
   downloadJobs: DownloadJob[];
   setDownloadJobs: React.Dispatch<React.SetStateAction<DownloadJob[]>>;
@@ -99,6 +106,7 @@ function collectSiblingNames(files: DriveFile[]): string[] {
 export function FileBrowser({
   activeSection,
   fileService,
+  accountScopeKey = "",
   openRequest,
   downloadJobs,
   setDownloadJobs,
@@ -206,7 +214,9 @@ export function FileBrowser({
     return sortDriveFiles(files, sortBy, sortOrder);
   }, [files, sortBy, sortOrder, serverSideSort]);
 
-  const currentLoadScope = `${activeSection}\u0000${debouncedSearchQuery}\u0000${currentFolderId ?? ""}`;
+  // The account is part of the load scope: the same section/folder names a
+  // different node set once another account is signed in.
+  const currentLoadScope = `${accountScopeKey}\u0000${activeSection}\u0000${debouncedSearchQuery}\u0000${currentFolderId ?? ""}`;
 
   const listRowHeight = preferences.compactMode ? 40 : 48;
   const gridColumns = useFileBrowserGridColumns(viewMode === "grid");

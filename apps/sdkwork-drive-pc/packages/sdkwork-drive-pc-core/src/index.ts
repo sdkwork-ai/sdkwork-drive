@@ -12,6 +12,7 @@ export * from './sdk/driveAppSdkClient';
 export * from './sdk/uploadDeclaration';
 export * from './services/driveFileService';
 export * from './session/sessionStore';
+export * from './session/driveStorageScope';
 export * from './session/osSecureSessionStorage';
 export * from './session/sessionTokenManager';
 export * from './transfer/transferJobStore';

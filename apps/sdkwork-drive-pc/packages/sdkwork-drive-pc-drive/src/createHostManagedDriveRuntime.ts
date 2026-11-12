@@ -5,6 +5,7 @@ import {
   createHostAdapter,
   createRuntimeConfig,
   createSessionStore,
+  resolveDriveStorageScope,
   type DriveCoreRuntime,
 } from 'sdkwork-drive-pc-core';
 
@@ -24,6 +25,10 @@ export function createHostManagedDriveRuntime(): DriveCoreRuntime {
     config,
     sdkClient: hostClient as never,
     tokenManager,
+    // This runtime has no browser storage, so uploader state is in-memory only;
+    // scoping it by account still makes a host account swap drop the previous
+    // account's upload sessions.
+    resolveUploaderStorageScope: () => resolveDriveStorageScope(session.getSnapshot()),
   });
   const host = createHostAdapter();
 

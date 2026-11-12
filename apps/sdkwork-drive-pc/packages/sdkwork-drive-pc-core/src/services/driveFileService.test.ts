@@ -3282,4 +3282,55 @@ describe('drive file service', () => {
     expect(requests.filter((request) => request.operationId === 'versions.list')).toHaveLength(2);
     expect(requests[1]?.query?.cursor).toBe('versions-page-2');
   });
+
+  it('drops every account-scoped cache when the signed-in account changes', async () => {
+    const { service } = createRemoteService({
+      'spaces.list': {
+        items: [
+          {
+            id: 'space-team-a',
+            spaceType: 'team',
+            displayName: 'Team A',
+          },
+          {
+            id: 'space-kb-a',
+            spaceType: 'knowledge_base',
+            displayName: 'Knowledge A',
+          },
+        ],
+      },
+      'nodes.retrieve': fileNode,
+    });
+
+    service.syncAccountScope('tenant-001:user-001');
+    await service.listSharedSpaces();
+    await service.listKnowledgeBaseSpaces();
+    await service.getNodeDetails('file-001');
+
+    expect(service.getSharedSpaces().map((space) => space.name)).toEqual(['Team A']);
+    expect(service.getKnowledgeBaseSpaces().map((space) => space.name)).toEqual(['Knowledge A']);
+    expect(await service.listCachedWorkspaceFiles()).not.toEqual([]);
+
+    service.syncAccountScope('tenant-001:user-002');
+
+    // A second sign-in on the same renderer must not inherit the first account's
+    // space catalogue, node metadata or favorites.
+    expect(service.getSharedSpaces()).toEqual([]);
+    expect(service.getKnowledgeBaseSpaces()).toEqual([]);
+    expect(await service.listCachedWorkspaceFiles()).toEqual([]);
+  });
+
+  it('keeps caches for repeated calls within the same account', async () => {
+    const { service } = createRemoteService({
+      'nodes.retrieve': fileNode,
+    });
+
+    service.syncAccountScope('tenant-001:user-001');
+    await service.getNodeDetails('file-001');
+    expect(await service.listCachedWorkspaceFiles()).not.toEqual([]);
+
+    service.syncAccountScope('tenant-001:user-001');
+
+    expect(await service.listCachedWorkspaceFiles()).not.toEqual([]);
+  });
 });

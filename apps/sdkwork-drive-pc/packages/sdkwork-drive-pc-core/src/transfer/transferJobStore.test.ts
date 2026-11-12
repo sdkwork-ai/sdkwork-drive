@@ -170,4 +170,39 @@ describe('transfer job store', () => {
       sourceNodeIds: ['node-download'],
     });
   });
+
+  it('keeps each account transfer list under its own key', () => {
+    const backing = installMockWindowStorage();
+    const scopeA = { tenantId: 'tenant-1', userId: 'user-a' };
+    const scopeB = { tenantId: 'tenant-1', userId: 'user-b' };
+
+    persistTransferJobs([makeJob({ fileName: 'A-only.pdf' })], scopeA);
+
+    expect(backing.get(`${STORAGE_KEY}.tenant-1.user-a`)).toBeTruthy();
+    expect(loadPersistedTransferJobs(scopeA).map((job) => job.fileName)).toEqual(['A-only.pdf']);
+    expect(loadPersistedTransferJobs(scopeB)).toEqual([]);
+  });
+
+  it('drops the pre-scope global list instead of handing it to the next account', () => {
+    const backing = installMockWindowStorage();
+    backing.set(STORAGE_KEY, JSON.stringify([makeJob({ fileName: 'legacy.pdf' })]));
+
+    expect(loadPersistedTransferJobs({ tenantId: 'tenant-1', userId: 'user-b' })).toEqual([]);
+    expect(backing.has(STORAGE_KEY)).toBe(false);
+  });
+
+  it('restores an interrupted job from the account-scoped key', () => {
+    const backing = installMockWindowStorage();
+    const scope = { tenantId: 'tenant-1', userId: 'user-a' };
+    backing.set(
+      `${STORAGE_KEY}.tenant-1.user-a`,
+      JSON.stringify([makeJob({ status: 'uploading', uploadParentId: 'folder-001' })]),
+    );
+
+    expect(loadPersistedTransferJobs(scope)[0]).toMatchObject({
+      status: 'failed',
+      errorMessage: TRANSFER_INTERRUPTION_UPLOAD_RESELECT,
+      uploadParentId: 'folder-001',
+    });
+  });
 });
