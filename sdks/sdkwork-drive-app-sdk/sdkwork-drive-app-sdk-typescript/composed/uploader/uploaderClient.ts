@@ -80,7 +80,10 @@ async function readUploadPartBody(
       "Drive uploader file source supports neither readRange nor slice.",
     );
   }
-  return readableBlob(slice(offsetBytes, offsetBytes + sizeBytes, contentType));
+  // `slice` must run with the source as its receiver: Blob.prototype.slice is
+  // brand-checked, so an unbound call throws "Value of this must be of type
+  // Blob" in Node and "Illegal invocation" in browsers.
+  return readableBlob(slice.call(file, offsetBytes, offsetBytes + sizeBytes, contentType));
 }
 
 const UPLOADER_CHECKSUM_CHUNK_BYTES = 4 * 1024 * 1024;
@@ -161,7 +164,8 @@ async function sha256Checksum(file: DriveUploaderBlobLike): Promise<string> {
         "Drive uploader file source supports neither readRange nor slice.",
       );
     }
-    const blob = slice(offset, offset + length, file.type);
+    // Blob.prototype.slice is brand-checked; call it with the source as `this`.
+    const blob = slice.call(file, offset, offset + length, file.type);
     hasher.update(new Uint8Array(await blobToArrayBuffer(blob)));
   }
 

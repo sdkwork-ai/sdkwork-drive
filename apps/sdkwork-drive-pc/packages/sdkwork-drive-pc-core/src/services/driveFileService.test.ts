@@ -643,6 +643,99 @@ describe('drive file service', () => {
     expect(createFolderRequest?.body).not.toHaveProperty('id');
   });
 
+  it('provisions a personal space from the generated SDK resource payload without an envelope', async () => {
+    // Regression: the generated transport strips the SdkWorkApiResponse `data`
+    // envelope, so a single resource arrives as `{ item }` rather than
+    // `{ code, data: { item } }`. Resource parsing must accept both shapes or
+    // the first file-browser load fails while the space was already created.
+    const requests: DriveAppSdkRequest[] = [];
+    const appSdkClient = attachUploader({
+      metadata: {} as DriveAppSdkClient['metadata'],
+      operations: {} as DriveAppSdkClient['operations'],
+      request: vi.fn(async (request: DriveAppSdkRequest): Promise<unknown> => {
+        requests.push(request);
+        if (request.operationId === 'spaces.list') {
+          return { items: [] };
+        }
+        if (request.operationId === 'spaces.create') {
+          return { item: { ...personalSpaceNode, id: 'space-unwrapped-personal' } };
+        }
+        if (request.operationId === 'nodes.folders.create') {
+          return {
+            item: {
+              ...folderNode,
+              id: 'folder-unwrapped-personal',
+              spaceId: 'space-unwrapped-personal',
+              parentNodeId: undefined,
+            },
+          };
+        }
+        if (request.operationId === 'nodeProperties.list') {
+          return { items: [] };
+        }
+        return {};
+      }) as DriveAppSdkClient['request'],
+    });
+    const service = createDriveFileService({
+      appSdkClient,
+      getSession: () => session,
+    });
+
+    const folder = await service.createFolder('Reports', 'my-storage');
+
+    expect(folder).toEqual(expect.objectContaining({
+      id: 'folder-unwrapped-personal',
+      spaceId: 'space-unwrapped-personal',
+    }));
+    expect(requests.map((request) => request.operationId)).toEqual([
+      'spaces.list',
+      'spaces.create',
+      'nodes.folders.create',
+      'nodeProperties.list',
+    ]);
+  });
+
+  it('confirms the provisioned personal space through the owner list when create returns no resource payload', async () => {
+    const requests: DriveAppSdkRequest[] = [];
+    let listCalls = 0;
+    const appSdkClient = attachUploader({
+      metadata: {} as DriveAppSdkClient['metadata'],
+      operations: {} as DriveAppSdkClient['operations'],
+      request: vi.fn(async (request: DriveAppSdkRequest): Promise<unknown> => {
+        requests.push(request);
+        if (request.operationId === 'spaces.list') {
+          listCalls += 1;
+          return { items: listCalls === 1 ? [] : [personalSpaceNode] };
+        }
+        if (request.operationId === 'spaces.create') {
+          // Creation succeeded server-side but the payload is empty/unreadable.
+          return {};
+        }
+        if (request.operationId === 'nodes.list') {
+          return { items: [] };
+        }
+        return {};
+      }) as DriveAppSdkClient['request'],
+    });
+    const service = createDriveFileService({
+      appSdkClient,
+      getSession: () => session,
+    });
+
+    const files = await service.listFiles('my-storage');
+
+    expect(files).toEqual([]);
+    expect(requests.map((request) => request.operationId)).toEqual([
+      'spaces.list',
+      'spaces.create',
+      'spaces.list',
+      'nodes.list',
+    ]);
+    expect(requests.find((request) => request.operationId === 'nodes.list')?.pathParams).toEqual({
+      spaceId: 'my-storage',
+    });
+  });
+
   it('loads remote folder breadcrumb ancestors through the node path SDK surface', async () => {
     const { service, requests } = createRemoteService({
       'nodes.path.retrieve': {

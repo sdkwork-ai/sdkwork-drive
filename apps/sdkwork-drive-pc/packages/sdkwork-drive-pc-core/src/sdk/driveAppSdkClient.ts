@@ -169,6 +169,31 @@ function buildSdkError(
   });
 }
 
+/**
+ * Normalizes a single-resource response to the resource itself.
+ *
+ * The generated transport strips only the `SdkWorkApiResponse.data` envelope,
+ * so a single-resource operation (`spaces.create`, `nodes.retrieve`,
+ * `uploadSessions.complete`, ...) resolves to `{ item: T }`. The typed
+ * generated methods pass `sdkworkUnwrapKind: 'item'` for exactly those
+ * operations; this generic dispatch cannot read that per-operation metadata, so
+ * it applies the same unwrapping by shape. List (`{ items, pageInfo }`) and
+ * command (`{ node, uploadSession }`, `{ downloadUrl }`, ...) payloads never
+ * carry a sole `item` key and pass through unchanged.
+ */
+function unwrapResourceItem<T>(payload: unknown): T {
+  if (
+    typeof payload !== 'object'
+    || payload === null
+    || Array.isArray(payload)
+    || !('item' in payload)
+    || Object.keys(payload).length !== 1
+  ) {
+    return payload as T;
+  }
+  return (payload as { item: T }).item;
+}
+
 export function createDriveAppSdkClient({
   config,
   sdkClient,
@@ -198,7 +223,7 @@ export function createDriveAppSdkClient({
     }: DriveAppSdkRequest): Promise<T> {
       const operation = operations[operationId];
       try {
-        return await generatedClient.http.request<T>(
+        const payload = await generatedClient.http.request<unknown>(
           buildGeneratedSdkPath(operation.path, pathParams),
           {
             method: operation.method,
@@ -208,6 +233,7 @@ export function createDriveAppSdkClient({
             signal,
           },
         );
+        return unwrapResourceItem<T>(payload);
       } catch (error) {
         if (isDriveRequestCancellationError(error)) {
           throw error;

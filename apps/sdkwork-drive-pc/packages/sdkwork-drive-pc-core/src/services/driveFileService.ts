@@ -1,5 +1,5 @@
 import type { DriveUploaderBlobLike } from '@sdkwork/drive-app-sdk';
-import { extractSdkWorkResourceItem, hexEncode, uuid as createUuid } from '@sdkwork/utils';
+import { hexEncode, uuid as createUuid } from '@sdkwork/utils';
 import {
   canCreateDriveFolderInSection,
   canUploadDriveFileToSection,
@@ -277,6 +277,13 @@ type JsonRecord = Record<string, unknown>;
 
 const DEFAULT_PAGE_SIZE = 20;
 const MAX_VERSION_LIST_PAGES = 10;
+/**
+ * Bounded confirmation attempts after an owner-scoped space create. A create
+ * may commit after our owner-scoped list, so a single immediate lookup is not
+ * enough to distinguish "concurrent creator won" from "no space exists".
+ */
+const OWNED_SPACE_RESOLUTION_ATTEMPTS = 3;
+const OWNED_SPACE_RESOLUTION_DELAY_MS = 120;
 /** Text preview/editor in-memory limit (aligned with downloadTransfer guard order of magnitude). */
 const MAX_TEXT_PREVIEW_BYTES = 10 * 1024 * 1024;
 const DEFAULT_DOWNLOAD_TTL_SECONDS = 300;
@@ -399,6 +406,45 @@ function responseListPayload(response: unknown): JsonRecord {
     return response.data;
   }
   return isRecord(response) ? response : {};
+}
+
+/**
+ * Unwraps a single-resource App SDK payload across every wire shape the client
+ * can observe:
+ * - the raw `SdkWorkApiResponse` envelope (`{ code, data: { item } }`),
+ * - the generated transport's `data` payload (`{ item }`), which is what the
+ *   real client returns because it already strips the `data` envelope, and
+ * - a bare resource record.
+ *
+ * Resource ids must never depend on which of those shapes the transport
+ * happened to produce; a missing id here used to fail the whole file browser.
+ */
+function resourceItemFromResponse(response: unknown): unknown {
+  if (response === undefined || response === null) {
+    return undefined;
+  }
+  if (!isRecord(response)) {
+    return response;
+  }
+
+  if ('data' in response) {
+    const data = response.data;
+    if (isRecord(data) && 'item' in data) {
+      return data.item;
+    }
+    return data;
+  }
+
+  if ('item' in response) {
+    return response.item;
+  }
+
+  return response;
+}
+
+function resourceRecordFromResponse(response: unknown): JsonRecord | undefined {
+  const item = resourceItemFromResponse(response);
+  return isRecord(item) ? item : undefined;
 }
 
 function extractItems(response: unknown): unknown[] {
@@ -533,6 +579,24 @@ function makeId(prefix: string): string {
 
 function makeShareToken(): string {
   return randomHex(32) || `${Date.now().toString(36)}-${makeId('share')}`;
+}
+
+function delay(ms: number, signal?: AbortSignal): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if (signal?.aborted) {
+      reject(signal.reason ?? new Error('Drive request aborted.'));
+      return;
+    }
+    const timer = setTimeout(() => {
+      signal?.removeEventListener('abort', onAbort);
+      resolve();
+    }, ms);
+    const onAbort = (): void => {
+      clearTimeout(timer);
+      reject(signal?.reason ?? new Error('Drive request aborted.'));
+    };
+    signal?.addEventListener('abort', onAbort, { once: true });
+  });
 }
 
 function mapShareLink(record: unknown): DriveShareLink {
@@ -711,7 +775,7 @@ function responseToArchiveEntry(response: unknown): DriveArchiveEntry {
 }
 
 function responseToStorageSummary(response: unknown, identity: RemoteIdentity): DriveStorageSummary {
-  const record = extractSdkWorkResourceItem<JsonRecord>(response) ?? responseListPayload(response);
+  const record = resourceRecordFromResponse(response) ?? responseListPayload(response);
   const usedBytes =
     numberField(record, 'usedBytes', 'used_bytes', 'totalBytes', 'total_bytes') ?? 0;
   const totalBytes = numberField(record, 'quotaBytes', 'quota_bytes', 'totalQuotaBytes', 'totalBytesLimit');
@@ -782,20 +846,17 @@ function isKnowledgeBaseSpace(response: unknown): boolean {
 }
 
 function spaceIdFromSpace(response: unknown): string | undefined {
-  if (response === undefined || response === null) {
-    return undefined;
-  }
-  const record = extractSdkWorkResourceItem<JsonRecord>(response);
-  if (!isRecord(record)) {
+  const record = resourceRecordFromResponse(response);
+  if (!record) {
     return undefined;
   }
   return stringField(record, 'id', 'spaceId', 'space_id');
 }
 
 function spaceIdFromNode(response: unknown): string | undefined {
-  const record = extractSdkWorkResourceItem<JsonRecord>(response);
-  const node = isRecord(record.node) ? record.node : record;
-  return stringField(node, 'spaceId', 'space_id');
+  const record = resourceRecordFromResponse(response);
+  const node = isRecord(record?.node) ? record.node : record;
+  return node ? stringField(node, 'spaceId', 'space_id') : undefined;
 }
 
 function uploadSessionFromCreateFile(response: unknown): JsonRecord {
@@ -813,7 +874,7 @@ function nodeFromCreateFile(response: unknown): unknown {
   if (payload.node !== undefined) {
     return payload.node;
   }
-  return extractSdkWorkResourceItem(response);
+  return resourceItemFromResponse(response);
 }
 
 function createSdkBackedDriveFileService(
@@ -1227,95 +1288,144 @@ function createSdkBackedDriveFileService(
   const ownerSpaceCacheKey = (identity: RemoteIdentity): string =>
     `${identity.tenantId}:${identity.subjectType}:${identity.userId}`;
 
-  const resolvePersonalSpaceId = async (
-    identity: RemoteIdentity,
+  const pendingOwnedSpaceProvisioning = new Map<string, Promise<string>>();
+
+  const findOwnedSpaceIdWithRetry = async (
+    spaceType: string,
+    options: DriveFileReadOptions = {},
+  ): Promise<string | undefined> => {
+    let lastError: unknown;
+    for (let attempt = 0; attempt < OWNED_SPACE_RESOLUTION_ATTEMPTS; attempt += 1) {
+      if (attempt > 0) {
+        await delay(OWNED_SPACE_RESOLUTION_DELAY_MS * attempt, options.signal);
+      }
+      try {
+        const spaceId = await findOwnedSpaceId(spaceType, options);
+        if (spaceId) {
+          return spaceId;
+        }
+      } catch (error) {
+        if (isDriveAbortError(error)) {
+          throw error;
+        }
+        lastError = error;
+      }
+    }
+    if (lastError !== undefined) {
+      throw lastError;
+    }
+    return undefined;
+  };
+
+  const provisionOwnedSpace = async (
+    spaceType: string,
+    displayName: string,
+    missingSpaceIdMessage: string,
     options: DriveFileReadOptions = {},
   ): Promise<string> => {
-    const cacheKey = ownerSpaceCacheKey(identity);
-    const cachedSpaceId = personalSpaceIds.get(cacheKey);
-    if (cachedSpaceId) {
-      return cachedSpaceId;
+    const existingSpaceId = await findOwnedSpaceId(spaceType, options);
+    if (existingSpaceId) {
+      return existingSpaceId;
     }
 
-    const existingPersonalSpaceId = await findOwnedSpaceId('personal', options);
-    if (existingPersonalSpaceId) {
-      personalSpaceIds.set(cacheKey, existingPersonalSpaceId);
-      return existingPersonalSpaceId;
-    }
-
-    let response: unknown;
+    let createError: unknown;
+    let createdSpaceId: string | undefined;
     try {
-      response = await sdkRequest<unknown>({
+      const response = await sdkRequest<unknown>({
         operationId: 'spaces.create',
         signal: options.signal,
         body: {
           id: makeId('space'),
-          displayName: PERSONAL_SPACE_DISPLAY_NAME,
-          spaceType: 'personal',
+          displayName,
+          spaceType,
         },
       });
+      createdSpaceId = spaceIdFromSpace(response);
     } catch (error) {
-      if (isConflictError(error)) {
-        const resolvedSpaceId = await findOwnedSpaceId('personal', options);
-        if (resolvedSpaceId) {
-          personalSpaceIds.set(cacheKey, resolvedSpaceId);
-          return resolvedSpaceId;
-        }
+      // A concurrent caller or another tab can win the owner-type uniqueness
+      // race. The confirmation lookup below adopts the winner's space; every
+      // other failure is real and must keep propagating.
+      if (!isConflictError(error)) {
+        throw error;
       }
-      throw error;
+      createError = error;
     }
-    const createdSpaceId = spaceIdFromSpace(response);
+
+    // The create response is only advisory: a transport or proxy may drop the
+    // resource payload, and a concurrent creator may commit after our first
+    // list. Confirm the owner-scoped space before failing the file browser.
     if (!createdSpaceId) {
-      throw new Error('Drive personal space provisioning did not return a space id.');
+      createdSpaceId = await findOwnedSpaceIdWithRetry(spaceType, options);
     }
-    personalSpaceIds.set(cacheKey, createdSpaceId);
+    if (!createdSpaceId) {
+      throw createError instanceof Error ? createError : new Error(missingSpaceIdMessage);
+    }
     return createdSpaceId;
   };
+
+  const resolveOwnedSpaceId = async (
+    spaceType: string,
+    displayName: string,
+    cache: Map<string, string>,
+    missingSpaceIdMessage: string,
+    identity: RemoteIdentity,
+    options: DriveFileReadOptions = {},
+  ): Promise<string> => {
+    const cacheKey = ownerSpaceCacheKey(identity);
+    const cachedSpaceId = cache.get(cacheKey);
+    if (cachedSpaceId) {
+      return cachedSpaceId;
+    }
+
+    // Collapse concurrent first-load calls onto one create instead of racing
+    // the owner-type uniqueness constraint and surfacing a conflict.
+    const pendingKey = `${spaceType}:${cacheKey}`;
+    const inFlight = pendingOwnedSpaceProvisioning.get(pendingKey);
+    if (inFlight) {
+      const spaceId = await inFlight;
+      cache.set(cacheKey, spaceId);
+      return spaceId;
+    }
+
+    const provisioning = provisionOwnedSpace(
+      spaceType,
+      displayName,
+      missingSpaceIdMessage,
+      options,
+    );
+    pendingOwnedSpaceProvisioning.set(pendingKey, provisioning);
+    try {
+      const spaceId = await provisioning;
+      cache.set(cacheKey, spaceId);
+      return spaceId;
+    } finally {
+      pendingOwnedSpaceProvisioning.delete(pendingKey);
+    }
+  };
+
+  const resolvePersonalSpaceId = async (
+    identity: RemoteIdentity,
+    options: DriveFileReadOptions = {},
+  ): Promise<string> => resolveOwnedSpaceId(
+    'personal',
+    PERSONAL_SPACE_DISPLAY_NAME,
+    personalSpaceIds,
+    'Drive personal space provisioning did not return a space id.',
+    identity,
+    options,
+  );
 
   const resolveGitRepositorySpaceId = async (
     identity: RemoteIdentity,
     options: DriveFileReadOptions = {},
-  ): Promise<string> => {
-    const cacheKey = ownerSpaceCacheKey(identity);
-    const cachedSpaceId = gitRepositorySpaceIds.get(cacheKey);
-    if (cachedSpaceId) {
-      return cachedSpaceId;
-    }
-
-    const existingGitRepositorySpaceId = await findOwnedSpaceId('git_repository', options);
-    if (existingGitRepositorySpaceId) {
-      gitRepositorySpaceIds.set(cacheKey, existingGitRepositorySpaceId);
-      return existingGitRepositorySpaceId;
-    }
-
-    let response: unknown;
-    try {
-      response = await sdkRequest<unknown>({
-        operationId: 'spaces.create',
-        signal: options.signal,
-        body: {
-          id: makeId('space'),
-          displayName: GIT_REPOSITORY_SPACE_DISPLAY_NAME,
-          spaceType: 'git_repository',
-        },
-      });
-    } catch (error) {
-      if (isConflictError(error)) {
-        const resolvedSpaceId = await findOwnedSpaceId('git_repository', options);
-        if (resolvedSpaceId) {
-          gitRepositorySpaceIds.set(cacheKey, resolvedSpaceId);
-          return resolvedSpaceId;
-        }
-      }
-      throw error;
-    }
-    const createdSpaceId = spaceIdFromSpace(response);
-    if (!createdSpaceId) {
-      throw new Error('Drive git repository space provisioning did not return a space id.');
-    }
-    gitRepositorySpaceIds.set(cacheKey, createdSpaceId);
-    return createdSpaceId;
-  };
+  ): Promise<string> => resolveOwnedSpaceId(
+    'git_repository',
+    GIT_REPOSITORY_SPACE_DISPLAY_NAME,
+    gitRepositorySpaceIds,
+    'Drive git repository space provisioning did not return a space id.',
+    identity,
+    options,
+  );
 
   const resolveSectionSpaceIds = async (
     section: string,
@@ -1548,7 +1658,7 @@ function createSdkBackedDriveFileService(
       pathParams: { nodeId },
       query: {},
     });
-    const node = extractSdkWorkResourceItem<unknown>(response);
+    const node = resourceItemFromResponse(response);
     if (!isRecord(node)) {
       throw new Error('Drive App SDK nodes.retrieve did not return node metadata.');
     }
@@ -1900,7 +2010,7 @@ function createSdkBackedDriveFileService(
           nodeName: name,
         },
       });
-      const folder = await mapDecoratedNode(extractSdkWorkResourceItem(response), identity, {}, options);
+      const folder = await mapDecoratedNode(resourceItemFromResponse(response), identity, {}, options);
       rememberFiles([folder]);
       return folder;
     },
@@ -1933,7 +2043,7 @@ function createSdkBackedDriveFileService(
           targetParentNodeId: targetParentNodeId || undefined,
         },
       });
-      const moved = await mapDecoratedNode(extractSdkWorkResourceItem(response), identity, {}, options);
+      const moved = await mapDecoratedNode(resourceItemFromResponse(response), identity, {}, options);
       rememberFiles([moved]);
       return moved;
     },
@@ -1950,7 +2060,7 @@ function createSdkBackedDriveFileService(
           nodeName: options.nodeName,
         },
       });
-      const copied = await mapDecoratedNode(extractSdkWorkResourceItem(response), identity, {}, options);
+      const copied = await mapDecoratedNode(resourceItemFromResponse(response), identity, {}, options);
       rememberFiles([copied]);
       return copied;
     },
@@ -2275,7 +2385,7 @@ function createSdkBackedDriveFileService(
           description,
         },
       });
-      const created = responseToSharedSpace(extractSdkWorkResourceItem(response) ?? response, {
+      const created = responseToSharedSpace(resourceItemFromResponse(response) ?? response, {
         name,
         icon,
         color,

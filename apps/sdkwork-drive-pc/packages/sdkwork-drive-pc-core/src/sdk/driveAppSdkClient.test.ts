@@ -72,6 +72,44 @@ describe('drive app sdk client', () => {
     expect(request.mock.calls[0]![1]).not.toHaveProperty('headers');
   });
 
+  it('unwraps single-resource payloads exactly like the typed generated SDK methods', async () => {
+    // The generated transport already strips the `SdkWorkApiResponse.data`
+    // envelope; the generic dispatch must also strip the resource `item`
+    // wrapper, otherwise every resource caller sees `{ item }` instead of the
+    // resource and reads ids that do not exist.
+    const tokenManager = createDriveSessionTokenManager(createSessionStore());
+    const responses: Record<string, unknown> = {
+      '/app/v3/api/drive/spaces': { item: { id: 'space-001', spaceType: 'personal' } },
+      '/app/v3/api/drive/spaces/space-001/nodes': {
+        items: [{ id: 'node-001' }],
+        pageInfo: { mode: 'offset' },
+      },
+    };
+    const request = vi.fn(async <T>(path: string): Promise<T> => responses[path] as T);
+    const sdkClient = {
+      http: { request },
+      setTokenManager: vi.fn(),
+    };
+
+    const client = createDriveAppSdkClient({
+      config,
+      sdkClient: sdkClient as never,
+      tokenManager,
+    });
+
+    await expect(client.request({
+      operationId: 'spaces.create',
+      body: { id: 'space-001', displayName: 'My Storage', spaceType: 'personal' },
+    })).resolves.toEqual({ id: 'space-001', spaceType: 'personal' });
+    await expect(client.request({
+      operationId: 'nodes.list',
+      pathParams: { spaceId: 'space-001' },
+    })).resolves.toEqual({
+      items: [{ id: 'node-001' }],
+      pageInfo: { mode: 'offset' },
+    });
+  });
+
   it('normalizes generated SDK failures at the Drive app SDK facade boundary', async () => {
     const tokenManager = createDriveSessionTokenManager(createSessionStore());
     const request = vi.fn(async <T>(): Promise<T> => {

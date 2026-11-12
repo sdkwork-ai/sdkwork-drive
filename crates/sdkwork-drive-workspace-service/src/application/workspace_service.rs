@@ -142,6 +142,51 @@ impl SqlDriveWorkspaceService {
         self.service.get_node(command).await
     }
 
+    /// Soft-deletes one file node and retires its active object versions.
+    ///
+    /// Drive keeps node rows and object bytes for retention and audit, so a
+    /// cross-module delete marks both `lifecycle_status = 'deleted'` instead of
+    /// removing history. Public delivery resolves only active nodes/objects.
+    pub async fn soft_delete_node(
+        &self,
+        tenant_id: &str,
+        space_id: &str,
+        node_id: &str,
+        operator_id: &str,
+    ) -> Result<(), DriveServiceError> {
+        sqlx::query(
+            "UPDATE dr_drive_node
+             SET lifecycle_status = 'deleted', updated_by = $4, updated_at = NOW()
+             WHERE tenant_id = $1 AND space_id = $2 AND id = $3
+               AND lifecycle_status <> 'deleted'",
+        )
+        .bind(tenant_id)
+        .bind(space_id)
+        .bind(node_id)
+        .bind(operator_id)
+        .execute(&self.pool)
+        .await
+        .map_err(|error| {
+            DriveServiceError::Internal(format!("soft delete drive node failed: {error}"))
+        })?;
+
+        sqlx::query(
+            "UPDATE dr_drive_storage_object
+             SET lifecycle_status = 'deleted'
+             WHERE tenant_id = $1 AND node_id = $2 AND lifecycle_status = 'active'",
+        )
+        .bind(tenant_id)
+        .bind(node_id)
+        .execute(&self.pool)
+        .await
+        .map_err(|error| {
+            DriveServiceError::Internal(format!(
+                "retire drive node object versions failed: {error}"
+            ))
+        })?;
+        Ok(())
+    }
+
     pub async fn list_children(
         &self,
         command: ListDriveWorkspaceChildrenCommand,

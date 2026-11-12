@@ -27,7 +27,7 @@ CREATE TABLE IF NOT EXISTS dr_drive_space (
     CONSTRAINT ck_dr_drive_space_owner_subject_type
         CHECK (owner_subject_type IN ('user', 'group', 'organization', 'app')),
     CONSTRAINT ck_dr_drive_space_space_type
-        CHECK (space_type IN ('personal', 'team', 'knowledge_base', 'ai_generated', 'git_repository', 'deployment', 'app_upload', 'im', 'rtc', 'notary', 'website')),
+        CHECK (space_type IN ('personal', 'team', 'knowledge_base', 'ai_generated', 'git_repository', 'deployment', 'app_upload', 'im', 'rtc', 'notary', 'website', 'documents')),
     CONSTRAINT ck_dr_drive_space_git_repository_owner_user
         CHECK (space_type != 'git_repository' OR owner_subject_type = 'user'),
     CONSTRAINT ck_dr_drive_space_rtc_owner_user
@@ -142,7 +142,7 @@ CREATE TABLE IF NOT EXISTS dr_drive_node (
     CONSTRAINT ck_dr_drive_node_node_type
         CHECK (node_type IN ('file', 'folder', 'shortcut', 'virtual_reference')),
     CONSTRAINT ck_dr_drive_node_space_type
-        CHECK (space_type IN ('personal', 'team', 'knowledge_base', 'ai_generated', 'git_repository', 'deployment', 'app_upload', 'im', 'rtc', 'notary', 'website')),
+        CHECK (space_type IN ('personal', 'team', 'knowledge_base', 'ai_generated', 'git_repository', 'deployment', 'app_upload', 'im', 'rtc', 'notary', 'website', 'documents')),
     CONSTRAINT ck_dr_drive_node_scene
         CHECK (scene IS NULL OR (
             scene = btrim(scene)

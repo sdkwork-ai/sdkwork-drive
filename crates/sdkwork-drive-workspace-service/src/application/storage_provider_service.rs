@@ -4,6 +4,7 @@ use crate::ports::storage_provider_store::{
 };
 use crate::DriveServiceError;
 use sdkwork_drive_config::allows_plain_credential_refs;
+use sqlx::PgPool;
 
 #[derive(Debug, Clone)]
 pub struct CreateStorageProviderCommand {
@@ -1058,4 +1059,46 @@ fn capabilities_for_provider(provider: &DriveStorageProvider) -> StorageProvider
         supported_server_side_encryption_modes: Vec::new(),
         supported_storage_classes: Vec::new(),
     }
+}
+
+/// Ensures one space resolves to a storage provider for new object versions.
+///
+/// The uploader resolves a provider through `dr_drive_storage_provider_binding`
+/// (space -> space_type -> tenant), so a sibling module that creates a space and
+/// seeds a provider directly must also mount the provider on that space. The
+/// binding is idempotent and stays inside the Drive-owned table.
+pub async fn ensure_space_storage_provider_binding(
+    pool: &PgPool,
+    tenant_id: &str,
+    space_id: &str,
+    provider_id: &str,
+    storage_root_prefix: &str,
+    operator_id: &str,
+) -> Result<(), DriveServiceError> {
+    let binding_id = format!("binding-{provider_id}-{space_id}");
+    sqlx::query(
+        "INSERT INTO dr_drive_storage_provider_binding
+         (id, tenant_id, space_id, provider_id, binding_scope, purpose,
+          storage_root_prefix, lifecycle_status, version, created_by, updated_by)
+         VALUES ($1, $2, $3, $4, 'space', 'primary', $5, 'active', 1, $6, $6)
+         ON CONFLICT (id) DO UPDATE
+         SET provider_id = EXCLUDED.provider_id,
+             storage_root_prefix = EXCLUDED.storage_root_prefix,
+             lifecycle_status = 'active',
+             version = dr_drive_storage_provider_binding.version + 1,
+             updated_by = EXCLUDED.updated_by,
+             updated_at = NOW()",
+    )
+    .bind(binding_id)
+    .bind(tenant_id)
+    .bind(space_id)
+    .bind(provider_id)
+    .bind(storage_root_prefix)
+    .bind(operator_id)
+    .execute(pool)
+    .await
+    .map_err(|error| {
+        DriveServiceError::Internal(format!("ensure storage provider binding failed: {error}"))
+    })?;
+    Ok(())
 }

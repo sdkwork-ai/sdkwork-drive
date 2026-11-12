@@ -2783,7 +2783,8 @@
               "im",
               "rtc",
               "notary",
-              "website"
+              "website",
+        "documents"
             ]
           },
           "lifecycleStatus": {

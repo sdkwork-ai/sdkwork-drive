@@ -51,7 +51,8 @@
                 "im",
                 "rtc",
                 "notary",
-                "website"
+                "website",
+        "documents"
               ]
             }
           }
@@ -320,7 +321,8 @@
                 "im",
                 "rtc",
                 "notary",
-                "website"
+                "website",
+        "documents"
               ]
             }
           }
@@ -5498,7 +5500,8 @@
               "im",
               "rtc",
               "notary",
-              "website"
+              "website",
+        "documents"
             ]
           },
           "providerId": {
