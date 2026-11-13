@@ -29,9 +29,14 @@ pub type ApiAssembly = ApiAssemblyContribution;
 /// serving traffic, so it is logged and the request path continues.
 ///
 /// Configuration is environment driven (`StorageBootstrapEnv`); the default
-/// vendor is Tencent Cloud COS. The Tencent row is only created when its
-/// SecretId, SecretKey and bucket are all configured — a placeholder cloud
-/// binding would silently point uploads at a credential that cannot work.
+/// vendor is Tencent Cloud COS. One reusable account and provider
+/// configuration is created per built-in cloud vendor, so the storage console
+/// opens with an account the operator only has to edit. When
+/// `SDKWORK_DRIVE_TENCENT_COS_SECRET_ID`, `SDKWORK_DRIVE_TENCENT_COS_SECRET_KEY`
+/// and `SDKWORK_DRIVE_TENCENT_COS_BUCKET` are configured the Tencent account is
+/// sealed with the real key pair; otherwise it keeps its unmistakable
+/// placeholder until the operator replaces it. The tenant the bootstrap seeds
+/// is `SDKWORK_DRIVE_BOOTSTRAP_TENANT_ID` (the platform tenant by default).
 static STORAGE_PROVIDER_BOOTSTRAP_STARTED: std::sync::atomic::AtomicBool =
     std::sync::atomic::AtomicBool::new(false);
 

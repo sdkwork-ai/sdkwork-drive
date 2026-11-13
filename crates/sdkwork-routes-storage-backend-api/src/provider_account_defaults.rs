@@ -77,10 +77,9 @@ use sdkwork_iam_provider_account_service::{
 
 /// Provider id prefix every bootstrapped row shares, so an operator can tell a
 /// built-in row from one they created by hand. Also what makes the run
-/// idempotent: the id is derived from the kind, never random.
+/// idempotent: the id is derived from the tenant and the kind, never random.
 const BUILTIN_PROVIDER_ID_PREFIX: &str = "builtin-storage-provider-";
 
-const LOCAL_PROVIDER_ID: &str = "builtin-storage-provider-local-filesystem";
 const LOCAL_PROVIDER_KIND: &str = "local_filesystem";
 const LOCAL_PROVIDER_NAME: &str = "Built-in Local Filesystem";
 /// `local_filesystem` stores under a filesystem path, not a bucket URL, and the
@@ -98,7 +97,6 @@ const LOCAL_PROVIDER_BUCKET: &str = "sdkwork-drive";
 /// binding falls back to `local_filesystem` when the kind is disabled or its row
 /// was never created, so the default is never a dangling reference.
 const DEFAULT_PROVIDER_KIND: &str = "tencent_cos";
-const DEFAULT_PROVIDER_ID: &str = "builtin-storage-provider-tencent-cos";
 
 /// One vendor's credential-field shape: the labels an operator sees next to the
 /// two halves of the key pair, and the identifier shape each half has.
@@ -637,11 +635,27 @@ const ALL_BUILTIN_KINDS_PAGE: OffsetPage = OffsetPage {
     offset: 0,
 };
 
-fn provider_id_for(provider_kind: &str) -> String {
+fn provider_id_for(tenant_id: &str, provider_kind: &str) -> String {
+    // Provider ids are global while `dr_drive_storage_provider.tenant_id` is
+    // not, so the tenant is part of the id: a plain kind-derived id would make
+    // the second tenant's bootstrap collide with the first tenant's row and be
+    // rejected as a cross-tenant conflict, leaving that console empty. The
+    // tenant prefix also keeps a deployment that once seeded the platform
+    // sentinel tenant from blocking the real console tenant.
     format!(
-        "{BUILTIN_PROVIDER_ID_PREFIX}{}",
+        "{BUILTIN_PROVIDER_ID_PREFIX}{tenant_id}-{}",
         provider_kind.replace('_', "-")
     )
+}
+
+/// The per-tenant id of the credential-free fallback provider.
+fn local_provider_id_for(tenant_id: &str) -> String {
+    provider_id_for(tenant_id, LOCAL_PROVIDER_KIND)
+}
+
+/// The per-tenant id of the default cloud provider.
+fn default_provider_id_for(tenant_id: &str) -> String {
+    provider_id_for(tenant_id, DEFAULT_PROVIDER_KIND)
 }
 
 /// The advanced-control defaults a bootstrap run reports for one vendor.
@@ -1030,6 +1044,7 @@ pub(crate) async fn initialize_storage_provider_account_defaults(
     };
 
     let mut items = Vec::with_capacity(BUILTIN_CLOUD_PROVIDERS.len() + 1);
+    let local_provider_id = local_provider_id_for(&tenant_id);
 
     // The credential-free kind is settled first: it is what the default binding
     // points at, so it has to exist before the binding is written.
@@ -1038,7 +1053,7 @@ pub(crate) async fn initialize_storage_provider_account_defaults(
             &state,
             &tenant_id,
             &operator_id,
-            LOCAL_PROVIDER_ID,
+            &local_provider_id,
             LOCAL_PROVIDER_KIND,
             LOCAL_PROVIDER_NAME,
             LOCAL_PROVIDER_ENDPOINT,
@@ -1053,14 +1068,14 @@ pub(crate) async fn initialize_storage_provider_account_defaults(
     let local_provider_available = if local_provider_created {
         true
     } else {
-        kind_is_enabled(LOCAL_PROVIDER_KIND) && provider_exists(&state, LOCAL_PROVIDER_ID).await?
+        kind_is_enabled(LOCAL_PROVIDER_KIND) && provider_exists(&state, &local_provider_id).await?
     };
 
     for builtin in &BUILTIN_CLOUD_PROVIDERS {
         if !kind_is_enabled(builtin.provider_kind) {
             continue;
         }
-        let provider_id = provider_id_for(builtin.provider_kind);
+        let provider_id = provider_id_for(&tenant_id, builtin.provider_kind);
         // The same contract table `capabilities_for_provider` reads, so the
         // console's editor dropdowns and the server's own capability report can
         // never disagree about what this vendor accepts.
@@ -1111,22 +1126,23 @@ pub(crate) async fn initialize_storage_provider_account_defaults(
     //     pointing at a provider that was never created;
     //   * `ensure_default_binding` itself declines to touch an operator's own
     //     default, so re-running the bootstrap never re-points a live tenant.
+    let preferred_default_id = default_provider_id_for(&tenant_id);
     let default_provider_id = if kind_is_enabled(DEFAULT_PROVIDER_KIND)
-        && provider_exists(&state, DEFAULT_PROVIDER_ID).await?
+        && provider_exists(&state, &preferred_default_id).await?
     {
-        DEFAULT_PROVIDER_ID
+        preferred_default_id
     } else {
-        LOCAL_PROVIDER_ID
+        local_provider_id.clone()
     };
     // A `local_filesystem` binding only makes sense when that provider exists;
     // the preferred-provider branch is already existence-checked above.
-    if default_provider_id != LOCAL_PROVIDER_ID || local_provider_available {
-        ensure_default_binding(&state, &tenant_id, &operator_id, default_provider_id).await?;
+    if default_provider_id != local_provider_id || local_provider_available {
+        ensure_default_binding(&state, &tenant_id, &operator_id, &default_provider_id).await?;
     }
 
     items.push(StorageProviderAccountDefaultResponse {
         provider_kind: LOCAL_PROVIDER_KIND.to_owned(),
-        provider_id: LOCAL_PROVIDER_ID.to_owned(),
+        provider_id: local_provider_id.clone(),
         provider_created: local_provider_created,
         vendor_code: None,
         provider_account_id: None,
@@ -1287,90 +1303,135 @@ pub async fn bootstrap_storage_provider_defaults(
 
     // Seed the kind catalog first: the provider service validates the kind
     // against it, and a fresh database starts with an empty catalog.
-    DriveStorageProviderKindService::new(SqlStorageProviderKindStore::new(pool.clone()))
-        .initialize_storage_provider_kinds()
-        .await
-        .map_err(|error| format!("initialize storage provider kinds failed: {error:?}"))?;
+    let kinds =
+        DriveStorageProviderKindService::new(SqlStorageProviderKindStore::new(pool.clone()))
+            .initialize_storage_provider_kinds()
+            .await
+            .map_err(|error| format!("initialize storage provider kinds failed: {error:?}"))?;
+    // A kind the operator disabled is a decision: the bootstrap must not bring
+    // it back to life, so it is skipped and simply stays absent.
+    let kind_is_enabled = |provider_kind: &str| {
+        kinds
+            .iter()
+            .any(|registry| registry.provider_kind == provider_kind && registry.enabled)
+    };
 
     // The credential-free provider always exists first: it is the fallback the
-    // default binding drops back to when no cloud credential is configured.
-    let local_created = ensure_provider(
-        &state,
-        tenant_id,
-        operator_id,
-        LOCAL_PROVIDER_ID,
-        LOCAL_PROVIDER_KIND,
-        LOCAL_PROVIDER_NAME,
-        LOCAL_PROVIDER_ENDPOINT,
-        None,
-        LOCAL_PROVIDER_BUCKET,
-        None,
-    )
-    .await
-    .map_err(bootstrap_problem)?;
+    // default binding drops back to when the configured cloud provider row was
+    // never created.
+    let local_provider_id = local_provider_id_for(tenant_id);
+    let local_created = if kind_is_enabled(LOCAL_PROVIDER_KIND) {
+        ensure_provider(
+            &state,
+            tenant_id,
+            operator_id,
+            &local_provider_id,
+            LOCAL_PROVIDER_KIND,
+            LOCAL_PROVIDER_NAME,
+            LOCAL_PROVIDER_ENDPOINT,
+            None,
+            LOCAL_PROVIDER_BUCKET,
+            None,
+        )
+        .await
+        .map_err(bootstrap_problem)?
+    } else {
+        false
+    };
     outcome.providers_created += if local_created { 1 } else { 0 };
+    let local_available = local_created
+        || (kind_is_enabled(LOCAL_PROVIDER_KIND)
+            && provider_exists(&state, &local_provider_id)
+                .await
+                .map_err(bootstrap_problem)?);
 
-    let mut default_provider_id = LOCAL_PROVIDER_ID.to_owned();
-    if env.default_provider_kind == TENCENT_COS_PROVIDER_KIND {
-        if env.tencent_cos_ready() {
-            let builtin = BUILTIN_CLOUD_PROVIDERS
-                .iter()
-                .find(|builtin| builtin.provider_kind == TENCENT_COS_PROVIDER_KIND)
-                .ok_or_else(|| {
-                    "tencent_cos is missing from the built-in provider table".to_owned()
-                })?;
-            let credentials = env.tencent_cos_credentials().ok_or_else(|| {
-                "tencent_cos credentials disappeared between readiness and creation".to_owned()
-            })?;
-            let bucket = env.tencent_cos_bucket.as_deref().ok_or_else(|| {
-                "tencent_cos bucket disappeared between readiness and creation".to_owned()
-            })?;
-            let region = env.tencent_cos_region.as_deref().unwrap_or(builtin.region);
-            let endpoint = env
-                .tencent_cos_endpoint
-                .as_deref()
-                .unwrap_or(builtin.endpoint_url);
-
-            let (account_id, account_created, credential_seeded) =
-                ensure_vendor_account(&state, tenant_id, operator_id, builtin, Some(credentials))
-                    .await
-                    .map_err(bootstrap_problem)?;
-
-            let provider_id = provider_id_for(TENCENT_COS_PROVIDER_KIND);
-            let provider_created = ensure_provider(
-                &state,
-                tenant_id,
-                operator_id,
-                &provider_id,
-                TENCENT_COS_PROVIDER_KIND,
-                builtin.provider_name,
-                endpoint,
-                Some(region),
-                bucket,
-                Some(&account_id),
-            )
-            .await
-            .map_err(bootstrap_problem)?;
-
-            outcome.providers_created += if provider_created { 1 } else { 0 };
-            outcome.accounts_created += if account_created { 1 } else { 0 };
-            outcome.credentials_seeded += if credential_seeded { 1 } else { 0 };
-            default_provider_id = provider_id;
-        } else {
-            outcome.tencent_skipped = Some(
-                "SDKWORK_DRIVE_TENCENT_COS_SECRET_ID, SDKWORK_DRIVE_TENCENT_COS_SECRET_KEY and \
-                 SDKWORK_DRIVE_TENCENT_COS_BUCKET are not all configured"
-                    .to_owned(),
-            );
+    // One reusable account and one provider configuration per built-in cloud
+    // vendor — not only the default vendor. This is what makes the storage
+    // console usable on a fresh plane: every supported provider already has an
+    // account row the operator can open and replace the credential in, instead
+    // of creating the account and the provider configuration by hand first.
+    for builtin in &BUILTIN_CLOUD_PROVIDERS {
+        if !kind_is_enabled(builtin.provider_kind) {
+            continue;
         }
+        let is_default_vendor = builtin.provider_kind == TENCENT_COS_PROVIDER_KIND;
+        // A deployment that configured the default vendor's real key pair and
+        // bucket gets them sealed into the account instead of the placeholder;
+        // every other vendor keeps the unmistakable placeholder until edited.
+        let credentials = if is_default_vendor && env.tencent_cos_ready() {
+            env.tencent_cos_credentials()
+        } else {
+            None
+        };
+        let bucket = if is_default_vendor {
+            env.tencent_cos_bucket.as_deref().unwrap_or(builtin.bucket)
+        } else {
+            builtin.bucket
+        };
+        let region = if is_default_vendor {
+            env.tencent_cos_region.as_deref().unwrap_or(builtin.region)
+        } else {
+            builtin.region
+        };
+        let endpoint = if is_default_vendor {
+            env.tencent_cos_endpoint
+                .as_deref()
+                .unwrap_or(builtin.endpoint_url)
+        } else {
+            builtin.endpoint_url
+        };
+
+        let (account_id, account_created, credential_seeded) =
+            ensure_vendor_account(&state, tenant_id, operator_id, builtin, credentials)
+                .await
+                .map_err(bootstrap_problem)?;
+        let provider_created = ensure_provider(
+            &state,
+            tenant_id,
+            operator_id,
+            &provider_id_for(tenant_id, builtin.provider_kind),
+            builtin.provider_kind,
+            builtin.provider_name,
+            endpoint,
+            Some(region),
+            bucket,
+            Some(&account_id),
+        )
+        .await
+        .map_err(bootstrap_problem)?;
+
+        outcome.providers_created += if provider_created { 1 } else { 0 };
+        outcome.accounts_created += if account_created { 1 } else { 0 };
+        outcome.credentials_seeded += if credential_seeded { 1 } else { 0 };
     }
 
-    // A local-file binding is only meaningful when the fallback exists; the
-    // Tencent branch is existence-checked by the successful create above.
-    if default_provider_id != LOCAL_PROVIDER_ID || !local_created {
+    // The configured default vendor is the binding target even while it still
+    // carries the placeholder credential: the storage-center contract is that
+    // the operator only edits that account to complete the integration. The
+    // binding falls back to the credential-free provider when the requested
+    // vendor was disabled or its row was never created, so the default is never
+    // a dangling reference.
+    let requested_default_id = provider_id_for(tenant_id, &env.default_provider_kind);
+    let mut default_provider_id = local_provider_id.clone();
+    if env.default_provider_kind != LOCAL_PROVIDER_KIND
+        && provider_exists(&state, &requested_default_id)
+            .await
+            .map_err(bootstrap_problem)?
+    {
+        default_provider_id = requested_default_id;
+    }
+    if default_provider_id != local_provider_id || local_available {
         ensure_default_binding(&state, tenant_id, operator_id, &default_provider_id)
             .await
             .map_err(bootstrap_problem)?;
+    }
+    if env.default_provider_kind == TENCENT_COS_PROVIDER_KIND && !env.tencent_cos_ready() {
+        outcome.tencent_skipped = Some(
+            "SDKWORK_DRIVE_TENCENT_COS_SECRET_ID, SDKWORK_DRIVE_TENCENT_COS_SECRET_KEY and \
+             SDKWORK_DRIVE_TENCENT_COS_BUCKET are not all configured; the Tencent Cloud COS \
+             account keeps its placeholder credential until the operator edits it"
+                .to_owned(),
+        );
     }
     outcome.default_provider_id = Some(default_provider_id);
     Ok(outcome)
@@ -1604,17 +1665,17 @@ mod tests {
     #[test]
     fn provider_ids_are_deterministic_prefixed_and_distinct() {
         for builtin in &BUILTIN_CLOUD_PROVIDERS {
-            let id = provider_id_for(builtin.provider_kind);
+            let id = provider_id_for(PLATFORM_TENANT_ID, builtin.provider_kind);
             assert_eq!(
                 id,
-                provider_id_for(builtin.provider_kind),
+                provider_id_for(PLATFORM_TENANT_ID, builtin.provider_kind),
                 "an unstable provider id would create a second provider on every run"
             );
             assert!(
                 id.starts_with(BUILTIN_PROVIDER_ID_PREFIX),
                 "{id} is not namespaced, so an operator cannot tell it from a hand-made row"
             );
-            assert_ne!(id, LOCAL_PROVIDER_ID);
+            assert_ne!(id, local_provider_id_for(PLATFORM_TENANT_ID));
             assert!(
                 !id.contains('_'),
                 "{id} leaks an underscore; ids are kebab-cased from the kind"
@@ -1624,7 +1685,7 @@ mod tests {
         // The id is the idempotency key, so the mapping has to be injective.
         let ids = BUILTIN_CLOUD_PROVIDERS
             .iter()
-            .map(|builtin| provider_id_for(builtin.provider_kind))
+            .map(|builtin| provider_id_for(PLATFORM_TENANT_ID, builtin.provider_kind))
             .collect::<Vec<_>>();
         let mut unique = ids.clone();
         unique.sort_unstable();
@@ -1632,8 +1693,32 @@ mod tests {
         assert_eq!(unique.len(), ids.len(), "provider id collision: {ids:?}");
 
         assert_eq!(
-            provider_id_for("tencent_cos"),
-            "builtin-storage-provider-tencent-cos"
+            provider_id_for(PLATFORM_TENANT_ID, "tencent_cos"),
+            "builtin-storage-provider-100001-tencent-cos"
+        );
+    }
+
+    /// Provider ids are global while provider rows are tenant-scoped, so every
+    /// tenant gets its own qualified id. Reusing one tenant's id for another is
+    /// rejected as a cross-tenant conflict and would leave that tenant's storage
+    /// console empty.
+    #[test]
+    fn every_tenant_gets_tenant_qualified_provider_ids() {
+        let platform_id = default_provider_id_for(PLATFORM_TENANT_ID);
+        let tenant_id = default_provider_id_for("200002");
+
+        assert_ne!(platform_id, tenant_id);
+        assert_eq!(tenant_id, default_provider_id_for("200002"));
+        assert!(tenant_id.starts_with(BUILTIN_PROVIDER_ID_PREFIX));
+        assert!(tenant_id.contains("200002"));
+        assert_ne!(
+            tenant_id,
+            provider_id_for("200002", LOCAL_PROVIDER_KIND),
+            "two kinds in one tenant must not collide"
+        );
+        assert_eq!(
+            local_provider_id_for("200002"),
+            provider_id_for("200002", LOCAL_PROVIDER_KIND)
         );
     }
 
@@ -1896,8 +1981,11 @@ mod tests {
 
         // The local provider follows the same id derivation as every other
         // built-in row, so the whole built-in set is recognisable by one prefix.
-        assert_eq!(LOCAL_PROVIDER_ID, provider_id_for(LOCAL_PROVIDER_KIND));
-        assert!(LOCAL_PROVIDER_ID.starts_with(BUILTIN_PROVIDER_ID_PREFIX));
+        assert_eq!(
+            local_provider_id_for(PLATFORM_TENANT_ID),
+            provider_id_for(PLATFORM_TENANT_ID, LOCAL_PROVIDER_KIND)
+        );
+        assert!(local_provider_id_for(PLATFORM_TENANT_ID).starts_with(BUILTIN_PROVIDER_ID_PREFIX));
     }
 
     /// Every built-in vendor ships its own credential-field vocabulary, so the
@@ -1964,12 +2052,13 @@ mod tests {
             });
 
         assert_eq!(
-            DEFAULT_PROVIDER_ID,
-            provider_id_for(tencent.provider_kind),
+            default_provider_id_for(PLATFORM_TENANT_ID),
+            provider_id_for(PLATFORM_TENANT_ID, tencent.provider_kind),
             "the default provider id must be the same derivation every other built-in row uses"
         );
         assert_ne!(
-            DEFAULT_PROVIDER_ID, LOCAL_PROVIDER_ID,
+            default_provider_id_for(PLATFORM_TENANT_ID),
+            local_provider_id_for(PLATFORM_TENANT_ID),
             "the default must be a cloud provider, not the credential-free fallback"
         );
         assert_eq!(tencent.vendor_code, "tencent");
