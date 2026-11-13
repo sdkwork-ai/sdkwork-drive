@@ -39,6 +39,22 @@
 //! produce. Seeding the accounts therefore has to be a runtime write through
 //! `sdkwork-iam-provider-account-service` — the same call the console's own
 //! "new account" form makes.
+//!
+//! ## Seed first, bootstrap second
+//!
+//! The complete vendor catalog — one provider row per mainstream cloud vendor,
+//! with path-style/TLS/SSE/storage-class defaults and an `env:` credential
+//! reference — plus the tenant's Tencent Cloud COS default binding is installed
+//! by `database/seeds/common/002_storage_provider_catalog.sql`. That is what
+//! makes `/admin/storage/providers` complete immediately after `install` or
+//! `upgrade`, without waiting for a process to call this hook.
+//!
+//! This bootstrap is the tenant-specific completion path: it covers a console
+//! tenant the seed does not (via `SDKWORK_DRIVE_BOOTSTRAP_TENANT_ID`) and
+//! upgrades a deployment whose providers predate the seed. It creates a
+//! provider only when the row is missing — an existing (seeded or operator
+//! edited) row keeps its endpoint, bucket and credential source, and does not
+//! get a sealed placeholder account attached to it.
 
 use crate::app_context::DriveRequestContext;
 use crate::audit::record_audit_event;
@@ -63,7 +79,9 @@ use sdkwork_drive_workspace_service::application::storage_provider_kind_service:
 use sdkwork_drive_workspace_service::application::storage_provider_service::{
     CreateStorageProviderCommand, DriveStorageProviderService, GetStorageProviderCommand,
 };
-use sdkwork_drive_workspace_service::domain::storage_provider::DriveStorageProviderKind;
+use sdkwork_drive_workspace_service::domain::storage_provider::{
+    DriveStorageProvider, DriveStorageProviderKind,
+};
 use sdkwork_drive_workspace_service::infrastructure::sql::storage_provider_kind_store::SqlStorageProviderKindStore;
 use sdkwork_drive_workspace_service::infrastructure::sql::storage_provider_store::SqlStorageProviderStore;
 use sdkwork_drive_workspace_service::DriveServiceError;
@@ -658,6 +676,23 @@ fn default_provider_id_for(tenant_id: &str) -> String {
     provider_id_for(tenant_id, DEFAULT_PROVIDER_KIND)
 }
 
+/// The vendor's own key-pair labels, carried into the bootstrap response so the
+/// console renders `SecretId`/`SecretKey` instead of generic AWS wording.
+///
+/// Extracted because both branches of the account-defaults handler report it —
+/// the "row already exists" branch and the "row created now" branch — and an
+/// operator must not see a different vocabulary depending on whether the seed
+/// or the bootstrap produced the row.
+fn vendor_credential_fields_for(builtin: &BuiltinCloudProvider) -> VendorCredentialFieldResponse {
+    VendorCredentialFieldResponse {
+        access_key_label: builtin.credential_fields.access_key_label.to_owned(),
+        secret_key_label: builtin.credential_fields.secret_key_label.to_owned(),
+        default_env_access_key: builtin.credential_fields.default_env_access_key.to_owned(),
+        default_env_secret_key: builtin.credential_fields.default_env_secret_key.to_owned(),
+        console_url: builtin.credential_fields.console_url.to_owned(),
+    }
+}
+
 /// The advanced-control defaults a bootstrap run reports for one vendor.
 ///
 /// Extracted as a free function so the handler and the test that guards its
@@ -695,14 +730,22 @@ async fn provider_exists(
     state: &AdminStorageState,
     provider_id: &str,
 ) -> Result<bool, (StatusCode, Json<ProblemDetail>)> {
+    Ok(load_provider(state, provider_id).await?.is_some())
+}
+
+/// Load one provider row, treating "absent" as `None` rather than an error.
+async fn load_provider(
+    state: &AdminStorageState,
+    provider_id: &str,
+) -> Result<Option<DriveStorageProvider>, (StatusCode, Json<ProblemDetail>)> {
     match provider_service(state)
         .get_storage_provider(GetStorageProviderCommand {
             provider_id: provider_id.to_owned(),
         })
         .await
     {
-        Ok(_) => Ok(true),
-        Err(DriveServiceError::NotFound(_)) => Ok(false),
+        Ok(provider) => Ok(Some(provider)),
+        Err(DriveServiceError::NotFound(_)) => Ok(None),
         Err(error) => Err(map_service_error(error)),
     }
 }
@@ -1080,6 +1123,31 @@ pub(crate) async fn initialize_storage_provider_account_defaults(
         // console's editor dropdowns and the server's own capability report can
         // never disagree about what this vendor accepts.
         let kind = parse_storage_provider_kind(builtin.provider_kind).map_err(map_service_error)?;
+
+        // A provider configuration that already exists is a decision, not a gap.
+        // It is either the row the database seed installed
+        // (`database/seeds/common/002_storage_provider_catalog.sql`, which gives
+        // every vendor an `env:` credential reference) or a row the operator
+        // edited. Creating an account-center account here would produce a
+        // sealed placeholder nobody references, and re-writing the provider would
+        // discard the operator's endpoint/bucket/credential choice. Report the
+        // existing row instead so the console shows the real configuration.
+        if let Some(existing) = load_provider(&state, &provider_id).await? {
+            items.push(StorageProviderAccountDefaultResponse {
+                provider_kind: builtin.provider_kind.to_owned(),
+                provider_id,
+                provider_created: false,
+                vendor_code: Some(builtin.vendor_code.to_owned()),
+                provider_account_id: existing.provider_account_id,
+                account_code: None,
+                account_created: false,
+                credential_seeded: false,
+                credential_fields: Some(vendor_credential_fields_for(builtin)),
+                vendor_capabilities: Some(vendor_capability_defaults_for(&kind)),
+            });
+            continue;
+        }
+
         let (account_id, account_created, credential_seeded) =
             ensure_vendor_account(&state, &tenant_id, &operator_id, builtin, None).await?;
         let provider_created = ensure_provider(
@@ -1104,13 +1172,7 @@ pub(crate) async fn initialize_storage_provider_account_defaults(
             account_code: Some(builtin.account_code.to_owned()),
             account_created,
             credential_seeded,
-            credential_fields: Some(VendorCredentialFieldResponse {
-                access_key_label: builtin.credential_fields.access_key_label.to_owned(),
-                secret_key_label: builtin.credential_fields.secret_key_label.to_owned(),
-                default_env_access_key: builtin.credential_fields.default_env_access_key.to_owned(),
-                default_env_secret_key: builtin.credential_fields.default_env_secret_key.to_owned(),
-                console_url: builtin.credential_fields.console_url.to_owned(),
-            }),
+            credential_fields: Some(vendor_credential_fields_for(builtin)),
             vendor_capabilities: Some(vendor_capability_defaults_for(&kind)),
         });
     }
@@ -1364,8 +1426,24 @@ pub async fn bootstrap_storage_provider_defaults(
     // console usable on a fresh plane: every supported provider already has an
     // account row the operator can open and replace the credential in, instead
     // of creating the account and the provider configuration by hand first.
+    //
+    // A provider row that already exists (installed by
+    // `database/seeds/common/002_storage_provider_catalog.sql`, or written by an
+    // earlier run) is left completely alone: its credential source is either an
+    // `env:` reference the operator edits or an account they replaced, and
+    // sealing a placeholder account behind it would create a row nothing
+    // references. The seed is the primary source of the catalog; this loop is
+    // the tenant-specific completion path for deployments whose console tenant
+    // is not the seeded platform tenant.
+    let mut default_vendor_created_here = false;
     for builtin in &BUILTIN_CLOUD_PROVIDERS {
         if !kind_is_enabled(builtin.provider_kind) {
+            continue;
+        }
+        if provider_exists(&state, &provider_id_for(tenant_id, builtin.provider_kind))
+            .await
+            .map_err(bootstrap_problem)?
+        {
             continue;
         }
         let is_default_vendor = builtin.provider_kind == TENCENT_COS_PROVIDER_KIND;
@@ -1417,6 +1495,9 @@ pub async fn bootstrap_storage_provider_defaults(
         outcome.providers_created += if provider_created { 1 } else { 0 };
         outcome.accounts_created += if account_created { 1 } else { 0 };
         outcome.credentials_seeded += if credential_seeded { 1 } else { 0 };
+        if is_default_vendor && provider_created {
+            default_vendor_created_here = true;
+        }
     }
 
     // The configured default vendor is the binding target even while it still
@@ -1439,7 +1520,14 @@ pub async fn bootstrap_storage_provider_defaults(
             .await
             .map_err(bootstrap_problem)?;
     }
-    if env.default_provider_kind == TENCENT_COS_PROVIDER_KIND && !env.tencent_cos_ready() {
+    // Only a Tencent row this run created can be described as "keeps its
+    // placeholder". A seeded row carries an `env:` credential reference instead,
+    // so an unset variable surfaces as a clear request-time error naming it —
+    // reporting a placeholder account here would be wrong.
+    if env.default_provider_kind == TENCENT_COS_PROVIDER_KIND
+        && !env.tencent_cos_ready()
+        && default_vendor_created_here
+    {
         outcome.tencent_skipped = Some(
             "SDKWORK_DRIVE_TENCENT_COS_SECRET_ID, SDKWORK_DRIVE_TENCENT_COS_SECRET_KEY and \
              SDKWORK_DRIVE_TENCENT_COS_BUCKET are not all configured; the Tencent Cloud COS \
@@ -1461,6 +1549,7 @@ fn bootstrap_problem((status, _problem): (StatusCode, Json<ProblemDetail>)) -> S
 #[cfg(test)]
 mod tests {
     use super::*;
+    use sdkwork_drive_workspace_service::application::storage_provider_kind_service::BUILTIN_STORAGE_PROVIDER_KIND_CATALOG;
     use std::collections::HashMap;
 
     fn env_map(pairs: &[(&str, &str)]) -> impl FnMut(&str) -> Option<String> {
@@ -2088,5 +2177,86 @@ mod tests {
             "the default must be a cloud provider, not the credential-free fallback"
         );
         assert_eq!(tencent.vendor_code, "tencent");
+    }
+
+    /// The database seed and this module's built-in table describe the same
+    /// catalog twice (SQL cannot read Rust constants), so the two have to be
+    /// pinned together or an endpoint/bucket/credential change in one of them
+    /// silently ships a console and a database that disagree.
+    #[test]
+    fn database_seed_pins_the_builtin_storage_provider_contract() {
+        let seed = include_str!("../../../database/seeds/common/002_storage_provider_catalog.sql");
+
+        for (provider_kind, display_name, sort_order) in BUILTIN_STORAGE_PROVIDER_KIND_CATALOG {
+            let kind_row = format!("('{provider_kind}', '{display_name}', TRUE, {sort_order})");
+            assert!(
+                seed.contains(&kind_row),
+                "the database seed is missing the kind catalog row {kind_row}"
+            );
+        }
+
+        for builtin in &BUILTIN_CLOUD_PROVIDERS {
+            let provider_id = provider_id_for(PLATFORM_TENANT_ID, builtin.provider_kind);
+            for fragment in [
+                format!("'{provider_id}'"),
+                format!("'{}'", builtin.provider_kind),
+                format!("'{}'", builtin.provider_name),
+                format!("'{}'", builtin.endpoint_url),
+                format!("'{}'", builtin.region),
+                format!("'{}'", builtin.bucket),
+            ] {
+                assert!(
+                    seed.contains(&fragment),
+                    "the database seed does not install {fragment} for {}",
+                    builtin.provider_kind
+                );
+            }
+
+            // The seeded credential reference must name env variables an
+            // operator can actually set. Tencent keeps the deployment-time pair
+            // (`SDKWORK_DRIVE_TENCENT_COS_*`) because that is the contract the
+            // runtime bootstrap already reads; every other vendor uses its
+            // own conventional names, which the console shows next to the keys.
+            let expected_ref = if builtin.provider_kind == DEFAULT_PROVIDER_KIND {
+                format!("'env:{TENCENT_COS_SECRET_ID_ENV}:{TENCENT_COS_SECRET_KEY_ENV}'")
+            } else {
+                let fields = &builtin.credential_fields;
+                format!(
+                    "'env:{}:{}'",
+                    fields.default_env_access_key, fields.default_env_secret_key
+                )
+            };
+            assert!(
+                seed.contains(&expected_ref),
+                "the database seed must point {} at {expected_ref}",
+                builtin.provider_kind
+            );
+        }
+
+        // The credential-free fallback ships in the same seed, so a database
+        // without any cloud key can still store objects.
+        assert!(seed.contains(&format!("'{}'", local_provider_id_for(PLATFORM_TENANT_ID))));
+        assert!(seed.contains(&format!("'{LOCAL_PROVIDER_ENDPOINT}'")));
+        assert!(seed.contains(&format!("'{LOCAL_PROVIDER_BUCKET}'")));
+
+        // The tenant default binding, as the binding routes derive it, must
+        // point at Tencent COS so the seeded database is usable immediately.
+        assert!(seed.contains(&format!("'default:tenant:{PLATFORM_TENANT_ID}'")));
+        assert!(seed.contains(&format!("'sdkwork-drive/v1/tenants/{PLATFORM_TENANT_ID}'")));
+        assert!(seed.contains(&format!(
+            "'{}'",
+            default_provider_id_for(PLATFORM_TENANT_ID)
+        )));
+    }
+
+    /// The seed has to be wired into the lifecycle module, otherwise it never
+    /// executes on install/upgrade no matter how complete its contents are.
+    #[test]
+    fn database_seed_is_registered_in_the_standard_seed_profile() {
+        let manifest = include_str!("../../../database/seeds/seed.manifest.json");
+        assert!(
+            manifest.contains("\"common/002_storage_provider_catalog.sql\""),
+            "the storage provider catalog seed must be part of a seed profile"
+        );
     }
 }

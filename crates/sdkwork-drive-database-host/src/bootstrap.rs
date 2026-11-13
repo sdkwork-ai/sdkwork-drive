@@ -63,6 +63,25 @@ pub async fn bootstrap_drive_database(pool: DatabasePool) -> Result<DriveDatabas
         ));
     }
 
+    // DATABASE_FRAMEWORK_SPEC §4.3: the module manifest declares
+    // `seedOnBoot = true`, and the configurable surface that reads it
+    // (`/admin/storage/providers`, `/admin/storage/defaultBuckets`) must be
+    // complete on a fresh install and on upgrade, not only after an operator
+    // runs `pnpm db:seed` by hand. Seeding here is what makes every converge
+    // path — standalone serve, the CloudRouter federated assembly, and the
+    // explicit lifecycle commands that call this bootstrap — apply the same
+    // reference data. The seed runner records each file's content checksum, so
+    // re-running after an upgrade applies only new or changed seeds.
+    //
+    // Seeds run after the drift gate so a drifted schema reports the repair
+    // command instead of writing data into a schema the contract does not own.
+    if options.seed_on_boot {
+        orchestrator
+            .seed(&options.seed_locale, &options.seed_profile)
+            .await
+            .map_err(|error| format!("drive database seed failed: {error}"))?;
+    }
+
     Ok(
         ensure_drive_database_host_installed(DriveDatabaseHost { pool, module })
             .as_ref()

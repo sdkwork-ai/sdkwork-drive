@@ -102,6 +102,16 @@ fixtures rather than forged context headers.
 
 `GET /storage/providers/{providerId}/buckets` lists the buckets visible to the configured S3 account and marks the currently configured provider bucket, which lets administrators discover and choose the correct bucket before mounting a provider to tenant or space storage. `GET /storage/bindings` requires `tenantId` and can filter by `spaceId`, `providerId`, and `lifecycleStatus` so administrators can inspect which provider account is mounted to each tenant or space. `PUT /storage/bindings/default` accepts optional `storageRootPrefix`; when omitted, Drive derives the tenant or space default root. `DELETE /storage/bindings/default` soft-deletes the tenant or space primary binding and records `storage_provider_binding.default_deleted`.
 
+### Storage-center initialization data
+
+`database/seeds/common/002_storage_provider_catalog.sql` (the `standard` seed profile, applied after migrations by `bootstrap_drive_database`) installs the admin-storage reference data so `GET /storage/providers` is complete immediately after `install` and `upgrade`, without waiting for a runtime call:
+
+- the built-in provider-kind catalog (all 25 kinds);
+- one provider configuration per mainstream cloud vendor plus the credential-free `local_filesystem` fallback, for the platform tenant `100001`, with path-style/TLS/SSE/storage-class values taken from the provider-kind contract;
+- the tenant default binding, pointing at Tencent Cloud COS.
+
+Each vendor row carries an `env:` credential reference naming the key variables the console shows for that vendor, so an operator completes a vendor by supplying that key pair (Tencent COS reuses the deployment's `SDKWORK_DRIVE_TENCENT_COS_*` pair) and, if needed, editing endpoint/region/bucket. Every insert is `ON CONFLICT DO NOTHING`, so an upgrade only adds providers that are still missing and never rewrites an operator edit. The fail-open runtime bootstrap (`bootstrap_storage_provider_defaults`) remains the tenant-specific completion path and only fills rows that are still absent for the configured tenant.
+
 All admin-storage mutation routes must receive a real non-empty `operatorId` and record a Drive audit event. Provider and binding mutations carry `operatorId` in the JSON body except provider deletion, bucket create/delete, object delete, and default binding deletion, which use the required `operatorId` query parameter. Object copy carries `operatorId` in the request body. Low-level bucket and object audit events use the storage provider id as the audit resource id; object keys remain operational parameters, not audit resource identifiers.
 
 Migration routes resolve the operator from the verified request context instead of the body: `POST /storage/migrations` carries the run definition, `POST /storage/migrations/{migrationId}/run` takes only an optional `batchSize`, and `POST /storage/migrations/{migrationId}/cancel` takes no body at all. Because the operator is a request-context field, it is rejected as a client-supplied body property by the schema gate, so a caller cannot file an audit row under another principal's name.

@@ -51,7 +51,8 @@
     },
     "standard": {
       "common": [
-        "common/001_bootstrap.sql"
+        "common/001_bootstrap.sql",
+        "common/002_storage_provider_catalog.sql"
       ],
       "locales": {
         "zh-CN": [
