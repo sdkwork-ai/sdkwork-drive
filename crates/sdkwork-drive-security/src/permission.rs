@@ -23,20 +23,27 @@ const BACKEND_CAPABILITY_PERMISSIONS: &[&str] = &[
     DRIVE_SANDBOXES_ADMIN_PERMISSION,
 ];
 
+/// Returns true when the grant set authorizes the drive admin umbrella.
+///
+/// Wildcard-aware (AUTHORIZATION_STATE_SPEC 3.5): a `*` or `drive.*` grant
+/// authorizes `drive.storage.admin` without being pre-expanded or re-logged.
+pub fn drive_scope_has_admin_privilege(permission_scope: &[String]) -> bool {
+    permission_scope_grants(permission_scope, DRIVE_STORAGE_ADMIN_PERMISSION)
+}
+
 pub fn has_drive_admin_privilege(context: &DriveAppContext) -> bool {
-    context.permission_scope.iter().any(|scope| {
-        scope == DRIVE_BACKEND_ADMIN_WILDCARD || scope == DRIVE_STORAGE_ADMIN_PERMISSION
-    })
+    drive_scope_has_admin_privilege(&context.permission_scope)
 }
 
 pub fn has_drive_admin_capability(context: &DriveAppContext, capability_permission: &str) -> bool {
     if has_drive_admin_privilege(context) {
         return true;
     }
-    context
-        .permission_scope
-        .iter()
-        .any(|scope| scope == capability_permission)
+    permission_scope_grants(&context.permission_scope, capability_permission)
+}
+
+fn permission_scope_grants(permission_scope: &[String], required: &str) -> bool {
+    sdkwork_web_core::request_context::permission_scope_matches_any(permission_scope, required)
 }
 
 pub fn can_access_drive_storage_admin(context: &DriveAppContext) -> bool {

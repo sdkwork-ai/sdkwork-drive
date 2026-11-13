@@ -16,3 +16,4 @@ serde.workspace = true
 serde_json.workspace = true
 tokio = { workspace = true, features = ["time", "rt", "net"] }
 tracing.workspace = true
+sdkwork-web-core.workspace = true

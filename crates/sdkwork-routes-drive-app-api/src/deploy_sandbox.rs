@@ -107,11 +107,14 @@ const DEPLOY_LOCAL_PROJECTS_WRITE: &str = "deploy.local_projects.write";
 /// - empty scope (bootstrap / unrestricted tokens) → `full`
 /// - other non-empty scopes without deploy/drive privilege → no grant
 pub fn resolve_deploy_sandbox_grant_access(permission_scope: &[String]) -> Option<&'static str> {
-    let has = |needle: &str| permission_scope.iter().any(|scope| scope == needle);
+    // Wildcard-aware (AUTHORIZATION_STATE_SPEC 3.5): a `*` or `drive.*` grant
+    // authorizes the drive admin capabilities without being pre-expanded.
+    let has = |required: &str| {
+        sdkwork_web_core::request_context::permission_scope_matches_any(permission_scope, required)
+    };
     let has_write = has(DEPLOY_LOCAL_PROJECTS_WRITE)
         || has(sdkwork_drive_security::DRIVE_SANDBOXES_ADMIN_PERMISSION)
-        || has(sdkwork_drive_security::DRIVE_STORAGE_ADMIN_PERMISSION)
-        || has(sdkwork_drive_security::DRIVE_BACKEND_ADMIN_WILDCARD);
+        || has(sdkwork_drive_security::DRIVE_STORAGE_ADMIN_PERMISSION);
     let has_read = has_write || has(DEPLOY_LOCAL_PROJECTS_READ);
     if has_write {
         return Some("full");
