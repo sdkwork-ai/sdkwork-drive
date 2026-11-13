@@ -99,9 +99,7 @@ impl SqlDriveNodeVersionStore {
                 ))
             })?;
             let Some(row) = row else {
-                return Err(DriveServiceError::NotFound(
-                    "version not found".to_string(),
-                ));
+                return Err(DriveServiceError::NotFound("version not found".to_string()));
             };
             let storage_object_id: Option<String> = row.get("storage_object_id");
             let space_id: String = row.get("space_id");
@@ -124,9 +122,7 @@ impl SqlDriveNodeVersionStore {
             })?
             .rows_affected();
             if affected == 0 {
-                return Err(DriveServiceError::NotFound(
-                    "version not found".to_string(),
-                ));
+                return Err(DriveServiceError::NotFound("version not found".to_string()));
             }
 
             if let Some(storage_object_id) = storage_object_id {
@@ -154,7 +150,8 @@ impl SqlDriveNodeVersionStore {
                     tenant_id: &tenant_id,
                     space_id: &space_id,
                     node_id: Some(&node_id),
-                    event_type: sdkwork_drive_contract::drive::domain_events::file_version::RESTORED,
+                    event_type:
+                        sdkwork_drive_contract::drive::domain_events::file_version::RESTORED,
                     actor_id: &operator_id,
                 },
             )

@@ -14,7 +14,8 @@ use sqlx::PgPool;
 
 #[tokio::test]
 async fn restore_version_rejects_blank_version_id() {
-    let store = SqlDriveNodeVersionStore::new(sdkwork_drive_test_support::lazy_postgres_test_pool());
+    let store =
+        SqlDriveNodeVersionStore::new(sdkwork_drive_test_support::lazy_postgres_test_pool());
     let error = store
         .restore_version("tenant-1", "node-1", " ", "user-1")
         .await

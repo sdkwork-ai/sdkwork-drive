@@ -214,9 +214,8 @@ async fn trashed_node_direct_reader_permission_resolves_for_acl_checks() {
 
 #[tokio::test]
 async fn batch_access_rejects_an_oversized_node_list() {
-    let service = SqlDrivePermissionService::new(
-        sdkwork_drive_test_support::lazy_postgres_test_pool(),
-    );
+    let service =
+        SqlDrivePermissionService::new(sdkwork_drive_test_support::lazy_postgres_test_pool());
     let node_ids = (0..=MAX_NODE_ACCESS_BATCH)
         .map(|index| format!("node-{index}"))
         .collect::<Vec<_>>();
@@ -229,9 +228,8 @@ async fn batch_access_rejects_an_oversized_node_list() {
 
 #[tokio::test]
 async fn batch_access_is_empty_for_an_empty_node_list() {
-    let service = SqlDrivePermissionService::new(
-        sdkwork_drive_test_support::lazy_postgres_test_pool(),
-    );
+    let service =
+        SqlDrivePermissionService::new(sdkwork_drive_test_support::lazy_postgres_test_pool());
     let access = service
         .resolve_node_access_batch("100001", &[], "user", "user-1")
         .await
@@ -315,7 +313,10 @@ async fn batch_access_matches_single_node_resolution_for_every_node() {
         let batched = batch
             .get(node_id)
             .unwrap_or_else(|| panic!("batch must include {node_id}"));
-        assert_eq!(batched, &single, "batch and single must agree for {node_id}");
+        assert_eq!(
+            batched, &single,
+            "batch and single must agree for {node_id}"
+        );
     }
     assert!(
         !batch.contains_key("missing-node"),

@@ -1,6 +1,6 @@
 use async_trait::async_trait;
-use sqlx::{PgConnection, PgPool};
 use sqlx::Row;
+use sqlx::{PgConnection, PgPool};
 
 use crate::domain::node_version::DriveNodeVersion;
 use crate::domain::upload::{DriveUploadSession, DriveUploadSessionState};
@@ -146,13 +146,13 @@ impl SqlUploadSessionStore {
             .bind(tenant_id)
             .bind(upload_session_id)
             .execute(&self.pool)
-        .await
-        .map_err(|error| {
-            DriveServiceError::Internal(format!(
-                "update dr_drive_upload_session state failed: {error}"
-            ))
-        })?
-        .rows_affected();
+            .await
+            .map_err(|error| {
+                DriveServiceError::Internal(format!(
+                    "update dr_drive_upload_session state failed: {error}"
+                ))
+            })?
+            .rows_affected();
         if affected == 0 {
             return Err(DriveServiceError::NotFound(
                 "upload session not found".to_string(),

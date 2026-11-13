@@ -382,7 +382,8 @@ mod tests {
 
     #[test]
     fn rejects_period_only_object_key_segments() {
-        let error = validate_object_key("objects/../content", "objectKey").expect_err("dot segment");
+        let error =
+            validate_object_key("objects/../content", "objectKey").expect_err("dot segment");
         assert_eq!(
             error.message(),
             "objectKey must not contain empty or period-only path segments"
@@ -401,16 +402,17 @@ mod tests {
 
     #[test]
     fn parses_version_from_canonical_key() {
-        let key = crate::application::storage_key_service::DriveStorageKeyService::build_object_key(
-            crate::application::storage_key_service::BuildStorageObjectKeyCommand {
-                tenant_id: "t1",
-                space_id: "s1",
-                node_id: "n1",
-                version_no: 7,
-                object_id: "o1",
-            },
-        )
-        .expect("build key");
+        let key =
+            crate::application::storage_key_service::DriveStorageKeyService::build_object_key(
+                crate::application::storage_key_service::BuildStorageObjectKeyCommand {
+                    tenant_id: "t1",
+                    space_id: "s1",
+                    node_id: "n1",
+                    version_no: 7,
+                    object_id: "o1",
+                },
+            )
+            .expect("build key");
         let parsed = parse_storage_object_version_no_from_key(&key, "t1", "s1", "n1")
             .expect("parse version");
         assert_eq!(parsed, 7);

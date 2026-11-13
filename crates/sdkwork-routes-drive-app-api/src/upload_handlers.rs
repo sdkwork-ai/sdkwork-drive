@@ -306,8 +306,13 @@ pub(crate) async fn abort_upload_session(
 ///
 /// One constructor keeps the storage adapter (which owns the object-store
 /// runtime) wired the same way for every handler.
-fn upload_session_service(state: &AppState) -> DriveUploadSessionService<AppUploadMultipartStorage> {
-    DriveUploadSessionService::new(state.pool.clone(), AppUploadMultipartStorage::new(state.clone()))
+fn upload_session_service(
+    state: &AppState,
+) -> DriveUploadSessionService<AppUploadMultipartStorage> {
+    DriveUploadSessionService::new(
+        state.pool.clone(),
+        AppUploadMultipartStorage::new(state.clone()),
+    )
 }
 pub(crate) async fn prepare_uploader_upload(
     State(state): State<AppState>,

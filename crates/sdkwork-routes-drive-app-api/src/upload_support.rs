@@ -2,8 +2,9 @@ use crate::dto::*;
 use crate::error::{map_service_error, not_found_problem, ProblemDetail};
 use crate::ids::next_drive_id;
 use crate::object_store::{
-    build_s3_object_store_for_provider, find_storage_provider_by_id, missing_signing_provider_error,
-    require_active_storage_provider, unsupported_signing_provider_error,
+    build_s3_object_store_for_provider, find_storage_provider_by_id,
+    missing_signing_provider_error, require_active_storage_provider,
+    unsupported_signing_provider_error,
 };
 use crate::state::AppState;
 use crate::uploader::map_uploader_upload_item_row;
@@ -31,8 +32,7 @@ use sdkwork_drive_workspace_service::infrastructure::sql::upload_query_columns::
 use sdkwork_drive_workspace_service::infrastructure::sql::upload_session_store::SqlUploadSessionStore;
 use sdkwork_drive_workspace_service::ports::upload_multipart_storage::{
     AbortDriveMultipartUploadCommand, CompleteDriveMultipartUploadCommand,
-    CreateDriveMultipartUploadCommand, DeleteDriveStoredObjectCommand,
-    DriveUploadMultipartStorage,
+    CreateDriveMultipartUploadCommand, DeleteDriveStoredObjectCommand, DriveUploadMultipartStorage,
 };
 use sdkwork_drive_workspace_service::ports::upload_session_store::DriveUploadSessionStore;
 use sdkwork_drive_workspace_service::DriveServiceError;
@@ -60,8 +60,10 @@ impl AppUploadMultipartStorage {
         &self,
         storage_provider_id: &str,
         bucket: &str,
-    ) -> Result<std::sync::Arc<dyn sdkwork_drive_storage_contract::DriveObjectStore>, DriveServiceError>
-    {
+    ) -> Result<
+        std::sync::Arc<dyn sdkwork_drive_storage_contract::DriveObjectStore>,
+        DriveServiceError,
+    > {
         let provider = find_storage_provider_by_id(&self.state.pool, storage_provider_id).await?;
         let Some(provider) = provider else {
             return Err(missing_signing_provider_error(bucket));

@@ -9,16 +9,14 @@
 use sqlx::PgPool;
 use sqlx::Row;
 
-use crate::application::upload_session_rules::{
-    default_storage_root_prefix, join_storage_root_prefix,
-};
 use crate::application::storage_key_service::{
     BuildStorageObjectKeyCommand, DriveStorageKeyService,
 };
-use crate::infrastructure::sql::storage_provider_store::SqlStorageProviderStore;
-use crate::ports::storage_provider_store::{
-    DriveStorageProviderLookup, DriveStorageProviderStore,
+use crate::application::upload_session_rules::{
+    default_storage_root_prefix, join_storage_root_prefix,
 };
+use crate::infrastructure::sql::storage_provider_store::SqlStorageProviderStore;
+use crate::ports::storage_provider_store::{DriveStorageProviderLookup, DriveStorageProviderStore};
 use crate::DriveServiceError;
 
 /// The object locator a completed version will occupy.
@@ -111,7 +109,9 @@ pub async fn resolve_storage_target(
                     ),
                 }
             }
-            None => resolve_default_provider_target(pool, command.tenant_id, command.space_id).await?,
+            None => {
+                resolve_default_provider_target(pool, command.tenant_id, command.space_id).await?
+            }
         }
     };
     let standard_object_key =

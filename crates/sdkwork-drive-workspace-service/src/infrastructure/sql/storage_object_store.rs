@@ -1,6 +1,6 @@
 use async_trait::async_trait;
-use sqlx::{PgConnection, PgPool};
 use sqlx::Row;
+use sqlx::{PgConnection, PgPool};
 
 use crate::ports::storage_object_store::{DriveStorageObject, DriveStorageObjectStore};
 use crate::DriveServiceError;

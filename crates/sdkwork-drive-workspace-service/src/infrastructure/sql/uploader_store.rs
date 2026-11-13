@@ -999,11 +999,11 @@ async fn complete_stored_upload_in_transaction(
             )
         })?;
         ensure_stored_object_matches(
-        &stored_object,
-        &completion.content_type,
-        completion.content_length,
-        &completion.checksum_sha256_hex,
-    )?;
+            &stored_object,
+            &completion.content_type,
+            completion.content_length,
+            &completion.checksum_sha256_hex,
+        )?;
         return read_upload_item_by_id(connection, &completion.tenant_id, &target.item.id).await;
     }
 
@@ -1065,11 +1065,11 @@ async fn complete_stored_upload_in_transaction(
     {
         Some(stored_object) => {
             ensure_stored_object_matches(
-        &stored_object,
-        &completion.content_type,
-        completion.content_length,
-        &completion.checksum_sha256_hex,
-    )?;
+                &stored_object,
+                &completion.content_type,
+                completion.content_length,
+                &completion.checksum_sha256_hex,
+            )?;
             stored_object
         }
         None => {

@@ -37,6 +37,7 @@ use crate::infrastructure::change_recorder::{
     RecordDriveChangeCommand, RecordDriveNodeVersionCommittedCommand,
 };
 use crate::infrastructure::outbox_dispatch::trigger_immediate_outbox_dispatch;
+use crate::infrastructure::sql::begin_transaction_sql;
 use crate::infrastructure::sql::managed_website_tree_guard::ensure_managed_website_node_mutation_allowed;
 use crate::infrastructure::sql::node_head_metadata::{
     apply_file_node_head_snapshot_in_transaction, FileNodeHeadSnapshot,
@@ -55,7 +56,6 @@ use crate::ports::upload_multipart_storage::{
     CreateDriveMultipartUploadCommand, DeleteDriveStoredObjectCommand, DriveMultipartPart,
     DriveUploadMultipartStorage,
 };
-use crate::infrastructure::sql::begin_transaction_sql;
 use crate::ports::upload_session_store::DriveUploadSessionStore;
 use crate::ports::uploader_store::{DriveUploaderNodeRecord, DriveUploaderStore};
 use crate::DriveServiceError;
@@ -331,7 +331,9 @@ where
             DriveServiceError::Validation("parts must contain at most 10000 items".to_string())
         })?;
 
-        let session = self.load_session(&tenant_id, &command.upload_session_id).await?;
+        let session = self
+            .load_session(&tenant_id, &command.upload_session_id)
+            .await?;
         validate_mutable_upload_session(session.state.as_str())?;
         ensure_upload_session_not_expired(session.expires_at_epoch_ms, current_epoch_ms())?;
         if let Some(upload_id) = command.upload_id.as_deref() {
@@ -360,9 +362,9 @@ where
 
         let node_content_state_before_completion =
             read_node_content_state(&self.pool, &tenant_id, &session.node_id).await?;
-        let uploader_upload_item =
-            self.find_uploader_item_by_session(&tenant_id, &command.upload_session_id)
-                .await?;
+        let uploader_upload_item = self
+            .find_uploader_item_by_session(&tenant_id, &command.upload_session_id)
+            .await?;
         let completed_object_plan = self.plan_completed_object(&tenant_id, &session).await?;
         self.sessions()
             .claim_completion(&session, &operator_id)
@@ -790,9 +792,7 @@ where
         .execute(&mut *connection)
         .await
         .map_err(|error| {
-            DriveServiceError::Internal(format!(
-                "insert dr_drive_storage_object failed: {error}"
-            ))
+            DriveServiceError::Internal(format!("insert dr_drive_storage_object failed: {error}"))
         })?;
         Ok(())
     }
@@ -838,8 +838,7 @@ where
                 change_summary: None,
                 restored_from_version_id: None,
                 app_id: uploader_upload_item.map(|item| item.app_id.clone()),
-                app_resource_type: uploader_upload_item
-                    .map(|item| item.app_resource_type.clone()),
+                app_resource_type: uploader_upload_item.map(|item| item.app_resource_type.clone()),
                 app_resource_id: uploader_upload_item.map(|item| item.app_resource_id.clone()),
                 scene: uploader_upload_item.and_then(|item| item.scene.clone()),
                 source: uploader_upload_item.and_then(|item| item.source.clone()),

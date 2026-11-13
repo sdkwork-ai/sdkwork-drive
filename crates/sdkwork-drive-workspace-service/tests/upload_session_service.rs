@@ -92,7 +92,10 @@ impl DriveUploadMultipartStorage for InMemoryMultipartStorage {
 fn service_without_database(
     storage: InMemoryMultipartStorage,
 ) -> DriveUploadSessionService<InMemoryMultipartStorage> {
-    DriveUploadSessionService::new(sdkwork_drive_test_support::lazy_postgres_test_pool(), storage)
+    DriveUploadSessionService::new(
+        sdkwork_drive_test_support::lazy_postgres_test_pool(),
+        storage,
+    )
 }
 
 fn future_epoch_ms() -> i64 {
@@ -250,10 +253,7 @@ async fn prepare_complete_and_cancel_drive_the_session_state_machine() {
         .expect("prepare upload session");
     assert_eq!(created.state.as_str(), "created");
     assert_eq!(created.storage_provider_id, "provider-1");
-    assert_eq!(
-        storage.inner.created.lock().expect("created lock").len(),
-        1
-    );
+    assert_eq!(storage.inner.created.lock().expect("created lock").len(), 1);
 
     // Same idempotency key returns the same session without a second multipart
     // upload.
@@ -266,10 +266,7 @@ async fn prepare_complete_and_cancel_drive_the_session_state_machine() {
         .await
         .expect("replayed prepare");
     assert_eq!(replay.id, created.id);
-    assert_eq!(
-        storage.inner.created.lock().expect("created lock").len(),
-        1
-    );
+    assert_eq!(storage.inner.created.lock().expect("created lock").len(), 1);
 
     let completed = service
         .complete(CompleteDriveUploadSessionCommand {
@@ -284,7 +281,12 @@ async fn prepare_complete_and_cancel_drive_the_session_state_machine() {
         .expect("complete upload session");
     assert_eq!(completed.state.as_str(), "completed");
     assert_eq!(
-        storage.inner.completed.lock().expect("completed lock").len(),
+        storage
+            .inner
+            .completed
+            .lock()
+            .expect("completed lock")
+            .len(),
         1
     );
 

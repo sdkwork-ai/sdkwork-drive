@@ -12,6 +12,7 @@ use crate::domain::uploader::content_type_group_for;
 use crate::infrastructure::change_recorder::{
     record_drive_node_version_committed_on_connection, RecordDriveNodeVersionCommittedCommand,
 };
+use crate::infrastructure::sql::begin_transaction_sql;
 use crate::infrastructure::sql::managed_website_tree_guard::ensure_managed_website_node_mutation_allowed;
 use crate::infrastructure::sql::node_head_metadata::{
     apply_file_node_head_snapshot_in_transaction, file_extension_from_name, FileNodeHeadSnapshot,
@@ -24,8 +25,9 @@ use crate::infrastructure::sql::storage_object_store::next_storage_object_versio
 use crate::infrastructure::sql::uploader_store::{
     ensure_stored_object_matches, find_active_stored_upload_object,
 };
-use crate::infrastructure::sql::begin_transaction_sql;
-use crate::ports::stored_version_store::{CompleteStoredVersionUploadCommand, DriveStoredVersionStore};
+use crate::ports::stored_version_store::{
+    CompleteStoredVersionUploadCommand, DriveStoredVersionStore,
+};
 use crate::DriveServiceError;
 
 /// PostgreSQL repository for stored-version completion.
@@ -54,7 +56,8 @@ impl DriveStoredVersionStore for SqlStoredVersionStore {
         let tenant_id = require_text(&command.tenant_id, "tenant_id")?;
         let space_id = require_text(&command.space_id, "space_id")?;
         let node_id = require_text(&command.node_id, "node_id")?;
-        let storage_provider_id = require_text(&command.storage_provider_id, "storage_provider_id")?;
+        let storage_provider_id =
+            require_text(&command.storage_provider_id, "storage_provider_id")?;
         let bucket = require_text(&command.bucket, "bucket")?;
         let object_key = validate_object_key(&command.object_key, "object_key")?;
         let content_type = validate_content_type(&command.content_type, "content_type")?;
