@@ -1190,8 +1190,10 @@ const TENCENT_COS_ENDPOINT_ENV: &str = "SDKWORK_DRIVE_TENCENT_COS_ENDPOINT";
 const TENCENT_COS_PROVIDER_KIND: &str = "tencent_cos";
 const STORAGE_BOOTSTRAP_OPERATOR_ID: &str = "sdkwork-storage-bootstrap";
 /// Tenant the bootstrap seeds. Defaults to the platform tenant; a deployment
-/// whose console administrators belong to a different tenant (the first tenant
-/// created at signup) sets this once so the console sees its own providers.
+/// whose console administrators belong to a different tenant sets this once so
+/// the console sees its own providers. The platform sentinel `0` is normalized
+/// to the platform tenant, because providers are read by the caller's tenant and
+/// rows written under the sentinel are invisible to every console.
 const BOOTSTRAP_TENANT_ID_ENV: &str = "SDKWORK_DRIVE_BOOTSTRAP_TENANT_ID";
 
 /// Environment inputs for the fresh-deployment storage bootstrap.
@@ -1233,6 +1235,18 @@ impl StorageBootstrapEnv {
         Self {
             enabled,
             tenant_id: text(BOOTSTRAP_TENANT_ID_ENV)
+                .map(|value| {
+                    // `0` is the platform *sentinel* used by legacy rows, not an
+                    // application tenant: provisioning it left the real console
+                    // tenant's storage center empty because Drive reads
+                    // providers by the caller's tenant. Seed the platform
+                    // tenant instead of writing rows nobody can see.
+                    if value == "0" {
+                        PLATFORM_TENANT_ID.to_owned()
+                    } else {
+                        value
+                    }
+                })
                 .unwrap_or_else(|| PLATFORM_TENANT_ID.to_owned()),
             default_provider_kind: text(DEFAULT_STORAGE_PROVIDER_ENV)
                 .unwrap_or_else(|| DEFAULT_PROVIDER_KIND.to_owned()),
@@ -1513,6 +1527,18 @@ mod tests {
         assert_eq!(
             env.tenant_id, "100001",
             "a deployment seeds the tenant its console administrators belong to"
+        );
+    }
+
+    #[test]
+    fn storage_bootstrap_normalizes_the_sentinel_tenant_to_the_platform_tenant() {
+        let env = StorageBootstrapEnv::from_lookup(env_map(&[(
+            "SDKWORK_DRIVE_BOOTSTRAP_TENANT_ID",
+            "0",
+        )]));
+        assert_eq!(
+            env.tenant_id, PLATFORM_TENANT_ID,
+            "provider rows written under the platform sentinel are invisible to every console"
         );
     }
 
