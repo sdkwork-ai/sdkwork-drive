@@ -1,5 +1,22 @@
 # Drive Backend API Changelog
 
+## Unreleased
+
+- Add `files.admin.list` (`GET /backend/v3/api/drive/files`): a tenant-scoped,
+  metadata-only admin file listing with `space_id`, `space_type`, `node_type`,
+  `lifecycle_status`, `content_type_group`, `keyword`, and `owner_subject_id`
+  filters, cursor pagination, and an ancestor-resolved `filePath`. The projection
+  never exposes object keys, storage provider ids, or credentials. An omitted
+  `lifecycle_status` means live (`active`) nodes.
+- Require `drive.files.admin` for `files.admin.list`; `drive.spaces.admin`
+  continues to guard `spaces.admin.list`.
+- The Drive admin storage contribution
+  (`assemble_backend_admin_storage_contribution_with_pool`) now mounts the
+  workspace governance routes next to `/drive/storage/*`, and
+  `backend_admin_storage_route_manifest` projects both route families so
+  same-origin hosts (the Cloud Router storage center) compose one admin
+  contribution without `404 route-not-in-manifest`.
+
 ## 0.2.0 - 2026-07-16
 
 - Add organization-scoped sandbox volume list/create/retrieve/update/delete operations.

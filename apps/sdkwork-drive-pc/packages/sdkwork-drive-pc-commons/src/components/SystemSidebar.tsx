@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { HardDrive, Settings, Activity, ServerCog, Link2, ScrollText, Wrench, PieChart, Tags, LayoutGrid, Package, Database, FolderCog } from 'lucide-react';
+import { HardDrive, Settings, Activity, ServerCog, Link2, ScrollText, Wrench, PieChart, Tags, LayoutGrid, Package, Database, FolderCog, FileText } from 'lucide-react';
 import type { SettingsTab } from './SettingsModal';
 import {
   AccountAvatar,
@@ -19,6 +19,7 @@ export interface DriveAdminNavigationAccess {
   quotas: boolean;
   labels: boolean;
   spaces: boolean;
+  files: boolean;
   downloadPackages: boolean;
 }
 
@@ -64,6 +65,7 @@ export function SystemSidebar({
     'admin-quotas',
     'admin-labels',
     'admin-spaces',
+    'admin-files',
     'admin-download-packages',
   ]);
   const isStorageActive = activeSection !== 'transfer' && !adminSections.has(activeSection);
@@ -78,6 +80,7 @@ export function SystemSidebar({
   const isAdminQuotasActive = activeSection === 'admin-quotas';
   const isAdminLabelsActive = activeSection === 'admin-labels';
   const isAdminSpacesActive = activeSection === 'admin-spaces';
+  const isAdminFilesActive = activeSection === 'admin-files';
   const isAdminDownloadPackagesActive = activeSection === 'admin-download-packages';
 
   return (
@@ -187,6 +190,14 @@ export function SystemSidebar({
               title={t('sidebar.adminSpaces')}
               active={isAdminSpacesActive}
               onClick={() => onSectionChange?.('admin-spaces')}
+            />
+            ) : null}
+            {adminSectionAccess?.files ? (
+            <SidebarIcon
+              icon={<FileText size={22} />}
+              title={t('sidebar.adminFiles')}
+              active={isAdminFilesActive}
+              onClick={() => onSectionChange?.('admin-files')}
             />
             ) : null}
             {adminSectionAccess?.downloadPackages ? (

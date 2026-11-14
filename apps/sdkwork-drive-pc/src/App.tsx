@@ -59,6 +59,7 @@ const ADMIN_SECTION_ACCESS_KEYS: Record<string, keyof DriveAdminSectionAccess> =
   'admin-quotas': 'quotas',
   'admin-labels': 'labels',
   'admin-spaces': 'spaces',
+  'admin-files': 'files',
   'admin-download-packages': 'downloadPackages',
 };
 
@@ -115,6 +116,11 @@ const SpacesAdminPage = React.lazy(() =>
     default: module.SpacesAdminPage,
   })),
 );
+const FilesAdminPage = React.lazy(() =>
+  import('sdkwork-drive-pc-admin-operations').then((module) => ({
+    default: module.FilesAdminPage,
+  })),
+);
 const DownloadPackagesAdminPage = React.lazy(() =>
   import('sdkwork-drive-pc-admin-operations').then((module) => ({
     default: module.DownloadPackagesAdminPage,
@@ -143,6 +149,12 @@ export default function App({ runtime }: { runtime: DriveRuntime }) {
   const [storageSummaryUnavailable, setStorageSummaryUnavailable] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [settingsInitialTab, setSettingsInitialTab] = useState<SettingsTab>('account');
+  /**
+   * Space preselection handed from the spaces page to the file list. The file
+   * page is remounted with this value as its key, so the filter applies exactly
+   * once and later operator edits are not overwritten by a stale prop.
+   */
+  const [filesSpaceFilter, setFilesSpaceFilter] = useState<string | undefined>();
 
   useEffect(() => runtime.session.subscribe(setSessionSnapshot), [runtime.session]);
 
@@ -370,6 +382,17 @@ export default function App({ runtime }: { runtime: DriveRuntime }) {
                   <SpacesAdminPage
                     backendSdkClient={runtime.admin.backend}
                     getSession={runtime.session.getSnapshot}
+                    onOpenFiles={(space) => {
+                      setFilesSpaceFilter(space.id);
+                      setActiveSection('admin-files');
+                    }}
+                  />
+                ) : adminSectionAccess.files && activeSection === 'admin-files' ? (
+                  <FilesAdminPage
+                    key={filesSpaceFilter ?? 'all-files'}
+                    backendSdkClient={runtime.admin.backend}
+                    getSession={runtime.session.getSnapshot}
+                    initialSpaceId={filesSpaceFilter}
                   />
                 ) : adminSectionAccess.downloadPackages && activeSection === 'admin-download-packages' ? (
                   <DownloadPackagesAdminPage

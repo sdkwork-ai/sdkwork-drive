@@ -24,6 +24,7 @@ const requiredOperations = [
   "maintenance.expiredUploadContentSweep",
   "maintenance.abandonedUploadTaskSweep",
   "spaces.admin.list",
+  "files.admin.list",
   "downloadPackages.list",
 ];
 

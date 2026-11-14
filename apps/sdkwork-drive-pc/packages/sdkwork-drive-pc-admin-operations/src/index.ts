@@ -5,4 +5,5 @@ export { MaintenanceAdminPage } from './pages/MaintenanceAdminPage';
 export { QuotaAdminPage } from './pages/QuotaAdminPage';
 export { LabelsAdminPage } from './pages/LabelsAdminPage';
 export { SpacesAdminPage } from './pages/SpacesAdminPage';
+export { FilesAdminPage } from './pages/FilesAdminPage';
 export { DownloadPackagesAdminPage } from './pages/DownloadPackagesAdminPage';

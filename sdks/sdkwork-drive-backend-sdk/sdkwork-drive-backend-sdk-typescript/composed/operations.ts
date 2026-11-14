@@ -16,6 +16,7 @@ export const sdkMetadata = {
 export const operations = {
   "auditEvents.list": { method: "GET", path: "/backend/v3/api/drive/audit_events" },
   "downloadPackages.list": { method: "GET", path: "/backend/v3/api/drive/download_packages" },
+  "files.admin.list": { method: "GET", path: "/backend/v3/api/drive/files" },
   "labels.create": { method: "POST", path: "/backend/v3/api/drive/labels" },
   "labels.delete": { method: "DELETE", path: "/backend/v3/api/drive/labels/{labelId}" },
   "labels.list": { method: "GET", path: "/backend/v3/api/drive/labels" },

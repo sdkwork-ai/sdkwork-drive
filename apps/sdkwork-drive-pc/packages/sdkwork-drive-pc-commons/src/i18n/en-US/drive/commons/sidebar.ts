@@ -26,6 +26,7 @@ export default {
   adminQuotas: 'Quota Usage',
   adminLabels: 'Labels',
   adminSpaces: 'Spaces',
+  adminFiles: 'Files',
   adminDownloadPackages: 'Download Packages',
   noTransfers: 'No current transfers',
   active: 'active',

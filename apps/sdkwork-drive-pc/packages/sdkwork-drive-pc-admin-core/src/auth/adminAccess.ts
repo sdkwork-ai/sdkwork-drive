@@ -10,6 +10,7 @@ export const DRIVE_MAINTENANCE_ADMIN_PERMISSION = 'drive.maintenance.admin';
 export const DRIVE_QUOTA_ADMIN_PERMISSION = 'drive.quota.admin';
 export const DRIVE_LABELS_ADMIN_PERMISSION = 'drive.labels.admin';
 export const DRIVE_SPACES_ADMIN_PERMISSION = 'drive.spaces.admin';
+export const DRIVE_FILES_ADMIN_PERMISSION = 'drive.files.admin';
 export const DRIVE_DOWNLOAD_PACKAGES_ADMIN_PERMISSION = 'drive.download_packages.admin';
 
 export interface DriveAdminSectionAccess {
@@ -23,6 +24,7 @@ export interface DriveAdminSectionAccess {
   quotas: boolean;
   labels: boolean;
   spaces: boolean;
+  files: boolean;
   downloadPackages: boolean;
 }
 
@@ -62,6 +64,10 @@ export function canAccessDriveSpacesAdmin(session: SessionSnapshot): boolean {
   return hasDriveAdminCapability(session, DRIVE_SPACES_ADMIN_PERMISSION);
 }
 
+export function canAccessDriveFilesAdmin(session: SessionSnapshot): boolean {
+  return hasDriveAdminCapability(session, DRIVE_FILES_ADMIN_PERMISSION);
+}
+
 export function canAccessDriveDownloadPackagesAdmin(session: SessionSnapshot): boolean {
   return hasDriveAdminCapability(session, DRIVE_DOWNLOAD_PACKAGES_ADMIN_PERMISSION);
 }
@@ -74,6 +80,7 @@ export function canAccessAnyDriveAdminSurface(session: SessionSnapshot): boolean
     || canAccessDriveQuotaAdmin(session)
     || canAccessDriveLabelsAdmin(session)
     || canAccessDriveSpacesAdmin(session)
+    || canAccessDriveFilesAdmin(session)
     || canAccessDriveDownloadPackagesAdmin(session)
   );
 }
@@ -90,6 +97,7 @@ export function resolveDriveAdminSectionAccess(session: SessionSnapshot): DriveA
     quotas: canAccessDriveQuotaAdmin(session),
     labels: canAccessDriveLabelsAdmin(session),
     spaces: canAccessDriveSpacesAdmin(session),
+    files: canAccessDriveFilesAdmin(session),
     downloadPackages: canAccessDriveDownloadPackagesAdmin(session),
   };
 }

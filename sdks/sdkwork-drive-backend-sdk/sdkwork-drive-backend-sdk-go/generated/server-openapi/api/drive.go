@@ -176,6 +176,26 @@ func (a *DriveApi) SpacesAdminList(ownerSubjectType *string, ownerSubjectId *str
     return decodeResult[sdktypes.SpacesAdminListResponse](raw)
 }
 
+func (a *DriveApi) FilesAdminList(spaceId *string, spaceType *string, nodeType *string, lifecycleStatus *string, contentTypeGroup *string, keyword *string, ownerSubjectId *string, pageSize *int, cursor *string) (sdktypes.FilesAdminListResponse, error) {
+    query := BuildQueryString([]QueryParameterSpec{
+        {Name: "space_id", Value: func() interface{} { if spaceId == nil { return nil }; return *spaceId }(), Style: "form", Explode: true, AllowReserved: false},
+        {Name: "space_type", Value: func() interface{} { if spaceType == nil { return nil }; return *spaceType }(), Style: "form", Explode: true, AllowReserved: false},
+        {Name: "node_type", Value: func() interface{} { if nodeType == nil { return nil }; return *nodeType }(), Style: "form", Explode: true, AllowReserved: false},
+        {Name: "lifecycle_status", Value: func() interface{} { if lifecycleStatus == nil { return nil }; return *lifecycleStatus }(), Style: "form", Explode: true, AllowReserved: false},
+        {Name: "content_type_group", Value: func() interface{} { if contentTypeGroup == nil { return nil }; return *contentTypeGroup }(), Style: "form", Explode: true, AllowReserved: false},
+        {Name: "keyword", Value: func() interface{} { if keyword == nil { return nil }; return *keyword }(), Style: "form", Explode: true, AllowReserved: false},
+        {Name: "owner_subject_id", Value: func() interface{} { if ownerSubjectId == nil { return nil }; return *ownerSubjectId }(), Style: "form", Explode: true, AllowReserved: false},
+        {Name: "page_size", Value: func() interface{} { if pageSize == nil { return nil }; return *pageSize }(), Style: "form", Explode: true, AllowReserved: false},
+        {Name: "cursor", Value: func() interface{} { if cursor == nil { return nil }; return *cursor }(), Style: "form", Explode: true, AllowReserved: false},
+    })
+    raw, err := a.client.Get(AppendQueryString(BackendApiPath("/drive/files"), query), nil, nil)
+    if err != nil {
+        var zero sdktypes.FilesAdminListResponse
+        return zero, err
+    }
+    return decodeResult[sdktypes.FilesAdminListResponse](raw)
+}
+
 func (a *DriveApi) DownloadPackagesList(state *string, page *int, pageSize *int) (sdktypes.DownloadPackagesListResponse, error) {
     query := BuildQueryString([]QueryParameterSpec{
         {Name: "state", Value: func() interface{} { if state == nil { return nil }; return *state }(), Style: "form", Explode: true, AllowReserved: false},

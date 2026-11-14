@@ -26,6 +26,7 @@ export default {
   adminQuotas: '配额用量',
   adminLabels: '标签',
   adminSpaces: '空间',
+  adminFiles: '文件',
   adminDownloadPackages: '下载包',
   noTransfers: '暂无当前传输作业',
   active: '进行中',

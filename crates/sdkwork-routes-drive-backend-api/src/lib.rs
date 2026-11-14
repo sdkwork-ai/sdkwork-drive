@@ -1,5 +1,7 @@
 #![allow(clippy::result_large_err)]
 
+mod admin_file_handlers;
+mod admin_workspace_manifest;
 mod audit;
 mod audit_event_handlers;
 mod auth;
@@ -22,6 +24,7 @@ mod tenant_context;
 mod validators;
 mod web_bootstrap;
 
+pub use admin_workspace_manifest::backend_admin_workspace_route_manifest;
 pub use http_route_manifest::backend_route_manifest;
 pub use routes::*;
 pub use web_bootstrap::{

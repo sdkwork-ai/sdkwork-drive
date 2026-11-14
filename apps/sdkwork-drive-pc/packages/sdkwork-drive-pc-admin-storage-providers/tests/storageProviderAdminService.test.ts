@@ -1215,3 +1215,112 @@ describe('storage provider admin service', () => {
     expect(renamed).toBe(true);
   });
 });
+
+/**
+ * The provider console previously read one cursor page as the whole plane.
+ * With the 25 built-in configurations sorted by id, that hid `tencent_cos` and
+ * its neighbours — the operator-visible symptom was "Tencent COS was never
+ * initialized". `listAllProviders` is the fix, so it must walk every page and
+ * honour the server's cursor.
+ */
+describe('listAllProviders', () => {
+  it('walks every cursor page instead of stopping after the first window', async () => {
+    const calls: DriveAdminStorageSdkRequest[] = [];
+    const pages: unknown[] = [
+      {
+        items: [
+          {
+            id: 'builtin-storage-provider-100001-s3-compatible',
+            providerKind: 's3_compatible',
+            name: 'Built-in Amazon S3',
+            endpointUrl: 'https://s3.us-east-1.amazonaws.com',
+            region: 'us-east-1',
+            bucket: 'sdkwork-drive-s3-compatible',
+            pathStyle: true,
+            status: 'active',
+            version: 1,
+            credentialConfigured: true,
+          },
+        ],
+        pageInfo: { hasMore: true, nextCursor: 'cursor-page-2' },
+      },
+      {
+        items: [
+          {
+            id: 'builtin-storage-provider-100001-tencent-cos',
+            providerKind: 'tencent_cos',
+            name: 'Built-in Tencent Cloud COS',
+            endpointUrl: 'https://cos.ap-guangzhou.myqcloud.com',
+            region: 'ap-guangzhou',
+            bucket: 'sdkwork-drive-cos-1250000000',
+            pathStyle: false,
+            status: 'active',
+            version: 1,
+            credentialConfigured: true,
+          },
+        ],
+        pageInfo: { hasMore: false },
+      },
+    ];
+    const client = {
+      metadata: {},
+      operations: {},
+      setTokenManager: () => undefined,
+      async request<T>(request: DriveAdminStorageSdkRequest): Promise<T> {
+        calls.push(request);
+        return pages[calls.length - 1] as T;
+      },
+    } as unknown as DriveAdminStorageSdkClient;
+    const service = createStorageProviderAdminService({
+      adminStorageSdkClient: client,
+      getSession: () => ({
+        context: { tenantId: '100001', userId: 'user-100', actorId: 'operator-100' },
+      }),
+    });
+
+    const providers = await service.listAllProviders({ status: 'active' });
+
+    expect(providers.map((provider) => provider.id)).toEqual([
+      'builtin-storage-provider-100001-s3-compatible',
+      'builtin-storage-provider-100001-tencent-cos',
+    ]);
+    expect(calls).toHaveLength(2);
+    expect(calls[0]?.operationId).toBe('storageProviders.list');
+    expect(calls[0]?.query).toMatchObject({ status: 'active', page_size: 200 });
+    expect(calls[1]?.query).toMatchObject({ status: 'active', cursor: 'cursor-page-2' });
+  });
+
+  it('stops at the configured page cap instead of looping forever', async () => {
+    let requests = 0;
+    const client = {
+      metadata: {},
+      operations: {},
+      setTokenManager: () => undefined,
+      async request<T>(): Promise<T> {
+        requests += 1;
+        return {
+          items: [
+            {
+              id: `provider-${requests}`,
+              providerKind: 's3_compatible',
+              name: 'Provider',
+              endpointUrl: 'https://s3.example.com',
+              bucket: 'bucket',
+              pathStyle: true,
+              status: 'active',
+              version: 1,
+              credentialConfigured: true,
+            },
+          ],
+          pageInfo: { hasMore: true, nextCursor: 'always-more' },
+        } as T;
+      },
+    } as unknown as DriveAdminStorageSdkClient;
+    const service = createStorageProviderAdminService({ adminStorageSdkClient: client, getSession: () => ({ context: { tenantId: '100001', userId: 'user-100' } }) });
+
+    const providers = await service.listAllProviders({ maxPages: 3 });
+
+    expect(requests).toBe(3);
+    expect(providers).toHaveLength(3);
+  });
+});

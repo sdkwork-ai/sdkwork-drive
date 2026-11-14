@@ -7,6 +7,7 @@
 use sdkwork_web_bootstrap::WebModule;
 use std::sync::Arc;
 
+use axum::middleware;
 use axum::Router;
 use sdkwork_drive_config::DatabaseConfig;
 use sdkwork_drive_http::infra::PostgresReadinessCheck;
@@ -106,8 +107,23 @@ pub fn app_api_route_manifest() -> HttpRouteManifest {
 /// `assemble_backend_admin_storage_contribution_with_pool`; this manifest
 /// must be composed into the host backend route inventory so auth resolution
 /// matches the mounted router (API_ASSEMBLY_SPEC §3/§6.1).
+///
+/// It also projects the admin workspace routes (`spaces.admin.list`,
+/// `files.admin.list`) because the admin storage center now owns space and file
+/// governance next to provider/bucket governance, and a host that mounts the
+/// contribution without declaring those routes would answer
+/// `404 route-not-in-manifest` for them.
 pub fn backend_admin_storage_route_manifest() -> HttpRouteManifest {
-    sdkwork_routes_storage_backend_api::storage_route_manifest()
+    let mut routes = sdkwork_routes_storage_backend_api::storage_route_manifest()
+        .routes()
+        .to_vec();
+    routes.extend(
+        sdkwork_routes_drive_backend_api::backend_admin_workspace_route_manifest()
+            .routes()
+            .iter()
+            .cloned(),
+    );
+    HttpRouteManifest::from_owned_routes(routes)
 }
 
 pub struct BusinessRouterAssembly {
@@ -262,16 +278,26 @@ pub async fn assemble_backend_admin_storage_contribution_with_pool(
     let admin_storage_config =
         sdkwork_routes_storage_backend_api::AdminStorageConfig::from_env()
             .map_err(|error| format!("resolve admin storage config failed: {error}"))?;
-    let router =
+    let admin_storage_router =
         sdkwork_routes_storage_backend_api::build_admin_storage_business_router_for_host_framework(
             pg_pool.clone(),
             admin_storage_config,
         );
+    // The admin storage center also governs drive spaces and file metadata.
+    // Both surfaces share the host-owned Web Framework layer, so the workspace
+    // router only needs the same drive-context derivation the storage router
+    // installs; no drive-owned IAM layer is mounted here.
+    let admin_workspace_router =
+        sdkwork_routes_drive_backend_api::build_backend_admin_workspace_router(pg_pool.clone())
+            .route_layer(middleware::from_fn(
+                sdkwork_routes_storage_backend_api::derive_drive_storage_context_from_web_context,
+            ));
+    let router = admin_storage_router.merge(admin_workspace_router);
     ApiAssemblyContribution::from_manifest(
         "sdkwork-drive",
         "SDKWork Drive Admin Storage API",
         router,
-        sdkwork_routes_storage_backend_api::storage_route_manifest(),
+        backend_admin_storage_route_manifest(),
         Vec::new(),
         Arc::new(PostgresReadinessCheck::new(pg_pool)),
     )
@@ -506,4 +532,40 @@ pub async fn web_module_with_postgres_pool(pool: sqlx::PgPool) -> Result<WebModu
     Ok(WebModule::from_contribution(
         assemble_federated_api_router(pool).await?,
     ))
+}
+
+#[cfg(test)]
+mod tests {
+    use sdkwork_web_contract::RouteAuth;
+
+    use super::backend_admin_storage_route_manifest;
+
+    #[test]
+    fn admin_storage_manifest_projects_workspace_governance_routes() {
+        // The admin storage contribution also mounts the drive workspace
+        // governance routes. Hosts compose this manifest to resolve auth, so a
+        // missing projection would turn the storage center's space/file pages
+        // into `404 route-not-in-manifest` while the router still dispatches.
+        let manifest = backend_admin_storage_route_manifest();
+        for (method, path) in [
+            ("GET", "/backend/v3/api/drive/storage/providers"),
+            ("GET", "/backend/v3/api/drive/spaces"),
+            ("GET", "/backend/v3/api/drive/files"),
+        ] {
+            let route = manifest.match_route(method, path).unwrap_or_else(|| {
+                panic!("{method} {path} must be projected by the admin contribution manifest")
+            });
+            assert_eq!(
+                RouteAuth::DualToken,
+                route.auth,
+                "{method} {path} must stay dual-token"
+            );
+        }
+        assert!(
+            manifest
+                .match_route("GET", "/backend/v3/api/drive/labels")
+                .is_none(),
+            "business-only backend routes must not be pulled into the admin contribution"
+        );
+    }
 }

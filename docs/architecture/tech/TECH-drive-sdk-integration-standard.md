@@ -151,13 +151,24 @@ The legacy flat `/backend/v3/api/drive/storage_providers/*` routes and `storageP
 
 The OpenAPI export layer must remove App storage administration paths and unreachable storage administration schemas before App SDK generation. Do not hand-delete generated SDK files as the primary fix; fix API routing, OpenAPI export filters, schema quality gates, and SDK family smoke tests, then regenerate with `sdkgen` through Drive wrapper scripts.
 
+## Admin Workspace Governance Surface
+
+The storage center's space and file governance is owned by the backend workspace routes:
+
+- `GET /backend/v3/api/drive/spaces` -> `spaces.admin.list`
+- `GET /backend/v3/api/drive/files` -> `files.admin.list`
+
+`files.admin.list` is tenant-scoped, read-only, and metadata-only (no object keys, storage provider ids, or credentials). It is cursor-paginated and filters on lower_snake_case query parameters: `space_id`, `space_type`, `node_type`, `lifecycle_status`, `content_type_group`, `keyword`, and `owner_subject_id`. An omitted `lifecycle_status` means live (`active`) nodes; trashed and deleted nodes require an explicit filter.
+
+`assemble_backend_admin_storage_contribution_with_pool` mounts these routes next to `/drive/storage/*`, and `backend_admin_storage_route_manifest` projects both route families. A same-origin host (for example the Cloud Router storage center) therefore composes **one** Drive admin contribution; mounting the workspace routes as a second owner contribution would be rejected by the assembly owner-uniqueness rule.
+
 ## Backend Admin Permission Scopes
 
 `drive-backend-api` and `drive-admin-storage-api` enforce per-route authorization through the web framework `AuthorizationPolicy` and `operationId` manifest mapping:
 
 - umbrella: `drive.storage.admin` (all backend + storage admin operations)
 - wildcard: `drive.*`
-- granular: capability scopes such as `drive.audit.admin`, `drive.maintenance.admin`, `drive.quota.admin`, `drive.labels.admin`, `drive.spaces.admin`, and `drive.download_packages.admin`
+- granular: capability scopes such as `drive.audit.admin`, `drive.maintenance.admin`, `drive.quota.admin`, `drive.labels.admin`, `drive.spaces.admin`, `drive.files.admin`, and `drive.download_packages.admin`
 
 Storage admin routes require `drive.storage.admin` or `drive.*`. Backend operations routes require the matching capability scope or the umbrella/wildcard scopes. PC admin navigation mirrors the same scope evaluation through `resolveDriveAdminSectionAccess` in `sdkwork-drive-pc-admin-core`.
 

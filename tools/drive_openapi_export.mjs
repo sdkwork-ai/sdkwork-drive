@@ -99,6 +99,7 @@ const BACKEND_OPERATION_PERMISSIONS = new Map([
   ["quotas.retrieve", "drive.quota.admin"],
   ["quotas.update", "drive.quota.admin"],
   ["spaces.admin.list", "drive.spaces.admin"],
+  ["files.admin.list", "drive.files.admin"],
   ["downloadPackages.list", "drive.download_packages.admin"],
   ["sandboxVolumes.list", "drive.sandboxes.admin"],
   ["sandboxVolumes.create", "drive.sandboxes.admin"],

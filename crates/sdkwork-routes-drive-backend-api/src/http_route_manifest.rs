@@ -17,6 +17,12 @@ const HTTP_ROUTES: &[HttpRoute] = &[
     ),
     HttpRoute::dual_token(
         HttpMethod::Get,
+        "/backend/v3/api/drive/files",
+        "drive",
+        "files.admin.list",
+    ),
+    HttpRoute::dual_token(
+        HttpMethod::Get,
         "/backend/v3/api/drive/labels",
         "drive",
         "labels.list",

@@ -68,7 +68,9 @@ describe('SpacesAdminPage', () => {
 
     await screen.findByText('Primary');
     expect(screen.getByText('space-001')).toBeTruthy();
-    expect(screen.getByText('Personal')).toBeTruthy();
+    // The space-type filter also renders a "Personal" option, so the badge is
+    // asserted through the all-elements query rather than the single one.
+    expect(screen.getAllByText('Personal').length).toBeGreaterThan(0);
     expect(screen.getByText('User')).toBeTruthy();
     expect(screen.getByText('user-001')).toBeTruthy();
     expect(screen.getByText('Active')).toBeTruthy();

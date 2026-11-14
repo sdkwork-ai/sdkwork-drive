@@ -19,6 +19,7 @@ const BUILTIN_SECTION_PATHS: Record<string, string> = {
   'admin-quotas': '/admin/quotas',
   'admin-labels': '/admin/labels',
   'admin-spaces': '/admin/spaces',
+  'admin-files': '/admin/files',
   'admin-download-packages': '/admin/download-packages',
 };
 

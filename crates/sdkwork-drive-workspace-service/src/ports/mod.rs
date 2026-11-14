@@ -1,3 +1,4 @@
+pub mod admin_file_store;
 pub mod audit_store;
 pub mod domain_outbox_embedded_relay;
 pub mod maintenance_store;

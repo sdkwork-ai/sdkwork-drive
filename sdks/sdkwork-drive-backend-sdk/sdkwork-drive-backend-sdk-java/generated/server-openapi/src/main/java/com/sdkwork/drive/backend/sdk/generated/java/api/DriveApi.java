@@ -116,6 +116,22 @@ public class DriveApi {
         return client.convertValue(raw, new TypeReference<SpacesAdminListResponse>() {});
     }
 
+    public FilesAdminListResponse filesAdminList(String spaceId, String spaceType, String nodeType, String lifecycleStatus, String contentTypeGroup, String keyword, String ownerSubjectId, Integer pageSize, String cursor) throws Exception {
+        String query = buildQueryString(List.of(
+            new QueryParameterSpec("space_id", spaceId, "form", true, false, null),
+            new QueryParameterSpec("space_type", spaceType, "form", true, false, null),
+            new QueryParameterSpec("node_type", nodeType, "form", true, false, null),
+            new QueryParameterSpec("lifecycle_status", lifecycleStatus, "form", true, false, null),
+            new QueryParameterSpec("content_type_group", contentTypeGroup, "form", true, false, null),
+            new QueryParameterSpec("keyword", keyword, "form", true, false, null),
+            new QueryParameterSpec("owner_subject_id", ownerSubjectId, "form", true, false, null),
+            new QueryParameterSpec("page_size", pageSize, "form", true, false, null),
+            new QueryParameterSpec("cursor", cursor, "form", true, false, null)
+        ));
+        Object raw = client.get(ApiPaths.appendQueryString(ApiPaths.backendPath("/drive/files"), query));
+        return client.convertValue(raw, new TypeReference<FilesAdminListResponse>() {});
+    }
+
     public DownloadPackagesListResponse downloadPackagesList(String state, Integer page, Integer pageSize) throws Exception {
         String query = buildQueryString(List.of(
             new QueryParameterSpec("state", state, "form", true, false, null),

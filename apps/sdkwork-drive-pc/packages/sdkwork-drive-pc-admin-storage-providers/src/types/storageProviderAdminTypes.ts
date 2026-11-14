@@ -190,6 +190,21 @@ export interface ListStorageProvidersPageResult {
   hasMore: boolean;
 }
 
+/**
+ * Options for [`listAllProviders`](../../services/storageProviderAdminService.ts).
+ *
+ * `pageSize`/`maxPages` exist so a host can bound the work on very large tenant
+ * catalogs; the defaults (200 × 20 = 4000 rows) cover a provider plane many
+ * times the size of the built-in catalog.
+ */
+export interface ListAllStorageProvidersInput {
+  providerKind?: string;
+  status?: string;
+  signal?: AbortSignal;
+  pageSize?: number;
+  maxPages?: number;
+}
+
 export interface SetDefaultStorageProviderBindingInput {
   providerId: string;
   spaceId?: string;

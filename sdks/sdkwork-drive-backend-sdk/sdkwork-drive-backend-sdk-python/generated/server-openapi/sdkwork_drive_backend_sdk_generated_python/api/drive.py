@@ -1,6 +1,6 @@
 from typing import Any, Dict, List, Optional
 from ..http_client import HttpClient
-from ..models import AuditEventsListResponse, CreateLabelRequest, CreateSandboxGrantRequest, CreateSandboxVolumeRequest, DownloadPackagesListResponse, LabelsCreateResponse201, LabelsListResponse, LabelsRetrieveResponse, LabelsUpdateResponse, MaintenanceAbandonedUploadTaskSweepResponse, MaintenanceExpiredUploadContentSweepResponse, MaintenanceJobsListResponse, MaintenanceObjectSweepResponse, MaintenanceUploadSessionSweepResponse, QuotasRetrieveResponse, QuotasUpdateResponse, SandboxGrantsCreateResponse201, SandboxGrantsListResponse, SandboxGrantsRetrieveResponse, SandboxGrantsUpdateResponse, SandboxVolumesCreateResponse201, SandboxVolumesListResponse, SandboxVolumesRetrieveResponse, SandboxVolumesUpdateResponse, SpacesAdminListResponse, SweepObjectStoreRequest, SweepUploadSessionsRequest, UpdateLabelRequest, UpdateQuotaPolicyRequest, UpdateSandboxGrantRequest, UpdateSandboxVolumeRequest
+from ..models import AuditEventsListResponse, CreateLabelRequest, CreateSandboxGrantRequest, CreateSandboxVolumeRequest, DownloadPackagesListResponse, FilesAdminListResponse, LabelsCreateResponse201, LabelsListResponse, LabelsRetrieveResponse, LabelsUpdateResponse, MaintenanceAbandonedUploadTaskSweepResponse, MaintenanceExpiredUploadContentSweepResponse, MaintenanceJobsListResponse, MaintenanceObjectSweepResponse, MaintenanceUploadSessionSweepResponse, QuotasRetrieveResponse, QuotasUpdateResponse, SandboxGrantsCreateResponse201, SandboxGrantsListResponse, SandboxGrantsRetrieveResponse, SandboxGrantsUpdateResponse, SandboxVolumesCreateResponse201, SandboxVolumesListResponse, SandboxVolumesRetrieveResponse, SandboxVolumesUpdateResponse, SpacesAdminListResponse, SweepObjectStoreRequest, SweepUploadSessionsRequest, UpdateLabelRequest, UpdateQuotaPolicyRequest, UpdateSandboxGrantRequest, UpdateSandboxVolumeRequest
 
 def _append_query_string(path: str, raw_query_string: str) -> str:
     query = raw_query_string.lstrip('?')
@@ -194,6 +194,7 @@ class DriveApi:
         self.maintenance = DriveMaintenanceApi(client)
         self.quotas = DriveQuotasApi(client)
         self.spaces = DriveSpacesApi(client)
+        self.files = DriveFilesApi(client)
         self.download_packages = DriveDownloadPackagesApi(client)
         self.sandbox_volumes = DriveSandboxVolumesApi(client)
         self.sandbox_grants = DriveSandboxGrantsApi(client)
@@ -324,6 +325,35 @@ class DriveSpacesAdminApi:
             {'name': 'cursor', 'value': cursor, 'style': 'form', 'explode': True, 'allow_reserved': False},
         ])
         return self._client.get(_append_query_string(f"/backend/v3/api/drive/spaces", query))
+
+class DriveFilesApi:
+    """drive drive.files API client."""
+
+    def __init__(self, client: HttpClient):
+        self._client = client
+        self.admin = DriveFilesAdminApi(client)
+
+
+class DriveFilesAdminApi:
+    """drive drive.files.admin API client."""
+
+    def __init__(self, client: HttpClient):
+        self._client = client
+
+
+    def list(self, space_id: Optional[str] = None, space_type: Optional[str] = None, node_type: Optional[str] = None, lifecycle_status: Optional[str] = None, content_type_group: Optional[str] = None, keyword: Optional[str] = None, owner_subject_id: Optional[str] = None, page_size: Optional[int] = None, cursor: Optional[str] = None) -> FilesAdminListResponse:
+        query = build_query_string([
+            {'name': 'space_id', 'value': space_id, 'style': 'form', 'explode': True, 'allow_reserved': False},
+            {'name': 'space_type', 'value': space_type, 'style': 'form', 'explode': True, 'allow_reserved': False},
+            {'name': 'node_type', 'value': node_type, 'style': 'form', 'explode': True, 'allow_reserved': False},
+            {'name': 'lifecycle_status', 'value': lifecycle_status, 'style': 'form', 'explode': True, 'allow_reserved': False},
+            {'name': 'content_type_group', 'value': content_type_group, 'style': 'form', 'explode': True, 'allow_reserved': False},
+            {'name': 'keyword', 'value': keyword, 'style': 'form', 'explode': True, 'allow_reserved': False},
+            {'name': 'owner_subject_id', 'value': owner_subject_id, 'style': 'form', 'explode': True, 'allow_reserved': False},
+            {'name': 'page_size', 'value': page_size, 'style': 'form', 'explode': True, 'allow_reserved': False},
+            {'name': 'cursor', 'value': cursor, 'style': 'form', 'explode': True, 'allow_reserved': False},
+        ])
+        return self._client.get(_append_query_string(f"/backend/v3/api/drive/files", query))
 
 class DriveDownloadPackagesApi:
     """drive drive.download_packages API client."""

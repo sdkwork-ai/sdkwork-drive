@@ -118,6 +118,51 @@ async list(params?: DriveDownloadPackagesListParams, requestOptions?: ApiRequest
   }
 }
 
+export interface DriveFilesAdminListParams {
+  spaceId?: string;
+  spaceType?: 'personal' | 'team' | 'knowledge_base' | 'ai_generated' | 'git_repository' | 'deployment' | 'app_upload' | 'im' | 'rtc' | 'notary' | 'website' | 'documents';
+  nodeType?: 'file' | 'folder' | 'shortcut' | 'virtual_reference';
+  lifecycleStatus?: 'active' | 'trashed' | 'deleted';
+  contentTypeGroup?: 'image' | 'video' | 'audio' | 'text' | 'document' | 'archive' | 'binary';
+  keyword?: string;
+  ownerSubjectId?: string;
+  pageSize?: number;
+  cursor?: string;
+}
+
+export class DriveFilesAdminApi {
+  private client: HttpClient;
+
+  constructor(client: HttpClient) {
+    this.client = client;
+  }
+
+
+async list(params?: DriveFilesAdminListParams, requestOptions?: ApiRequestOptions): Promise<unknown> {
+    const query = buildQueryString([
+      { name: 'space_id', value: params?.spaceId, style: 'form', explode: true, allowReserved: false },
+      { name: 'space_type', value: params?.spaceType, style: 'form', explode: true, allowReserved: false },
+      { name: 'node_type', value: params?.nodeType, style: 'form', explode: true, allowReserved: false },
+      { name: 'lifecycle_status', value: params?.lifecycleStatus, style: 'form', explode: true, allowReserved: false },
+      { name: 'content_type_group', value: params?.contentTypeGroup, style: 'form', explode: true, allowReserved: false },
+      { name: 'keyword', value: params?.keyword, style: 'form', explode: true, allowReserved: false },
+      { name: 'owner_subject_id', value: params?.ownerSubjectId, style: 'form', explode: true, allowReserved: false },
+      { name: 'page_size', value: params?.pageSize, style: 'form', explode: true, allowReserved: false },
+      { name: 'cursor', value: params?.cursor, style: 'form', explode: true, allowReserved: false },
+    ]);
+    return this.client.request<unknown>(appendQueryString(backendApiPath(`/drive/files`), query), { ...(requestOptions?.signal !== undefined ? { signal: requestOptions.signal } : {}), ...(requestOptions?.timeout !== undefined ? { timeout: requestOptions.timeout } : {}), method: 'GET' as any, sdkworkUnwrapKind: 'data' });
+  }
+}
+
+export class DriveFilesApi {
+  public readonly admin: DriveFilesAdminApi;
+
+  constructor(client: HttpClient) {
+    this.admin = new DriveFilesAdminApi(client);
+  }
+
+}
+
 export interface DriveSpacesAdminListParams {
   ownerSubjectType?: string;
   ownerSubjectId?: string;
@@ -309,6 +354,7 @@ export class DriveApi {
   public readonly maintenance: DriveMaintenanceApi;
   public readonly quotas: DriveQuotasApi;
   public readonly spaces: DriveSpacesApi;
+  public readonly files: DriveFilesApi;
   public readonly downloadPackages: DriveDownloadPackagesApi;
   public readonly sandboxVolumes: DriveSandboxVolumesApi;
   public readonly sandboxGrants: DriveSandboxGrantsApi;
@@ -319,6 +365,7 @@ export class DriveApi {
     this.maintenance = new DriveMaintenanceApi(client);
     this.quotas = new DriveQuotasApi(client);
     this.spaces = new DriveSpacesApi(client);
+    this.files = new DriveFilesApi(client);
     this.downloadPackages = new DriveDownloadPackagesApi(client);
     this.sandboxVolumes = new DriveSandboxVolumesApi(client);
     this.sandboxGrants = new DriveSandboxGrantsApi(client);

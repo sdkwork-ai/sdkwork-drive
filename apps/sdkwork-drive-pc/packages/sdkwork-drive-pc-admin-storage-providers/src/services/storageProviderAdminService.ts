@@ -15,6 +15,7 @@ import type {
   ListStorageProviderBindingsInput,
   ListStorageProviderBindingsPageResult,
   ListStorageProviderAccountsPageResult,
+  ListAllStorageProvidersInput,
   ListStorageProvidersInput,
   ListStorageProvidersPageResult,
   ListStorageProviderObjectsInput,
@@ -56,6 +57,17 @@ type JsonRecord = Record<string, unknown>;
  */
 const BUCKET_INVENTORY_PAGE_SIZE = 200;
 
+/**
+ * Page size and page cap for [`StorageProviderAdminService.listAllProviders`].
+ *
+ * The server accepts up to 200 rows per cursor window; 20 windows (4000
+ * provider configurations) is far beyond any real tenant while still giving the
+ * loop a hard stop, so a malformed `hasMore`/cursor response cannot spin
+ * forever.
+ */
+const PROVIDER_LIST_ALL_PAGE_SIZE = 200;
+const PROVIDER_LIST_ALL_MAX_PAGES = 20;
+
 export interface StorageProviderAdminService {
   /**
    * 存储中心仪表盘聚合。
@@ -67,6 +79,20 @@ export interface StorageProviderAdminService {
   getStorageOverview(input?: GetStorageOverviewInput): Promise<StorageOverviewView>;
   listProviders(input?: ListStorageProvidersInput): Promise<StorageProviderView[]>;
   listProvidersPage(input?: ListStorageProvidersInput): Promise<ListStorageProvidersPageResult>;
+  /**
+   * Every provider configuration in the tenant, not just the first cursor page.
+   *
+   * `listProviders` is one page (default 20). A host whose provider table has no
+   * pagination control — the CloudRouter storage console is one — reads that
+   * page as "the whole plane" and silently hides the rows after it. With the
+   * 25-row built-in catalog sorted by id, the hidden tail is exactly
+   * `tencent_cos` (the default-bound provider) plus its neighbours, which reads
+   * to an operator as "Tencent COS was never initialized".
+   *
+   * Pagination is sequential and bounded: the caller gets either every row or a
+   * hard stop after `maxPages`, never an unbounded request loop.
+   */
+  listAllProviders(input?: ListAllStorageProvidersInput): Promise<StorageProviderView[]>;
   listKinds(input?: { signal?: AbortSignal }): Promise<StorageProviderKindView[]>;
   setKindEnabled(
     providerKind: string,
@@ -265,6 +291,25 @@ export function createStorageProviderAdminService({
     async listProviders(input = {}) {
       const page = await service.listProvidersPage(input);
       return page.items;
+    },
+    async listAllProviders(input = {}) {
+      const pageSize = input.pageSize ?? PROVIDER_LIST_ALL_PAGE_SIZE;
+      const maxPages = input.maxPages ?? PROVIDER_LIST_ALL_MAX_PAGES;
+      const items: StorageProviderView[] = [];
+      let pageToken: string | undefined;
+      for (let page = 0; page < maxPages; page += 1) {
+        const result = await service.listProvidersPage({
+          providerKind: input.providerKind,
+          status: input.status,
+          signal: input.signal,
+          pageSize,
+          pageToken,
+        });
+        items.push(...result.items);
+        if (!result.hasMore || !result.nextPageToken) return items;
+        pageToken = result.nextPageToken;
+      }
+      return items;
     },
     async listKinds(input = {}) {
       const response = await adminStorageSdkClient.request<unknown>({

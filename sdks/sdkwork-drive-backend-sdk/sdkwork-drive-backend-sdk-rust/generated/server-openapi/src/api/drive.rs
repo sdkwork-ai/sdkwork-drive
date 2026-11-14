@@ -118,6 +118,22 @@ impl DriveApi {
         self.client.get(&path, None, None).await
     }
 
+    pub async fn files_admin_list(&self, space_id: Option<&str>, space_type: Option<&str>, node_type: Option<&str>, lifecycle_status: Option<&str>, content_type_group: Option<&str>, keyword: Option<&str>, owner_subject_id: Option<&str>, page_size: Option<i64>, cursor: Option<&str>) -> Result<serde_json::Value, SdkworkError> {
+        let query = build_query_string(&[
+            QueryParameterSpec::new("space_id", space_id, "form", true, false, None),
+            QueryParameterSpec::new("space_type", space_type, "form", true, false, None),
+            QueryParameterSpec::new("node_type", node_type, "form", true, false, None),
+            QueryParameterSpec::new("lifecycle_status", lifecycle_status, "form", true, false, None),
+            QueryParameterSpec::new("content_type_group", content_type_group, "form", true, false, None),
+            QueryParameterSpec::new("keyword", keyword, "form", true, false, None),
+            QueryParameterSpec::new("owner_subject_id", owner_subject_id, "form", true, false, None),
+            QueryParameterSpec::new("page_size", page_size, "form", true, false, None),
+            QueryParameterSpec::new("cursor", cursor, "form", true, false, None),
+        ]);
+        let path = append_query_string(backend_path(&"/drive/files".to_string()), &query);
+        self.client.get(&path, None, None).await
+    }
+
     pub async fn download_packages_list(&self, state: Option<&str>, page: Option<i64>, page_size: Option<i64>) -> Result<serde_json::Value, SdkworkError> {
         let query = build_query_string(&[
             QueryParameterSpec::new("state", state, "form", true, false, None),

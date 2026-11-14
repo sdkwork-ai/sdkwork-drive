@@ -1,4 +1,5 @@
 pub mod acl_predicate;
+pub mod admin_file_store;
 pub mod audit_store;
 pub mod change_feed_store;
 pub mod entities;

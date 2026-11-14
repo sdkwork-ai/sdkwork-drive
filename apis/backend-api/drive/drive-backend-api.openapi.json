@@ -1434,6 +1434,186 @@
         "x-sdkwork-permission": "drive.spaces.admin"
       }
     },
+    "/backend/v3/api/drive/files": {
+      "get": {
+        "tags": [
+          "drive"
+        ],
+        "operationId": "files.admin.list",
+        "parameters": [
+          {
+            "name": "space_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "space_type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "personal",
+                "team",
+                "knowledge_base",
+                "ai_generated",
+                "git_repository",
+                "deployment",
+                "app_upload",
+                "im",
+                "rtc",
+                "notary",
+                "website",
+                "documents"
+              ]
+            }
+          },
+          {
+            "name": "node_type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "file",
+                "folder",
+                "shortcut",
+                "virtual_reference"
+              ]
+            }
+          },
+          {
+            "name": "lifecycle_status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "active",
+                "trashed",
+                "deleted"
+              ]
+            }
+          },
+          {
+            "name": "content_type_group",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "image",
+                "video",
+                "audio",
+                "text",
+                "document",
+                "archive",
+                "binary"
+              ]
+            }
+          },
+          {
+            "name": "keyword",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 128
+            }
+          },
+          {
+            "name": "owner_subject_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 20
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SdkWorkApiResponse"
+                    },
+                    {
+                      "$ref": "#/components/schemas/DriveFileListHttpResponse"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "AuthToken": [],
+            "AccessToken": []
+          }
+        ],
+        "x-sdkwork-owner": "sdkwork-drive",
+        "x-sdkwork-api-authority": "sdkwork-drive.backend",
+        "x-sdkwork-request-context": "WebRequestContext",
+        "x-sdkwork-api-surface": "backend-api",
+        "x-sdkwork-permission": "drive.files.admin"
+      }
+    },
     "/backend/v3/api/drive/download_packages": {
       "get": {
         "tags": [
@@ -2797,6 +2977,140 @@
           }
         }
       },
+      "DriveFile": {
+        "type": "object",
+        "description": "One drive node as seen by the tenant-scoped backend admin file list. Metadata only: object storage keys and credentials never enter this projection.",
+        "required": [
+          "id",
+          "tenantId",
+          "spaceId",
+          "spaceName",
+          "spaceType",
+          "ownerSubjectType",
+          "ownerSubjectId",
+          "nodeType",
+          "nodeName",
+          "filePath",
+          "contentLength",
+          "lifecycleStatus",
+          "version",
+          "createdBy",
+          "updatedBy",
+          "createdAt",
+          "updatedAt"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "tenantId": {
+            "type": "string"
+          },
+          "spaceId": {
+            "type": "string"
+          },
+          "spaceName": {
+            "type": "string"
+          },
+          "spaceType": {
+            "type": "string",
+            "enum": [
+              "personal",
+              "team",
+              "knowledge_base",
+              "ai_generated",
+              "git_repository",
+              "deployment",
+              "app_upload",
+              "im",
+              "rtc",
+              "notary",
+              "website",
+              "documents"
+            ]
+          },
+          "ownerSubjectType": {
+            "type": "string"
+          },
+          "ownerSubjectId": {
+            "type": "string"
+          },
+          "parentNodeId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "nodeType": {
+            "type": "string",
+            "enum": [
+              "file",
+              "folder",
+              "shortcut",
+              "virtual_reference"
+            ]
+          },
+          "nodeName": {
+            "type": "string"
+          },
+          "filePath": {
+            "type": "string",
+            "description": "Slash-separated logical path inside the space, resolved from the node ancestor chain."
+          },
+          "fileExtension": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "contentType": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "contentTypeGroup": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Head media group: image, video, audio, text, document, archive, or binary."
+          },
+          "contentLength": {
+            "type": "string",
+            "format": "int64",
+            "pattern": "^-?[0-9]+$",
+            "x-sdkwork-int64-string": true,
+            "description": "Head content length in bytes; 0 for nodes without file content."
+          },
+          "lifecycleStatus": {
+            "type": "string",
+            "enum": [
+              "active",
+              "trashed",
+              "deleted"
+            ]
+          },
+          "version": {
+            "type": "string",
+            "format": "int64",
+            "pattern": "^-?[0-9]+$",
+            "x-sdkwork-int64-string": true
+          },
+          "createdBy": {
+            "type": "string"
+          },
+          "updatedBy": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string"
+          }
+        }
+      },
       "MaintenanceJob": {
         "type": "object",
         "required": [
@@ -3458,6 +3772,39 @@
                     "type": "array",
                     "items": {
                       "$ref": "#/components/schemas/DriveSpace"
+                    }
+                  },
+                  "pageInfo": {
+                    "$ref": "#/components/schemas/PageInfo"
+                  }
+                }
+              }
+            }
+          }
+        ]
+      },
+      "DriveFileListHttpResponse": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/SdkWorkApiResponse"
+          },
+          {
+            "type": "object",
+            "required": [
+              "data"
+            ],
+            "properties": {
+              "data": {
+                "type": "object",
+                "required": [
+                  "items",
+                  "pageInfo"
+                ],
+                "properties": {
+                  "items": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/DriveFile"
                     }
                   },
                   "pageInfo": {

@@ -328,6 +328,210 @@ async fn list_spaces_backend_route_returns_tenant_filtered_result() {
 }
 
 #[tokio::test]
+async fn backend_admin_file_list_is_tenant_scoped_filters_and_resolves_paths() {
+    let Some((pool, _database_guard)) = sdkwork_drive_test_support::postgres_test_database().await
+    else {
+        return;
+    };
+
+    for (space_id, tenant_id, display_name, owner_subject_id) in [
+        ("space-001", "tenant-001", "Main", "user-001"),
+        ("space-002", "tenant-002", "Other", "user-002"),
+    ] {
+        sqlx::query(
+            "INSERT INTO dr_drive_space (
+                id, tenant_id, owner_subject_type, owner_subject_id, space_type,
+                display_name, lifecycle_status, version, created_by, updated_by
+            ) VALUES ($1, $2, 'user', $3, 'personal', $4, 'active', 1, 'admin-001', 'admin-001')",
+        )
+        .bind(space_id)
+        .bind(tenant_id)
+        .bind(owner_subject_id)
+        .bind(display_name)
+        .execute(&pool)
+        .await
+        .expect("seed admin file space should succeed");
+    }
+
+    let seed_node = |id: &str,
+                     tenant_id: &str,
+                     space_id: &str,
+                     parent_node_id: Option<&str>,
+                     node_type: &str,
+                     node_name: &str,
+                     content_type_group: Option<&str>,
+                     lifecycle_status: &str,
+                     updated_offset_seconds: i64| {
+        let pool = pool.clone();
+        let id = id.to_string();
+        let tenant_id = tenant_id.to_string();
+        let space_id = space_id.to_string();
+        let parent_node_id = parent_node_id.map(str::to_string);
+        let node_type = node_type.to_string();
+        let node_name = node_name.to_string();
+        let content_type_group = content_type_group.map(str::to_string);
+        let lifecycle_status = lifecycle_status.to_string();
+        async move {
+            let is_file = node_type == "file";
+            sqlx::query(
+                "INSERT INTO dr_drive_node (
+                    id, tenant_id, space_id, parent_node_id, node_type, node_name,
+                    content_state, head_content_type, head_content_type_group,
+                    head_content_length, head_version_no, lifecycle_status, version,
+                    created_by, updated_by, created_at, updated_at
+                ) VALUES (
+                    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, 1,
+                    'admin-001', 'admin-001',
+                    NOW() - $13::interval,
+                    NOW() - $13::interval
+                )",
+            )
+            .bind(&id)
+            .bind(&tenant_id)
+            .bind(&space_id)
+            .bind(&parent_node_id)
+            .bind(&node_type)
+            .bind(&node_name)
+            .bind(if is_file { "ready" } else { "empty" })
+            .bind(if is_file {
+                Some("application/octet-stream")
+            } else {
+                None
+            })
+            .bind(&content_type_group)
+            .bind(if is_file { Some(512_i64) } else { None })
+            .bind(if is_file { Some(1_i64) } else { None })
+            .bind(&lifecycle_status)
+            .bind(format!("{updated_offset_seconds} seconds"))
+            .execute(&pool)
+            .await
+            .expect("seed admin file node should succeed");
+        }
+    };
+
+    seed_node(
+        "folder-docs",
+        "tenant-001",
+        "space-001",
+        None,
+        "folder",
+        "Docs",
+        None,
+        "active",
+        300,
+    )
+    .await;
+    seed_node(
+        "file-report",
+        "tenant-001",
+        "space-001",
+        Some("folder-docs"),
+        "file",
+        "report.txt",
+        Some("text"),
+        "active",
+        120,
+    )
+    .await;
+    seed_node(
+        "file-trashed",
+        "tenant-001",
+        "space-001",
+        None,
+        "file",
+        "old.txt",
+        Some("text"),
+        "trashed",
+        60,
+    )
+    .await;
+    seed_node(
+        "file-other-tenant",
+        "tenant-002",
+        "space-002",
+        None,
+        "file",
+        "foreign.txt",
+        Some("text"),
+        "active",
+        0,
+    )
+    .await;
+
+    let app = build_router_with_pool(pool.clone());
+
+    // Default page: tenant-001 only, live nodes only (the trashed file stays
+    // behind an explicit lifecycle filter), newest first.
+    let (first_page, first_token) =
+        fetch_backend_paged_items(app.clone(), "/backend/v3/api/drive/files?page_size=1").await;
+    assert_eq!(1, first_page.len());
+    assert_eq!("file-report", first_page[0]["id"].as_str().unwrap());
+    let first_token = first_token.expect("two live nodes must expose a continuation token");
+
+    let (second_page, second_token) = fetch_backend_paged_items(
+        app.clone(),
+        &format!("/backend/v3/api/drive/files?page_size=1&cursor={first_token}"),
+    )
+    .await;
+    assert_eq!(1, second_page.len());
+    assert_eq!("folder-docs", second_page[0]["id"].as_str().unwrap());
+    assert!(second_token.is_none(), "last page must not expose a token");
+
+    // Ancestor chain resolution: the nested file reports its full path.
+    let (nested_files, _) = fetch_backend_paged_items(
+        app.clone(),
+        "/backend/v3/api/drive/files?node_type=file&keyword=report",
+    )
+    .await;
+    assert_eq!(1, nested_files.len());
+    assert_eq!(
+        "Docs/report.txt",
+        nested_files[0]["filePath"].as_str().unwrap()
+    );
+    assert_eq!(
+        "space-001",
+        nested_files[0]["spaceId"].as_str().unwrap(),
+        "nested file must keep its owning space"
+    );
+    assert_eq!(
+        "Main",
+        nested_files[0]["spaceName"].as_str().unwrap(),
+        "nested file must carry the human-readable space name"
+    );
+
+    let (trashed, _) = fetch_backend_paged_items(
+        app.clone(),
+        "/backend/v3/api/drive/files?lifecycle_status=trashed",
+    )
+    .await;
+    assert_eq!(1, trashed.len());
+    assert_eq!("file-trashed", trashed[0]["id"].as_str().unwrap());
+
+    let (other_tenant_scope, _) = fetch_backend_paged_items(
+        app.clone(),
+        "/backend/v3/api/drive/files?space_id=space-002",
+    )
+    .await;
+    assert!(
+        other_tenant_scope.is_empty(),
+        "a tenant must never read another tenant's file list"
+    );
+
+    let (matched, _) = fetch_backend_paged_items(
+        app,
+        "/backend/v3/api/drive/files?content_type_group=text&owner_subject_id=user-001",
+    )
+    .await;
+    assert_eq!(
+        vec!["file-report".to_string()],
+        matched
+            .iter()
+            .map(|item| item["id"].as_str().unwrap_or_default().to_string())
+            .collect::<Vec<_>>()
+    );
+}
+
+#[tokio::test]
 async fn list_quotas_route_returns_usage_aggregated_from_storage_objects() {
     let Some((pool, _database_guard)) = sdkwork_drive_test_support::postgres_test_database().await
     else {

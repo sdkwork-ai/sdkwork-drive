@@ -1,3 +1,4 @@
+pub mod admin_file_service;
 pub mod audit_service;
 pub mod change_feed_service;
 pub mod download_service;

@@ -39,8 +39,8 @@ pub use provider_account_defaults::{
 pub use routes::*;
 pub use state::AdminStorageState;
 pub use web_bootstrap::{
-    wrap_router_with_iam_web_framework, wrap_router_with_web_framework,
-    wrap_router_with_web_framework_from_env,
+    derive_drive_storage_context_from_web_context, wrap_router_with_iam_web_framework,
+    wrap_router_with_web_framework, wrap_router_with_web_framework_from_env,
 };
 
 use sdkwork_web_core::HttpRouteManifest;

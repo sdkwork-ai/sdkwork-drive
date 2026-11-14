@@ -29,6 +29,7 @@ const ADMIN_OPERATIONS_ROUTES: readonly SdkworkDrivePcAdminRouteDescriptor[] = [
   { id: 'admin-quotas', path: '/admin/quotas', screen: 'quotas', surface: 'backend-admin' },
   { id: 'admin-labels', path: '/admin/labels', screen: 'labels', surface: 'backend-admin' },
   { id: 'admin-spaces', path: '/admin/spaces', screen: 'spaces', surface: 'backend-admin' },
+  { id: 'admin-files', path: '/admin/files', screen: 'files', surface: 'backend-admin' },
   { id: 'admin-download-packages', path: '/admin/download-packages', screen: 'download-packages', surface: 'backend-admin' },
 ];
 

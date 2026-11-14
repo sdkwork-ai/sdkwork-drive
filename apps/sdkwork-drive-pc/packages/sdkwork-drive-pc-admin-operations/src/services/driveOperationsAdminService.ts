@@ -5,10 +5,12 @@ import type {
   CreateLabelInput,
   UpdateLabelInput,
   DownloadPackageView,
+  DriveFileAdminView,
   DriveSpaceAdminView,
   LabelListView,
   ListAuditEventsQuery,
   ListDownloadPackagesQuery,
+  ListFilesAdminQuery,
   ListLabelsQuery,
   ListMaintenanceJobsQuery,
   ListSpacesAdminQuery,
@@ -46,6 +48,7 @@ export interface DriveOperationsAdminService {
   updateLabel(labelId: string, input: UpdateLabelInput): Promise<LabelListView['items'][number]>;
   deleteLabel(labelId: string): Promise<void>;
   listSpaces(query?: ListSpacesAdminQuery): Promise<BackendOffsetListPage<DriveSpaceAdminView>>;
+  listFiles(query?: ListFilesAdminQuery): Promise<BackendOffsetListPage<DriveFileAdminView>>;
   listDownloadPackages(query?: ListDownloadPackagesQuery): Promise<BackendOffsetListPage<DownloadPackageView>>;
 }
 
@@ -185,6 +188,25 @@ export function createDriveOperationsAdminService({
         query: {
           ownerSubjectType: query.ownerSubjectType,
           ownerSubjectId: query.ownerSubjectId,
+          page_size: query.pageSize,
+          cursor: query.pageToken,
+        },
+        signal: query.signal,
+      });
+      return normalizeBackendOffsetListPage(payload);
+    },
+
+    async listFiles(query = {}) {
+      const payload = await backendSdkClient.request<BackendOffsetListWire<DriveFileAdminView>>({
+        operationId: 'files.admin.list',
+        query: {
+          space_id: query.spaceId,
+          space_type: query.spaceType,
+          node_type: query.nodeType,
+          lifecycle_status: query.lifecycleStatus,
+          content_type_group: query.contentTypeGroup,
+          keyword: query.keyword,
+          owner_subject_id: query.ownerSubjectId,
           page_size: query.pageSize,
           cursor: query.pageToken,
         },

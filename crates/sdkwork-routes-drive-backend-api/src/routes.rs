@@ -107,6 +107,7 @@ fn build_business_router_layers(state: BackendState, require_iam: bool) -> Route
             get(list_download_packages),
         )
         .route("/backend/v3/api/drive/spaces", get(list_spaces))
+        .route("/backend/v3/api/drive/files", get(list_files))
         .route(
             "/backend/v3/api/drive/sandbox_volumes",
             get(list_sandbox_volumes).post(create_sandbox_volume),
@@ -157,6 +158,33 @@ fn build_router_with_state(state: BackendState, require_iam: bool) -> Router {
     .layer(middleware::from_fn(
         sdkwork_drive_http::metrics::record_request_metrics,
     ))
+}
+
+/// Admin workspace business router (spaces + files) for a composing gateway
+/// that owns the Web Framework layer and derives the drive request context from
+/// its own `WebRequestContext` (same-origin dependency composition,
+/// API_ASSEMBLY_SPEC §3/§6.1).
+///
+/// This is the workspace half of the drive admin contribution: the storage
+/// center composes it next to the admin storage surface so space and file
+/// governance ships with the canonical admin routes instead of a second,
+/// drifted read model.
+pub fn build_backend_admin_workspace_router(pool: PgPool) -> Router {
+    let state = BackendState::new(pool);
+    Router::new()
+        .route("/backend/v3/api/drive/spaces", get(list_spaces))
+        .route("/backend/v3/api/drive/files", get(list_files))
+        .route_layer(middleware::from_fn(
+            crate::rate_limit::backend_api_rate_limit,
+        ))
+        .route_layer(middleware::from_fn(drive_context_projection_guard))
+        .route_layer(middleware::from_fn(
+            sdkwork_drive_http::problem_correlation::problem_correlation_middleware,
+        ))
+        .layer(middleware::from_fn(
+            sdkwork_drive_http::metrics::record_request_metrics,
+        ))
+        .with_state(state)
 }
 
 /// Business router for multi-surface gateway assembly (infra mounted once by assembly).

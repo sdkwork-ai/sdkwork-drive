@@ -3,6 +3,7 @@ export type { AuditEvent } from './audit-event';
 export type { CreateLabelRequest } from './create-label-request';
 export type { DriveLabel } from './drive-label';
 export type { DriveSpace } from './drive-space';
+export type { DriveFile } from './drive-file';
 export type { MaintenanceJob } from './maintenance-job';
 export type { ProblemDetail } from './problem-detail';
 export type { UpdateQuotaPolicyRequest } from './update-quota-policy-request';
@@ -20,6 +21,7 @@ export type { AuditEventListHttpResponse } from './audit-event-list-http-respons
 export type { DriveLabelListHttpResponse } from './drive-label-list-http-response';
 export type { MaintenanceJobListHttpResponse } from './maintenance-job-list-http-response';
 export type { DriveSpaceListHttpResponse } from './drive-space-list-http-response';
+export type { DriveFileListHttpResponse } from './drive-file-list-http-response';
 export type { DownloadPackageListHttpResponse } from './download-package-list-http-response';
 export type { SandboxProviderKind } from './sandbox-provider-kind';
 export type { SandboxLifecycleStatus } from './sandbox-lifecycle-status';
@@ -54,6 +56,7 @@ export type { MaintenanceAbandonedUploadTaskSweepResponse } from './maintenance-
 export type { QuotasRetrieveResponse } from './quotas-retrieve-response';
 export type { QuotasUpdateResponse } from './quotas-update-response';
 export type { SpacesAdminListResponse } from './spaces-admin-list-response';
+export type { FilesAdminListResponse } from './files-admin-list-response';
 export type { DownloadPackagesListResponse } from './download-packages-list-response';
 export type { SandboxVolumesListResponse } from './sandbox-volumes-list-response';
 export type { SandboxVolumesCreateResponse201 } from './sandbox-volumes-create-response201';

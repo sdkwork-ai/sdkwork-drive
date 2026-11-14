@@ -1,5 +1,6 @@
-use crate::dto::{DownloadPackageItemResponse, LabelResponse, SpaceResponse};
+use crate::dto::{DownloadPackageItemResponse, FileItemResponse, LabelResponse, SpaceResponse};
 use sdkwork_drive_workspace_service::domain::space::DriveSpace;
+use sdkwork_drive_workspace_service::ports::admin_file_store::DriveAdminFileRecord;
 use sqlx::Row;
 
 pub(crate) fn map_label_row(row: &sqlx::postgres::PgRow) -> LabelResponse {
@@ -47,5 +48,31 @@ pub(crate) fn map_space(space: DriveSpace) -> SpaceResponse {
         space_type: space.space_type.as_str().to_string(),
         lifecycle_status: space.lifecycle_status,
         version: space.version,
+    }
+}
+
+pub(crate) fn map_admin_file(file: DriveAdminFileRecord) -> FileItemResponse {
+    FileItemResponse {
+        id: file.id,
+        tenant_id: file.tenant_id,
+        space_id: file.space_id,
+        space_name: file.space_name,
+        space_type: file.space_type,
+        owner_subject_type: file.owner_subject_type,
+        owner_subject_id: file.owner_subject_id,
+        parent_node_id: file.parent_node_id,
+        node_type: file.node_type,
+        node_name: file.node_name,
+        file_path: file.file_path,
+        file_extension: file.file_extension,
+        content_type: file.content_type,
+        content_type_group: file.content_type_group,
+        content_length: file.content_length,
+        lifecycle_status: file.lifecycle_status,
+        version: file.version,
+        created_by: file.created_by,
+        updated_by: file.updated_by,
+        created_at: file.created_at,
+        updated_at: file.updated_at,
     }
 }

@@ -111,6 +111,61 @@ export interface DriveSpaceListView {
   items: DriveSpaceAdminView[];
 }
 
+/**
+ * One drive node as projected by the tenant-scoped backend admin file list.
+ *
+ * The projection is metadata only: no object key, storage provider, or
+ * credential reference ever reaches the admin table. `contentLength` and
+ * `version` are int64 wire strings and must never be coerced to `number`.
+ */
+export interface DriveFileAdminView {
+  id: string;
+  tenantId: string;
+  spaceId: string;
+  spaceName: string;
+  spaceType: string;
+  ownerSubjectType: string;
+  ownerSubjectId: string;
+  parentNodeId?: string | null;
+  nodeType: string;
+  nodeName: string;
+  filePath: string;
+  fileExtension?: string | null;
+  contentType?: string | null;
+  contentTypeGroup?: string | null;
+  contentLength: string;
+  lifecycleStatus: string;
+  version: string;
+  createdBy: string;
+  updatedBy: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface DriveFileListView {
+  items: DriveFileAdminView[];
+  pageInfo?: {
+    mode?: 'offset' | 'cursor';
+    pageSize?: number;
+    hasMore?: boolean;
+    nextCursor?: string | null;
+  };
+}
+
+/** Filters accepted by the backend admin file list. */
+export interface ListFilesAdminQuery {
+  spaceId?: string;
+  spaceType?: string;
+  nodeType?: string;
+  lifecycleStatus?: string;
+  contentTypeGroup?: string;
+  keyword?: string;
+  ownerSubjectId?: string;
+  pageSize?: number;
+  pageToken?: string;
+  signal?: AbortSignal;
+}
+
 export interface DownloadPackageView {
   id: string;
   tenantId: string;

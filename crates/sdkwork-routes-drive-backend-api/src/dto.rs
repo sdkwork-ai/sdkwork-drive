@@ -180,6 +180,48 @@ pub(crate) struct SpaceResponse {
 }
 
 #[derive(Debug, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub(crate) struct ListFilesQuery {
+    pub(crate) space_id: Option<String>,
+    pub(crate) space_type: Option<String>,
+    pub(crate) node_type: Option<String>,
+    pub(crate) lifecycle_status: Option<String>,
+    pub(crate) content_type_group: Option<String>,
+    pub(crate) keyword: Option<String>,
+    pub(crate) owner_subject_id: Option<String>,
+    #[serde(rename = "page_size")]
+    pub(crate) page_size: Option<i64>,
+    #[serde(rename = "cursor")]
+    pub(crate) page_token: Option<String>,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct FileItemResponse {
+    pub(crate) id: String,
+    pub(crate) tenant_id: String,
+    pub(crate) space_id: String,
+    pub(crate) space_name: String,
+    pub(crate) space_type: String,
+    pub(crate) owner_subject_type: String,
+    pub(crate) owner_subject_id: String,
+    pub(crate) parent_node_id: Option<String>,
+    pub(crate) node_type: String,
+    pub(crate) node_name: String,
+    pub(crate) file_path: String,
+    pub(crate) file_extension: Option<String>,
+    pub(crate) content_type: Option<String>,
+    pub(crate) content_type_group: Option<String>,
+    pub(crate) content_length: i64,
+    pub(crate) lifecycle_status: String,
+    pub(crate) version: i64,
+    pub(crate) created_by: String,
+    pub(crate) updated_by: String,
+    pub(crate) created_at: String,
+    pub(crate) updated_at: String,
+}
+
+#[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct QuotaQuery {}
 

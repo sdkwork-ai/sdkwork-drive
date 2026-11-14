@@ -10,6 +10,7 @@ pub const DRIVE_MAINTENANCE_ADMIN_PERMISSION: &str = "drive.maintenance.admin";
 pub const DRIVE_QUOTA_ADMIN_PERMISSION: &str = "drive.quota.admin";
 pub const DRIVE_LABELS_ADMIN_PERMISSION: &str = "drive.labels.admin";
 pub const DRIVE_SPACES_ADMIN_PERMISSION: &str = "drive.spaces.admin";
+pub const DRIVE_FILES_ADMIN_PERMISSION: &str = "drive.files.admin";
 pub const DRIVE_DOWNLOAD_PACKAGES_ADMIN_PERMISSION: &str = "drive.download_packages.admin";
 pub const DRIVE_SANDBOXES_ADMIN_PERMISSION: &str = "drive.sandboxes.admin";
 
@@ -19,6 +20,7 @@ const BACKEND_CAPABILITY_PERMISSIONS: &[&str] = &[
     DRIVE_QUOTA_ADMIN_PERMISSION,
     DRIVE_LABELS_ADMIN_PERMISSION,
     DRIVE_SPACES_ADMIN_PERMISSION,
+    DRIVE_FILES_ADMIN_PERMISSION,
     DRIVE_DOWNLOAD_PACKAGES_ADMIN_PERMISSION,
     DRIVE_SANDBOXES_ADMIN_PERMISSION,
 ];
@@ -55,6 +57,7 @@ pub fn drive_backend_operation_required_permission(operation_id: &str) -> Option
         "auditEvents.list" => Some(DRIVE_AUDIT_ADMIN_PERMISSION),
         "downloadPackages.list" => Some(DRIVE_DOWNLOAD_PACKAGES_ADMIN_PERMISSION),
         "spaces.admin.list" => Some(DRIVE_SPACES_ADMIN_PERMISSION),
+        "files.admin.list" => Some(DRIVE_FILES_ADMIN_PERMISSION),
         operation_id if operation_id.starts_with("maintenance.") => {
             Some(DRIVE_MAINTENANCE_ADMIN_PERMISSION)
         }
@@ -192,6 +195,37 @@ mod tests {
             can_access_drive_admin_storage(&context),
             can_access_drive_storage_admin(&context),
         );
+    }
+
+    #[test]
+    fn files_scope_is_limited_to_file_admin_operations() {
+        let context = context_with_scopes(&[DRIVE_FILES_ADMIN_PERMISSION]);
+        assert!(can_invoke_drive_backend_operation(
+            &context,
+            "files.admin.list"
+        ));
+        assert!(!can_invoke_drive_backend_operation(
+            &context,
+            "spaces.admin.list"
+        ));
+        assert!(!can_invoke_drive_storage_operation(
+            &context,
+            "storageProviders.list"
+        ));
+        assert!(can_access_any_drive_admin_surface(&context));
+    }
+
+    #[test]
+    fn spaces_scope_does_not_grant_file_admin_operations() {
+        let context = context_with_scopes(&[DRIVE_SPACES_ADMIN_PERMISSION]);
+        assert!(can_invoke_drive_backend_operation(
+            &context,
+            "spaces.admin.list"
+        ));
+        assert!(!can_invoke_drive_backend_operation(
+            &context,
+            "files.admin.list"
+        ));
     }
 
     #[test]

@@ -3,6 +3,7 @@ import {
   ChevronLeft,
   ChevronRight,
   CircleAlert,
+  FolderOpen,
   HardDrive,
   RefreshCw,
   SlidersHorizontal,
@@ -15,6 +16,7 @@ import type { DriveSpaceAdminView } from '../types/driveOperationsAdminTypes';
 import {
   CARD_CLASS,
   CARD_HEADER_CLASS,
+  GHOST_BUTTON_CLASS,
   INPUT_CLASS,
   PRIMARY_BUTTON_CLASS,
   SECONDARY_BUTTON_CLASS,
@@ -27,6 +29,12 @@ import { useTranslation } from '../hooks/useTranslation';
 interface SpacesAdminPageProps {
   backendSdkClient: DriveBackendSdkClient;
   getSession: () => SessionSnapshot;
+  /**
+   * Hand-off to the admin file list, scoped to the selected space. Optional:
+   * a host that does not mount the files page simply does not show the row
+   * action instead of offering a dead end.
+   */
+  onOpenFiles?: (space: DriveSpaceAdminView) => void;
 }
 
 const SPACE_TYPE_TONE: Record<string, string> = {
@@ -47,7 +55,7 @@ function resolveTone(map: Record<string, string>, value: string): string {
   return map[value.toLowerCase()] ?? 'bg-neutral-100 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-300';
 }
 
-export function SpacesAdminPage({ backendSdkClient, getSession }: SpacesAdminPageProps) {
+export function SpacesAdminPage({ backendSdkClient, getSession, onOpenFiles }: SpacesAdminPageProps) {
   const { t } = useTranslation();
   const service = useMemo(
     () => createDriveOperationsAdminService({ backendSdkClient, getSession }),
@@ -192,14 +200,15 @@ export function SpacesAdminPage({ backendSdkClient, getSession }: SpacesAdminPag
                   <th className="w-[34%] px-5 py-3 text-left">{t('colSpaceName')}</th>
                   <th className="w-[18%] px-5 py-3 text-left">{t('colSpaceType')}</th>
                   <th className="w-[30%] px-5 py-3 text-left">{t('colOwner')}</th>
-                  <th className="w-[18%] px-5 py-3 text-left">{t('colStatus')}</th>
+                  <th className="w-[14%] px-5 py-3 text-left">{t('colStatus')}</th>
+                  {onOpenFiles ? <th className="w-[4%] px-5 py-3 text-right">{t('colActions')}</th> : null}
                 </tr>
               </thead>
               <tbody>
                 {loading ? (
                   Array.from({ length: 4 }, (_, index) => (
                     <tr key={`space-skeleton-${index}`} className={TABLE_ROW_CLASS}>
-                      <td colSpan={4} className="px-5 py-4">
+                      <td colSpan={onOpenFiles ? 5 : 4} className="px-5 py-4">
                         <div className="flex animate-pulse items-center gap-3">
                           <div className="h-9 w-9 rounded-lg bg-neutral-200 dark:bg-neutral-800" />
                           <div className="flex-1 space-y-2">
@@ -213,7 +222,7 @@ export function SpacesAdminPage({ backendSdkClient, getSession }: SpacesAdminPag
                   ))
                 ) : spaces.length === 0 ? (
                   <tr className={TABLE_ROW_CLASS}>
-                    <td colSpan={4} className="px-5 py-14 text-center">
+                    <td colSpan={onOpenFiles ? 5 : 4} className="px-5 py-14 text-center">
                       <div className="mx-auto flex max-w-sm flex-col items-center">
                         <div className="flex h-11 w-11 items-center justify-center rounded-full bg-neutral-100 text-neutral-400 dark:bg-neutral-800 dark:text-neutral-500">
                           <HardDrive aria-hidden="true" size={20} strokeWidth={1.7} />
@@ -257,6 +266,20 @@ export function SpacesAdminPage({ backendSdkClient, getSession }: SpacesAdminPag
                           {t(`spaceStatus.${space.lifecycleStatus}`)}
                         </span>
                       </td>
+                      {onOpenFiles ? (
+                        <td className="px-5 py-3.5 text-right align-top">
+                          <button
+                            aria-label={t('viewFilesAction')}
+                            className={GHOST_BUTTON_CLASS}
+                            onClick={() => onOpenFiles(space)}
+                            title={t('viewFilesAction')}
+                            type="button"
+                          >
+                            <FolderOpen aria-hidden="true" size={14} />
+                            <span className="hidden xl:inline">{t('viewFilesAction')}</span>
+                          </button>
+                        </td>
+                      ) : null}
                     </tr>
                   ))
                 )}
