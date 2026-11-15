@@ -62,6 +62,11 @@ pub struct ResolveDriveStorageTargetCommand<'a> {
 /// 2. `requested_bucket` - resolves through the tenant-scoped bucket lookup.
 /// 3. Otherwise the provider bound to the space / space type / tenant.
 ///
+/// The first two select only the physical destination for one request. The
+/// object key still starts at the space's business root (logical bucket chain)
+/// when one exists, so an integration hint cannot scatter one space's objects
+/// outside the route every other upload uses.
+///
 /// # Errors
 ///
 /// - `NotFound` when an explicitly named provider does not belong to the tenant.
@@ -74,50 +79,59 @@ pub async fn resolve_storage_target(
     pool: &PgPool,
     command: ResolveDriveStorageTargetCommand<'_>,
 ) -> Result<DriveStorageTarget, DriveServiceError> {
-    let default_target = if let Some(provider_id) = command
+    let requested_provider_id = command
         .requested_provider_id
         .map(str::trim)
-        .filter(|value| !value.is_empty())
-    {
+        .filter(|value| !value.is_empty());
+    let requested_bucket = command
+        .requested_bucket
+        .map(str::trim)
+        .filter(|value| !value.is_empty());
+    let uses_explicit_route = requested_provider_id.is_some() || requested_bucket.is_some();
+    let default_target = if let Some(provider_id) = requested_provider_id {
         resolve_explicit_provider_target(pool, command.tenant_id, command.space_id, provider_id)
             .await?
-    } else {
-        match command
-            .requested_bucket
-            .map(str::trim)
-            .filter(|value| !value.is_empty())
+    } else if let Some(bucket) = requested_bucket {
+        let store = SqlStorageProviderStore::new(pool.clone());
+        let provider = match store
+            .find_active_storage_provider_by_bucket(command.tenant_id, bucket)
+            .await?
         {
-            Some(bucket) => {
-                let store = SqlStorageProviderStore::new(pool.clone());
-                let provider = match store
-                    .find_active_storage_provider_by_bucket(command.tenant_id, bucket)
-                    .await?
-                {
-                    DriveStorageProviderLookup::Found(provider) => provider,
-                    DriveStorageProviderLookup::Missing => {
-                        return Err(missing_active_provider_error(bucket))
-                    }
-                    DriveStorageProviderLookup::Ambiguous(provider_ids) => {
-                        return Err(ambiguous_provider_error(
-                            command.tenant_id,
-                            bucket,
-                            &provider_ids,
-                        ))
-                    }
-                };
-                DefaultStorageProviderTarget {
-                    provider_id: provider.id,
-                    bucket: bucket.to_string(),
-                    storage_root_prefix: default_storage_root_prefix(
-                        command.tenant_id,
-                        Some(command.space_id),
-                    ),
-                }
+            DriveStorageProviderLookup::Found(provider) => provider,
+            DriveStorageProviderLookup::Missing => {
+                return Err(missing_active_provider_error(bucket))
             }
-            None => {
-                resolve_default_provider_target(pool, command.tenant_id, command.space_id).await?
+            DriveStorageProviderLookup::Ambiguous(provider_ids) => {
+                return Err(ambiguous_provider_error(
+                    command.tenant_id,
+                    bucket,
+                    &provider_ids,
+                ))
             }
+        };
+        DefaultStorageProviderTarget {
+            provider_id: provider.id,
+            bucket: bucket.to_string(),
+            storage_root_prefix: default_storage_root_prefix(
+                command.tenant_id,
+                Some(command.space_id),
+            ),
         }
+    } else {
+        resolve_default_provider_target(pool, command.tenant_id, command.space_id).await?
+    };
+    // An explicit provider/bucket selects the physical destination for a single
+    // request, not a different business namespace. Keep the request below the
+    // logical root when one exists so a client hint cannot scatter one space's
+    // objects outside the route every other upload uses.
+    let storage_root_prefix = if uses_explicit_route {
+        match try_resolve_default_provider_target(pool, command.tenant_id, command.space_id).await?
+        {
+            Some(logical_target) => logical_target.storage_root_prefix,
+            None => default_target.storage_root_prefix.clone(),
+        }
+    } else {
+        default_target.storage_root_prefix.clone()
     };
     let standard_object_key =
         DriveStorageKeyService::build_object_key(BuildStorageObjectKeyCommand {
@@ -128,7 +142,6 @@ pub async fn resolve_storage_target(
             object_id: command.object_id,
         })
         .map_err(DriveServiceError::Validation)?;
-    let storage_root_prefix = default_target.storage_root_prefix;
     let object_key = join_storage_root_prefix(&storage_root_prefix, &standard_object_key)?;
     Ok(DriveStorageTarget {
         provider_id: default_target.provider_id,

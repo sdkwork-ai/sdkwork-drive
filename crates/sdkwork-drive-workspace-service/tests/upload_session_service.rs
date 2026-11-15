@@ -463,4 +463,25 @@ async fn prepare_upload_session_routes_through_the_logical_bucket_by_default() {
     assert_eq!(created_calls.len(), 1);
     assert_eq!(created_calls[0].storage_provider_id, "provider-logical");
     assert_eq!(created_calls[0].bucket, "bucket-logical");
+    drop(created_calls);
+
+    // An explicit provider hint selects the physical destination but must not
+    // move the write outside the business root.
+    let explicit = service
+        .prepare(PrepareDriveUploadSessionCommand {
+            session_id: "session-explicit-provider".to_string(),
+            idempotency_key: "idem-explicit-provider".to_string(),
+            requested_storage_provider_id: Some("provider-1".to_string()),
+            ..prepare_command(future_epoch_ms())
+        })
+        .await
+        .expect("explicit provider session should be prepared");
+    assert_eq!(explicit.storage_provider_id, "provider-1");
+    assert!(
+        explicit.object_key.starts_with(
+            "sdkwork-drive/v1/tenants/tenant-1/logical/business/space-types/personal/"
+        ),
+        "explicit routing must keep the logical root: {}",
+        explicit.object_key
+    );
 }
