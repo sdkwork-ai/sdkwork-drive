@@ -20339,9 +20339,9 @@ async fn create_download_package_writes_the_archive_below_the_logical_storage_ro
     assert!(
         requests.iter().any(|request| {
             request.method == "PUT"
-                && request.path.contains(
-                    "/logical/business/space-types/personal/download-packages/",
-                )
+                && request
+                    .path
+                    .contains("/logical/business/space-types/personal/download-packages/")
         }),
         "archive PUT must target the logical root"
     );
