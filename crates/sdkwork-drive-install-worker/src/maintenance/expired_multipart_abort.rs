@@ -120,6 +120,10 @@ pub async fn abort_expired_multipart_uploads(
         .bind(&session_id)
         .execute(pool)
         .await?;
+        sqlx::query("DELETE FROM dr_drive_upload_part WHERE upload_session_id = $1")
+            .bind(&session_id)
+            .execute(pool)
+            .await?;
         result.aborted_uploads += 1;
     }
 
