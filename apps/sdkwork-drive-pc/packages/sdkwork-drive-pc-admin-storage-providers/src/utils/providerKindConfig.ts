@@ -1395,6 +1395,9 @@ const PATH_STYLE_DEFAULT_KINDS = new Set([
 ]);
 
 export function providerKindDefaultPathStyle(kind: string): boolean {
+  // Unknown/custom vendors default to path style on the server because it is
+  // the permissive addressing mode for arbitrary S3 gateways.
+  if (kind.startsWith('custom:')) return true;
   return PATH_STYLE_DEFAULT_KINDS.has(kind);
 }
 
