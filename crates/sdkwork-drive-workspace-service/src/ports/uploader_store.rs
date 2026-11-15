@@ -21,6 +21,14 @@ pub struct DriveUploaderNodeRecord {
     pub node_type: String,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DriveUploaderStorageTarget {
+    pub provider_id: String,
+    pub bucket: String,
+    /// Fully composed root prefix, including the logical bucket prefix.
+    pub storage_root_prefix: String,
+}
+
 #[derive(Debug, Clone)]
 pub struct NewDriveUploadItem {
     pub id: String,
@@ -183,17 +191,19 @@ pub trait DriveUploaderStore: Send + Sync {
         session: &NewDriveUploaderSession,
     ) -> Result<String, DriveServiceError>;
 
-    /// Resolve the default storage provider target for a tenant/space pair.
+    /// Resolve the default storage target for a tenant/space pair through the
+    /// same rule chain the app upload-session resolver uses: space binding,
+    /// business (logical bucket) binding, then legacy space-type/tenant rows.
     ///
     /// `dr_drive_storage_provider` is a platform-level table without tenant
     /// columns, so the tenant and space scope MUST be resolved through
     /// `dr_drive_storage_provider_binding`; a bare provider lookup would leak
     /// another tenant's bucket.
-    async fn find_default_storage_provider(
+    async fn find_default_storage_target(
         &self,
         tenant_id: &str,
         space_id: &str,
-    ) -> Result<Option<(String, String)>, DriveServiceError>;
+    ) -> Result<Option<DriveUploaderStorageTarget>, DriveServiceError>;
 
     async fn insert_upload_item(
         &self,

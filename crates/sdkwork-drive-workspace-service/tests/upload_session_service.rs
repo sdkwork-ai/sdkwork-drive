@@ -376,3 +376,91 @@ async fn seed_space_node_and_provider(pool: &PgPool) {
     .await
     .expect("seed provider");
 }
+
+#[tokio::test]
+async fn prepare_upload_session_routes_through_the_logical_bucket_by_default() {
+    let Some((pool, _database_guard)) = sdkwork_drive_test_support::postgres_test_database().await
+    else {
+        return;
+    };
+    seed_space_node_and_provider(&pool).await;
+
+    // Legacy tenant binding that must be outranked by the logical business rule.
+    sqlx::query(
+        "INSERT INTO dr_drive_storage_provider_binding (
+            id, tenant_id, space_id, provider_id, binding_scope, purpose,
+            storage_root_prefix, lifecycle_status, version, created_by, updated_by
+        ) VALUES ('legacy-tenant-binding', 'tenant-1', NULL, 'provider-1', 'tenant', 'primary',
+            'sdkwork-drive/v1/tenants/tenant-1', 'active', 1, 'user-1', 'user-1')",
+    )
+    .execute(&pool)
+    .await
+    .expect("legacy tenant binding should be seeded");
+
+    sqlx::query(
+        "INSERT INTO dr_drive_storage_provider (
+            id, tenant_id, provider_kind, name, endpoint_url, region, bucket, path_style,
+            strict_tls, credential_ref, server_side_encryption_mode, default_storage_class,
+            status, version, created_by, updated_by
+         ) VALUES ('provider-logical', 'tenant-1', 's3_compatible', 'provider-logical',
+            'https://s3.example.com', 'us-east-1', 'bucket-logical', TRUE, TRUE,
+            'plain:test:test', NULL, NULL, 'active', 1, 'user-1', 'user-1')",
+    )
+    .execute(&pool)
+    .await
+    .expect("logical provider should be seeded");
+
+    sqlx::query(
+        "INSERT INTO dr_drive_logical_bucket (
+            id, tenant_id, bucket_key, display_name, object_prefix,
+            lifecycle_status, version, created_by, updated_by
+         ) VALUES ('bucket-logical', 'tenant-1', 'business', 'Business Content',
+            'logical/business', 'active', 1, 'user-1', 'user-1')",
+    )
+    .execute(&pool)
+    .await
+    .expect("logical bucket should be seeded");
+
+    sqlx::query(
+        "INSERT INTO dr_drive_logical_bucket_provider_binding (
+            id, tenant_id, logical_bucket_id, provider_id, storage_root_prefix,
+            lifecycle_status, version, created_by, updated_by
+         ) VALUES ('provider-binding-logical', 'tenant-1', 'bucket-logical', 'provider-logical',
+            'sdkwork-drive/v1/tenants/tenant-1', 'active', 1, 'user-1', 'user-1')",
+    )
+    .execute(&pool)
+    .await
+    .expect("logical provider binding should be seeded");
+
+    sqlx::query(
+        "INSERT INTO dr_drive_business_storage_binding (
+            id, tenant_id, scope_type, scope_id, logical_bucket_id, write_prefix,
+            lifecycle_status, version, created_by, updated_by
+         ) VALUES ('business-logical', 'tenant-1', 'space_type', 'personal',
+            'bucket-logical', 'space-types/personal', 'active', 1, 'user-1', 'user-1')",
+    )
+    .execute(&pool)
+    .await
+    .expect("logical business binding should be seeded");
+
+    let storage = InMemoryMultipartStorage::default();
+    let service = DriveUploadSessionService::new(pool.clone(), storage.clone());
+    let created = service
+        .prepare(prepare_command(future_epoch_ms()))
+        .await
+        .expect("logical upload session should be prepared");
+
+    assert_eq!(created.storage_provider_id, "provider-logical");
+    assert_eq!(created.bucket, "bucket-logical");
+    assert!(
+        created.object_key.starts_with(
+            "sdkwork-drive/v1/tenants/tenant-1/logical/business/space-types/personal/"
+        ),
+        "upload session key must include the logical root: {}",
+        created.object_key
+    );
+    let created_calls = storage.inner.created.lock().expect("created lock");
+    assert_eq!(created_calls.len(), 1);
+    assert_eq!(created_calls[0].storage_provider_id, "provider-logical");
+    assert_eq!(created_calls[0].bucket, "bucket-logical");
+}

@@ -210,6 +210,7 @@ pub(crate) async fn resolve_storage_target(
         provider_id: target.provider_id,
         bucket: target.bucket,
         object_key: target.object_key,
+        storage_root_prefix: target.storage_root_prefix,
     })
 }
 

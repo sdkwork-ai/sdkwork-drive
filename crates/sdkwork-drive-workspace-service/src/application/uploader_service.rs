@@ -1,6 +1,7 @@
 use crate::application::upload_content_policy::{
     evaluate_upload_content_policy, UploadContentPolicyContext, UploadContentPolicyDecision,
 };
+use crate::application::upload_session_rules::join_storage_root_prefix;
 use crate::domain::uploader::{content_type_group_for, DriveUploadItem, DriveUploadPart};
 use crate::ports::uploader_store::{
     CompleteDriveStoredUpload, DriveUploaderStore, NewDriveUploadItem, NewDriveUploadPart,
@@ -271,15 +272,15 @@ where
                 Err(error) => return Err(error),
             }
         }
-        let (storage_provider_id, bucket) = self
+        let storage_target = self
             .store
-            .find_default_storage_provider(&tenant_id, &space_id)
+            .find_default_storage_target(&tenant_id, &space_id)
             .await?
             .ok_or_else(|| {
                 DriveServiceError::NotFound("active storage provider not found".to_string())
             })?;
         let upload_session_id = format!("session-{id}");
-        let object_key = build_uploader_object_key_prefix(UploaderObjectKeyPrefix {
+        let uploader_object_key = build_uploader_object_key_prefix(UploaderObjectKeyPrefix {
             tenant_id: &tenant_id,
             organization_id: organization_id.as_deref(),
             user_id: user_id.as_deref(),
@@ -293,14 +294,20 @@ where
             node_id: &node_id,
             upload_item_id: &id,
         });
+        // Put the uploader layout *inside* the resolved root prefix. Previously
+        // the key started at `sdkwork-drive/uploader/`, so uploader bytes
+        // bypassed the logical bucket prefix and the same space could write
+        // outside the business route the app upload-session path uses.
+        let object_key =
+            join_storage_root_prefix(&storage_target.storage_root_prefix, &uploader_object_key)?;
         self.store
             .insert_upload_session(&NewDriveUploaderSession {
                 id: upload_session_id.clone(),
                 tenant_id: tenant_id.clone(),
                 space_id: space_id.clone(),
                 node_id: node_id.clone(),
-                storage_provider_id: storage_provider_id.clone(),
-                bucket: bucket.clone(),
+                storage_provider_id: storage_target.provider_id.clone(),
+                bucket: storage_target.bucket.clone(),
                 object_key: object_key.clone(),
                 operator_id: operator_id.clone(),
                 expires_at_epoch_ms: add_seconds_to_epoch_ms(
@@ -330,7 +337,7 @@ where
                 space_id,
                 node_id,
                 upload_session_id: Some(upload_session_id.clone()),
-                storage_provider_id: Some(storage_provider_id),
+                storage_provider_id: Some(storage_target.provider_id.clone()),
                 storage_upload_id: Some(upload_session_id),
                 original_file_name: node_name.clone(),
                 file_extension: file_extension(&node_name),

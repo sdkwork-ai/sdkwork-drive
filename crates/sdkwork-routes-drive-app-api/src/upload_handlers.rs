@@ -372,7 +372,7 @@ pub(crate) async fn prepare_uploader_upload(
             &upload_item.tenant_id,
             &upload_item.space_id,
             None,
-            Some(&upload_session.bucket),
+            None,
             &upload_item.node_id,
             &upload_item.id,
             target_version_no,
@@ -380,6 +380,7 @@ pub(crate) async fn prepare_uploader_upload(
         .await?;
         if let Some(object_key) = uploader_final_object_key(
             upload_session.object_key.as_str(),
+            storage_target.storage_root_prefix.as_str(),
             storage_target.object_key.as_str(),
         )? {
             storage_target.object_key = object_key;

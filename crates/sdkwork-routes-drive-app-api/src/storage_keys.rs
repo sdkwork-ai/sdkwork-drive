@@ -5,28 +5,38 @@ use axum::Json;
 
 pub(crate) fn uploader_final_object_key(
     uploader_session_object_key: &str,
+    storage_root_prefix: &str,
     standard_object_key: &str,
 ) -> Result<Option<String>, (StatusCode, Json<ProblemDetail>)> {
     let Some(prefix) = uploader_locator_prefix(uploader_session_object_key) else {
         return Ok(None);
     };
-    let final_key = format!("{prefix}/{standard_object_key}");
+    // The standard key already starts with the resolved root prefix. Strip it
+    // once so the uploader layout can sit *below* that root instead of
+    // duplicating it; an unprefixed key (older resolver) is used as-is.
+    let standard_suffix = standard_object_key
+        .strip_prefix(storage_root_prefix)
+        .and_then(|rest| rest.strip_prefix('/'))
+        .unwrap_or(standard_object_key);
+    let final_key = format!("{storage_root_prefix}/{prefix}/{standard_suffix}");
     if final_key.len() <= 1024 {
         return validate_object_key(final_key, "objectKey").map(Some);
     }
 
     let compact_prefix = compact_uploader_locator_prefix(prefix);
-    let compact_key = format!("{compact_prefix}/{standard_object_key}");
+    let compact_key = format!("{storage_root_prefix}/{compact_prefix}/{standard_suffix}");
     validate_object_key(compact_key, "objectKey").map(Some)
 }
 
 fn uploader_locator_prefix(object_key: &str) -> Option<&str> {
-    if !object_key.starts_with("sdkwork-drive/uploader/") {
-        return None;
-    }
-    object_key
-        .find("/nodes/")
-        .map(|index| object_key[..index].trim_end_matches('/'))
+    // Uploader session keys now carry the logical storage root before
+    // `sdkwork-drive/uploader/`, so the marker must be located rather than
+    // assumed at position 0.
+    let marker = "sdkwork-drive/uploader/";
+    let start = object_key.find(marker)?;
+    let rest = &object_key[start..];
+    rest.find("/nodes/")
+        .map(|index| rest[..index].trim_end_matches('/'))
 }
 
 fn compact_uploader_locator_prefix(prefix: &str) -> String {

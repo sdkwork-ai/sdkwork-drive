@@ -25,6 +25,11 @@ pub struct DriveStorageTarget {
     pub provider_id: String,
     pub bucket: String,
     pub object_key: String,
+    /// Root prefix the object key was built under.
+    ///
+    /// Uploaders that add their own layout below this root need it to keep that
+    /// layout inside the logical bucket prefix instead of above it.
+    pub storage_root_prefix: String,
 }
 
 /// Inputs that select a storage target.
@@ -123,26 +128,26 @@ pub async fn resolve_storage_target(
             object_id: command.object_id,
         })
         .map_err(DriveServiceError::Validation)?;
-    let object_key =
-        join_storage_root_prefix(&default_target.storage_root_prefix, &standard_object_key)?;
+    let storage_root_prefix = default_target.storage_root_prefix;
+    let object_key = join_storage_root_prefix(&storage_root_prefix, &standard_object_key)?;
     Ok(DriveStorageTarget {
         provider_id: default_target.provider_id,
         bucket: default_target.bucket,
         object_key,
+        storage_root_prefix,
     })
 }
 
-/// Resolve a default storage provider target for a tenant/space pair.
+/// Resolve the default storage target, treating "no rule" as `None`.
 ///
-/// # Errors
-///
-/// Returns `Validation` when no binding chain resolves a provider, and
-/// `Internal` when the binding query fails.
-pub async fn resolve_default_provider_target(
+/// Split from [`resolve_default_provider_target`] so a caller that has a
+/// deliberate fallback (the uploader's own bucket hint) can distinguish "no
+/// binding" from a broken binding. Both still read the same rule chain.
+pub async fn try_resolve_default_provider_target(
     pool: &PgPool,
     tenant_id: &str,
     space_id: &str,
-) -> Result<DefaultStorageProviderTarget, DriveServiceError> {
+) -> Result<Option<DefaultStorageProviderTarget>, DriveServiceError> {
     let row = sqlx::query(
         "SELECT provider.id AS provider_id, provider.bucket, binding.storage_root_prefix
          FROM dr_drive_storage_provider_binding binding
@@ -164,11 +169,11 @@ pub async fn resolve_default_provider_target(
         ))
     })?;
     if let Some(row) = row {
-        return Ok(DefaultStorageProviderTarget {
+        return Ok(Some(DefaultStorageProviderTarget {
             provider_id: row.get("provider_id"),
             bucket: row.get("bucket"),
             storage_root_prefix: row.get("storage_root_prefix"),
-        });
+        }));
     }
 
     // Logical routing: business scope -> logical bucket -> provider binding.
@@ -176,7 +181,7 @@ pub async fn resolve_default_provider_target(
     // logical plane (all businesses routed, one provider account) wins without
     // touching existing installations that still use the legacy rows.
     if let Some(target) = resolve_logical_bucket_target(pool, tenant_id, space_id).await? {
-        return Ok(target);
+        return Ok(Some(target));
     }
 
     let row = sqlx::query(
@@ -203,11 +208,11 @@ pub async fn resolve_default_provider_target(
         ))
     })?;
     if let Some(row) = row {
-        return Ok(DefaultStorageProviderTarget {
+        return Ok(Some(DefaultStorageProviderTarget {
             provider_id: row.get("provider_id"),
             bucket: row.get("bucket"),
             storage_root_prefix: row.get("storage_root_prefix"),
-        });
+        }));
     }
 
     let row = sqlx::query(
@@ -230,15 +235,33 @@ pub async fn resolve_default_provider_target(
         ))
     })?;
     if let Some(row) = row {
-        return Ok(DefaultStorageProviderTarget {
+        return Ok(Some(DefaultStorageProviderTarget {
             provider_id: row.get("provider_id"),
             bucket: row.get("bucket"),
             storage_root_prefix: row.get("storage_root_prefix"),
-        });
+        }));
     }
-    Err(DriveServiceError::Validation(
-        "bucket is required when no default storage provider binding exists".to_string(),
-    ))
+    Ok(None)
+}
+
+/// Resolve the default storage target and fail when no binding chain exists.
+///
+/// # Errors
+///
+/// Returns `Validation` when no binding chain resolves a provider, and
+/// `Internal` when the binding query fails.
+pub async fn resolve_default_provider_target(
+    pool: &PgPool,
+    tenant_id: &str,
+    space_id: &str,
+) -> Result<DefaultStorageProviderTarget, DriveServiceError> {
+    try_resolve_default_provider_target(pool, tenant_id, space_id)
+        .await?
+        .ok_or_else(|| {
+            DriveServiceError::Validation(
+                "bucket is required when no default storage provider binding exists".to_string(),
+            )
+        })
 }
 
 /// Resolve a provider through the logical storage plane:

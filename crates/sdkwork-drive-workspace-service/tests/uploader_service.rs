@@ -1832,3 +1832,132 @@ async fn seed_share_link(
     .await
     .expect("seed share link should succeed");
 }
+
+#[tokio::test]
+async fn prepare_upload_routes_through_the_logical_bucket_before_legacy_bindings() {
+    let Some((pool, _database_guard)) = sdkwork_drive_test_support::postgres_test_database().await
+    else {
+        return;
+    };
+    let tenant_id = "tenant-logical-uploader";
+
+    // A working legacy tenant binding: the logical business binding must still
+    // outrank it, otherwise the two upload pipelines disagree for this space.
+    sdkwork_drive_test_support::seed_storage_provider_and_binding(
+        &pool,
+        &sdkwork_drive_test_support::StorageProviderSeed::new(
+            "provider-legacy-uploader",
+            tenant_id,
+        )
+        .with_bucket("legacy-uploader-bucket")
+        .with_actor_id("user-logical-uploader"),
+    )
+    .await;
+
+    sqlx::query(
+        "INSERT INTO dr_drive_storage_provider (
+            id, tenant_id, provider_kind, name, endpoint_url, region, bucket, path_style,
+            credential_ref, status, version, created_by, updated_by
+        ) VALUES ('provider-logical-uploader', $1, 's3_compatible', 'Logical Uploader S3',
+            'https://s3.us-east-1.amazonaws.com', 'us-east-1', 'logical-uploader-bucket', false,
+            'plain:access-key:secret-key', 'active', 1, 'user-logical-uploader', 'user-logical-uploader')",
+    )
+    .bind(tenant_id)
+    .execute(&pool)
+    .await
+    .expect("logical uploader provider should be seeded");
+
+    sqlx::query(
+        "INSERT INTO dr_drive_logical_bucket (
+            id, tenant_id, bucket_key, display_name, object_prefix,
+            lifecycle_status, version, created_by, updated_by
+        ) VALUES ('bucket-logical-uploader', $1, 'business', 'Business Content',
+            'logical/business', 'active', 1, 'user-logical-uploader', 'user-logical-uploader')",
+    )
+    .bind(tenant_id)
+    .execute(&pool)
+    .await
+    .expect("logical uploader bucket should be seeded");
+
+    sqlx::query(
+        "INSERT INTO dr_drive_logical_bucket_provider_binding (
+            id, tenant_id, logical_bucket_id, provider_id, storage_root_prefix,
+            lifecycle_status, version, created_by, updated_by
+        ) VALUES ('provider-binding-logical-uploader', $1, 'bucket-logical-uploader',
+            'provider-logical-uploader', 'sdkwork-drive/v1/tenants/tenant-logical-uploader',
+            'active', 1, 'user-logical-uploader', 'user-logical-uploader')",
+    )
+    .bind(tenant_id)
+    .execute(&pool)
+    .await
+    .expect("logical uploader provider binding should be seeded");
+
+    sqlx::query(
+        "INSERT INTO dr_drive_business_storage_binding (
+            id, tenant_id, scope_type, scope_id, logical_bucket_id, write_prefix,
+            lifecycle_status, version, created_by, updated_by
+        ) VALUES ('business-logical-uploader', $1, 'space_type', 'app_upload',
+            'bucket-logical-uploader', 'space-types/app_upload', 'active', 1,
+            'user-logical-uploader', 'user-logical-uploader')",
+    )
+    .bind(tenant_id)
+    .execute(&pool)
+    .await
+    .expect("logical uploader business binding should be seeded");
+
+    let service = DriveUploaderService::new(SqlUploaderStore::new(pool.clone()));
+    let prepared = service
+        .prepare_upload(PrepareUploaderUploadCommand {
+            id: "upload-item-logical".to_string(),
+            task_id: "task-logical".to_string(),
+            tenant_id: tenant_id.to_string(),
+            organization_id: Some("org-logical".to_string()),
+            actor: UploaderActor::User {
+                user_id: "user-logical-uploader".to_string(),
+            },
+            app_id: "drive-pc".to_string(),
+            app_resource_type: "desktop-file-browser".to_string(),
+            app_resource_id: "root".to_string(),
+            scene: Some("user_document_upload".to_string()),
+            source: Some("pc_local_file".to_string()),
+            upload_profile_code: "generic".to_string(),
+            file_fingerprint: "fp-logical".to_string(),
+            original_file_name: "logical.txt".to_string(),
+            content_type: "text/plain".to_string(),
+            content_length: 5,
+            chunk_size_bytes: 5,
+            target: UploaderTarget::AutoUploadSpace {
+                parent_node_id: None,
+            },
+            retention: UploaderRetention::LongTerm,
+            operator_id: "user-logical-uploader".to_string(),
+            now_epoch_ms: 1_800_000_000_000,
+        })
+        .await
+        .expect("logical uploader task should be prepared");
+
+    assert_eq!(
+        prepared.storage_provider_id.as_deref(),
+        Some("provider-logical-uploader"),
+        "the logical provider must outrank the legacy tenant binding"
+    );
+    assert_eq!(
+        prepared.object_bucket.as_deref(),
+        Some("logical-uploader-bucket"),
+        "the logical bucket must outrank the legacy tenant bucket"
+    );
+    let object_key = prepared
+        .object_key
+        .as_deref()
+        .expect("prepared upload should expose an object key");
+    assert!(
+        object_key.starts_with(
+            "sdkwork-drive/v1/tenants/tenant-logical-uploader/logical/business/space-types/app_upload/"
+        ),
+        "uploader bytes must land below the logical root prefix: {object_key}"
+    );
+    assert!(
+        object_key.contains("sdkwork-drive/uploader/"),
+        "uploader layout must stay inside the logical root: {object_key}"
+    );
+}

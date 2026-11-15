@@ -3010,6 +3010,10 @@ async fn uploader_prepare_to_target_space_enforces_writer_permission_and_preserv
         .as_str()
         .expect("allowed response should include final object key");
     assert!(
+        object_key.starts_with("sdkwork-drive/v1/tenants/tenant-uploader-permission/"),
+        "uploader bytes must stay below the resolved storage root: {object_key}"
+    );
+    assert!(
         object_key.contains("sdkwork-drive/uploader/"),
         "final uploader object key should preserve upload locator prefix: {object_key}"
     );

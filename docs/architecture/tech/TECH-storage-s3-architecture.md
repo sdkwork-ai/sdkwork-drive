@@ -59,6 +59,7 @@ The production implementation uses the official Rust AWS S3 SDK through `aws-sdk
    - App upload workflows must generate object keys through the Drive storage key service.
    - The stored key is `{storageRootPrefix}/{standardContentKey}`. The standard content key remains `sdkwork-drive/v1/t/{tenantShard}/tenants/{tenantId}/spaces/{spaceId}/nodes/n/{nodeShard}/{nodeId}/versions/{versionNo}/{objectId}/content`.
    - Completion/version validation must parse and validate the standard content key suffix even when it is nested below a binding root.
+   - Every writer applies the resolved root to its own layout: uploader keys and generated download-package archives are `{resolvedRoot}/{layoutSuffix}`, and must never start at `sdkwork-drive/...` independently of the resolved root.
    - Client-supplied object keys are compatibility inputs only and must not control physical storage layout.
 
 6. Upload sessions store both Drive id and provider multipart id.
