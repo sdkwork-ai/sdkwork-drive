@@ -227,14 +227,19 @@ where
         provider_id: &str,
         current: &DriveStorageProvider,
         endpoint_url: &str,
-        bucket: &str,
+        region: Option<&str>,
         path_style: bool,
         strict_tls: bool,
     ) -> Result<(), DriveServiceError> {
+        // The configured bucket is a write target, not an access path: every
+        // stored object carries its own bucket locator, so switching the target
+        // bucket leaves existing bytes readable through the same provider.
+        // Endpoint/region/path/TLS changes alter how those bytes are reached and
+        // stay blocked until bindings are drained.
         let changed_field = if current.endpoint_url != endpoint_url {
             Some("endpoint_url")
-        } else if current.bucket != bucket {
-            Some("bucket")
+        } else if current.region.as_deref() != region {
+            Some("region")
         } else if current.path_style != path_style {
             Some("path_style")
         } else if current.strict_tls != strict_tls {
@@ -449,21 +454,21 @@ where
         .await?;
         let path_style = command.path_style.unwrap_or(current.path_style);
         let strict_tls = command.strict_tls.unwrap_or(current.strict_tls);
+        let region = match command.region {
+            Some(region) if region.trim().is_empty() => None,
+            Some(region) => Some(region.trim().to_string()),
+            None => current.region.clone(),
+        };
         self.ensure_active_bindings_allow_location_update(
             provider_id,
             &current,
             &endpoint_url,
-            &bucket,
+            region.as_deref(),
             path_style,
             strict_tls,
         )
         .await?;
         validate_strict_tls_endpoint(strict_tls, &endpoint_url)?;
-        let region = match command.region {
-            Some(region) if region.trim().is_empty() => None,
-            Some(region) => Some(region.trim().to_string()),
-            None => current.region,
-        };
         let server_side_encryption_mode = match command.server_side_encryption_mode {
             Some(mode) if mode.trim().is_empty() => None,
             Some(mode) => Some(mode.trim().to_string()),

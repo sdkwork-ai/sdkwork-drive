@@ -781,14 +781,14 @@ async fn storage_provider_service_rejects_location_changes_when_active_bindings_
             },
         ),
         (
-            "bucket",
+            "region",
             UpdateStorageProviderCommand {
                 provider_id: "provider-location-bound".to_string(),
                 provider_account_id: None,
                 name: None,
                 endpoint_url: None,
-                region: None,
-                bucket: Some("drive-bucket-new".to_string()),
+                region: Some("us-west-2".to_string()),
+                bucket: None,
                 path_style: None,
                 strict_tls: None,
                 credential_ref: None,
@@ -847,6 +847,26 @@ async fn storage_provider_service_rejects_location_changes_when_active_bindings_
         );
     }
 
+    let bucket_switched = service
+        .update_storage_provider(UpdateStorageProviderCommand {
+            provider_id: "provider-location-bound".to_string(),
+            provider_account_id: None,
+            name: None,
+            endpoint_url: None,
+            region: None,
+            bucket: Some("drive-bucket-new".to_string()),
+            path_style: None,
+            strict_tls: None,
+            credential_ref: None,
+            server_side_encryption_mode: None,
+            default_storage_class: None,
+            status: None,
+            operator_id: "admin-002".to_string(),
+        })
+        .await
+        .expect("the configured bucket must stay switchable while bindings are active");
+    assert_eq!(bucket_switched.bucket, "drive-bucket-new");
+
     let updated = service
         .update_storage_provider(UpdateStorageProviderCommand {
             provider_id: "provider-location-bound".to_string(),
@@ -871,7 +891,7 @@ async fn storage_provider_service_rejects_location_changes_when_active_bindings_
         Some("plain:new-access:new-secret")
     );
     assert_eq!(updated.endpoint_url, "http://127.0.0.1:9000");
-    assert_eq!(updated.bucket, "drive-bucket");
+    assert_eq!(updated.bucket, "drive-bucket-new");
     assert!(updated.path_style);
     assert!(!updated.strict_tls);
 }

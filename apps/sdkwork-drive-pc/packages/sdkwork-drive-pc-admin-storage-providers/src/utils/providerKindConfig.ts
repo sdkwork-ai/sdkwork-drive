@@ -1373,6 +1373,31 @@ export function getProviderKindMeta(kind: string): ProviderKindMeta {
   return PROVIDER_KIND_META.find((m) => m.value === kind) ?? CUSTOM_PROVIDER_META;
 }
 
+/**
+ * Path-style default per vendor, mirroring Rust's `default_force_path_style`.
+ *
+ * The editor must pre-select the same addressing style the server will use when
+ * the field is omitted. Without this, creating MinIO/R2/China Mobile/etc. left
+ * the toggle on virtual-host style and the first bucket operation failed against
+ * the vendor endpoint.
+ */
+const PATH_STYLE_DEFAULT_KINDS = new Set([
+  'local_filesystem',
+  's3_compatible',
+  'minio',
+  'cloudflare_r2',
+  'china_mobile_ecloud',
+  'china_telecom_eos',
+  'china_unicom_wo',
+  'linode_object_storage',
+  'vultr_object_storage',
+  'ibm_cos',
+]);
+
+export function providerKindDefaultPathStyle(kind: string): boolean {
+  return PATH_STYLE_DEFAULT_KINDS.has(kind);
+}
+
 export function getAllProviderKindMeta(): ProviderKindMeta[] {
   return [...PROVIDER_KIND_META, CUSTOM_PROVIDER_META];
 }

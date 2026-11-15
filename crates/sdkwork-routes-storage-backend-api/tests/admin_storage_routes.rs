@@ -524,17 +524,17 @@ async fn admin_storage_delete_provider_rejects_active_provider_bindings() {
         )
         .await
         .expect("patch provider bucket request should be handled");
-    assert_eq!(patch_bucket_response.status(), StatusCode::CONFLICT);
+    assert_eq!(patch_bucket_response.status(), StatusCode::OK);
     let patch_bucket_payload: serde_json::Value = serde_json::from_slice(
         &to_bytes(patch_bucket_response.into_body(), usize::MAX)
             .await
-            .expect("patch provider bucket conflict response body should be read"),
+            .expect("patch provider bucket response body should be read"),
     )
-    .expect("patch provider bucket conflict response should be json");
-    assert_eq!(patch_bucket_payload["code"], 40901);
-    assert!(patch_bucket_payload["detail"]
-        .as_str()
-        .is_some_and(|detail| detail.contains("bucket cannot be changed")));
+    .expect("patch provider bucket response should be json");
+    assert_eq!(
+        patch_bucket_payload["data"]["item"]["bucket"],
+        "bound-delete-bucket-updated"
+    );
 
     let patch_deleted_response = app
         .clone()
@@ -4069,6 +4069,48 @@ async fn admin_storage_logical_plane_binds_business_through_logical_bucket_and_r
     assert_eq!(
         target.storage_root_prefix,
         "sdkwork-drive/v1/tenants/tenant-logical/logical/business/space-types/personal"
+    );
+
+    sqlx::query(
+        "INSERT INTO dr_drive_storage_provider (
+            id, tenant_id, provider_kind, name, endpoint_url, region, bucket, path_style,
+            credential_ref, status, version, created_by, updated_by
+        ) VALUES ('provider-logical-b', $1, 's3_compatible', 'Logical S3 B',
+            'https://s3.us-east-1.amazonaws.com', 'us-east-1', 'logical-bucket-b', false,
+            'plain:access-key:secret-key', 'active', 1, 'admin-storage', 'admin-storage')",
+    )
+    .bind(tenant_id)
+    .execute(&pool)
+    .await
+    .expect("second logical provider should be seeded");
+
+    let switch_provider = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method(Method::PUT)
+                .uri("/backend/v3/api/drive/storage/logical-buckets/bucket-logical")
+                .header("content-type", "application/json")
+                .body(Body::from(r#"{"providerId":"provider-logical-b"}"#))
+                .expect("logical bucket provider switch request should be built"),
+        )
+        .await
+        .expect("logical bucket provider switch request should be handled");
+    assert_eq!(switch_provider.status(), StatusCode::OK);
+    let switch_payload: serde_json::Value = serde_json::from_slice(
+        &to_bytes(switch_provider.into_body(), usize::MAX)
+            .await
+            .expect("logical bucket provider switch body should be read"),
+    )
+    .expect("logical bucket provider switch should be json");
+    assert_eq!(
+        switch_payload["data"]["item"]["providerId"],
+        "provider-logical-b"
+    );
+    assert_eq!(
+        switch_payload["data"]["item"]["storageRootPrefix"],
+        "sdkwork-drive/v1/tenants/tenant-logical",
+        "a provider switch must not inherit the previous provider root prefix"
     );
 
     let response = app

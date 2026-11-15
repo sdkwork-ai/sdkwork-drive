@@ -20,6 +20,7 @@ import {
   providerBucketHint,
   providerCredentialLabel,
   providerKindLabel,
+  providerKindDefaultPathStyle,
   providerRegionLabel,
   providerVendorCodeForKind,
   resolveProviderKindMeta,
@@ -126,7 +127,7 @@ function applyKindDefaults(
   const hint = getProviderKindMeta(kind);
   setRegion(hint.regionHint);
   setEndpointUrl(hint.features.isLocal ? hint.endpointHint : buildProviderEndpointUrl(String(kind), hint.regionHint) ?? hint.endpointHint);
-  setPathStyle(hint.features.isLocal);
+  setPathStyle(providerKindDefaultPathStyle(String(kind)));
   setStrictTls(!hint.features.isLocal);
   setSseMode('');
   setStorageClass('');

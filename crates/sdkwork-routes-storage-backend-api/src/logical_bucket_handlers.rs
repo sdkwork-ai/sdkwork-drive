@@ -121,6 +121,7 @@ pub(crate) async fn update_storage_logical_bucket(
                 "logical bucket provider must be active".to_string(),
             )));
         }
+        let provider_changed = existing.provider_id.as_deref() != Some(provider.id.as_str());
         let storage_root_prefix = match normalize_optional_text(payload.storage_root_prefix) {
             Some(prefix) => {
                 let prefix = validate_object_prefix(Some(prefix), "storageRootPrefix")?
@@ -132,6 +133,11 @@ pub(crate) async fn update_storage_logical_bucket(
                 }
                 prefix
             }
+            // A new provider must not inherit the previous provider's root: the
+            // two vendors can use different root layouts, and silently keeping
+            // the old prefix writes new objects under a path the new provider
+            // was never configured for.
+            None if provider_changed => format!("sdkwork-drive/v1/tenants/{tenant_id}"),
             None => existing
                 .storage_root_prefix
                 .clone()
