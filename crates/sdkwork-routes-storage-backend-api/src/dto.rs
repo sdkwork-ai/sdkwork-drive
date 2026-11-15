@@ -392,6 +392,15 @@ pub(crate) struct ProviderBucketListItemResponse {
     pub(crate) region: Option<String>,
 }
 
+/// Optional controls for the one-click provider initialization.
+#[derive(Debug, Default, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub(crate) struct InitializeStorageProviderRequest {
+    /// Re-point every active logical bucket (and the legacy tenant fallback) at
+    /// this provider after the readiness probe passes.
+    pub(crate) adopt_as_default: Option<bool>,
+}
+
 /// Result of the one-click provider initialization.
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -406,6 +415,8 @@ pub(crate) struct StorageProviderInitializeResponse {
     pub(crate) default_binding_created: bool,
     /// The logical bucket/business binding plane was created by this run.
     pub(crate) logical_plane_created: bool,
+    /// The logical plane and tenant fallback now route to this provider.
+    pub(crate) routing_switched: bool,
     #[serde(with = "sdkwork_utils_rust::serde_int64")]
     pub(crate) logical_bucket_count: i64,
     #[serde(with = "sdkwork_utils_rust::serde_int64")]

@@ -540,8 +540,8 @@ func (a *DriveApi) StorageBusinessBindingsDelete(scopeType string, scopeId strin
 }
 
 // One-click initialize a storage provider
-func (a *DriveApi) StorageProvidersInitialize(providerId string) (sdktypes.StorageProvidersInitializeResponse, error) {
-    raw, err := a.client.Post(CustomApiPath(fmt.Sprintf("/drive/storage/providers/%s/initialize", SerializePathParameter(providerId, PathParameterSpec{Name: "providerId", Style: "simple", Explode: false}))), nil, nil, nil, "")
+func (a *DriveApi) StorageProvidersInitialize(providerId string, body *sdktypes.InitializeStorageProviderRequest) (sdktypes.StorageProvidersInitializeResponse, error) {
+    raw, err := a.client.Post(CustomApiPath(fmt.Sprintf("/drive/storage/providers/%s/initialize", SerializePathParameter(providerId, PathParameterSpec{Name: "providerId", Style: "simple", Explode: false}))), body, nil, nil, "application/json")
     if err != nil {
         var zero sdktypes.StorageProvidersInitializeResponse
         return zero, err

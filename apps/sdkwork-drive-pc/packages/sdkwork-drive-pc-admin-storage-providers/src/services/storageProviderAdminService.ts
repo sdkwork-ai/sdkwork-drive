@@ -213,7 +213,7 @@ export interface StorageProviderAdminService {
    */
   initializeProvider(
     providerId: string,
-    options?: StorageProviderMutationOptions,
+    options?: StorageProviderMutationOptions & { adoptAsDefault?: boolean },
   ): Promise<StorageProviderInitializationView>;
   deleteBucket(providerId: string, options?: StorageProviderMutationOptions): Promise<boolean>;
   listObjects(
@@ -737,6 +737,9 @@ export function createStorageProviderAdminService({
         operationId: 'storageProviders.initialize',
         signal: options?.signal,
         pathParams: { providerId },
+        body: {
+          adoptAsDefault: options?.adoptAsDefault ?? false,
+        },
       });
       const record = resourceRecord(response);
       return {
@@ -746,6 +749,7 @@ export function createStorageProviderAdminService({
         bucketVerified: booleanField(record, 'bucketVerified') ?? false,
         defaultBindingCreated: booleanField(record, 'defaultBindingCreated') ?? false,
         logicalPlaneCreated: booleanField(record, 'logicalPlaneCreated') ?? false,
+        routingSwitched: booleanField(record, 'routingSwitched') ?? false,
         logicalBucketCount: stringField(record, 'logicalBucketCount') ?? '0',
         businessBindingCount: stringField(record, 'businessBindingCount') ?? '0',
         objectWriteVerified: booleanField(record, 'objectWriteVerified') ?? false,

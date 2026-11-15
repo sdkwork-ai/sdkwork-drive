@@ -205,6 +205,8 @@ export interface StorageProviderInitializationView {
   bucketVerified: boolean;
   defaultBindingCreated: boolean;
   logicalPlaneCreated: boolean;
+  /** The logical plane and tenant fallback now route to this provider. */
+  routingSwitched: boolean;
   logicalBucketCount: string;
   businessBindingCount: string;
   objectWriteVerified: boolean;

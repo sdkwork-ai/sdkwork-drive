@@ -4384,6 +4384,63 @@ async fn one_click_provider_initialize_creates_bucket_default_binding_and_logica
     .expect("logical provider bindings should be readable");
     assert_eq!(logical_provider_bindings, 4);
 
+    sqlx::query(
+        "INSERT INTO dr_drive_storage_provider (
+            id, tenant_id, provider_kind, name, endpoint_url, region, bucket, path_style,
+            strict_tls, credential_ref, status, version, created_by, updated_by
+        ) VALUES ('provider-adopt', $1, 's3_compatible', 'Adopt S3', $2, 'us-east-1',
+            'init-bucket', TRUE, FALSE, 'plain:test-access-key:test-secret-key',
+            'active', 1, 'user-init', 'user-init')",
+    )
+    .bind(tenant_id)
+    .bind(&s3_endpoint)
+    .execute(&pool)
+    .await
+    .expect("adoptable provider should be seeded");
+
+    let adopt_response = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method(Method::POST)
+                .uri("/backend/v3/api/drive/storage/providers/provider-adopt/initialize")
+                .header("content-type", "application/json")
+                .body(Body::from(r#"{"adoptAsDefault":true}"#))
+                .expect("adopt provider request should be built"),
+        )
+        .await
+        .expect("adopt provider request should be handled");
+    assert_eq!(adopt_response.status(), StatusCode::OK);
+    let adopt_payload: serde_json::Value = serde_json::from_slice(
+        &to_bytes(adopt_response.into_body(), usize::MAX)
+            .await
+            .expect("adopt provider response should be read"),
+    )
+    .expect("adopt provider response should be json");
+    let adopt_item = &adopt_payload["data"]["item"];
+    assert_eq!(adopt_item["routingSwitched"], true);
+    assert_eq!(adopt_item["routingProviderId"], "provider-adopt");
+    assert_eq!(adopt_item["ready"], true);
+
+    let adopted_bindings: i64 = sqlx::query_scalar(
+        "SELECT COUNT(*) FROM dr_drive_logical_bucket_provider_binding
+         WHERE tenant_id = 'tenant-provider-init' AND provider_id = 'provider-adopt'
+           AND lifecycle_status = 'active'",
+    )
+    .fetch_one(&pool)
+    .await
+    .expect("adopted logical provider bindings should be readable");
+    assert_eq!(adopted_bindings, 4);
+
+    let adopted_default: String = sqlx::query_scalar(
+        "SELECT provider_id FROM dr_drive_storage_provider_binding
+         WHERE id = 'default:tenant:tenant-provider-init' AND lifecycle_status = 'active'",
+    )
+    .fetch_one(&pool)
+    .await
+    .expect("adopted legacy default binding should exist");
+    assert_eq!(adopted_default, "provider-adopt");
+
     assert!(
         captured_requests
             .lock()

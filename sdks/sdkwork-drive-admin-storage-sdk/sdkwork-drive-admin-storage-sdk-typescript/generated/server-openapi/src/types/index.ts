@@ -53,6 +53,7 @@ export type { UpdateStorageLogicalBucketRequest } from './update-storage-logical
 export type { BusinessStorageBinding } from './business-storage-binding';
 export type { UpdateBusinessStorageBindingRequest } from './update-business-storage-binding-request';
 export type { StorageProviderInitialization } from './storage-provider-initialization';
+export type { InitializeStorageProviderRequest } from './initialize-storage-provider-request';
 export type { SdkWorkResourceData } from './sdk-work-resource-data';
 export type { SdkWorkPageData } from './sdk-work-page-data';
 export type { SdkWorkCommandData } from './sdk-work-command-data';

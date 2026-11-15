@@ -106,6 +106,8 @@ pub mod update_business_storage_binding_request;
 pub use update_business_storage_binding_request::UpdateBusinessStorageBindingRequest;
 pub mod storage_provider_initialization;
 pub use storage_provider_initialization::StorageProviderInitialization;
+pub mod initialize_storage_provider_request;
+pub use initialize_storage_provider_request::InitializeStorageProviderRequest;
 pub mod sdk_work_resource_data;
 pub use sdk_work_resource_data::SdkWorkResourceData;
 pub mod sdk_work_page_data;

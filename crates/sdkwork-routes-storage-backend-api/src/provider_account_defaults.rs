@@ -60,8 +60,9 @@ use crate::app_context::DriveRequestContext;
 use crate::audit::{record_audit_event, record_storage_provider_audit};
 use crate::config::AdminStorageConfig;
 use crate::dto::{
-    OffsetPage, StorageProviderAccountDefaultResponse, StorageProviderInitializeResponse,
-    VendorCapabilityDefaultsResponse, VendorCredentialFieldResponse,
+    InitializeStorageProviderRequest, OffsetPage, StorageProviderAccountDefaultResponse,
+    StorageProviderInitializeResponse, VendorCapabilityDefaultsResponse,
+    VendorCredentialFieldResponse,
 };
 use crate::error::{
     map_object_store_route_error, map_provider_account_error, map_service_error, ProblemDetail,
@@ -1212,6 +1213,89 @@ async fn count_logical_plane_rows(
     })
 }
 
+/// Re-point the tenant's logical plane and legacy fallback at one provider.
+///
+/// Only called after the readiness probe passes, so a broken provider can never
+/// become the routing target. Existing objects keep their own provider/bucket
+/// locators; this changes where *new* writes go.
+pub(crate) async fn adopt_provider_for_tenant(
+    state: &AdminStorageState,
+    tenant_id: &str,
+    operator_id: &str,
+    provider_id: &str,
+) -> Result<bool, (StatusCode, Json<ProblemDetail>)> {
+    let root_prefix = default_storage_root_prefix(tenant_id, &StorageProviderBindingTarget::Tenant);
+    let mut transaction = state.pool.begin().await.map_err(|error| {
+        map_service_error(DriveServiceError::Internal(format!(
+            "begin provider adoption transaction failed: {error}"
+        )))
+    })?;
+    let logical = sqlx::query(
+        "INSERT INTO dr_drive_logical_bucket_provider_binding (
+            id, tenant_id, logical_bucket_id, provider_id, storage_root_prefix,
+            lifecycle_status, version, created_by, updated_by
+         )
+         SELECT 'logical-bucket-provider:' || $1 || ':' || bucket_key,
+                $1, id, $2, $3, 'active', 1, $4, $4
+         FROM dr_drive_logical_bucket
+         WHERE tenant_id = $1 AND lifecycle_status = 'active'
+         ON CONFLICT(id) DO UPDATE SET
+            provider_id = excluded.provider_id,
+            storage_root_prefix = excluded.storage_root_prefix,
+            lifecycle_status = 'active',
+            version = dr_drive_logical_bucket_provider_binding.version + 1,
+            updated_by = excluded.updated_by,
+            updated_at = CURRENT_TIMESTAMP",
+    )
+    .bind(tenant_id)
+    .bind(provider_id)
+    .bind(&root_prefix)
+    .bind(operator_id)
+    .execute(&mut *transaction)
+    .await
+    .map_err(|error| {
+        map_service_error(DriveServiceError::Internal(format!(
+            "adopt logical provider binding failed: {error}"
+        )))
+    })?;
+
+    let target = StorageProviderBindingTarget::Tenant;
+    let binding_id = default_storage_provider_binding_id(tenant_id, &target);
+    let fallback = sqlx::query(
+        "INSERT INTO dr_drive_storage_provider_binding (
+            id, tenant_id, space_id, provider_id, binding_scope, purpose,
+            storage_root_prefix, lifecycle_status, version, created_by, updated_by
+         ) VALUES ($1, $2, NULL, $3, 'tenant', 'primary', $4, 'active', 1, $5, $5)
+         ON CONFLICT(id) DO UPDATE SET
+            provider_id = excluded.provider_id,
+            storage_root_prefix = excluded.storage_root_prefix,
+            lifecycle_status = 'active',
+            version = dr_drive_storage_provider_binding.version + 1,
+            updated_by = excluded.updated_by,
+            updated_at = CURRENT_TIMESTAMP",
+    )
+    .bind(&binding_id)
+    .bind(tenant_id)
+    .bind(provider_id)
+    .bind(&root_prefix)
+    .bind(operator_id)
+    .execute(&mut *transaction)
+    .await
+    .map_err(|error| {
+        map_service_error(DriveServiceError::Internal(format!(
+            "adopt legacy tenant binding failed: {error}"
+        )))
+    })?;
+    let changed = logical.rows_affected() > 0 || fallback.rows_affected() > 0;
+    transaction.commit().await.map_err(|error| {
+        map_service_error(DriveServiceError::Internal(format!(
+            "commit provider adoption failed: {error}"
+        )))
+    })?;
+
+    Ok(changed)
+}
+
 /// One-click initialization for a single provider configuration.
 ///
 /// This is the completion action after the operator stores real cloud account
@@ -1223,12 +1307,16 @@ pub(crate) async fn initialize_storage_provider(
     State(state): State<AdminStorageState>,
     Extension(ctx): Extension<DriveRequestContext>,
     Path(provider_id): Path<String>,
+    payload: Option<Json<InitializeStorageProviderRequest>>,
 ) -> Result<
     StorageItemHttpResponse<StorageProviderInitializeResponse>,
     (StatusCode, Json<ProblemDetail>),
 > {
     let tenant_id = ctx.resolve_tenant_id()?;
     let operator_id = ctx.resolve_operator_id()?;
+    let adopt_as_default = payload
+        .and_then(|Json(payload)| payload.adopt_as_default)
+        .unwrap_or(false);
     let provider_id = crate::validators::require_non_empty_text(provider_id, "providerId")?;
     let provider = get_active_provider(&state, &tenant_id, &provider_id).await?;
 
@@ -1287,6 +1375,20 @@ pub(crate) async fn initialize_storage_provider(
         )))
     })?;
 
+    let quota_ready =
+        ensure_tenant_can_allocate_bytes(&SqlQuotaStore::new(state.pool.clone()), &tenant_id, 1)
+            .await;
+
+    let probe_ready = readiness.ready
+        && quota_ready.is_ok()
+        && logical_bucket_count > 0
+        && business_binding_count > 0;
+    let mut routing_switched = false;
+    if adopt_as_default && probe_ready {
+        routing_switched =
+            adopt_provider_for_tenant(&state, &tenant_id, &operator_id, &provider_id).await?;
+    }
+
     let routing_provider_id: Option<String> = sqlx::query_scalar(
         "SELECT provider_binding.provider_id
          FROM dr_drive_business_storage_binding binding
@@ -1311,10 +1413,6 @@ pub(crate) async fn initialize_storage_provider(
             "resolve initialized routing provider failed: {error}"
         )))
     })?;
-
-    let quota_ready =
-        ensure_tenant_can_allocate_bytes(&SqlQuotaStore::new(state.pool.clone()), &tenant_id, 1)
-            .await;
 
     let mut ready = readiness.ready;
     let mut readiness_error = readiness.readiness_error.clone();
@@ -1372,6 +1470,7 @@ pub(crate) async fn initialize_storage_provider(
         bucket_verified: true,
         default_binding_created,
         logical_plane_created,
+        routing_switched,
         logical_bucket_count,
         business_binding_count,
         object_write_verified: readiness.object_write_verified,
