@@ -921,7 +921,31 @@ fn validate_endpoint_url(
             "endpoint_url must not target a cloud metadata or link-local address".to_string(),
         ));
     }
+    if lower.starts_with("http://") && !storage_host_is_private(host) {
+        return Err(DriveServiceError::Validation(
+            "endpoint_url must use https for public hosts; plain http is only allowed for loopback, private, or single-label service hosts"
+                .to_string(),
+        ));
+    }
     Ok(endpoint_url.to_string())
+}
+
+fn storage_host_is_private(host: &str) -> bool {
+    let normalized = host.trim().trim_matches('.').to_ascii_lowercase();
+    if normalized == "localhost" || normalized.ends_with(".local") || !normalized.contains('.') {
+        return true;
+    }
+    match normalized.parse::<std::net::IpAddr>() {
+        Ok(std::net::IpAddr::V4(address)) => address.is_loopback() || address.is_private(),
+        Ok(std::net::IpAddr::V6(address)) => {
+            address.is_loopback()
+                || address.is_unique_local()
+                || address
+                    .to_ipv4_mapped()
+                    .is_some_and(|mapped| mapped.is_loopback() || mapped.is_private())
+        }
+        Err(_) => false,
+    }
 }
 
 /// Reject the addresses cloud SDKs are most often abused to reach through a
@@ -1232,6 +1256,8 @@ mod tests {
         assert!(validate_endpoint_url(&kind, "https://169.254.169.254").is_err());
         assert!(validate_endpoint_url(&kind, "http://metadata.google.internal").is_err());
         assert!(validate_endpoint_url(&kind, "http://127.0.0.1:9000").is_ok());
+        assert!(validate_endpoint_url(&kind, "http://minio:9000").is_ok());
+        assert!(validate_endpoint_url(&kind, "http://s3.example.com").is_err());
         assert!(validate_endpoint_url(&kind, "https://s3.example.com").is_ok());
     }
 
