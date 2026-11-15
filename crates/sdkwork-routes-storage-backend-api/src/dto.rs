@@ -410,6 +410,25 @@ pub(crate) struct StorageProviderInitializeResponse {
     pub(crate) logical_bucket_count: i64,
     #[serde(with = "sdkwork_utils_rust::serde_int64")]
     pub(crate) business_binding_count: i64,
+    /// A probe object was written with the configured account.
+    pub(crate) object_write_verified: bool,
+    /// The probe object was read back with the expected bytes.
+    pub(crate) object_read_verified: bool,
+    /// The probe object was deleted.
+    pub(crate) object_delete_verified: bool,
+    /// A multipart upload was created and aborted.
+    pub(crate) multipart_verified: bool,
+    /// A presigned upload-part URL was signed.
+    pub(crate) presigned_upload_verified: bool,
+    /// A presigned download URL was signed.
+    pub(crate) presigned_download_verified: bool,
+    /// Every operation Drive storage workflows depend on passed.
+    pub(crate) ready: bool,
+    /// Provider the tenant logical plane currently routes to, when one exists.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) routing_provider_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) readiness_error: Option<String>,
 }
 
 #[derive(Debug, Serialize)]

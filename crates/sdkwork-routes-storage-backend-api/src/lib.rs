@@ -23,6 +23,7 @@ mod provider_handlers;
 mod provider_kind_handlers;
 mod provider_lookup;
 mod provider_mappers;
+mod provider_readiness;
 mod rate_limit;
 mod response;
 mod route_paths;

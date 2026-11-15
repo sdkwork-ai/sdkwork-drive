@@ -418,6 +418,13 @@ describe('storage provider admin service', () => {
           logicalPlaneCreated: true,
           logicalBucketCount: '4',
           businessBindingCount: '12',
+          objectWriteVerified: true,
+          objectReadVerified: true,
+          objectDeleteVerified: true,
+          multipartVerified: true,
+          presignedUploadVerified: true,
+          presignedDownloadVerified: true,
+          ready: true,
         },
       },
       'storageProviders.create': {
@@ -463,6 +470,13 @@ describe('storage provider admin service', () => {
       bucketVerified: true,
       logicalBucketCount: '4',
       businessBindingCount: '12',
+      objectWriteVerified: true,
+      objectReadVerified: true,
+      objectDeleteVerified: true,
+      multipartVerified: true,
+      presignedUploadVerified: true,
+      presignedDownloadVerified: true,
+      ready: true,
     });
     await expect(
       service.createProvider({

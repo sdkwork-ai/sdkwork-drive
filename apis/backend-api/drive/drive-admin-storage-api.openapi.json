@@ -8392,7 +8392,14 @@
           "defaultBindingCreated",
           "logicalPlaneCreated",
           "logicalBucketCount",
-          "businessBindingCount"
+          "businessBindingCount",
+          "objectWriteVerified",
+          "objectReadVerified",
+          "objectDeleteVerified",
+          "multipartVerified",
+          "ready",
+          "presignedUploadVerified",
+          "presignedDownloadVerified"
         ],
         "properties": {
           "providerId": {
@@ -8428,6 +8435,42 @@
             "format": "int64",
             "pattern": "^-?[0-9]+$",
             "x-sdkwork-int64-string": true
+          },
+          "objectWriteVerified": {
+            "type": "boolean",
+            "description": "A probe object was written with the configured account."
+          },
+          "objectReadVerified": {
+            "type": "boolean",
+            "description": "The probe object was read back with the expected bytes."
+          },
+          "objectDeleteVerified": {
+            "type": "boolean",
+            "description": "The probe object was deleted."
+          },
+          "multipartVerified": {
+            "type": "boolean",
+            "description": "A multipart upload was created and aborted."
+          },
+          "ready": {
+            "type": "boolean",
+            "description": "Every operation Drive storage workflows depend on passed, and the logical plane is populated."
+          },
+          "readinessError": {
+            "type": "string",
+            "description": "Actionable failure detail when `ready` is false."
+          },
+          "presignedUploadVerified": {
+            "type": "boolean",
+            "description": "A presigned upload-part URL was signed."
+          },
+          "presignedDownloadVerified": {
+            "type": "boolean",
+            "description": "A presigned download URL was signed."
+          },
+          "routingProviderId": {
+            "type": "string",
+            "description": "Provider the tenant logical plane currently routes to."
           }
         },
         "additionalProperties": false

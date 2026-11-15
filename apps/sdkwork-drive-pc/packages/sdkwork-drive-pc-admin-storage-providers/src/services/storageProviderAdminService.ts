@@ -748,6 +748,15 @@ export function createStorageProviderAdminService({
         logicalPlaneCreated: booleanField(record, 'logicalPlaneCreated') ?? false,
         logicalBucketCount: stringField(record, 'logicalBucketCount') ?? '0',
         businessBindingCount: stringField(record, 'businessBindingCount') ?? '0',
+        objectWriteVerified: booleanField(record, 'objectWriteVerified') ?? false,
+        objectReadVerified: booleanField(record, 'objectReadVerified') ?? false,
+        objectDeleteVerified: booleanField(record, 'objectDeleteVerified') ?? false,
+        multipartVerified: booleanField(record, 'multipartVerified') ?? false,
+        presignedUploadVerified: booleanField(record, 'presignedUploadVerified') ?? false,
+        presignedDownloadVerified: booleanField(record, 'presignedDownloadVerified') ?? false,
+        ready: booleanField(record, 'ready') ?? false,
+        routingProviderId: stringField(record, 'routingProviderId'),
+        readinessError: stringField(record, 'readinessError'),
       } satisfies StorageProviderInitializationView;
     },
     async deleteBucket(providerId, options) {

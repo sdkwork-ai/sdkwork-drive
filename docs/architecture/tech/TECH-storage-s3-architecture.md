@@ -56,7 +56,10 @@ The production implementation uses the official Rust AWS S3 SDK through `aws-sdk
      `exists: false` until the vendor inventory contains it. After the operator
      stores the cloud account, `POST /storage/providers/{id}/initialize` creates
      the configured bucket, establishes the tenant default binding when missing,
-     and materializes the logical plane in one idempotent call.
+     and materializes the logical plane in one idempotent call. The response's
+     readiness probe writes, heads, range-reads, presigns, multipart-creates and
+     deletes a tiny probe object, so `ready: true` means the operations every
+     storage workflow depends on actually work with the configured account.
 
 5. Object keys are internal.
    - App APIs should avoid exposing object keys as durable business identifiers.

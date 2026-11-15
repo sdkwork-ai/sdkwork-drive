@@ -1248,6 +1248,13 @@ pub(crate) async fn initialize_storage_provider(
         .await?;
     }
 
+    let readiness = crate::provider_readiness::probe_storage_readiness(
+        object_store.as_ref(),
+        &provider.bucket,
+        &tenant_id,
+    )
+    .await;
+
     let default_binding_created =
         ensure_default_binding(&state, &tenant_id, &operator_id, &provider.id).await?;
     let logical_plane_created =
@@ -1278,6 +1285,51 @@ pub(crate) async fn initialize_storage_provider(
         )))
     })?;
 
+    let routing_provider_id: Option<String> = sqlx::query_scalar(
+        "SELECT provider_binding.provider_id
+         FROM dr_drive_business_storage_binding binding
+         INNER JOIN dr_drive_logical_bucket bucket
+           ON bucket.id = binding.logical_bucket_id
+          AND bucket.tenant_id = binding.tenant_id
+          AND bucket.lifecycle_status = 'active'
+         INNER JOIN dr_drive_logical_bucket_provider_binding provider_binding
+           ON provider_binding.logical_bucket_id = bucket.id
+          AND provider_binding.tenant_id = bucket.tenant_id
+          AND provider_binding.lifecycle_status = 'active'
+         WHERE binding.tenant_id = $1
+           AND binding.scope_type = 'tenant'
+           AND binding.lifecycle_status = 'active'
+         LIMIT 1",
+    )
+    .bind(&tenant_id)
+    .fetch_optional(&state.pool)
+    .await
+    .map_err(|error| {
+        map_service_error(DriveServiceError::Internal(format!(
+            "resolve initialized routing provider failed: {error}"
+        )))
+    })?;
+
+    let mut ready = readiness.ready;
+    let mut readiness_error = readiness.readiness_error.clone();
+    if logical_bucket_count == 0 || business_binding_count == 0 {
+        ready = false;
+        if readiness_error.is_none() {
+            readiness_error =
+                Some("logical storage plane is incomplete; re-run initialization".to_string());
+        }
+    }
+    if let Some(routing_provider_id) = routing_provider_id.as_deref() {
+        if routing_provider_id != provider.id.as_str() {
+            ready = false;
+            if readiness_error.is_none() {
+                readiness_error = Some(format!(
+                    "logical storage plane currently routes to {routing_provider_id}; re-point it to {provider_id} before serving traffic"
+                ));
+            }
+        }
+    }
+
     record_storage_provider_audit(
         &state,
         admin_audit::storage_provider::INITIALIZED,
@@ -1296,6 +1348,15 @@ pub(crate) async fn initialize_storage_provider(
         logical_plane_created,
         logical_bucket_count,
         business_binding_count,
+        object_write_verified: readiness.object_write_verified,
+        object_read_verified: readiness.object_read_verified,
+        object_delete_verified: readiness.object_delete_verified,
+        multipart_verified: readiness.multipart_verified,
+        presigned_upload_verified: readiness.presigned_upload_verified,
+        presigned_download_verified: readiness.presigned_download_verified,
+        ready,
+        routing_provider_id,
+        readiness_error,
     }))
 }
 

@@ -207,6 +207,17 @@ export interface StorageProviderInitializationView {
   logicalPlaneCreated: boolean;
   logicalBucketCount: string;
   businessBindingCount: string;
+  objectWriteVerified: boolean;
+  objectReadVerified: boolean;
+  objectDeleteVerified: boolean;
+  multipartVerified: boolean;
+  presignedUploadVerified: boolean;
+  presignedDownloadVerified: boolean;
+  /** Every operation Drive storage workflows depend on passed. */
+  ready: boolean;
+  /** Provider the tenant logical plane currently routes to. */
+  routingProviderId?: string;
+  readinessError?: string;
 }
 
 export interface CreateStorageProviderInput {

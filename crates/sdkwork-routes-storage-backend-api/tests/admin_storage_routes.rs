@@ -108,6 +108,25 @@ async fn mock_s3_endpoint(
     if method == Method::HEAD && uri.path() == "/bucket-admin/objects/notes.txt" {
         return (StatusCode::OK, [("content-length", "11")], Body::empty()).into_response();
     }
+    // Initialization readiness probe: HEAD reports the probe length and GET
+    // returns the exact bytes, so the one-click self-test can verify a real
+    // write/read round trip instead of guessing from list output.
+    if uri.path().contains("/.sdkwork-initialization/") {
+        if method == Method::HEAD {
+            return (StatusCode::OK, [("content-length", "34")], Body::empty()).into_response();
+        }
+        if method == Method::GET {
+            return (
+                StatusCode::OK,
+                [
+                    ("content-type", "application/octet-stream"),
+                    ("content-length", "34"),
+                ],
+                Body::from("sdkwork-drive-initialization-probe"),
+            )
+                .into_response();
+        }
+    }
     if method == Method::HEAD {
         return (StatusCode::OK, [("content-length", "0")], Body::empty()).into_response();
     }
@@ -4253,6 +4272,14 @@ async fn one_click_provider_initialize_creates_bucket_default_binding_and_logica
         assert_eq!(item["bucketVerified"], true);
         assert_eq!(item["logicalBucketCount"].as_str(), Some("4"));
         assert_eq!(item["businessBindingCount"].as_str(), Some("12"));
+        assert_eq!(item["objectWriteVerified"], true);
+        assert_eq!(item["objectReadVerified"], true);
+        assert_eq!(item["objectDeleteVerified"], true);
+        assert_eq!(item["multipartVerified"], true);
+        assert_eq!(item["presignedUploadVerified"], true);
+        assert_eq!(item["presignedDownloadVerified"], true);
+        assert_eq!(item["routingProviderId"], "provider-init");
+        assert_eq!(item["ready"], true);
         assert_eq!(
             item["bucketCreated"], expected_first_run,
             "second run must converge without creating the bucket again"
