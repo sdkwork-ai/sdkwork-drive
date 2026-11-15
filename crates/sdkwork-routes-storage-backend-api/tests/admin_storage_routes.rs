@@ -4336,6 +4336,53 @@ async fn one_click_provider_initialize_creates_bucket_default_binding_and_logica
         );
     }
 
+    // Archiving a logical bucket/binding must not make initialization a
+    // permanent no-op: re-running it has to revive the deterministic rows.
+    for statement in [
+        "UPDATE dr_drive_logical_bucket SET lifecycle_status = 'inactive'
+         WHERE id = 'logical-bucket:tenant-provider-init:business'",
+        "UPDATE dr_drive_logical_bucket_provider_binding SET lifecycle_status = 'inactive'
+         WHERE id = 'logical-bucket-provider:tenant-provider-init:business'",
+        "UPDATE dr_drive_business_storage_binding SET lifecycle_status = 'inactive'
+         WHERE id = 'business-storage:tenant-provider-init:space_type:personal'",
+    ] {
+        sqlx::query(statement)
+            .execute(&pool)
+            .await
+            .expect("logical plane row should be archivable");
+    }
+
+    let revive_response = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method(Method::POST)
+                .uri("/backend/v3/api/drive/storage/providers/provider-init/initialize")
+                .body(Body::empty())
+                .expect("revive initialization request should be built"),
+        )
+        .await
+        .expect("revive initialization request should be handled");
+    assert_eq!(revive_response.status(), StatusCode::OK);
+    let revive_payload: serde_json::Value = serde_json::from_slice(
+        &to_bytes(revive_response.into_body(), usize::MAX)
+            .await
+            .expect("revive initialization response should be read"),
+    )
+    .expect("revive initialization response should be json");
+    assert_eq!(
+        revive_payload["data"]["item"]["ready"], true,
+        "re-initialization must revive archived logical rows instead of leaving routing empty"
+    );
+    let revived_rows: i64 = sqlx::query_scalar(
+        "SELECT COUNT(*) FROM dr_drive_logical_bucket_provider_binding
+         WHERE tenant_id = 'tenant-provider-init' AND lifecycle_status = 'active'",
+    )
+    .fetch_one(&pool)
+    .await
+    .expect("revived logical bindings should be readable");
+    assert_eq!(revived_rows, 4);
+
     let overview_response = app
         .clone()
         .oneshot(

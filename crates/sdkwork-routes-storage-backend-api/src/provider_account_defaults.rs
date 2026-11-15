@@ -1092,7 +1092,12 @@ pub(crate) async fn ensure_default_logical_plane(
                 id, tenant_id, bucket_key, display_name, object_prefix,
                 lifecycle_status, version, created_by, updated_by
              ) VALUES ($1, $2, $3, $4, $5, 'active', 1, $6, $6)
-             ON CONFLICT (id) DO NOTHING",
+             ON CONFLICT (id) DO UPDATE SET
+                lifecycle_status = 'active',
+                version = dr_drive_logical_bucket.version + 1,
+                updated_by = excluded.updated_by,
+                updated_at = CURRENT_TIMESTAMP
+             WHERE dr_drive_logical_bucket.lifecycle_status <> 'active'",
         )
         .bind(&bucket_id)
         .bind(tenant_id)
@@ -1114,7 +1119,14 @@ pub(crate) async fn ensure_default_logical_plane(
                 id, tenant_id, logical_bucket_id, provider_id, storage_root_prefix,
                 lifecycle_status, version, created_by, updated_by
              ) VALUES ($1, $2, $3, $4, $5, 'active', 1, $6, $6)
-             ON CONFLICT (id) DO NOTHING",
+             ON CONFLICT (id) DO UPDATE SET
+                provider_id = excluded.provider_id,
+                storage_root_prefix = excluded.storage_root_prefix,
+                lifecycle_status = 'active',
+                version = dr_drive_logical_bucket_provider_binding.version + 1,
+                updated_by = excluded.updated_by,
+                updated_at = CURRENT_TIMESTAMP
+             WHERE dr_drive_logical_bucket_provider_binding.lifecycle_status <> 'active'",
         )
         .bind(&provider_binding_id)
         .bind(tenant_id)
@@ -1152,7 +1164,12 @@ pub(crate) async fn ensure_default_logical_plane(
                 id, tenant_id, scope_type, scope_id, logical_bucket_id, write_prefix,
                 lifecycle_status, version, created_by, updated_by
              ) VALUES ($1, $2, 'space_type', $3, $4, $5, 'active', 1, $6, $6)
-             ON CONFLICT (id) DO NOTHING",
+             ON CONFLICT (id) DO UPDATE SET
+                lifecycle_status = 'active',
+                version = dr_drive_business_storage_binding.version + 1,
+                updated_by = excluded.updated_by,
+                updated_at = CURRENT_TIMESTAMP
+             WHERE dr_drive_business_storage_binding.lifecycle_status <> 'active'",
         )
         .bind(&binding_id)
         .bind(tenant_id)
@@ -1176,7 +1193,12 @@ pub(crate) async fn ensure_default_logical_plane(
             id, tenant_id, scope_type, scope_id, logical_bucket_id, write_prefix,
             lifecycle_status, version, created_by, updated_by
          ) VALUES ($1, $2, 'tenant', $2, $3, 'tenant', 'active', 1, $4, $4)
-         ON CONFLICT (id) DO NOTHING",
+         ON CONFLICT (id) DO UPDATE SET
+            lifecycle_status = 'active',
+            version = dr_drive_business_storage_binding.version + 1,
+            updated_by = excluded.updated_by,
+            updated_at = CURRENT_TIMESTAMP
+         WHERE dr_drive_business_storage_binding.lifecycle_status <> 'active'",
     )
     .bind(&tenant_binding_id)
     .bind(tenant_id)
