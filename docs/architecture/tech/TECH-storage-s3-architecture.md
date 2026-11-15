@@ -60,6 +60,11 @@ The production implementation uses the official Rust AWS S3 SDK through `aws-sdk
      readiness probe writes, heads, range-reads, presigns, multipart-creates and
      deletes a tiny probe object, so `ready: true` means the operations every
      storage workflow depends on actually work with the configured account.
+   - `initialize` accepts `adoptAsDefault`. When true and the probe passes, the
+     active logical bucket bindings and the legacy tenant fallback are
+     re-pointed to this provider in one transaction; existing objects keep their
+     own provider/bucket locators and only new writes move. A failed probe never
+     changes routing, so a bad account cannot take over production.
 
 4.2 Admin safety constraints.
    - Every route under `/backend/v3/api/drive/storage` requires
