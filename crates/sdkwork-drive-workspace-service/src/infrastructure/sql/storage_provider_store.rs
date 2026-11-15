@@ -257,6 +257,10 @@ impl DriveStorageProviderStore for SqlStorageProviderStore {
                  SELECT 1
                  FROM dr_drive_storage_provider_binding
                  WHERE provider_id=$1 AND lifecycle_status='active'
+                 UNION ALL
+                 SELECT 1
+                 FROM dr_drive_logical_bucket_provider_binding
+                 WHERE provider_id=$1 AND lifecycle_status='active'
              )",
         )
         .bind(provider_id)

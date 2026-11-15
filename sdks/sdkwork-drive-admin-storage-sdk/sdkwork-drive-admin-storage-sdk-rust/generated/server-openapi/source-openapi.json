@@ -51,7 +51,8 @@
                 "im",
                 "rtc",
                 "notary",
-                "website"
+                "website",
+                "documents"
               ]
             }
           }
@@ -320,7 +321,8 @@
                 "im",
                 "rtc",
                 "notary",
-                "website"
+                "website",
+                "documents"
               ]
             }
           }
@@ -5358,6 +5360,537 @@
         "x-sdkwork-api-surface": "backend-api",
         "x-sdkwork-permission": "drive.storage.admin"
       }
+    },
+    "/backend/v3/api/drive/storage/logical-buckets": {
+      "get": {
+        "tags": [
+          "storageAdmin"
+        ],
+        "summary": "List tenant logical storage buckets",
+        "operationId": "storageLogicalBuckets.list",
+        "description": "Logical buckets are the business-facing storage layer. Each one resolves to a provider configuration; business scopes bind to them instead of naming a provider directly.",
+        "parameters": [
+          {
+            "name": "page_size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 20
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Tenant logical storage buckets.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SdkWorkApiResponse"
+                    },
+                    {
+                      "type": "object",
+                      "required": [
+                        "data"
+                      ],
+                      "properties": {
+                        "data": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "required": [
+                            "items",
+                            "pageInfo"
+                          ],
+                          "properties": {
+                            "items": {
+                              "type": "array",
+                              "items": {
+                                "$ref": "#/components/schemas/StorageLogicalBucket"
+                              }
+                            },
+                            "pageInfo": {
+                              "$ref": "#/components/schemas/PageInfo"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "AuthToken": [],
+            "AccessToken": []
+          }
+        ],
+        "x-sdkwork-owner": "sdkwork-drive",
+        "x-sdkwork-api-authority": "sdkwork-drive.admin.storage",
+        "x-sdkwork-request-context": "WebRequestContext",
+        "x-sdkwork-api-surface": "backend-api",
+        "x-sdkwork-permission": "drive.storage.admin"
+      }
+    },
+    "/backend/v3/api/drive/storage/logical-buckets/{logicalBucketId}": {
+      "put": {
+        "tags": [
+          "storageAdmin"
+        ],
+        "summary": "Update a logical storage bucket",
+        "operationId": "storageLogicalBuckets.update",
+        "description": "Update the display name, object prefix, lifecycle state, or provider configuration of a logical bucket. Changing `providerId` re-points every business bound to the bucket in one write.",
+        "parameters": [
+          {
+            "name": "logicalBucketId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 192
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateStorageLogicalBucketRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated logical storage bucket.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SdkWorkApiResponse"
+                    },
+                    {
+                      "type": "object",
+                      "required": [
+                        "data"
+                      ],
+                      "properties": {
+                        "data": {
+                          "type": "object",
+                          "required": [
+                            "item"
+                          ],
+                          "properties": {
+                            "item": {
+                              "$ref": "#/components/schemas/StorageLogicalBucket"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "AuthToken": [],
+            "AccessToken": []
+          }
+        ],
+        "x-sdkwork-owner": "sdkwork-drive",
+        "x-sdkwork-api-authority": "sdkwork-drive.admin.storage",
+        "x-sdkwork-request-context": "WebRequestContext",
+        "x-sdkwork-api-surface": "backend-api",
+        "x-sdkwork-permission": "drive.storage.admin"
+      }
+    },
+    "/backend/v3/api/drive/storage/business-bindings": {
+      "get": {
+        "tags": [
+          "storageAdmin"
+        ],
+        "summary": "List business storage bindings",
+        "operationId": "storageBusinessBindings.list",
+        "description": "Business scopes (tenant, space type, logical scope) bound to a logical bucket, including the provider currently resolved through that bucket.",
+        "parameters": [
+          {
+            "name": "scope_type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "tenant",
+                "space_type",
+                "logical_scope"
+              ]
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 20
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Business storage bindings.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SdkWorkApiResponse"
+                    },
+                    {
+                      "type": "object",
+                      "required": [
+                        "data"
+                      ],
+                      "properties": {
+                        "data": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "required": [
+                            "items",
+                            "pageInfo"
+                          ],
+                          "properties": {
+                            "items": {
+                              "type": "array",
+                              "items": {
+                                "$ref": "#/components/schemas/BusinessStorageBinding"
+                              }
+                            },
+                            "pageInfo": {
+                              "$ref": "#/components/schemas/PageInfo"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "AuthToken": [],
+            "AccessToken": []
+          }
+        ],
+        "x-sdkwork-owner": "sdkwork-drive",
+        "x-sdkwork-api-authority": "sdkwork-drive.admin.storage",
+        "x-sdkwork-request-context": "WebRequestContext",
+        "x-sdkwork-api-surface": "backend-api",
+        "x-sdkwork-permission": "drive.storage.admin"
+      }
+    },
+    "/backend/v3/api/drive/storage/business-bindings/{scopeType}/{scopeId}": {
+      "put": {
+        "tags": [
+          "storageAdmin"
+        ],
+        "summary": "Assign a business scope to a logical storage bucket",
+        "operationId": "storageBusinessBindings.update",
+        "description": "Bind a tenant, space type, or logical scope to a logical bucket. The provider is resolved through the bucket, so this operation never names a provider.",
+        "parameters": [
+          {
+            "name": "scopeType",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "tenant",
+                "space_type",
+                "logical_scope"
+              ]
+            }
+          },
+          {
+            "name": "scopeId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateBusinessStorageBindingRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated business storage binding.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SdkWorkApiResponse"
+                    },
+                    {
+                      "type": "object",
+                      "required": [
+                        "data"
+                      ],
+                      "properties": {
+                        "data": {
+                          "type": "object",
+                          "required": [
+                            "item"
+                          ],
+                          "properties": {
+                            "item": {
+                              "$ref": "#/components/schemas/BusinessStorageBinding"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "AuthToken": [],
+            "AccessToken": []
+          }
+        ],
+        "x-sdkwork-owner": "sdkwork-drive",
+        "x-sdkwork-api-authority": "sdkwork-drive.admin.storage",
+        "x-sdkwork-request-context": "WebRequestContext",
+        "x-sdkwork-api-surface": "backend-api",
+        "x-sdkwork-permission": "drive.storage.admin"
+      },
+      "delete": {
+        "tags": [
+          "storageAdmin"
+        ],
+        "summary": "Clear a business storage binding",
+        "operationId": "storageBusinessBindings.delete",
+        "description": "Clear a business scope assignment. Writes fall through to the next logical binding rule.",
+        "parameters": [
+          {
+            "name": "scopeType",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "tenant",
+                "space_type",
+                "logical_scope"
+              ]
+            }
+          },
+          {
+            "name": "scopeId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Binding cleared."
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "AuthToken": [],
+            "AccessToken": []
+          }
+        ],
+        "x-sdkwork-owner": "sdkwork-drive",
+        "x-sdkwork-api-authority": "sdkwork-drive.admin.storage",
+        "x-sdkwork-request-context": "WebRequestContext",
+        "x-sdkwork-api-surface": "backend-api",
+        "x-sdkwork-permission": "drive.storage.admin"
+      }
     }
   },
   "components": {
@@ -5498,7 +6031,8 @@
               "im",
               "rtc",
               "notary",
-              "website"
+              "website",
+              "documents"
             ]
           },
           "providerId": {
@@ -7461,6 +7995,188 @@
           "completed": {
             "type": "boolean",
             "description": "True once the run reached `succeeded` on this call."
+          }
+        }
+      },
+      "StorageLogicalBucket": {
+        "type": "object",
+        "required": [
+          "id",
+          "tenantId",
+          "bucketKey",
+          "displayName",
+          "objectPrefix",
+          "lifecycleStatus",
+          "version"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "tenantId": {
+            "type": "string"
+          },
+          "bucketKey": {
+            "type": "string"
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "objectPrefix": {
+            "type": "string"
+          },
+          "lifecycleStatus": {
+            "type": "string",
+            "enum": [
+              "active",
+              "archived",
+              "deleted"
+            ]
+          },
+          "version": {
+            "type": "string",
+            "format": "int64",
+            "pattern": "^-?[0-9]+$",
+            "x-sdkwork-int64-string": true
+          },
+          "providerId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "providerBindingId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "storageRootPrefix": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "UpdateStorageLogicalBucketRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "displayName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "objectPrefix": {
+            "type": "string",
+            "maxLength": 512
+          },
+          "lifecycleStatus": {
+            "type": "string",
+            "enum": [
+              "active",
+              "archived"
+            ]
+          },
+          "providerId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "storageRootPrefix": {
+            "type": "string",
+            "maxLength": 512
+          }
+        }
+      },
+      "BusinessStorageBinding": {
+        "type": "object",
+        "required": [
+          "id",
+          "tenantId",
+          "scopeType",
+          "scopeId",
+          "logicalBucketId",
+          "logicalBucketKey",
+          "logicalBucketName",
+          "writePrefix",
+          "lifecycleStatus",
+          "version"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "tenantId": {
+            "type": "string"
+          },
+          "scopeType": {
+            "type": "string",
+            "enum": [
+              "tenant",
+              "space_type",
+              "logical_scope"
+            ]
+          },
+          "scopeId": {
+            "type": "string"
+          },
+          "logicalBucketId": {
+            "type": "string"
+          },
+          "logicalBucketKey": {
+            "type": "string"
+          },
+          "logicalBucketName": {
+            "type": "string"
+          },
+          "writePrefix": {
+            "type": "string"
+          },
+          "lifecycleStatus": {
+            "type": "string",
+            "enum": [
+              "active",
+              "disabled",
+              "deleted"
+            ]
+          },
+          "version": {
+            "type": "string",
+            "format": "int64",
+            "pattern": "^-?[0-9]+$",
+            "x-sdkwork-int64-string": true
+          },
+          "providerId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "storageRootPrefix": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "UpdateBusinessStorageBindingRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "logicalBucketId"
+        ],
+        "properties": {
+          "logicalBucketId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 192
+          },
+          "writePrefix": {
+            "type": "string",
+            "maxLength": 512
           }
         }
       },

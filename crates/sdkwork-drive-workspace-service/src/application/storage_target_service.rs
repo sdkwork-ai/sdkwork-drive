@@ -171,6 +171,14 @@ pub async fn resolve_default_provider_target(
         });
     }
 
+    // Logical routing: business scope -> logical bucket -> provider binding.
+    // This precedes the legacy space_type/tenant provider bindings so a seeded
+    // logical plane (all businesses routed, one provider account) wins without
+    // touching existing installations that still use the legacy rows.
+    if let Some(target) = resolve_logical_bucket_target(pool, tenant_id, space_id).await? {
+        return Ok(target);
+    }
+
     let row = sqlx::query(
         "SELECT provider.id AS provider_id, provider.bucket, binding.storage_root_prefix
          FROM dr_drive_storage_provider_binding binding
@@ -231,6 +239,125 @@ pub async fn resolve_default_provider_target(
     Err(DriveServiceError::Validation(
         "bucket is required when no default storage provider binding exists".to_string(),
     ))
+}
+
+/// Resolve a provider through the logical storage plane:
+/// business scope -> logical bucket -> provider binding -> provider.
+///
+/// Returns `None` when the tenant has no logical binding for the space type and
+/// no tenant-scoped fallback, so the caller falls back to the legacy provider
+/// binding rows that predate the logical plane.
+async fn resolve_logical_bucket_target(
+    pool: &PgPool,
+    tenant_id: &str,
+    space_id: &str,
+) -> Result<Option<DefaultStorageProviderTarget>, DriveServiceError> {
+    let space_type: Option<String> = sqlx::query_scalar(
+        "SELECT space_type
+         FROM dr_drive_space
+         WHERE tenant_id = $1 AND id = $2 AND lifecycle_status = 'active'",
+    )
+    .bind(tenant_id)
+    .bind(space_id)
+    .fetch_optional(pool)
+    .await
+    .map_err(|error| {
+        DriveServiceError::Internal(format!(
+            "resolve logical storage space type failed: {error}"
+        ))
+    })?;
+    let Some(space_type) = space_type else {
+        return Ok(None);
+    };
+
+    if let Some(target) =
+        lookup_business_storage_target(pool, tenant_id, "space_type", &space_type).await?
+    {
+        return Ok(Some(target));
+    }
+    lookup_business_storage_target(pool, tenant_id, "tenant", tenant_id).await
+}
+
+async fn lookup_business_storage_target(
+    pool: &PgPool,
+    tenant_id: &str,
+    scope_type: &str,
+    scope_id: &str,
+) -> Result<Option<DefaultStorageProviderTarget>, DriveServiceError> {
+    let row = sqlx::query(
+        "SELECT provider.id AS provider_id,
+                provider.bucket,
+                provider_binding.storage_root_prefix AS provider_root,
+                bucket.object_prefix,
+                business.write_prefix
+         FROM dr_drive_business_storage_binding business
+         INNER JOIN dr_drive_logical_bucket bucket
+           ON bucket.id = business.logical_bucket_id
+          AND bucket.tenant_id = business.tenant_id
+          AND bucket.lifecycle_status = 'active'
+         INNER JOIN dr_drive_logical_bucket_provider_binding provider_binding
+           ON provider_binding.logical_bucket_id = bucket.id
+          AND provider_binding.tenant_id = bucket.tenant_id
+          AND provider_binding.lifecycle_status = 'active'
+         INNER JOIN dr_drive_storage_provider provider
+           ON provider.id = provider_binding.provider_id
+          AND provider.status = 'active'
+         WHERE business.tenant_id = $1
+           AND business.scope_type = $2
+           AND business.scope_id = $3
+           AND business.lifecycle_status = 'active'
+         ORDER BY business.updated_at DESC
+         LIMIT 1",
+    )
+    .bind(tenant_id)
+    .bind(scope_type)
+    .bind(scope_id)
+    .fetch_optional(pool)
+    .await
+    .map_err(|error| {
+        DriveServiceError::Internal(format!(
+            "resolve logical business storage binding failed: {error}"
+        ))
+    })?;
+    let Some(row) = row else {
+        return Ok(None);
+    };
+
+    let provider_root: String = row.get("provider_root");
+    let object_prefix: String = row.get("object_prefix");
+    let write_prefix: String = row.get("write_prefix");
+    let storage_root_prefix = compose_storage_root_prefix(&[
+        provider_root.as_str(),
+        object_prefix.as_str(),
+        write_prefix.as_str(),
+    ])?;
+
+    Ok(Some(DefaultStorageProviderTarget {
+        provider_id: row.get("provider_id"),
+        bucket: row.get("bucket"),
+        storage_root_prefix,
+    }))
+}
+
+fn compose_storage_root_prefix(parts: &[&str]) -> Result<String, DriveServiceError> {
+    let mut prefix = String::new();
+    for part in parts
+        .iter()
+        .map(|part| part.trim())
+        .filter(|part| !part.is_empty())
+    {
+        prefix = if prefix.is_empty() {
+            part.to_string()
+        } else {
+            join_storage_root_prefix(&prefix, part)?
+        };
+    }
+    if prefix.is_empty() {
+        return Err(DriveServiceError::Validation(
+            "logical storage target resolved an empty root prefix".to_string(),
+        ));
+    }
+    Ok(prefix)
 }
 
 /// Resolve a provider the caller named explicitly on the write path.
@@ -300,7 +427,7 @@ pub fn ambiguous_provider_error(
 
 #[cfg(test)]
 mod tests {
-    use super::missing_active_provider_error;
+    use super::{compose_storage_root_prefix, missing_active_provider_error};
 
     #[test]
     fn missing_provider_error_names_the_bucket() {
@@ -309,5 +436,35 @@ mod tests {
             error.message(),
             "active storage provider is required for bucket media-bucket to sign object store URLs"
         );
+    }
+
+    #[test]
+    fn logical_root_prefix_joins_provider_bucket_and_business_prefixes() {
+        let prefix = compose_storage_root_prefix(&[
+            "sdkwork-drive/v1/tenants/100001",
+            "logical/business",
+            "space-types/personal",
+        ])
+        .expect("three non-empty segments should compose");
+        assert_eq!(
+            prefix,
+            "sdkwork-drive/v1/tenants/100001/logical/business/space-types/personal"
+        );
+    }
+
+    #[test]
+    fn logical_root_prefix_skips_empty_segments_and_rejects_an_empty_chain() {
+        let prefix = compose_storage_root_prefix(&[
+            "sdkwork-drive/v1/tenants/100001",
+            "",
+            "  ",
+            "space-types/team",
+        ])
+        .expect("empty segments should be skipped");
+        assert_eq!(prefix, "sdkwork-drive/v1/tenants/100001/space-types/team");
+
+        for parts in [&[][..], &["", "  "][..]] {
+            assert!(compose_storage_root_prefix(parts).is_err());
+        }
     }
 }

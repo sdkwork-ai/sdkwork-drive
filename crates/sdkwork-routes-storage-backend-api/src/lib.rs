@@ -11,6 +11,7 @@ mod error;
 mod handlers;
 pub mod http_route_manifest;
 mod locale;
+mod logical_bucket_handlers;
 mod migration_copier;
 mod migration_handlers;
 mod object_handlers;

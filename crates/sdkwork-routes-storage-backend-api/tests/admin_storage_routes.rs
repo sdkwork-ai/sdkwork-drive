@@ -3891,3 +3891,261 @@ async fn admin_storage_provider_account_list_reports_a_real_continuation() {
         "the console's vendor-scoped page must carry the newest account: {console_page}"
     );
 }
+
+#[tokio::test]
+async fn admin_storage_logical_plane_binds_business_through_logical_bucket_and_resolves() {
+    let Some((pool, _database_guard)) = sdkwork_drive_test_support::postgres_test_database().await
+    else {
+        return;
+    };
+    let tenant_id = "tenant-logical";
+
+    sqlx::query(
+        "INSERT INTO dr_drive_storage_provider (
+            id, tenant_id, provider_kind, name, endpoint_url, region, bucket, path_style,
+            credential_ref, status, version, created_by, updated_by
+        ) VALUES ('provider-logical', $1, 's3_compatible', 'Logical S3',
+            'https://s3.us-east-1.amazonaws.com', 'us-east-1', 'logical-bucket', false,
+            'plain:access-key:secret-key', 'active', 1, 'admin-storage', 'admin-storage')",
+    )
+    .bind(tenant_id)
+    .execute(&pool)
+    .await
+    .expect("logical provider should be seeded");
+
+    sqlx::query(
+        "INSERT INTO dr_drive_space (
+            id, tenant_id, owner_subject_type, owner_subject_id, display_name,
+            space_type, lifecycle_status, version, created_by, updated_by
+        ) VALUES ('space-logical', $1, 'user', 'user-logical', 'Logical Space',
+            'personal', 'active', 1, 'admin-storage', 'admin-storage')",
+    )
+    .bind(tenant_id)
+    .execute(&pool)
+    .await
+    .expect("logical space should be seeded");
+
+    sqlx::query(
+        "INSERT INTO dr_drive_logical_bucket (
+            id, tenant_id, bucket_key, display_name, object_prefix,
+            lifecycle_status, version, created_by, updated_by
+        ) VALUES ('bucket-logical', $1, 'business', 'Business Content', 'logical/business',
+            'active', 1, 'admin-storage', 'admin-storage')",
+    )
+    .bind(tenant_id)
+    .execute(&pool)
+    .await
+    .expect("logical bucket should be seeded");
+
+    sqlx::query(
+        "INSERT INTO dr_drive_logical_bucket_provider_binding (
+            id, tenant_id, logical_bucket_id, provider_id, storage_root_prefix,
+            lifecycle_status, version, created_by, updated_by
+        ) VALUES ('provider-binding-logical', $1, 'bucket-logical', 'provider-logical',
+            'sdkwork-drive/v1/tenants/tenant-logical', 'active', 1,
+            'admin-storage', 'admin-storage')",
+    )
+    .bind(tenant_id)
+    .execute(&pool)
+    .await
+    .expect("logical provider binding should be seeded");
+
+    sqlx::query(
+        "INSERT INTO dr_drive_business_storage_binding (
+            id, tenant_id, scope_type, scope_id, logical_bucket_id, write_prefix,
+            lifecycle_status, version, created_by, updated_by
+        ) VALUES ('business-logical', $1, 'space_type', 'personal', 'bucket-logical',
+            'space-types/personal', 'active', 1, 'admin-storage', 'admin-storage')",
+    )
+    .bind(tenant_id)
+    .execute(&pool)
+    .await
+    .expect("business binding should be seeded");
+
+    let app = build_router_with_pool_without_iam_and_test_tenant(pool.clone(), tenant_id);
+    let response = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method(Method::GET)
+                .uri("/backend/v3/api/drive/storage/logical-buckets")
+                .body(Body::empty())
+                .expect("logical bucket list request should be built"),
+        )
+        .await
+        .expect("logical bucket list request should be handled");
+    assert_eq!(response.status(), StatusCode::OK);
+    let payload: serde_json::Value = serde_json::from_slice(
+        &to_bytes(response.into_body(), usize::MAX)
+            .await
+            .expect("logical bucket list body should be read"),
+    )
+    .expect("logical bucket list should be json");
+    assert_eq!(payload["data"]["items"][0]["id"], "bucket-logical");
+    assert_eq!(
+        payload["data"]["items"][0]["providerId"],
+        "provider-logical"
+    );
+    assert_eq!(
+        payload["data"]["items"][0]["version"].as_str(),
+        Some("1"),
+        "int64 wire fields must be strings"
+    );
+
+    let response = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method(Method::PUT)
+                .uri("/backend/v3/api/drive/storage/logical-buckets/bucket-logical")
+                .header("content-type", "application/json")
+                .body(Body::from(r#"{"displayName":"Business Content 2"}"#))
+                .expect("logical bucket update request should be built"),
+        )
+        .await
+        .expect("logical bucket update request should be handled");
+    assert_eq!(response.status(), StatusCode::OK);
+    let payload: serde_json::Value = serde_json::from_slice(
+        &to_bytes(response.into_body(), usize::MAX)
+            .await
+            .expect("logical bucket update body should be read"),
+    )
+    .expect("logical bucket update should be json");
+    assert_eq!(payload["data"]["item"]["displayName"], "Business Content 2");
+
+    let response = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method(Method::PUT)
+                .uri("/backend/v3/api/drive/storage/business-bindings/space_type/team")
+                .header("content-type", "application/json")
+                .body(Body::from(
+                    r#"{"logicalBucketId":"bucket-logical","writePrefix":"space-types/team"}"#,
+                ))
+                .expect("business binding update request should be built"),
+        )
+        .await
+        .expect("business binding update request should be handled");
+    assert_eq!(response.status(), StatusCode::OK);
+    let payload: serde_json::Value = serde_json::from_slice(
+        &to_bytes(response.into_body(), usize::MAX)
+            .await
+            .expect("business binding update body should be read"),
+    )
+    .expect("business binding update should be json");
+    assert_eq!(payload["data"]["item"]["scopeId"], "team");
+    assert_eq!(payload["data"]["item"]["logicalBucketKey"], "business");
+
+    let target =
+        sdkwork_drive_workspace_service::application::storage_target_service::resolve_default_provider_target(
+            &pool,
+            tenant_id,
+            "space-logical",
+        )
+        .await
+        .expect("logical business binding should resolve a storage target");
+    assert_eq!(target.provider_id, "provider-logical");
+    assert_eq!(target.bucket, "logical-bucket");
+    assert_eq!(
+        target.storage_root_prefix,
+        "sdkwork-drive/v1/tenants/tenant-logical/logical/business/space-types/personal"
+    );
+
+    let response = app
+        .oneshot(
+            Request::builder()
+                .method(Method::DELETE)
+                .uri("/backend/v3/api/drive/storage/business-bindings/space_type/team")
+                .body(Body::empty())
+                .expect("business binding delete request should be built"),
+        )
+        .await
+        .expect("business binding delete request should be handled");
+    assert_eq!(response.status(), StatusCode::NO_CONTENT);
+}
+
+#[tokio::test]
+async fn seed_logical_storage_buckets_routes_every_space_type_and_stays_idempotent() {
+    let Some((pool, _database_guard)) = sdkwork_drive_test_support::postgres_test_database().await
+    else {
+        return;
+    };
+
+    let provider_seed = include_str!("../../../database/seeds/common/002_storage_provider_catalog.sql");
+    let logical_seed = include_str!("../../../database/seeds/common/003_logical_storage_buckets.sql");
+
+    for _ in 0..2 {
+        sqlx::raw_sql(provider_seed)
+            .execute(&pool)
+            .await
+            .expect("storage provider catalog seed should apply");
+        sqlx::raw_sql(logical_seed)
+            .execute(&pool)
+            .await
+            .expect("logical storage bucket seed should apply");
+    }
+
+    let buckets: i64 = sqlx::query_scalar(
+        "SELECT COUNT(*) FROM dr_drive_logical_bucket
+         WHERE tenant_id = '100001' AND lifecycle_status = 'active'",
+    )
+    .fetch_one(&pool)
+    .await
+    .expect("logical bucket count should be readable");
+    assert_eq!(buckets, 4);
+
+    let business_bindings: i64 = sqlx::query_scalar(
+        "SELECT COUNT(*) FROM dr_drive_business_storage_binding
+         WHERE tenant_id = '100001' AND lifecycle_status = 'active'",
+    )
+    .fetch_one(&pool)
+    .await
+    .expect("business binding count should be readable");
+    assert_eq!(business_bindings, 12);
+
+    let unbound_space_types: i64 = sqlx::query_scalar(
+        "SELECT COUNT(*)
+         FROM (VALUES
+             ('personal'), ('team'), ('knowledge_base'), ('ai_generated'),
+             ('git_repository'), ('deployment'), ('app_upload'), ('im'),
+             ('rtc'), ('notary'), ('website')
+         ) AS expected(space_type)
+         WHERE NOT EXISTS (
+             SELECT 1 FROM dr_drive_business_storage_binding binding
+             WHERE binding.tenant_id = '100001'
+               AND binding.scope_type = 'space_type'
+               AND binding.scope_id = expected.space_type
+               AND binding.lifecycle_status = 'active'
+         )",
+    )
+    .fetch_one(&pool)
+    .await
+    .expect("space-type coverage should be readable");
+    assert_eq!(
+        unbound_space_types, 0,
+        "every space type must be routed by the seed"
+    );
+
+    let unresolved: i64 = sqlx::query_scalar(
+        "SELECT COUNT(*)
+         FROM dr_drive_business_storage_binding binding
+         INNER JOIN dr_drive_logical_bucket bucket
+           ON bucket.id = binding.logical_bucket_id
+          AND bucket.tenant_id = binding.tenant_id
+          AND bucket.lifecycle_status = 'active'
+         INNER JOIN dr_drive_logical_bucket_provider_binding provider_binding
+           ON provider_binding.logical_bucket_id = bucket.id
+          AND provider_binding.tenant_id = bucket.tenant_id
+          AND provider_binding.lifecycle_status = 'active'
+         WHERE binding.tenant_id = '100001'
+           AND binding.lifecycle_status = 'active'",
+    )
+    .fetch_one(&pool)
+    .await
+    .expect("logical resolution count should be readable");
+    assert_eq!(
+        unresolved, 12,
+        "every seeded business binding must resolve to a logical bucket provider"
+    );
+}

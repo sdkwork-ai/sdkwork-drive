@@ -3,7 +3,7 @@ use std::sync::Arc;
 use crate::api::paths::custom_path;
 use crate::api::paths::append_query_string;
 use crate::http::{SdkworkError, SdkworkHttpClient};
-use crate::models::{AbortProviderObjectMultipartUploadRequest, CompleteProviderObjectMultipartUploadRequest, CopyProviderObjectRequest, CreateProviderObjectMultipartUploadRequest, CreateStorageMigrationRequest, CreateStorageProviderAccountRequest, CreateStorageProviderRequest, PresignProviderObjectUploadPartsRequest, RotateStorageProviderCredentialRequest, RunStorageMigrationRequest, SetDefaultStorageProviderBindingRequest, SetStorageProviderKindEnabledRequest, StorageMigrationsCancelResponse, StorageMigrationsCreateResponse, StorageMigrationsItemsListResponse, StorageMigrationsListResponse, StorageMigrationsRetrieveResponse, StorageMigrationsRunResponse, StorageOverviewRetrieveResponse, StorageProviderAccountDefaultsCreateResponse201, StorageProviderAccountsCreateResponse201, StorageProviderAccountsListResponse, StorageProviderBindingsDefaultRetrieveResponse, StorageProviderBindingsDefaultUpdateResponse, StorageProviderBindingsListResponse, StorageProviderKindsCreateResponse201, StorageProviderKindsListResponse, StorageProviderKindsUpdateResponse, StorageProvidersActivateResponse, StorageProvidersBucketRetrieveResponse, StorageProvidersBucketUpdateResponse, StorageProvidersBucketsListResponse, StorageProvidersCapabilitiesListResponse, StorageProvidersCreateResponse201, StorageProvidersCredentialsRotateResponse, StorageProvidersDeactivateResponse, StorageProvidersListResponse, StorageProvidersObjectsContentRetrieveResponse, StorageProvidersObjectsContentUpdateResponse, StorageProvidersObjectsCopyResponse, StorageProvidersObjectsListResponse, StorageProvidersObjectsMultipartUploadAbortResponse, StorageProvidersObjectsMultipartUploadCompleteResponse, StorageProvidersObjectsMultipartUploadCreateResponse, StorageProvidersObjectsMultipartUploadPartsPresignResponse, StorageProvidersObjectsRetrieveResponse, StorageProvidersRetrieveResponse, StorageProvidersTestResponse, StorageProvidersUpdateResponse, UpdateProviderObjectContent, UpdateStorageProviderRequest};
+use crate::models::{AbortProviderObjectMultipartUploadRequest, CompleteProviderObjectMultipartUploadRequest, CopyProviderObjectRequest, CreateProviderObjectMultipartUploadRequest, CreateStorageMigrationRequest, CreateStorageProviderAccountRequest, CreateStorageProviderRequest, PresignProviderObjectUploadPartsRequest, RotateStorageProviderCredentialRequest, RunStorageMigrationRequest, SetDefaultStorageProviderBindingRequest, SetStorageProviderKindEnabledRequest, StorageBusinessBindingsListResponse, StorageBusinessBindingsUpdateResponse, StorageLogicalBucketsListResponse, StorageLogicalBucketsUpdateResponse, StorageMigrationsCancelResponse, StorageMigrationsCreateResponse, StorageMigrationsItemsListResponse, StorageMigrationsListResponse, StorageMigrationsRetrieveResponse, StorageMigrationsRunResponse, StorageOverviewRetrieveResponse, StorageProviderAccountDefaultsCreateResponse201, StorageProviderAccountsCreateResponse201, StorageProviderAccountsListResponse, StorageProviderBindingsDefaultRetrieveResponse, StorageProviderBindingsDefaultUpdateResponse, StorageProviderBindingsListResponse, StorageProviderKindsCreateResponse201, StorageProviderKindsListResponse, StorageProviderKindsUpdateResponse, StorageProvidersActivateResponse, StorageProvidersBucketRetrieveResponse, StorageProvidersBucketUpdateResponse, StorageProvidersBucketsListResponse, StorageProvidersCapabilitiesListResponse, StorageProvidersCreateResponse201, StorageProvidersCredentialsRotateResponse, StorageProvidersDeactivateResponse, StorageProvidersListResponse, StorageProvidersObjectsContentRetrieveResponse, StorageProvidersObjectsContentUpdateResponse, StorageProvidersObjectsCopyResponse, StorageProvidersObjectsListResponse, StorageProvidersObjectsMultipartUploadAbortResponse, StorageProvidersObjectsMultipartUploadCompleteResponse, StorageProvidersObjectsMultipartUploadCreateResponse, StorageProvidersObjectsMultipartUploadPartsPresignResponse, StorageProvidersObjectsRetrieveResponse, StorageProvidersRetrieveResponse, StorageProvidersTestResponse, StorageProvidersUpdateResponse, UpdateBusinessStorageBindingRequest, UpdateProviderObjectContent, UpdateStorageLogicalBucketRequest, UpdateStorageProviderRequest};
 
 #[derive(Clone)]
 pub struct DriveApi {
@@ -312,6 +312,45 @@ impl DriveApi {
     pub async fn storage_migrations_cancel(&self, migration_id: &str) -> Result<StorageMigrationsCancelResponse, SdkworkError> {
         let path = custom_path(&format!("/drive/storage/migrations/{}/cancel", serialize_path_parameter(migration_id, PathParameterSpec::new("migrationId", "simple", false))));
         self.client.post(&path, Option::<&serde_json::Value>::None, None, None, None).await
+    }
+
+    /// List tenant logical storage buckets
+    pub async fn storage_logical_buckets_list(&self, page_size: Option<i64>, cursor: Option<&str>) -> Result<StorageLogicalBucketsListResponse, SdkworkError> {
+        let query = build_query_string(&[
+            QueryParameterSpec::new("page_size", page_size, "form", true, false, None),
+            QueryParameterSpec::new("cursor", cursor, "form", true, false, None),
+        ]);
+        let path = append_query_string(custom_path(&"/drive/storage/logical-buckets".to_string()), &query);
+        self.client.get(&path, None, None).await
+    }
+
+    /// Update a logical storage bucket
+    pub async fn storage_logical_buckets_update(&self, logical_bucket_id: &str, body: &UpdateStorageLogicalBucketRequest) -> Result<StorageLogicalBucketsUpdateResponse, SdkworkError> {
+        let path = custom_path(&format!("/drive/storage/logical-buckets/{}", serialize_path_parameter(logical_bucket_id, PathParameterSpec::new("logicalBucketId", "simple", false))));
+        self.client.put(&path, Some(body), None, None, Some("application/json")).await
+    }
+
+    /// List business storage bindings
+    pub async fn storage_business_bindings_list(&self, scope_type: Option<&str>, page_size: Option<i64>, cursor: Option<&str>) -> Result<StorageBusinessBindingsListResponse, SdkworkError> {
+        let query = build_query_string(&[
+            QueryParameterSpec::new("scope_type", scope_type, "form", true, false, None),
+            QueryParameterSpec::new("page_size", page_size, "form", true, false, None),
+            QueryParameterSpec::new("cursor", cursor, "form", true, false, None),
+        ]);
+        let path = append_query_string(custom_path(&"/drive/storage/business-bindings".to_string()), &query);
+        self.client.get(&path, None, None).await
+    }
+
+    /// Assign a business scope to a logical storage bucket
+    pub async fn storage_business_bindings_update(&self, scope_type: &str, scope_id: &str, body: &UpdateBusinessStorageBindingRequest) -> Result<StorageBusinessBindingsUpdateResponse, SdkworkError> {
+        let path = custom_path(&format!("/drive/storage/business-bindings/{}/{}", serialize_path_parameter(scope_type, PathParameterSpec::new("scopeType", "simple", false)), serialize_path_parameter(scope_id, PathParameterSpec::new("scopeId", "simple", false))));
+        self.client.put(&path, Some(body), None, None, Some("application/json")).await
+    }
+
+    /// Clear a business storage binding
+    pub async fn storage_business_bindings_delete(&self, scope_type: &str, scope_id: &str) -> Result<(), SdkworkError> {
+        let path = custom_path(&format!("/drive/storage/business-bindings/{}/{}", serialize_path_parameter(scope_type, PathParameterSpec::new("scopeType", "simple", false)), serialize_path_parameter(scope_id, PathParameterSpec::new("scopeId", "simple", false))));
+        self.client.delete(&path, None, None).await
     }
 
 }

@@ -480,6 +480,65 @@ func (a *DriveApi) StorageMigrationsCancel(migrationId string) (sdktypes.Storage
     return decodeResult[sdktypes.StorageMigrationsCancelResponse](raw)
 }
 
+// List tenant logical storage buckets
+func (a *DriveApi) StorageLogicalBucketsList(pageSize *int, cursor *string) (sdktypes.StorageLogicalBucketsListResponse, error) {
+    query := BuildQueryString([]QueryParameterSpec{
+        {Name: "page_size", Value: func() interface{} { if pageSize == nil { return nil }; return *pageSize }(), Style: "form", Explode: true, AllowReserved: false},
+        {Name: "cursor", Value: func() interface{} { if cursor == nil { return nil }; return *cursor }(), Style: "form", Explode: true, AllowReserved: false},
+    })
+    raw, err := a.client.Get(AppendQueryString(CustomApiPath("/drive/storage/logical-buckets"), query), nil, nil)
+    if err != nil {
+        var zero sdktypes.StorageLogicalBucketsListResponse
+        return zero, err
+    }
+    return decodeResult[sdktypes.StorageLogicalBucketsListResponse](raw)
+}
+
+// Update a logical storage bucket
+func (a *DriveApi) StorageLogicalBucketsUpdate(logicalBucketId string, body sdktypes.UpdateStorageLogicalBucketRequest) (sdktypes.StorageLogicalBucketsUpdateResponse, error) {
+    raw, err := a.client.Put(CustomApiPath(fmt.Sprintf("/drive/storage/logical-buckets/%s", SerializePathParameter(logicalBucketId, PathParameterSpec{Name: "logicalBucketId", Style: "simple", Explode: false}))), body, nil, nil, "application/json")
+    if err != nil {
+        var zero sdktypes.StorageLogicalBucketsUpdateResponse
+        return zero, err
+    }
+    return decodeResult[sdktypes.StorageLogicalBucketsUpdateResponse](raw)
+}
+
+// List business storage bindings
+func (a *DriveApi) StorageBusinessBindingsList(scopeType *string, pageSize *int, cursor *string) (sdktypes.StorageBusinessBindingsListResponse, error) {
+    query := BuildQueryString([]QueryParameterSpec{
+        {Name: "scope_type", Value: func() interface{} { if scopeType == nil { return nil }; return *scopeType }(), Style: "form", Explode: true, AllowReserved: false},
+        {Name: "page_size", Value: func() interface{} { if pageSize == nil { return nil }; return *pageSize }(), Style: "form", Explode: true, AllowReserved: false},
+        {Name: "cursor", Value: func() interface{} { if cursor == nil { return nil }; return *cursor }(), Style: "form", Explode: true, AllowReserved: false},
+    })
+    raw, err := a.client.Get(AppendQueryString(CustomApiPath("/drive/storage/business-bindings"), query), nil, nil)
+    if err != nil {
+        var zero sdktypes.StorageBusinessBindingsListResponse
+        return zero, err
+    }
+    return decodeResult[sdktypes.StorageBusinessBindingsListResponse](raw)
+}
+
+// Assign a business scope to a logical storage bucket
+func (a *DriveApi) StorageBusinessBindingsUpdate(scopeType string, scopeId string, body sdktypes.UpdateBusinessStorageBindingRequest) (sdktypes.StorageBusinessBindingsUpdateResponse, error) {
+    raw, err := a.client.Put(CustomApiPath(fmt.Sprintf("/drive/storage/business-bindings/%s/%s", SerializePathParameter(scopeType, PathParameterSpec{Name: "scopeType", Style: "simple", Explode: false}), SerializePathParameter(scopeId, PathParameterSpec{Name: "scopeId", Style: "simple", Explode: false}))), body, nil, nil, "application/json")
+    if err != nil {
+        var zero sdktypes.StorageBusinessBindingsUpdateResponse
+        return zero, err
+    }
+    return decodeResult[sdktypes.StorageBusinessBindingsUpdateResponse](raw)
+}
+
+// Clear a business storage binding
+func (a *DriveApi) StorageBusinessBindingsDelete(scopeType string, scopeId string) (struct{}, error) {
+    raw, err := a.client.Delete(CustomApiPath(fmt.Sprintf("/drive/storage/business-bindings/%s/%s", SerializePathParameter(scopeType, PathParameterSpec{Name: "scopeType", Style: "simple", Explode: false}), SerializePathParameter(scopeId, PathParameterSpec{Name: "scopeId", Style: "simple", Explode: false}))), nil, nil)
+    if err != nil {
+        var zero struct{}
+        return zero, err
+    }
+    return decodeResult[struct{}](raw)
+}
+
 type PathParameterSpec struct {
     Name    string
     Style   string

@@ -10,6 +10,11 @@ const sdkName = "sdkwork-drive-admin-storage-sdk";
 const apiPrefix = "/backend/v3/api";
 const languages = ["typescript", "rust", "java", "python", "go"];
 const requiredOperations = [
+  "storageBusinessBindings.delete",
+  "storageBusinessBindings.list",
+  "storageBusinessBindings.update",
+  "storageLogicalBuckets.list",
+  "storageLogicalBuckets.update",
   "storageProviderBindings.default.delete",
   "storageProviderBindings.default.retrieve",
   "storageProviderBindings.default.update",

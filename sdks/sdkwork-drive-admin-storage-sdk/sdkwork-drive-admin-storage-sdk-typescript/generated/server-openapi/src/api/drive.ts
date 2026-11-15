@@ -1,8 +1,71 @@
 import { customApiPath } from './paths';
 import type { ApiRequestOptions, HttpClient } from '../http/client';
 
-import type { AbortProviderObjectMultipartUploadRequest, CompleteProviderObjectMultipartUploadRequest, CopyProviderObjectRequest, CreateProviderObjectMultipartUploadRequest, CreateStorageMigrationRequest, CreateStorageProviderAccountRequest, CreateStorageProviderRequest, PresignProviderObjectUploadPartsRequest, RotateStorageProviderCredentialRequest, RunStorageMigrationRequest, SetDefaultStorageProviderBindingRequest, SetStorageProviderKindEnabledRequest, StorageMigrationsCancelResponse, StorageMigrationsCreateResponse, StorageMigrationsItemsListResponse, StorageMigrationsListResponse, StorageMigrationsRetrieveResponse, StorageMigrationsRunResponse, StorageOverviewRetrieveResponse, StorageProviderAccountDefaultsCreateResponse201, StorageProviderAccountsCreateResponse201, StorageProviderAccountsListResponse, StorageProviderBindingsDefaultRetrieveResponse, StorageProviderBindingsDefaultUpdateResponse, StorageProviderBindingsListResponse, StorageProviderKindsCreateResponse201, StorageProviderKindsListResponse, StorageProviderKindsUpdateResponse, StorageProvidersActivateResponse, StorageProvidersBucketRetrieveResponse, StorageProvidersBucketsListResponse, StorageProvidersBucketUpdateResponse, StorageProvidersCapabilitiesListResponse, StorageProvidersCreateResponse201, StorageProvidersCredentialsRotateResponse, StorageProvidersDeactivateResponse, StorageProvidersListResponse, StorageProvidersObjectsContentRetrieveResponse, StorageProvidersObjectsContentUpdateResponse, StorageProvidersObjectsCopyResponse, StorageProvidersObjectsListResponse, StorageProvidersObjectsMultipartUploadAbortResponse, StorageProvidersObjectsMultipartUploadCompleteResponse, StorageProvidersObjectsMultipartUploadCreateResponse, StorageProvidersObjectsMultipartUploadPartsPresignResponse, StorageProvidersObjectsRetrieveResponse, StorageProvidersRetrieveResponse, StorageProvidersTestResponse, StorageProvidersUpdateResponse, UpdateProviderObjectContent, UpdateStorageProviderRequest } from '../types';
+import type { AbortProviderObjectMultipartUploadRequest, CompleteProviderObjectMultipartUploadRequest, CopyProviderObjectRequest, CreateProviderObjectMultipartUploadRequest, CreateStorageMigrationRequest, CreateStorageProviderAccountRequest, CreateStorageProviderRequest, PresignProviderObjectUploadPartsRequest, RotateStorageProviderCredentialRequest, RunStorageMigrationRequest, SetDefaultStorageProviderBindingRequest, SetStorageProviderKindEnabledRequest, StorageBusinessBindingsListResponse, StorageBusinessBindingsUpdateResponse, StorageLogicalBucketsListResponse, StorageLogicalBucketsUpdateResponse, StorageMigrationsCancelResponse, StorageMigrationsCreateResponse, StorageMigrationsItemsListResponse, StorageMigrationsListResponse, StorageMigrationsRetrieveResponse, StorageMigrationsRunResponse, StorageOverviewRetrieveResponse, StorageProviderAccountDefaultsCreateResponse201, StorageProviderAccountsCreateResponse201, StorageProviderAccountsListResponse, StorageProviderBindingsDefaultRetrieveResponse, StorageProviderBindingsDefaultUpdateResponse, StorageProviderBindingsListResponse, StorageProviderKindsCreateResponse201, StorageProviderKindsListResponse, StorageProviderKindsUpdateResponse, StorageProvidersActivateResponse, StorageProvidersBucketRetrieveResponse, StorageProvidersBucketsListResponse, StorageProvidersBucketUpdateResponse, StorageProvidersCapabilitiesListResponse, StorageProvidersCreateResponse201, StorageProvidersCredentialsRotateResponse, StorageProvidersDeactivateResponse, StorageProvidersListResponse, StorageProvidersObjectsContentRetrieveResponse, StorageProvidersObjectsContentUpdateResponse, StorageProvidersObjectsCopyResponse, StorageProvidersObjectsListResponse, StorageProvidersObjectsMultipartUploadAbortResponse, StorageProvidersObjectsMultipartUploadCompleteResponse, StorageProvidersObjectsMultipartUploadCreateResponse, StorageProvidersObjectsMultipartUploadPartsPresignResponse, StorageProvidersObjectsRetrieveResponse, StorageProvidersRetrieveResponse, StorageProvidersTestResponse, StorageProvidersUpdateResponse, UpdateBusinessStorageBindingRequest, UpdateProviderObjectContent, UpdateStorageLogicalBucketRequest, UpdateStorageProviderRequest } from '../types';
 
+
+export interface DriveStorageBusinessBindingsListParams {
+  scopeType?: 'tenant' | 'space_type' | 'logical_scope';
+  pageSize?: number;
+  cursor?: string;
+}
+
+export class DriveStorageBusinessBindingsApi {
+  private client: HttpClient;
+
+  constructor(client: HttpClient) {
+    this.client = client;
+  }
+
+
+/** List business storage bindings */
+  async list(params?: DriveStorageBusinessBindingsListParams, requestOptions?: ApiRequestOptions): Promise<StorageBusinessBindingsListResponse> {
+    const query = buildQueryString([
+      { name: 'scope_type', value: params?.scopeType, style: 'form', explode: true, allowReserved: false },
+      { name: 'page_size', value: params?.pageSize, style: 'form', explode: true, allowReserved: false },
+      { name: 'cursor', value: params?.cursor, style: 'form', explode: true, allowReserved: false },
+    ]);
+    return this.client.request<StorageBusinessBindingsListResponse>(appendQueryString(customApiPath(`/drive/storage/business-bindings`), query), { ...(requestOptions?.signal !== undefined ? { signal: requestOptions.signal } : {}), ...(requestOptions?.timeout !== undefined ? { timeout: requestOptions.timeout } : {}), method: 'GET' as any });
+  }
+
+/** Assign a business scope to a logical storage bucket */
+  async update(scopeType: 'tenant' | 'space_type' | 'logical_scope', scopeId: string, body: UpdateBusinessStorageBindingRequest, requestOptions?: ApiRequestOptions): Promise<StorageBusinessBindingsUpdateResponse> {
+    return this.client.request<StorageBusinessBindingsUpdateResponse>(customApiPath(`/drive/storage/business-bindings/${serializePathParameter(scopeType, { name: 'scopeType', style: 'simple', explode: false })}/${serializePathParameter(scopeId, { name: 'scopeId', style: 'simple', explode: false })}`), { ...(requestOptions?.signal !== undefined ? { signal: requestOptions.signal } : {}), ...(requestOptions?.timeout !== undefined ? { timeout: requestOptions.timeout } : {}), method: 'PUT' as any, body, contentType: 'application/json' });
+  }
+
+/** Clear a business storage binding */
+  async delete(scopeType: 'tenant' | 'space_type' | 'logical_scope', scopeId: string, requestOptions?: ApiRequestOptions): Promise<void> {
+    return this.client.request<void>(customApiPath(`/drive/storage/business-bindings/${serializePathParameter(scopeType, { name: 'scopeType', style: 'simple', explode: false })}/${serializePathParameter(scopeId, { name: 'scopeId', style: 'simple', explode: false })}`), { ...(requestOptions?.signal !== undefined ? { signal: requestOptions.signal } : {}), ...(requestOptions?.timeout !== undefined ? { timeout: requestOptions.timeout } : {}), method: 'DELETE' as any });
+  }
+}
+
+export interface DriveStorageLogicalBucketsListParams {
+  pageSize?: number;
+  cursor?: string;
+}
+
+export class DriveStorageLogicalBucketsApi {
+  private client: HttpClient;
+
+  constructor(client: HttpClient) {
+    this.client = client;
+  }
+
+
+/** List tenant logical storage buckets */
+  async list(params?: DriveStorageLogicalBucketsListParams, requestOptions?: ApiRequestOptions): Promise<StorageLogicalBucketsListResponse> {
+    const query = buildQueryString([
+      { name: 'page_size', value: params?.pageSize, style: 'form', explode: true, allowReserved: false },
+      { name: 'cursor', value: params?.cursor, style: 'form', explode: true, allowReserved: false },
+    ]);
+    return this.client.request<StorageLogicalBucketsListResponse>(appendQueryString(customApiPath(`/drive/storage/logical-buckets`), query), { ...(requestOptions?.signal !== undefined ? { signal: requestOptions.signal } : {}), ...(requestOptions?.timeout !== undefined ? { timeout: requestOptions.timeout } : {}), method: 'GET' as any });
+  }
+
+/** Update a logical storage bucket */
+  async update(logicalBucketId: string, body: UpdateStorageLogicalBucketRequest, requestOptions?: ApiRequestOptions): Promise<StorageLogicalBucketsUpdateResponse> {
+    return this.client.request<StorageLogicalBucketsUpdateResponse>(customApiPath(`/drive/storage/logical-buckets/${serializePathParameter(logicalBucketId, { name: 'logicalBucketId', style: 'simple', explode: false })}`), { ...(requestOptions?.signal !== undefined ? { signal: requestOptions.signal } : {}), ...(requestOptions?.timeout !== undefined ? { timeout: requestOptions.timeout } : {}), method: 'PUT' as any, body, contentType: 'application/json' });
+  }
+}
 
 export interface DriveStorageMigrationsItemsListParams {
   status?: string;
@@ -457,12 +520,12 @@ async test(providerId: string, requestOptions?: ApiRequestOptions): Promise<Stor
 
 export interface DriveStorageProviderBindingsDefaultRetrieveParams {
   spaceId?: string;
-  spaceType?: 'personal' | 'team' | 'knowledge_base' | 'ai_generated' | 'git_repository' | 'deployment' | 'app_upload' | 'im' | 'rtc' | 'notary' | 'website';
+  spaceType?: 'personal' | 'team' | 'knowledge_base' | 'ai_generated' | 'git_repository' | 'deployment' | 'app_upload' | 'im' | 'rtc' | 'notary' | 'website' | 'documents';
 }
 
 export interface DriveStorageProviderBindingsDefaultDeleteParams {
   spaceId?: string;
-  spaceType?: 'personal' | 'team' | 'knowledge_base' | 'ai_generated' | 'git_repository' | 'deployment' | 'app_upload' | 'im' | 'rtc' | 'notary' | 'website';
+  spaceType?: 'personal' | 'team' | 'knowledge_base' | 'ai_generated' | 'git_repository' | 'deployment' | 'app_upload' | 'im' | 'rtc' | 'notary' | 'website' | 'documents';
 }
 
 export class DriveStorageProviderBindingsDefaultApi {
@@ -532,6 +595,8 @@ export class DriveApi {
   public readonly storageProviderAccountDefaults: DriveStorageProviderAccountDefaultsApi;
   public readonly storageOverview: DriveStorageOverviewApi;
   public readonly storageMigrations: DriveStorageMigrationsApi;
+  public readonly storageLogicalBuckets: DriveStorageLogicalBucketsApi;
+  public readonly storageBusinessBindings: DriveStorageBusinessBindingsApi;
 
   constructor(client: HttpClient) {
     this.storageProviderBindings = new DriveStorageProviderBindingsApi(client);
@@ -541,6 +606,8 @@ export class DriveApi {
     this.storageProviderAccountDefaults = new DriveStorageProviderAccountDefaultsApi(client);
     this.storageOverview = new DriveStorageOverviewApi(client);
     this.storageMigrations = new DriveStorageMigrationsApi(client);
+    this.storageLogicalBuckets = new DriveStorageLogicalBucketsApi(client);
+    this.storageBusinessBindings = new DriveStorageBusinessBindingsApi(client);
   }
 
 }

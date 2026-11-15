@@ -14,6 +14,11 @@ export const sdkMetadata = {
 };
 
 export const operations = {
+  "storageBusinessBindings.delete": { method: "DELETE", path: "/backend/v3/api/drive/storage/business-bindings/{scopeType}/{scopeId}" },
+  "storageBusinessBindings.list": { method: "GET", path: "/backend/v3/api/drive/storage/business-bindings" },
+  "storageBusinessBindings.update": { method: "PUT", path: "/backend/v3/api/drive/storage/business-bindings/{scopeType}/{scopeId}" },
+  "storageLogicalBuckets.list": { method: "GET", path: "/backend/v3/api/drive/storage/logical-buckets" },
+  "storageLogicalBuckets.update": { method: "PUT", path: "/backend/v3/api/drive/storage/logical-buckets/{logicalBucketId}" },
   "storageMigrations.cancel": { method: "POST", path: "/backend/v3/api/drive/storage/migrations/{migrationId}/cancel" },
   "storageMigrations.create": { method: "POST", path: "/backend/v3/api/drive/storage/migrations" },
   "storageMigrations.items.list": { method: "GET", path: "/backend/v3/api/drive/storage/migrations/{migrationId}/items" },

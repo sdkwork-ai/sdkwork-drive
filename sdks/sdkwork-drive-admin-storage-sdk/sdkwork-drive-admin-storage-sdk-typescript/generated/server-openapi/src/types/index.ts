@@ -48,6 +48,10 @@ export type { StorageMigrationItem } from './storage-migration-item';
 export type { CreateStorageMigrationRequest } from './create-storage-migration-request';
 export type { RunStorageMigrationRequest } from './run-storage-migration-request';
 export type { StorageMigrationRunReport } from './storage-migration-run-report';
+export type { StorageLogicalBucket } from './storage-logical-bucket';
+export type { UpdateStorageLogicalBucketRequest } from './update-storage-logical-bucket-request';
+export type { BusinessStorageBinding } from './business-storage-binding';
+export type { UpdateBusinessStorageBindingRequest } from './update-business-storage-binding-request';
 export type { SdkWorkResourceData } from './sdk-work-resource-data';
 export type { SdkWorkPageData } from './sdk-work-page-data';
 export type { SdkWorkCommandData } from './sdk-work-command-data';
@@ -90,3 +94,7 @@ export type { StorageMigrationsRetrieveResponse } from './storage-migrations-ret
 export type { StorageMigrationsRunResponse } from './storage-migrations-run-response';
 export type { StorageMigrationsItemsListResponse } from './storage-migrations-items-list-response';
 export type { StorageMigrationsCancelResponse } from './storage-migrations-cancel-response';
+export type { StorageLogicalBucketsListResponse } from './storage-logical-buckets-list-response';
+export type { StorageLogicalBucketsUpdateResponse } from './storage-logical-buckets-update-response';
+export type { StorageBusinessBindingsListResponse } from './storage-business-bindings-list-response';
+export type { StorageBusinessBindingsUpdateResponse } from './storage-business-bindings-update-response';

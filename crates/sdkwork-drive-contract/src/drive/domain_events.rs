@@ -182,6 +182,17 @@ pub mod admin_audit {
         pub const DEFAULT_DELETED: &str = "drive.storage_provider_binding.default_deleted";
     }
 
+    /// Logical storage bucket mutations (backend-api).
+    pub mod logical_bucket {
+        pub const UPDATED: &str = "drive.storage_logical_bucket.updated";
+    }
+
+    /// Business scope -> logical bucket binding mutations (backend-api).
+    pub mod business_storage_binding {
+        pub const UPDATED: &str = "drive.business_storage_binding.updated";
+        pub const DELETED: &str = "drive.business_storage_binding.deleted";
+    }
+
     /// Maintenance job executions (backend-api).
     pub mod maintenance {
         pub const OBJECT_SWEEP_EXECUTED: &str = "drive.maintenance.object_sweep.executed";
@@ -302,6 +313,9 @@ mod tests {
         admin_audit::storage_provider_account::INITIALIZED,
         admin_audit::storage_provider_binding::DEFAULT_SET,
         admin_audit::storage_provider_binding::DEFAULT_DELETED,
+        admin_audit::logical_bucket::UPDATED,
+        admin_audit::business_storage_binding::UPDATED,
+        admin_audit::business_storage_binding::DELETED,
         admin_audit::maintenance::OBJECT_SWEEP_EXECUTED,
         admin_audit::maintenance::OBJECT_SWEEP_FAILED,
         admin_audit::maintenance::UPLOAD_SESSION_SWEEP_EXECUTED,

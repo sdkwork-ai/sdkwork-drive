@@ -40,6 +40,23 @@ const ACTIVE_PROVIDER = {
 
 const KNOWLEDGE_BASE_PREFIX = 'sdkwork-drive/v1/tenants/tenant-100/space-types/knowledge_base';
 
+/**
+ * The logical layer is part of every install, so the page always has at least
+ * the default logical bucket available for assignment in these tests.
+ */
+const LOGICAL_BUCKET = {
+  id: 'logical-bucket:tenant-100:business',
+  tenantId: 'tenant-100',
+  bucketKey: 'business',
+  displayName: 'Business Content',
+  objectPrefix: 'logical/business',
+  lifecycleStatus: 'active',
+  version: '1',
+  providerId: ACTIVE_PROVIDER.id,
+  providerBindingId: 'logical-bucket-provider:tenant-100:business',
+  storageRootPrefix: 'sdkwork-drive/v1/tenants/tenant-100',
+};
+
 /** A tenant configuration pointing at the same provider. */
 const TENANT_BINDING = {
   id: 'default:tenant:tenant-100',
@@ -66,14 +83,48 @@ function createRequest(
   bindings: unknown[],
   options: {
     tenantBinding?: unknown;
+    logicalBuckets?: unknown[];
+    businessBindings?: unknown[];
     onListObjects?: (input: any) => unknown;
     onBucketHead?: (input: any) => unknown;
   } = {},
 ) {
   const tenantBinding = options.tenantBinding === undefined ? TENANT_BINDING : options.tenantBinding;
-  return vi.fn(async ({ operationId, query, pathParams }: any) => {
+  const logicalBuckets = options.logicalBuckets ?? [LOGICAL_BUCKET];
+  const businessBindings = options.businessBindings ?? [];
+  return vi.fn(async ({ operationId, query, pathParams, body }: any) => {
     if (operationId === 'storageProviders.list') {
       return { items: [ACTIVE_PROVIDER], pageInfo: { mode: 'cursor', hasMore: false } };
+    }
+    if (operationId === 'storageLogicalBuckets.list') {
+      return { items: logicalBuckets, pageInfo: { mode: 'cursor', hasMore: false } };
+    }
+    if (operationId === 'storageBusinessBindings.list') {
+      return { items: businessBindings, pageInfo: { mode: 'cursor', hasMore: false } };
+    }
+    if (operationId === 'storageBusinessBindings.update') {
+      return {
+        item: {
+          id: `business-storage:tenant-100:${pathParams.scopeType}:${pathParams.scopeId}`,
+          tenantId: 'tenant-100',
+          scopeType: pathParams.scopeType,
+          scopeId: pathParams.scopeId,
+          logicalBucketId: body.logicalBucketId,
+          logicalBucketKey: 'business',
+          logicalBucketName: 'Business Content',
+          writePrefix: body.writePrefix ?? '',
+          lifecycleStatus: 'active',
+          version: '1',
+          providerId: ACTIVE_PROVIDER.id,
+          storageRootPrefix: 'sdkwork-drive/v1/tenants/tenant-100',
+        },
+      };
+    }
+    if (operationId === 'storageBusinessBindings.delete') {
+      return undefined;
+    }
+    if (operationId === 'storageLogicalBuckets.update') {
+      return { item: logicalBuckets[0] };
     }
     if (operationId === 'storageProviderBindings.list') {
       return {
@@ -251,9 +302,10 @@ describe('StorageBindingsAdminPage storage targets', () => {
       expect(
         request.mock.calls.some(
           (call) =>
-            call[0].operationId === 'storageProviderBindings.default.update'
-            && call[0].body?.spaceType === 'website'
-            && call[0].body?.providerId === ACTIVE_PROVIDER.id,
+            call[0].operationId === 'storageBusinessBindings.update'
+            && call[0].pathParams?.scopeType === 'space_type'
+            && call[0].pathParams?.scopeId === 'website'
+            && call[0].body?.logicalBucketId === LOGICAL_BUCKET.id,
         ),
       ).toBe(true),
     );

@@ -100,6 +100,65 @@ export interface StorageProviderBindingView {
 }
 
 /**
+ * Logical bucket: the business-facing storage layer.
+ *
+ * Business scopes bind to this record, and the record resolves to a provider
+ * configuration. Changing `providerId` here re-points every business bound to
+ * the bucket, which is why an install can be completed by editing only the
+ * provider account credentials.
+ */
+export interface StorageLogicalBucketView {
+  id: string;
+  tenantId: string;
+  bucketKey: string;
+  displayName: string;
+  objectPrefix: string;
+  lifecycleStatus: string;
+  version: string;
+  providerId?: string;
+  providerBindingId?: string;
+  storageRootPrefix?: string;
+}
+
+export interface UpdateStorageLogicalBucketInput {
+  displayName?: string;
+  objectPrefix?: string;
+  lifecycleStatus?: 'active' | 'archived';
+  providerId?: string;
+  storageRootPrefix?: string;
+  signal?: AbortSignal;
+}
+
+/** A business scope bound to a logical bucket, with the resolved provider. */
+export interface BusinessStorageBindingView {
+  id: string;
+  tenantId: string;
+  scopeType: 'tenant' | 'space_type' | 'logical_scope';
+  scopeId: string;
+  logicalBucketId: string;
+  logicalBucketKey: string;
+  logicalBucketName: string;
+  writePrefix: string;
+  lifecycleStatus: string;
+  version: string;
+  providerId?: string;
+  storageRootPrefix?: string;
+}
+
+export interface ListBusinessStorageBindingsInput {
+  scopeType?: BusinessStorageBindingView['scopeType'];
+  pageSize?: number;
+  pageToken?: string;
+  signal?: AbortSignal;
+}
+
+export interface UpdateBusinessStorageBindingInput {
+  logicalBucketId: string;
+  writePrefix?: string;
+  signal?: AbortSignal;
+}
+
+/**
  * One step of the storage resolution chain.
  *
  * The writer resolves a target in this order, so the console shows one section

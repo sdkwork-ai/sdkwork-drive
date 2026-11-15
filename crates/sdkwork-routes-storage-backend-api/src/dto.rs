@@ -540,6 +540,85 @@ pub(crate) struct StorageProviderBindingResponse {
     pub(crate) storage_provider: StorageProviderResponse,
 }
 
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct ListStorageLogicalBucketsQuery {
+    #[serde(rename = "page_size")]
+    pub(crate) page_size: Option<i64>,
+    #[serde(rename = "cursor")]
+    pub(crate) page_token: Option<String>,
+}
+
+/// One logical bucket plus the provider configuration currently resolved for it.
+///
+/// `provider_id`/`storage_root_prefix` are absent until an operator (or the
+/// default seed) binds the logical bucket to a provider. Business routes never
+/// depend on that provider directly, so moving to another vendor is one update
+/// here and every business follows.
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct StorageLogicalBucketResponse {
+    pub(crate) id: String,
+    pub(crate) tenant_id: String,
+    pub(crate) bucket_key: String,
+    pub(crate) display_name: String,
+    pub(crate) object_prefix: String,
+    pub(crate) lifecycle_status: String,
+    #[serde(with = "sdkwork_utils_rust::serde_int64")]
+    pub(crate) version: i64,
+    pub(crate) provider_id: Option<String>,
+    pub(crate) provider_binding_id: Option<String>,
+    pub(crate) storage_root_prefix: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub(crate) struct UpdateStorageLogicalBucketRequest {
+    pub(crate) display_name: Option<String>,
+    pub(crate) object_prefix: Option<String>,
+    pub(crate) lifecycle_status: Option<String>,
+    pub(crate) provider_id: Option<String>,
+    pub(crate) storage_root_prefix: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct ListBusinessStorageBindingsQuery {
+    #[serde(rename = "scope_type")]
+    pub(crate) scope_type: Option<String>,
+    #[serde(rename = "page_size")]
+    pub(crate) page_size: Option<i64>,
+    #[serde(rename = "cursor")]
+    pub(crate) page_token: Option<String>,
+}
+
+/// One business scope bound to a logical bucket, with the provider the former
+/// currently resolves to (read-only projection for the console).
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct BusinessStorageBindingResponse {
+    pub(crate) id: String,
+    pub(crate) tenant_id: String,
+    pub(crate) scope_type: String,
+    pub(crate) scope_id: String,
+    pub(crate) logical_bucket_id: String,
+    pub(crate) logical_bucket_key: String,
+    pub(crate) logical_bucket_name: String,
+    pub(crate) write_prefix: String,
+    pub(crate) lifecycle_status: String,
+    #[serde(with = "sdkwork_utils_rust::serde_int64")]
+    pub(crate) version: i64,
+    pub(crate) provider_id: Option<String>,
+    pub(crate) storage_root_prefix: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub(crate) struct UpdateBusinessStorageBindingRequest {
+    pub(crate) logical_bucket_id: String,
+    pub(crate) write_prefix: Option<String>,
+}
+
 #[derive(Debug, Clone, Copy)]
 pub(crate) struct OffsetPage {
     pub(crate) limit: i64,

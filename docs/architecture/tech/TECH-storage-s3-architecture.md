@@ -37,6 +37,22 @@ The production implementation uses the official Rust AWS S3 SDK through `aws-sdk
    - Backend admins and dedicated admin modules manage provider accounts, provider bindings, bucket existence, and low-level objects.
    - Provider, bucket, object, and binding administration is not part of normal end-user file workflows.
 
+4.1 Business routing uses a logical storage plane.
+   - `dr_drive_business_storage_binding` binds a business scope (`tenant`,
+     `space_type`, `logical_scope`) to a logical bucket, never directly to a
+     provider.
+   - `dr_drive_logical_bucket` owns the business-facing bucket identity and its
+     object prefix; `dr_drive_logical_bucket_provider_binding` maps that bucket
+     to one provider configuration plus the physical root prefix.
+   - Write resolution reads: a space-level binding, then the business binding for
+     the space type, then the tenant business binding, then the legacy
+     provider-binding rows. The resolved object root is
+     `providerRootPrefix/logicalBucket.objectPrefix/business.writePrefix`.
+   - Switching vendor or account is therefore one logical-bucket update; every
+     business bound to it follows. `003_logical_storage_buckets.sql` seeds all
+     space types and the tenant fallback against the default provider so a fresh
+     install is fully routable before the operator edits the provider account.
+
 5. Object keys are internal.
    - App APIs should avoid exposing object keys as durable business identifiers.
    - Backend object-management APIs may expose object keys because they are administrative storage tools.

@@ -28,7 +28,12 @@ import {
   createStorageProviderAdminService,
   type StorageProviderAdminService,
 } from '../services/storageProviderAdminService';
-import type { StorageProviderBindingView, StorageProviderView } from '../types/storageProviderAdminTypes';
+import type {
+  BusinessStorageBindingView,
+  StorageLogicalBucketView,
+  StorageProviderBindingView,
+  StorageProviderView,
+} from '../types/storageProviderAdminTypes';
 import { SPACE_TYPES, getSpaceTypeMeta, resolveSpaceTypeDescription, resolveSpaceTypeLabel } from '../utils/spaceTypeConfig';
 import { getProviderKindMeta, providerDisplayName } from '../utils/providerKindConfig';
 import {
@@ -62,9 +67,17 @@ interface StorageBindingsAdminPageProps {
 /** One row of the space-type section: a space type and the target it resolves to. */
 interface SpaceTypeBindingRow {
   spaceType: string;
+  logicalBucketId: string;
+  logicalBucketName: string;
+  logicalBucketKey: string;
+  logicalObjectPrefix: string;
   providerId: string;
+  providerName: string;
   bucket: string;
-  storageRootPrefix?: string;
+  writePrefix: string;
+  resolvedRootPrefix: string;
+  /** Legacy direct-provider binding shown only when no logical binding exists. */
+  legacy: boolean;
   bindingId?: string;
   configured: boolean;
 }
@@ -85,6 +98,17 @@ const BINDINGS_PAGE_SIZE = 200;
 
 function defaultSpaceTypeRootPrefix(tenantId: string, spaceType: string): string {
   return `sdkwork-drive/v1/tenants/${tenantId}/space-types/${spaceType}`;
+}
+
+function defaultBusinessWritePrefix(spaceType: string): string {
+  return `space-types/${spaceType}`;
+}
+
+function composePrefix(...parts: Array<string | undefined>): string {
+  return parts
+    .map((part) => (part ?? '').trim())
+    .filter((part) => part !== '')
+    .join('/');
 }
 
 function defaultSpaceRootPrefix(tenantId: string, spaceId: string): string {
@@ -137,11 +161,17 @@ export function StorageBindingsAdminPage({
   const [editingTenantConfig, setEditingTenantConfig] = useState(false);
   const [tenantProviderId, setTenantProviderId] = useState('');
 
+  // --- logical storage plane ------------------------------------------------
+  const [logicalBuckets, setLogicalBuckets] = useState<StorageLogicalBucketView[]>([]);
+  const [businessBindings, setBusinessBindings] = useState<BusinessStorageBindingView[]>([]);
+  const [logicalBucketDrafts, setLogicalBucketDrafts] = useState<
+    Record<string, { providerId: string; objectPrefix: string }>
+  >({});
+
   // --- space-type binding editor -------------------------------------------
   const [editingType, setEditingType] = useState<string | null>(null);
-  const [editProviderId, setEditProviderId] = useState('');
-  const [editRootPrefix, setEditRootPrefix] = useState('');
-  const [useCustomPrefix, setUseCustomPrefix] = useState(false);
+  const [editLogicalBucketId, setEditLogicalBucketId] = useState('');
+  const [editWritePrefix, setEditWritePrefix] = useState('');
 
   // --- space-scope binding editor ------------------------------------------
   const [editingSpaceId, setEditingSpaceId] = useState<string | null>(null);
@@ -161,12 +191,16 @@ export function StorageBindingsAdminPage({
 
   const activeProviders = providers.filter((p) => p.status === 'active');
   const tenantProvider = providers.find((p) => p.id === tenantBinding?.providerId);
-  const selectedProvider = providers.find((p) => p.id === editProviderId);
+  const selectedLogicalBucket = logicalBuckets.find((bucket) => bucket.id === editLogicalBucketId);
+  const selectedLogicalProvider = providers.find((p) => p.id === selectedLogicalBucket?.providerId);
   const selectedSpaceProvider = providers.find((p) => p.id === spaceProviderId);
   const tenantConfigProvider = providers.find((p) => p.id === tenantProviderId);
   const browseProvider = browseTarget
     ? providers.find((p) => p.id === browseTarget.providerId)
     : undefined;
+  const logicalTenantBinding = businessBindings.find(
+    (binding) => binding.scopeType === 'tenant' && binding.lifecycleStatus === 'active',
+  );
 
   const load = (signal?: AbortSignal) => {
     setLoading(true);
@@ -184,14 +218,26 @@ export function StorageBindingsAdminPage({
         signal,
       }),
       service.getDefaultBinding(undefined, { signal }),
+      service.listLogicalBuckets({ signal }),
+      service.listBusinessBindings({ pageSize: BINDINGS_PAGE_SIZE, signal }),
     ])
-      .then(([, spaceTypePage, spacePage, tenantConfig]) => {
+      .then(([, spaceTypePage, spacePage, tenantConfig, logicalBucketPage, businessBindingPage]) => {
         setSpaceTypeBindings(spaceTypePage.items.filter((binding) => binding.lifecycleStatus === 'active'));
         setSpaceBindings(spacePage.items.filter((binding) => binding.lifecycleStatus === 'active'));
         setSpaceBindingsNextToken(spacePage.nextPageToken);
         setSpaceBindingsHasMore(spacePage.hasMore);
         setTenantBinding(tenantConfig?.providerId ? tenantConfig : undefined);
         setTenantProviderId(tenantConfig?.providerId ?? '');
+        setLogicalBuckets(logicalBucketPage);
+        setBusinessBindings(businessBindingPage);
+        setLogicalBucketDrafts(
+          Object.fromEntries(
+            logicalBucketPage.map((bucket) => [
+              bucket.id,
+              { providerId: bucket.providerId ?? '', objectPrefix: bucket.objectPrefix },
+            ]),
+          ),
+        );
       })
       .catch((err) => {
         if (!isDriveRequestCancellationError(err)) {
@@ -234,26 +280,78 @@ export function StorageBindingsAdminPage({
   };
 
   const spaceTypeBindingRows: SpaceTypeBindingRow[] = useMemo(() => {
+    const logicalById = new Map(logicalBuckets.map((bucket) => [bucket.id, bucket]));
+    const businessByType = new Map(
+      businessBindings
+        .filter((binding) => binding.scopeType === 'space_type' && binding.lifecycleStatus === 'active')
+        .map((binding) => [binding.scopeId, binding]),
+    );
     return SPACE_TYPES.map((st) => {
-      const binding = spaceTypeBindings.find((b) => b.purpose === st.value);
-      if (binding) {
+      const business = businessByType.get(st.value);
+      if (business) {
+        const bucket = logicalById.get(business.logicalBucketId);
+        const provider = providers.find((candidate) => candidate.id === business.providerId);
         return {
           spaceType: st.value,
-          providerId: binding.providerId,
-          bucket: binding.storageProvider?.bucket ?? '',
-          storageRootPrefix: binding.storageRootPrefix,
-          bindingId: binding.id,
+          logicalBucketId: business.logicalBucketId,
+          logicalBucketName: business.logicalBucketName,
+          logicalBucketKey: business.logicalBucketKey,
+          logicalObjectPrefix: bucket?.objectPrefix ?? '',
+          providerId: business.providerId ?? '',
+          providerName: provider ? providerDisplayName(t, provider) : '',
+          bucket: provider?.bucket ?? '',
+          writePrefix: business.writePrefix,
+          resolvedRootPrefix: composePrefix(
+            business.storageRootPrefix,
+            bucket?.objectPrefix,
+            business.writePrefix,
+          ),
+          legacy: false,
+          bindingId: business.id,
           configured: true,
         };
       }
+
+      // Existing installations may still carry a direct space-type provider
+      // binding. It remains effective (legacy fallback in the resolver), so the
+      // page must show it instead of reporting an already-working type unbound.
+      const legacy = spaceTypeBindings.find((binding) => binding.purpose === st.value);
+      if (legacy) {
+        const provider = providers.find((candidate) => candidate.id === legacy.providerId);
+        return {
+          spaceType: st.value,
+          logicalBucketId: '',
+          logicalBucketName: '',
+          logicalBucketKey: '',
+          logicalObjectPrefix: '',
+          providerId: legacy.providerId,
+          providerName: provider ? providerDisplayName(t, provider) : legacy.providerId,
+          bucket: legacy.storageProvider?.bucket ?? provider?.bucket ?? '',
+          writePrefix: '',
+          resolvedRootPrefix:
+            legacy.storageRootPrefix ?? defaultSpaceTypeRootPrefix(tenantId, st.value),
+          legacy: true,
+          bindingId: legacy.id,
+          configured: true,
+        };
+      }
+
       return {
         spaceType: st.value,
+        logicalBucketId: '',
+        logicalBucketName: '',
+        logicalBucketKey: '',
+        logicalObjectPrefix: '',
         providerId: '',
+        providerName: '',
         bucket: '',
+        writePrefix: '',
+        resolvedRootPrefix: defaultSpaceTypeRootPrefix(tenantId, st.value),
+        legacy: false,
         configured: false,
       };
     });
-  }, [spaceTypeBindings]);
+  }, [businessBindings, logicalBuckets, providers, spaceTypeBindings, t, tenantId]);
 
   const boundCount = spaceTypeBindingRows.filter((b) => b.configured).length;
 
@@ -301,27 +399,27 @@ export function StorageBindingsAdminPage({
   const handleEdit = (spaceType: string) => {
     const existing = spaceTypeBindingRows.find((b) => b.spaceType === spaceType);
     setEditingType(spaceType);
-    // An unbound row exists too, with an empty `providerId`: `??` would keep that
-    // empty string and leave the editor with no destination, so the assignment
-    // opens on the first active configuration instead of on nothing.
-    setEditProviderId(
-      (existing?.configured ? existing.providerId : '') || activeProviders[0]?.id || '',
+    // Default to the bound logical bucket, then the first available one: an
+    // unbound row has no logical bucket and the picker must not open empty.
+    setEditLogicalBucketId(
+      (existing?.configured ? existing.logicalBucketId : '') || logicalBuckets[0]?.id || '',
     );
-    const defaultPrefix = defaultSpaceTypeRootPrefix(tenantId, spaceType);
-    const existingPrefix = existing?.storageRootPrefix;
-    setUseCustomPrefix(Boolean(existingPrefix && existingPrefix !== defaultPrefix));
-    setEditRootPrefix(existingPrefix ?? defaultPrefix);
+    setEditWritePrefix(existing?.writePrefix || defaultBusinessWritePrefix(spaceType));
   };
 
   const handleSave = async () => {
-    if (!editingType || !editProviderId) return;
+    if (!editingType || !editLogicalBucketId) return;
+    const bucket = logicalBuckets.find((candidate) => candidate.id === editLogicalBucketId);
+    if (!bucket?.providerId) {
+      setNotice({ type: 'error', messageKey: 'bindingsLogicalBucketProviderMissing' });
+      return;
+    }
     setPending(true);
     setNotice(null);
     try {
-      await service.setSpaceTypeBinding({
-        spaceType: editingType,
-        providerId: editProviderId,
-        storageRootPrefix: useCustomPrefix ? editRootPrefix.trim() : undefined,
+      await service.updateBusinessBinding('space_type', editingType, {
+        logicalBucketId: editLogicalBucketId,
+        writePrefix: editWritePrefix.trim() || defaultBusinessWritePrefix(editingType),
       });
       setNotice({
         type: 'success',
@@ -329,6 +427,29 @@ export function StorageBindingsAdminPage({
         params: { label: spaceTypeLabel(editingType) },
       });
       setEditingType(null);
+      load();
+    } catch (err) {
+      setNotice({
+        type: 'error',
+        messageKey: 'bindingsNoticeSaveFailed',
+        params: { detail: err instanceof Error ? err.message : '' },
+      });
+    } finally {
+      setPending(false);
+    }
+  };
+
+  const saveLogicalBucket = async (logicalBucketId: string) => {
+    const draft = logicalBucketDrafts[logicalBucketId];
+    if (!draft) return;
+    setPending(true);
+    setNotice(null);
+    try {
+      await service.updateLogicalBucket(logicalBucketId, {
+        objectPrefix: draft.objectPrefix,
+        providerId: draft.providerId || undefined,
+      });
+      setNotice({ type: 'success', messageKey: 'bindingsLogicalBucketSaved' });
       load();
     } catch (err) {
       setNotice({
@@ -391,7 +512,12 @@ export function StorageBindingsAdminPage({
     setNotice(null);
     try {
       if (clearTarget.kind === 'space_type') {
-        await service.deleteSpaceTypeBinding(clearTarget.spaceType);
+        const row = spaceTypeBindingRows.find((binding) => binding.spaceType === clearTarget.spaceType);
+        if (row?.legacy) {
+          await service.deleteSpaceTypeBinding(clearTarget.spaceType);
+        } else {
+          await service.deleteBusinessBinding('space_type', clearTarget.spaceType);
+        }
         setNotice({
           type: 'success',
           messageKey: 'bindingsNoticeCleared',
@@ -480,6 +606,77 @@ export function StorageBindingsAdminPage({
         )}
 
         {/*
+          The logical layer: business routes bind to these buckets, and each
+          bucket resolves to a provider configuration. Moving to another vendor
+          is one provider change here, not one edit per space type.
+        */}
+        {!loading && logicalBuckets.length > 0 && (
+          <div className={`${CARD_CLASS} mb-4`} data-testid="logical-storage-buckets">
+            <div className="border-b border-neutral-100 px-5 py-3 dark:border-neutral-800">
+              <h3 className="text-sm font-semibold">{t('bindingsLogicalBucketsTitle')}</h3>
+              <p className="mt-0.5 text-[11px] text-neutral-500">{t('bindingsLogicalBucketsDesc')}</p>
+            </div>
+            <div className="divide-y divide-neutral-100 dark:divide-neutral-800">
+              {logicalBuckets.map((bucket) => {
+                const draft = logicalBucketDrafts[bucket.id] ?? {
+                  providerId: bucket.providerId ?? '',
+                  objectPrefix: bucket.objectPrefix,
+                };
+                return (
+                  <div
+                    key={bucket.id}
+                    className="grid gap-3 px-5 py-3 lg:grid-cols-[1.2fr_1fr_1.2fr_auto] lg:items-end"
+                  >
+                    <div className="min-w-0">
+                      <div className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">
+                        {bucket.displayName}
+                      </div>
+                      <div className="font-mono text-[10px] text-neutral-500">
+                        {bucket.bucketKey} · {bucket.objectPrefix || '--'}
+                      </div>
+                    </div>
+                    <label className="grid gap-1 text-[11px] font-medium text-neutral-500">
+                      {t('bindingsObjectPrefixLabel')}
+                      <input
+                        value={draft.objectPrefix}
+                        onChange={(event) => setLogicalBucketDrafts((current) => ({
+                          ...current,
+                          [bucket.id]: { ...draft, objectPrefix: event.target.value },
+                        }))}
+                        className={`${INPUT_CLASS} font-mono text-xs`}
+                      />
+                    </label>
+                    <label className="grid gap-1 text-[11px] font-medium text-neutral-500">
+                      {t('bindingsSelectProvider')}
+                      <select
+                        value={draft.providerId}
+                        onChange={(event) => setLogicalBucketDrafts((current) => ({
+                          ...current,
+                          [bucket.id]: { ...draft, providerId: event.target.value },
+                        }))}
+                        className={SELECT_CLASS}
+                      >
+                        {activeProviders.map((provider) => (
+                          <option key={provider.id} value={provider.id}>{providerLabel(provider)}</option>
+                        ))}
+                      </select>
+                    </label>
+                    <button
+                      type="button"
+                      className={PRIMARY_BUTTON_CLASS}
+                      disabled={pending || !draft.providerId}
+                      onClick={() => void saveLogicalBucket(bucket.id)}
+                    >
+                      {t('save')}
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/*
           The tenant's storage-provider configuration, not a binding editor.
 
           This is the lowest-priority rule and the one that must always exist: an
@@ -489,7 +686,7 @@ export function StorageBindingsAdminPage({
           storage configuration cannot write at all, so the honest states are
           "configured" and "not configured yet, go configure one".
         */}
-        {!loading && (
+        {!loading && !logicalTenantBinding && (
           <div className={`${CARD_CLASS} mb-4`} data-testid="tenant-storage-configuration">
             <div className="border-b border-neutral-100 px-5 py-3 dark:border-neutral-800">
               <h3 className="text-sm font-semibold">{t('bindingsTenantConfigTitle')}</h3>
@@ -613,7 +810,7 @@ export function StorageBindingsAdminPage({
                   <tr>
                     <th className="px-5 py-3 font-semibold">{t('bindingsColSpaceType')}</th>
                     <th className="px-5 py-3 font-semibold">{t('bindingsColDescription')}</th>
-                    <th className="px-5 py-3 font-semibold">{t('bindingsColProvider')}</th>
+                    <th className="px-5 py-3 font-semibold">{t('bindingsColLogicalBucket')}</th>
                     <th className="px-5 py-3 font-semibold">{t('bindingsColBucket')}</th>
                     <th className="px-5 py-3 font-semibold">{t('bindingsColPrefix')}</th>
                     <th className="px-5 py-3 font-semibold">{t('bindingsColStatus')}</th>
@@ -625,7 +822,6 @@ export function StorageBindingsAdminPage({
                     const stMeta = getSpaceTypeMeta(binding.spaceType);
                     const SpaceTypeIcon = stMeta.icon;
                     const provider = providers.find((p) => p.id === binding.providerId);
-                    const providerMeta = provider ? getProviderKindMeta(provider.providerKind) : null;
                     const stLabel = spaceTypeLabel(binding.spaceType);
                     const stDesc = spaceTypeDescription(binding.spaceType);
 
@@ -653,20 +849,16 @@ export function StorageBindingsAdminPage({
                         </td>
 
                         <td className="px-5 py-3">
-                          {binding.configured && providerMeta ? (
-                            <div className="flex items-center gap-1.5">
-                              <span className={`inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-bold ${providerMeta.bgClass} ${providerMeta.textClass}`}>
-                                {providerMeta.icon}
-                              </span>
-                              <span className="text-xs font-medium text-neutral-900 dark:text-neutral-100">{provider ? providerDisplayName(t, provider) : ''}</span>
-                            </div>
-                          ) : binding.configured ? (
-                            // The binding is active but its provider is not in the
-                            // option set: retired configuration, still the target
-                            // every write of this type resolves to.
+                          {binding.configured ? (
                             <div className="grid gap-0.5">
-                              <span className="font-mono text-xs text-neutral-700 dark:text-neutral-300">{binding.providerId}</span>
-                              <span className="text-[10px] text-amber-700 dark:text-amber-300">{t('bindingsProviderUnavailable')}</span>
+                              <span className="text-xs font-medium text-neutral-900 dark:text-neutral-100">
+                                {binding.logicalBucketName || binding.providerName || binding.providerId}
+                              </span>
+                              <span className="text-[10px] text-neutral-500">
+                                {binding.legacy
+                                  ? t('bindingsLegacyBinding')
+                                  : binding.providerName || binding.providerId}
+                              </span>
                             </div>
                           ) : (
                             <span className="text-xs text-neutral-400">{t('bindingsNotAssigned')}</span>
@@ -675,7 +867,7 @@ export function StorageBindingsAdminPage({
 
                         <td className="px-5 py-3">
                           {binding.configured ? (
-                            <span className="font-mono text-xs text-neutral-700 dark:text-neutral-300">{binding.bucket || provider?.bucket || '--'}</span>
+                            <span className="font-mono text-xs text-neutral-700 dark:text-neutral-300">{binding.bucket || '--'}</span>
                           ) : (
                             <span className="text-xs text-neutral-400">--</span>
                           )}
@@ -684,7 +876,7 @@ export function StorageBindingsAdminPage({
                         <td className="px-5 py-3">
                           {binding.configured ? (
                             <span className="font-mono text-[10px] leading-relaxed break-all text-neutral-500">
-                              {binding.storageRootPrefix ?? defaultSpaceTypeRootPrefix(tenantId, binding.spaceType)}
+                              {binding.resolvedRootPrefix}
                             </span>
                           ) : (
                             <span className="text-xs text-neutral-400">--</span>
@@ -725,7 +917,7 @@ export function StorageBindingsAdminPage({
                                     key: `space-type-${binding.spaceType}`,
                                     label: stLabel,
                                     providerId: binding.providerId,
-                                    rootPrefix: binding.storageRootPrefix ?? defaultSpaceTypeRootPrefix(tenantId, binding.spaceType),
+                                    rootPrefix: binding.resolvedRootPrefix,
                                   })}
                                 >
                                   {t('bindingsBrowseFiles')}
@@ -735,7 +927,7 @@ export function StorageBindingsAdminPage({
                                 type="button"
                                 className="rounded-md px-2.5 py-1 text-xs font-medium text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-950/30"
                                 onClick={() => handleEdit(binding.spaceType)}
-                                disabled={activeProviders.length === 0}
+                                disabled={logicalBuckets.length === 0}
                               >
                                 {binding.configured ? t('bindingsChange') : t('bindingsAssign')}
                               </button>
@@ -925,53 +1117,62 @@ export function StorageBindingsAdminPage({
         </DrawerContent>
       </Drawer>
 
-      {/* Space-type binding: which provider configuration (endpoint + bucket) and
-          which prefix the type's objects land in. */}
+      {/* Space-type binding: which logical bucket (and therefore provider) the
+          type's objects route through, and its write prefix inside that bucket. */}
       <Drawer open={editingType !== null} onOpenChange={(open) => { if (!open && !pending) setEditingType(null); }}>
         <DrawerContent size="md">
           <DrawerHeader>
             <DrawerTitle>{editingType ? spaceTypeLabel(editingType) : t('bindingsAssign')}</DrawerTitle>
-            <DrawerDescription>{t('bindingsPageDescription')}</DrawerDescription>
+            <DrawerDescription>{t('bindingsLogicalBucketAssignDesc')}</DrawerDescription>
           </DrawerHeader>
           <DrawerBody className="grid content-start gap-5">
             <label className="grid gap-2 text-xs font-medium text-neutral-600 dark:text-neutral-300">
-              {t('bindingsSelectProvider')}
-              <select value={editProviderId} onChange={(event) => setEditProviderId(event.target.value)} className={SELECT_CLASS}>
-                {activeProviders.map((provider) => (
-                  <option key={provider.id} value={provider.id}>{providerLabel(provider)}</option>
+              {t('bindingsSelectLogicalBucket')}
+              <select value={editLogicalBucketId} onChange={(event) => setEditLogicalBucketId(event.target.value)} className={SELECT_CLASS}>
+                {logicalBuckets.map((bucket) => (
+                  <option key={bucket.id} value={bucket.id}>
+                    {bucket.displayName} · {bucket.bucketKey}
+                  </option>
                 ))}
               </select>
             </label>
-            {selectedProvider ? (
-              <>
-                <div className="grid gap-1 rounded-md border border-neutral-200 bg-neutral-50 p-3 text-xs text-neutral-500 dark:border-neutral-700 dark:bg-neutral-800">
-                  <div className="break-all font-mono text-neutral-800 dark:text-neutral-100">{selectedProvider.endpointUrl}</div>
-                  <div className="mt-1">
-                    {selectedProvider.region ? `${selectedProvider.region} · ` : ''}
-                    {selectedProvider.credentialConfigured ? t('credentialSet') : t('credentialMissing')}
-                  </div>
+            {selectedLogicalBucket ? (
+              <div className="grid gap-1 rounded-md border border-neutral-200 bg-neutral-50 p-3 text-xs text-neutral-500 dark:border-neutral-700 dark:bg-neutral-800">
+                <div className="flex gap-2">
+                  <span>{t('bindingsColProvider')}</span>
+                  <span className="text-neutral-800 dark:text-neutral-100">
+                    {selectedLogicalProvider
+                      ? providerLabel(selectedLogicalProvider)
+                      : t('bindingsProviderUnavailable')}
+                  </span>
                 </div>
-                <StorageBucketReadiness provider={selectedProvider} service={service} />
-              </>
+                <div className="flex gap-2">
+                  <span>{t('bindingsBucketLabel')}</span>
+                  <span className="font-mono text-neutral-800 dark:text-neutral-100">{selectedLogicalProvider?.bucket || '--'}</span>
+                </div>
+                <div className="flex gap-2">
+                  <span>{t('bindingsObjectPrefixLabel')}</span>
+                  <span className="font-mono text-neutral-800 dark:text-neutral-100">{selectedLogicalBucket.objectPrefix || '--'}</span>
+                </div>
+              </div>
             ) : null}
-            <label className="flex items-center gap-2 text-xs text-neutral-600 dark:text-neutral-300">
-              <input type="checkbox" checked={useCustomPrefix} onChange={(event) => { setUseCustomPrefix(event.target.checked); if (!event.target.checked && editingType) setEditRootPrefix(defaultSpaceTypeRootPrefix(tenantId, editingType)); }} />
-              {t('bindingsCustomPrefix')}
+            {selectedLogicalProvider ? (
+              <StorageBucketReadiness provider={selectedLogicalProvider} service={service} />
+            ) : null}
+            <label className="grid gap-2 text-xs font-medium text-neutral-600 dark:text-neutral-300">
+              {t('bindingsWritePrefixLabel')}
+              <input
+                value={editWritePrefix}
+                onChange={(event) => setEditWritePrefix(event.target.value)}
+                className={`${INPUT_CLASS} font-mono text-xs`}
+                placeholder={editingType ? defaultBusinessWritePrefix(editingType) : ''}
+              />
             </label>
-            {useCustomPrefix ? (
-              <label className="grid gap-2 text-xs font-medium text-neutral-600 dark:text-neutral-300">
-                {t('bindingsCustomPrefix')}
-                <input value={editRootPrefix} onChange={(event) => setEditRootPrefix(event.target.value)} className={`${INPUT_CLASS} font-mono text-xs`} placeholder={editingType ? defaultSpaceTypeRootPrefix(tenantId, editingType) : ''} />
-              </label>
-            ) : (
-              <p className="break-all font-mono text-[11px] text-neutral-500">
-                {editingType ? defaultSpaceTypeRootPrefix(tenantId, editingType) : ''}
-              </p>
-            )}
+            <p className="text-[11px] text-neutral-500">{t('bindingsWritePrefixHint')}</p>
           </DrawerBody>
           <DrawerFooter>
             <button type="button" className={SECONDARY_BUTTON_CLASS} disabled={pending} onClick={() => setEditingType(null)}>{t('cancel')}</button>
-            <button type="button" className={PRIMARY_BUTTON_CLASS} disabled={pending || !editProviderId} onClick={() => void handleSave()}>{pending ? t('saving') : t('save')}</button>
+            <button type="button" className={PRIMARY_BUTTON_CLASS} disabled={pending || !editLogicalBucketId || !selectedLogicalBucket?.providerId} onClick={() => void handleSave()}>{pending ? t('saving') : t('save')}</button>
           </DrawerFooter>
         </DrawerContent>
       </Drawer>

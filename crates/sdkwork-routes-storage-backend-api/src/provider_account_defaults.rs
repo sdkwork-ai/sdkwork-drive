@@ -1047,6 +1047,141 @@ async fn ensure_default_binding(
     Ok(true)
 }
 
+/// Ensure the three-layer default logical plane exists for a tenant.
+///
+/// The physical plane is the provider/bucket/account pair; this adds the
+/// business-facing layer on top:
+///
+/// ```text
+/// space type -> logical bucket -> provider configuration
+/// ```
+///
+/// Every business scope is bound, so a fresh tenant is usable as soon as the
+/// provider account credentials are edited. The inserts are `ON CONFLICT DO
+/// NOTHING` on deterministic ids: a re-run never rewrites an operator's choice
+/// of logical bucket, prefix, or provider.
+async fn ensure_default_logical_plane(
+    state: &AdminStorageState,
+    tenant_id: &str,
+    operator_id: &str,
+    provider_id: &str,
+) -> Result<(), (StatusCode, Json<ProblemDetail>)> {
+    let provider_root_prefix =
+        default_storage_root_prefix(tenant_id, &StorageProviderBindingTarget::Tenant);
+
+    for (bucket_key, display_name, object_prefix) in [
+        ("business", "Business Content", "logical/business"),
+        ("system", "System Content", "logical/system"),
+        ("archive", "Archive", "logical/archive"),
+        ("temp", "Temporary", "logical/temp"),
+    ] {
+        let bucket_id = format!("logical-bucket:{tenant_id}:{bucket_key}");
+        sqlx::query(
+            "INSERT INTO dr_drive_logical_bucket (
+                id, tenant_id, bucket_key, display_name, object_prefix,
+                lifecycle_status, version, created_by, updated_by
+             ) VALUES ($1, $2, $3, $4, $5, 'active', 1, $6, $6)
+             ON CONFLICT (id) DO NOTHING",
+        )
+        .bind(&bucket_id)
+        .bind(tenant_id)
+        .bind(bucket_key)
+        .bind(display_name)
+        .bind(object_prefix)
+        .bind(operator_id)
+        .execute(&state.pool)
+        .await
+        .map_err(|error| {
+            map_service_error(DriveServiceError::Internal(format!(
+                "insert dr_drive_logical_bucket failed: {error}"
+            )))
+        })?;
+
+        let provider_binding_id = format!("logical-bucket-provider:{tenant_id}:{bucket_key}");
+        sqlx::query(
+            "INSERT INTO dr_drive_logical_bucket_provider_binding (
+                id, tenant_id, logical_bucket_id, provider_id, storage_root_prefix,
+                lifecycle_status, version, created_by, updated_by
+             ) VALUES ($1, $2, $3, $4, $5, 'active', 1, $6, $6)
+             ON CONFLICT (id) DO NOTHING",
+        )
+        .bind(&provider_binding_id)
+        .bind(tenant_id)
+        .bind(&bucket_id)
+        .bind(provider_id)
+        .bind(&provider_root_prefix)
+        .bind(operator_id)
+        .execute(&state.pool)
+        .await
+        .map_err(|error| {
+            map_service_error(DriveServiceError::Internal(format!(
+                "insert dr_drive_logical_bucket_provider_binding failed: {error}"
+            )))
+        })?;
+    }
+
+    let business_scopes = [
+        ("personal", "business"),
+        ("team", "business"),
+        ("knowledge_base", "business"),
+        ("ai_generated", "business"),
+        ("im", "business"),
+        ("rtc", "business"),
+        ("git_repository", "system"),
+        ("deployment", "system"),
+        ("app_upload", "system"),
+        ("notary", "system"),
+        ("website", "system"),
+    ];
+    for (scope_id, bucket_key) in business_scopes {
+        let binding_id = format!("business-storage:{tenant_id}:space_type:{scope_id}");
+        let bucket_id = format!("logical-bucket:{tenant_id}:{bucket_key}");
+        sqlx::query(
+            "INSERT INTO dr_drive_business_storage_binding (
+                id, tenant_id, scope_type, scope_id, logical_bucket_id, write_prefix,
+                lifecycle_status, version, created_by, updated_by
+             ) VALUES ($1, $2, 'space_type', $3, $4, $5, 'active', 1, $6, $6)
+             ON CONFLICT (id) DO NOTHING",
+        )
+        .bind(&binding_id)
+        .bind(tenant_id)
+        .bind(scope_id)
+        .bind(&bucket_id)
+        .bind(format!("space-types/{scope_id}"))
+        .bind(operator_id)
+        .execute(&state.pool)
+        .await
+        .map_err(|error| {
+            map_service_error(DriveServiceError::Internal(format!(
+                "insert dr_drive_business_storage_binding failed: {error}"
+            )))
+        })?;
+    }
+
+    let tenant_binding_id = format!("business-storage:{tenant_id}:tenant:{tenant_id}");
+    let tenant_bucket_id = format!("logical-bucket:{tenant_id}:business");
+    sqlx::query(
+        "INSERT INTO dr_drive_business_storage_binding (
+            id, tenant_id, scope_type, scope_id, logical_bucket_id, write_prefix,
+            lifecycle_status, version, created_by, updated_by
+         ) VALUES ($1, $2, 'tenant', $2, $3, 'tenant', 'active', 1, $4, $4)
+         ON CONFLICT (id) DO NOTHING",
+    )
+    .bind(&tenant_binding_id)
+    .bind(tenant_id)
+    .bind(&tenant_bucket_id)
+    .bind(operator_id)
+    .execute(&state.pool)
+    .await
+    .map_err(|error| {
+        map_service_error(DriveServiceError::Internal(format!(
+            "insert tenant dr_drive_business_storage_binding failed: {error}"
+        )))
+    })?;
+
+    Ok(())
+}
+
 /// Bootstrap the built-in storage plane: an account per cloud provider kind, its
 /// provider configuration, and a usable tenant default binding.
 pub(crate) async fn initialize_storage_provider_account_defaults(
@@ -1200,6 +1335,8 @@ pub(crate) async fn initialize_storage_provider_account_defaults(
     // the preferred-provider branch is already existence-checked above.
     if default_provider_id != local_provider_id || local_provider_available {
         ensure_default_binding(&state, &tenant_id, &operator_id, &default_provider_id).await?;
+        ensure_default_logical_plane(&state, &tenant_id, &operator_id, &default_provider_id)
+            .await?;
     }
 
     items.push(StorageProviderAccountDefaultResponse {
@@ -1517,6 +1654,9 @@ pub async fn bootstrap_storage_provider_defaults(
     }
     if default_provider_id != local_provider_id || local_available {
         ensure_default_binding(&state, tenant_id, operator_id, &default_provider_id)
+            .await
+            .map_err(bootstrap_problem)?;
+        ensure_default_logical_plane(&state, tenant_id, operator_id, &default_provider_id)
             .await
             .map_err(bootstrap_problem)?;
     }
