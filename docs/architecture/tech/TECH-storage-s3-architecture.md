@@ -80,10 +80,10 @@ The production implementation uses the official Rust AWS S3 SDK through `aws-sdk
    - Browser direct uploads use vendor presigned URLs; the bucket must allow the
      console origin through CORS. Server-side write/read/multipart/presign
      readiness is covered by the initialization probe above.
-   - `local_filesystem` supports bucket/object administration and range reads,
-     but not the multipart/presigned upload sessions app uploads require. The
-     upload path fails closed with a 409 and an actionable message; production
-     app uploads need an S3-compatible provider.
+   - `local_filesystem` supports bucket/object administration, but not the
+     multipart/presigned upload sessions or cross-origin presigned downloads that
+     app uploads and download URLs require. Those paths fail closed with an
+     actionable 409; production app content needs an S3-compatible provider.
 
 4.3 Retention, recycle bin and cleanup.
    - Every temporary uploader retention expiry first moves its node to
