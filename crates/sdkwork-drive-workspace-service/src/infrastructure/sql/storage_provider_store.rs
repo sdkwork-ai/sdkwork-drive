@@ -294,6 +294,26 @@ impl DriveStorageProviderStore for SqlStorageProviderStore {
         Ok(count)
     }
 
+    async fn count_storage_provider_objects(
+        &self,
+        provider_id: &str,
+    ) -> Result<i64, DriveServiceError> {
+        let count: i64 = sqlx::query_scalar(
+            "SELECT COUNT(*)
+             FROM dr_drive_storage_object
+             WHERE storage_provider_id=$1",
+        )
+        .bind(provider_id)
+        .fetch_one(&self.pool)
+        .await
+        .map_err(|error| {
+            DriveServiceError::Internal(format!(
+                "count dr_drive_storage_object rows failed: {error}"
+            ))
+        })?;
+        Ok(count)
+    }
+
     async fn find_active_storage_provider_by_bucket(
         &self,
         tenant_id: &str,

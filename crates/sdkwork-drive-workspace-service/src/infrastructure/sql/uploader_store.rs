@@ -1111,6 +1111,20 @@ async fn complete_stored_upload_in_transaction(
     )
     .await?;
 
+    // Parts are only needed while the upload is resumable. Keeping them after a
+    // successful completion leaks one row per part for the life of the node.
+    sqlx::query(
+        "DELETE FROM dr_drive_upload_part
+         WHERE tenant_id = $1 AND upload_session_id = $2",
+    )
+    .bind(&completion.tenant_id)
+    .bind(&completion.upload_session_id)
+    .execute(&mut *connection)
+    .await
+    .map_err(|error| {
+        DriveServiceError::Internal(format!("delete completed upload parts failed: {error}"))
+    })?;
+
     read_upload_item_by_id(connection, &completion.tenant_id, &target.item.id).await
 }
 

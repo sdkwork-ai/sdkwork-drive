@@ -15,6 +15,7 @@ pub fn map_object_store_error(error: DriveObjectStoreError) -> DriveServiceError
         DriveObjectStoreErrorKind::NotFound => DriveServiceError::NotFound(error.message),
         DriveObjectStoreErrorKind::InvalidRequest => DriveServiceError::Validation(error.message),
         DriveObjectStoreErrorKind::Conflict => DriveServiceError::Conflict(error.message),
+        DriveObjectStoreErrorKind::NotSupported => DriveServiceError::Conflict(error.message),
         DriveObjectStoreErrorKind::PermissionDenied => {
             DriveServiceError::PermissionDenied(error.message)
         }

@@ -188,9 +188,14 @@ impl DriveProviderObjectStoreFactory {
         Ok(provider)
     }
 
-    /// Resolve an adapter for a provider the caller already loaded, enforcing
-    /// that the provider still addresses the location a historical locator was
-    /// written against.
+    /// Resolve an adapter for a provider the caller already loaded.
+    ///
+    /// A historical locator keeps its own bucket. Read intent therefore accepts
+    /// a provider whose configured default bucket has since moved: the S3 adapter
+    /// addresses the locator bucket explicitly, and refusing the old bucket
+    /// would make every pre-switch object unreadable (and unpurgeable). Write
+    /// intent still requires the locator bucket to match the provider's current
+    /// configured target.
     pub async fn resolve_for_locator(
         &self,
         provider: &DriveStorageProvider,
@@ -198,7 +203,7 @@ impl DriveProviderObjectStoreFactory {
         intent: ProviderAccessIntent,
     ) -> Result<Arc<dyn DriveObjectStore>, DriveObjectStoreError> {
         ensure_provider_state_allows(provider, intent)?;
-        if provider.bucket != expected_bucket {
+        if intent == ProviderAccessIntent::Write && provider.bucket != expected_bucket {
             return Err(DriveObjectStoreError::new(
                 DriveObjectStoreErrorKind::Conflict,
                 format!(

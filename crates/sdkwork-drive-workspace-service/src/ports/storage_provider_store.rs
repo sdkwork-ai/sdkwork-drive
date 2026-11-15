@@ -95,6 +95,16 @@ pub trait DriveStorageProviderStore: Send + Sync {
         provider_id: &str,
     ) -> Result<i64, DriveServiceError>;
 
+    /// Count every storage object row that still points at this provider.
+    ///
+    /// Deletion needs this stronger count: a `deleted` row may still be waiting
+    /// for the physical purge sweep, and removing the provider row would make the
+    /// old locator unresolvable and leak those bytes forever.
+    async fn count_storage_provider_objects(
+        &self,
+        provider_id: &str,
+    ) -> Result<i64, DriveServiceError>;
+
     /// Resolve the single active provider of a tenant that addresses a bucket.
     ///
     /// Buckets are a *storage-level* namespace shared by every tenant on the

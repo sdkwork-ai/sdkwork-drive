@@ -172,7 +172,7 @@ where
         if current_status == "deleted" || target_status != "deleted" {
             return Ok(());
         }
-        self.ensure_provider_holds_no_live_objects(provider_id, "delete")
+        self.ensure_provider_holds_no_live_objects(provider_id, "delete", true)
             .await?;
         if self
             .store
@@ -198,16 +198,27 @@ where
         &self,
         provider_id: &str,
         action: &str,
+        include_retired: bool,
     ) -> Result<(), DriveServiceError> {
-        let live_objects = self
-            .store
-            .count_active_storage_provider_objects(provider_id)
-            .await?;
-        if live_objects == 0 {
+        let object_count = if include_retired {
+            self.store
+                .count_storage_provider_objects(provider_id)
+                .await?
+        } else {
+            self.store
+                .count_active_storage_provider_objects(provider_id)
+                .await?
+        };
+        if object_count == 0 {
             return Ok(());
         }
+        let qualifier = if include_retired {
+            "object(s) (active or pending cleanup)"
+        } else {
+            "active object(s)"
+        };
         Err(DriveServiceError::Conflict(format!(
-            "storage provider still holds {live_objects} active object(s); migrate or delete them before you {action} it"
+            "storage provider still holds {object_count} {qualifier}; migrate or delete them before you {action} it"
         )))
     }
 
@@ -257,6 +268,19 @@ where
         {
             return Err(DriveServiceError::Conflict(format!(
                 "{field_name} cannot be changed while storage provider has active bindings"
+            )));
+        }
+        // A retired (`deleted`) object may still be waiting for the physical
+        // purge sweep. Moving the provider endpoint/bucket before that sweep
+        // would make the old locator unresolvable and leak the bytes.
+        if self
+            .store
+            .count_storage_provider_objects(provider_id)
+            .await?
+            > 0
+        {
+            return Err(DriveServiceError::Conflict(format!(
+                "{field_name} cannot be changed while storage provider still holds objects pending cleanup"
             )));
         }
         Ok(())
@@ -588,7 +612,7 @@ where
         // rule applies. Re-enabling (`disabled` -> `active`) is always allowed
         // and is the supported recovery path out of a mistaken disable.
         if status == "disabled" && current.status != "disabled" {
-            self.ensure_provider_holds_no_live_objects(provider_id, "disable")
+            self.ensure_provider_holds_no_live_objects(provider_id, "disable", false)
                 .await?;
         }
         self.store

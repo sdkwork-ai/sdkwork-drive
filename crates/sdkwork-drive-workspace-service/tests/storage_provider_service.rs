@@ -1839,7 +1839,7 @@ async fn deleting_storage_provider_is_rejected_while_live_objects_remain() {
         .expect_err("a provider that still holds live objects must not be deleted");
     assert!(
         matches!(&delete_error, DriveServiceError::Conflict(message)
-            if message.contains("1 active object")),
+            if message.contains("1 object(s)")),
         "unexpected error: {delete_error:?}"
     );
     assert_eq!(

@@ -14,6 +14,7 @@ use axum::Json;
 use sdkwork_drive_storage_contract::{
     AbortMultipartUploadRequest, CompleteMultipartUploadRequest, CompletedMultipartPart,
     CreateMultipartUploadRequest, DeleteObjectRequest, DriveObjectLocator,
+    DriveStorageProviderKind,
 };
 use sdkwork_drive_workspace_service::application::storage_target_service::{
     resolve_storage_target as resolve_workspace_storage_target, DriveStorageTarget,
@@ -232,6 +233,33 @@ pub(crate) async fn read_node_content_state(
     read_workspace_node_content_state(pool, tenant_id, node_id)
         .await
         .map_err(map_service_error)
+}
+
+pub(crate) async fn ensure_upload_provider_supports_multipart(
+    state: &AppState,
+    provider_id: &str,
+) -> Result<(), (StatusCode, Json<ProblemDetail>)> {
+    let provider_kind: Option<String> =
+        sqlx::query_scalar("SELECT provider_kind FROM dr_drive_storage_provider WHERE id = $1")
+            .bind(provider_id)
+            .fetch_optional(&state.pool)
+            .await
+            .map_err(|error| {
+                crate::error::internal_problem(format!("read upload provider kind failed: {error}"))
+            })?;
+    if provider_kind
+        .as_deref()
+        .and_then(DriveStorageProviderKind::try_from_str)
+        .is_some_and(|kind| !kind.is_s3_compatible())
+    {
+        return Err(crate::error::problem(
+            StatusCode::CONFLICT,
+            "storage provider cannot accept uploads",
+            "this storage provider does not support multipart upload sessions; choose an S3-compatible provider",
+            crate::error::SdkWorkResultCode::Conflict,
+        ));
+    }
+    Ok(())
 }
 
 /// Compatibility wrapper that presents the record DTO for callers that build

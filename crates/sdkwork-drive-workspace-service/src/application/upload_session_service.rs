@@ -230,6 +230,26 @@ where
             },
         )
         .await?;
+        let provider_kind: Option<String> =
+            sqlx::query_scalar("SELECT provider_kind FROM dr_drive_storage_provider WHERE id = $1")
+                .bind(&storage_target.provider_id)
+                .fetch_optional(&self.pool)
+                .await
+                .map_err(|error| {
+                    DriveServiceError::Internal(format!(
+                        "read upload provider kind failed: {error}"
+                    ))
+                })?;
+        if provider_kind
+            .as_deref()
+            .and_then(sdkwork_drive_storage_contract::DriveStorageProviderKind::try_from_str)
+            .is_some_and(|kind| !kind.is_s3_compatible())
+        {
+            return Err(DriveServiceError::Conflict(
+                "storage provider does not support multipart upload sessions; choose an S3-compatible provider"
+                    .to_string(),
+            ));
+        }
         let storage_upload_id = self
             .storage
             .create_multipart_upload(CreateDriveMultipartUploadCommand {
@@ -365,6 +385,13 @@ where
         let uploader_upload_item = self
             .find_uploader_item_by_session(&tenant_id, &command.upload_session_id)
             .await?;
+        if let Some(upload_item) = uploader_upload_item.as_ref() {
+            if upload_item.content_length != content_length {
+                return Err(DriveServiceError::Validation(
+                    "content_length does not match the prepared upload item".to_string(),
+                ));
+            }
+        }
         let completed_object_plan = self.plan_completed_object(&tenant_id, &session).await?;
         self.sessions()
             .claim_completion(&session, &operator_id)
