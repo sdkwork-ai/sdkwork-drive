@@ -7,8 +7,18 @@ use tokio::task::JoinHandle;
 pub struct SchedulerConfig {
     /// Interval for upload session cleanup.
     pub upload_cleanup_interval: Duration,
+    /// Interval for aborting vendor multipart uploads of expired sessions.
+    pub expired_multipart_abort_interval: Duration,
     /// Interval for orphan object cleanup.
     pub orphan_cleanup_interval: Duration,
+    /// Interval for expired uploader content moving to the recycle bin / purge.
+    pub expired_upload_cleanup_interval: Duration,
+    /// Interval for failing upload items abandoned by expired sessions.
+    pub abandoned_upload_sweep_interval: Duration,
+    /// Interval for physically deleting retired provider objects.
+    pub storage_object_purge_interval: Duration,
+    /// Interval for deleting expired download-package archives.
+    pub download_package_cleanup_interval: Duration,
     /// Interval for quota recalculation.
     pub quota_recalculation_interval: Duration,
     /// Interval for domain outbox dispatch.
@@ -21,7 +31,12 @@ impl Default for SchedulerConfig {
     fn default() -> Self {
         Self {
             upload_cleanup_interval: Duration::from_secs(3600),
+            expired_multipart_abort_interval: Duration::from_secs(1800),
             orphan_cleanup_interval: Duration::from_secs(86400),
+            expired_upload_cleanup_interval: Duration::from_secs(900),
+            abandoned_upload_sweep_interval: Duration::from_secs(900),
+            storage_object_purge_interval: Duration::from_secs(900),
+            download_package_cleanup_interval: Duration::from_secs(900),
             quota_recalculation_interval: Duration::from_secs(3600),
             domain_outbox_dispatch_interval: Duration::from_secs(30),
             website_publishing_cleanup_interval: Duration::from_secs(300),
@@ -83,6 +98,46 @@ impl Scheduler {
         }));
 
         let pool_clone = pool.clone();
+        let interval = self.config.expired_multipart_abort_interval;
+        self.handles.push(tokio::spawn(async move {
+            loop {
+                tokio::time::sleep(interval).await;
+                let pool_for_task = pool_clone.clone();
+                crate::maintenance::leader::run_if_maintenance_leader(
+                    &pool_clone,
+                    "expired_multipart_abort",
+                    || async move {
+                        match crate::maintenance::expired_multipart_abort::abort_expired_multipart_uploads(
+                            &pool_for_task,
+                            200,
+                        )
+                        .await
+                        {
+                            Ok(result) => {
+                                tracing::info!(
+                                    target: "sdkwork.drive",
+                                    event = "drive.install_worker.expired_multipart_abort",
+                                    scanned_sessions = result.scanned_sessions,
+                                    aborted_uploads = result.aborted_uploads,
+                                    failed_uploads = result.failed_uploads,
+                                    "expired multipart abort completed"
+                                );
+                            }
+                            Err(error) => {
+                                tracing::error!(
+                                    event = "drive.install_worker.expired_multipart_abort_failed",
+                                    error = %error,
+                                    "expired multipart abort failed"
+                                );
+                            }
+                        }
+                    },
+                )
+                .await;
+            }
+        }));
+
+        let pool_clone = pool.clone();
         let interval = self.config.orphan_cleanup_interval;
         self.handles.push(tokio::spawn(async move {
             loop {
@@ -108,6 +163,190 @@ impl Scheduler {
                             }
                             Err(error) => {
                                 tracing::error!("Orphan cleanup failed: {}", error);
+                            }
+                        }
+                    },
+                )
+                .await;
+            }
+        }));
+
+        let pool_clone = pool.clone();
+        let interval = self.config.expired_upload_cleanup_interval;
+        self.handles.push(tokio::spawn(async move {
+            loop {
+                tokio::time::sleep(interval).await;
+                let pool_for_task = pool_clone.clone();
+                crate::maintenance::leader::run_if_maintenance_leader(
+                    &pool_clone,
+                    "expired_upload_content_cleanup",
+                    || async move {
+                        let service =
+                            sdkwork_drive_workspace_service::application::maintenance_service::DriveMaintenanceService::new(
+                                sdkwork_drive_workspace_service::infrastructure::sql::maintenance_store::SqlMaintenanceStore::new(
+                                    pool_for_task,
+                                ),
+                            );
+                        match service
+                            .sweep_expired_upload_content(
+                                sdkwork_drive_workspace_service::application::maintenance_service::SweepExpiredUploadContentCommand {
+                                    now_epoch_ms: chrono::Utc::now().timestamp_millis(),
+                                    dry_run: false,
+                                    limit: Some(500),
+                                    operator_id: "install-worker".to_string(),
+                                    request_id: None,
+                                    trace_id: None,
+                                },
+                            )
+                            .await
+                        {
+                            Ok(result) => {
+                                tracing::info!(
+                                    target: "sdkwork.drive",
+                                    event = "drive.install_worker.expired_upload_content_cleanup",
+                                    scanned = result.scanned_count,
+                                    affected = result.affected_count,
+                                    "expired upload content cleanup completed"
+                                );
+                            }
+                            Err(error) => {
+                                tracing::error!(
+                                    event = "drive.install_worker.expired_upload_content_cleanup_failed",
+                                    error = ?error,
+                                    "expired upload content cleanup failed"
+                                );
+                            }
+                        }
+                    },
+                )
+                .await;
+            }
+        }));
+
+        let pool_clone = pool.clone();
+        let interval = self.config.abandoned_upload_sweep_interval;
+        self.handles.push(tokio::spawn(async move {
+            loop {
+                tokio::time::sleep(interval).await;
+                let pool_for_task = pool_clone.clone();
+                crate::maintenance::leader::run_if_maintenance_leader(
+                    &pool_clone,
+                    "abandoned_upload_task_sweep",
+                    || async move {
+                        let service =
+                            sdkwork_drive_workspace_service::application::maintenance_service::DriveMaintenanceService::new(
+                                sdkwork_drive_workspace_service::infrastructure::sql::maintenance_store::SqlMaintenanceStore::new(
+                                    pool_for_task,
+                                ),
+                            );
+                        match service
+                            .sweep_abandoned_upload_tasks(
+                                sdkwork_drive_workspace_service::application::maintenance_service::SweepAbandonedUploadTasksCommand {
+                                    now_epoch_ms: chrono::Utc::now().timestamp_millis(),
+                                    dry_run: false,
+                                    limit: Some(500),
+                                    operator_id: "install-worker".to_string(),
+                                    request_id: None,
+                                    trace_id: None,
+                                },
+                            )
+                            .await
+                        {
+                            Ok(result) => {
+                                tracing::info!(
+                                    target: "sdkwork.drive",
+                                    event = "drive.install_worker.abandoned_upload_task_sweep",
+                                    scanned = result.scanned_count,
+                                    affected = result.affected_count,
+                                    "abandoned upload task sweep completed"
+                                );
+                            }
+                            Err(error) => {
+                                tracing::error!(
+                                    event = "drive.install_worker.abandoned_upload_task_sweep_failed",
+                                    error = ?error,
+                                    "abandoned upload task sweep failed"
+                                );
+                            }
+                        }
+                    },
+                )
+                .await;
+            }
+        }));
+
+        let pool_clone = pool.clone();
+        let interval = self.config.storage_object_purge_interval;
+        self.handles.push(tokio::spawn(async move {
+            loop {
+                tokio::time::sleep(interval).await;
+                let pool_for_task = pool_clone.clone();
+                crate::maintenance::leader::run_if_maintenance_leader(
+                    &pool_clone,
+                    "storage_object_purge",
+                    || async move {
+                        match crate::maintenance::storage_object_purge::purge_deleted_storage_objects(
+                            &pool_for_task,
+                            500,
+                        )
+                        .await
+                        {
+                            Ok(result) => {
+                                tracing::info!(
+                                    target: "sdkwork.drive",
+                                    event = "drive.install_worker.storage_object_purge",
+                                    scanned_objects = result.scanned_objects,
+                                    purged_objects = result.purged_objects,
+                                    failed_objects = result.failed_objects,
+                                    "storage object purge completed"
+                                );
+                            }
+                            Err(error) => {
+                                tracing::error!(
+                                    event = "drive.install_worker.storage_object_purge_failed",
+                                    error = %error,
+                                    "storage object purge failed"
+                                );
+                            }
+                        }
+                    },
+                )
+                .await;
+            }
+        }));
+
+        let pool_clone = pool.clone();
+        let interval = self.config.download_package_cleanup_interval;
+        self.handles.push(tokio::spawn(async move {
+            loop {
+                tokio::time::sleep(interval).await;
+                let pool_for_task = pool_clone.clone();
+                crate::maintenance::leader::run_if_maintenance_leader(
+                    &pool_clone,
+                    "download_package_cleanup",
+                    || async move {
+                        match crate::maintenance::expired_download_package_cleanup::cleanup_expired_download_packages(
+                            &pool_for_task,
+                            200,
+                        )
+                        .await
+                        {
+                            Ok(result) => {
+                                tracing::info!(
+                                    target: "sdkwork.drive",
+                                    event = "drive.install_worker.download_package_cleanup",
+                                    scanned_packages = result.scanned_packages,
+                                    cleaned_packages = result.cleaned_packages,
+                                    failed_packages = result.failed_packages,
+                                    "expired download package cleanup completed"
+                                );
+                            }
+                            Err(error) => {
+                                tracing::error!(
+                                    event = "drive.install_worker.download_package_cleanup_failed",
+                                    error = %error,
+                                    "expired download package cleanup failed"
+                                );
                             }
                         }
                     },

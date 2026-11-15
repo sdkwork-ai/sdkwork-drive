@@ -56,9 +56,29 @@ fn read_scheduler_config() -> SchedulerConfig {
             "SDKWORK_DRIVE_WORKER_UPLOAD_CLEANUP_INTERVAL_SECONDS",
             3600,
         ),
+        expired_multipart_abort_interval: read_duration_seconds(
+            "SDKWORK_DRIVE_WORKER_EXPIRED_MULTIPART_ABORT_INTERVAL_SECONDS",
+            1800,
+        ),
         orphan_cleanup_interval: read_duration_seconds(
             "SDKWORK_DRIVE_WORKER_ORPHAN_CLEANUP_INTERVAL_SECONDS",
             86_400,
+        ),
+        expired_upload_cleanup_interval: read_duration_seconds(
+            "SDKWORK_DRIVE_WORKER_EXPIRED_UPLOAD_CLEANUP_INTERVAL_SECONDS",
+            900,
+        ),
+        abandoned_upload_sweep_interval: read_duration_seconds(
+            "SDKWORK_DRIVE_WORKER_ABANDONED_UPLOAD_SWEEP_INTERVAL_SECONDS",
+            900,
+        ),
+        storage_object_purge_interval: read_duration_seconds(
+            "SDKWORK_DRIVE_WORKER_STORAGE_OBJECT_PURGE_INTERVAL_SECONDS",
+            900,
+        ),
+        download_package_cleanup_interval: read_duration_seconds(
+            "SDKWORK_DRIVE_WORKER_DOWNLOAD_PACKAGE_CLEANUP_INTERVAL_SECONDS",
+            900,
         ),
         quota_recalculation_interval: read_duration_seconds(
             "SDKWORK_DRIVE_WORKER_QUOTA_RECALC_INTERVAL_SECONDS",
