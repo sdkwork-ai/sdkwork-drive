@@ -81,6 +81,26 @@ The production implementation uses the official Rust AWS S3 SDK through `aws-sdk
      console origin through CORS. Server-side write/read/multipart/presign
      readiness is covered by the initialization probe above.
 
+4.3 Retention, recycle bin and cleanup.
+   - Every temporary uploader retention expiry first moves its node to
+     `trashed` (`cleanup_status=soft_deleted`), so the user gets a restore
+     window even when the policy is `hard_delete`.
+   - `hard_delete` grace is measured from retention expiry. Once
+     `hard_delete_after_epoch_ms` (or the expiry itself when no grace was
+     supplied) passes, a second sweep retires the node/objects and records the
+     sensitive operation; the install-worker then deletes the provider bytes and
+     removes the storage-object metadata. A provider failure keeps the metadata
+     for retry instead of silently leaking the object.
+   - Expired upload sessions are aborted at the vendor before their multipart
+     metadata is discarded, expired download-package archives are deleted, and
+     empty-trash/hard-delete objects are physically purged by the same worker.
+   - Maintenance intervals:
+     `SDKWORK_DRIVE_WORKER_EXPIRED_UPLOAD_CLEANUP_INTERVAL_SECONDS` (900),
+     `SDKWORK_DRIVE_WORKER_ABANDONED_UPLOAD_SWEEP_INTERVAL_SECONDS` (900),
+     `SDKWORK_DRIVE_WORKER_STORAGE_OBJECT_PURGE_INTERVAL_SECONDS` (900),
+     `SDKWORK_DRIVE_WORKER_EXPIRED_MULTIPART_ABORT_INTERVAL_SECONDS` (1800),
+     `SDKWORK_DRIVE_WORKER_DOWNLOAD_PACKAGE_CLEANUP_INTERVAL_SECONDS` (900).
+
 5. Object keys are internal.
    - App APIs should avoid exposing object keys as durable business identifiers.
    - Backend object-management APIs may expose object keys because they are administrative storage tools.
