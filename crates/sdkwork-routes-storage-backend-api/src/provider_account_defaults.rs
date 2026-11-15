@@ -82,6 +82,7 @@ use axum::http::StatusCode;
 use axum::Json;
 use sdkwork_drive_contract::drive::domain_events::admin_audit;
 use sdkwork_drive_storage_contract::CreateBucketRequest;
+use sdkwork_drive_workspace_service::application::quota_enforcement::ensure_tenant_can_allocate_bytes;
 use sdkwork_drive_workspace_service::application::storage_provider_kind_service::DriveStorageProviderKindService;
 use sdkwork_drive_workspace_service::application::storage_provider_service::{
     CreateStorageProviderCommand, DriveStorageProviderService, GetStorageProviderCommand,
@@ -89,6 +90,7 @@ use sdkwork_drive_workspace_service::application::storage_provider_service::{
 use sdkwork_drive_workspace_service::domain::storage_provider::{
     DriveStorageProvider, DriveStorageProviderKind,
 };
+use sdkwork_drive_workspace_service::infrastructure::sql::quota_store::SqlQuotaStore;
 use sdkwork_drive_workspace_service::infrastructure::sql::storage_provider_kind_store::SqlStorageProviderKindStore;
 use sdkwork_drive_workspace_service::infrastructure::sql::storage_provider_store::SqlStorageProviderStore;
 use sdkwork_drive_workspace_service::DriveServiceError;
@@ -1310,8 +1312,18 @@ pub(crate) async fn initialize_storage_provider(
         )))
     })?;
 
+    let quota_ready =
+        ensure_tenant_can_allocate_bytes(&SqlQuotaStore::new(state.pool.clone()), &tenant_id, 1)
+            .await;
+
     let mut ready = readiness.ready;
     let mut readiness_error = readiness.readiness_error.clone();
+    if let Err(error) = quota_ready {
+        ready = false;
+        if readiness_error.is_none() {
+            readiness_error = Some(format!("tenant quota blocks uploads: {}", error.message()));
+        }
+    }
     if logical_bucket_count == 0 || business_binding_count == 0 {
         ready = false;
         if readiness_error.is_none() {
