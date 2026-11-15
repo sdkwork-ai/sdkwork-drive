@@ -36,7 +36,7 @@ pub(crate) async fn probe_storage_readiness(
 ) -> StorageProviderReadiness {
     let probe_id = SystemTime::now()
         .duration_since(UNIX_EPOCH)
-        .map(|elapsed| elapsed.as_millis())
+        .map(|elapsed| elapsed.as_nanos())
         .unwrap_or(0);
     let locator = DriveObjectLocator {
         bucket: bucket.to_string(),

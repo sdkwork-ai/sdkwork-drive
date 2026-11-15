@@ -4294,6 +4294,36 @@ async fn one_click_provider_initialize_creates_bucket_default_binding_and_logica
         );
     }
 
+    let overview_response = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method(Method::GET)
+                .uri("/backend/v3/api/drive/storage/overview?trendMonths=1")
+                .body(Body::empty())
+                .expect("overview request should be built"),
+        )
+        .await
+        .expect("overview request should be handled");
+    assert_eq!(overview_response.status(), StatusCode::OK);
+    let overview: serde_json::Value = serde_json::from_slice(
+        &to_bytes(overview_response.into_body(), usize::MAX)
+            .await
+            .expect("overview response should be read"),
+    )
+    .expect("overview response should be json");
+    let data = &overview["data"];
+    assert_eq!(
+        data["bindings"]["byScope"]["spaceTypeCount"].as_str(),
+        Some("11")
+    );
+    assert_eq!(
+        data["bindings"]["byScope"]["tenantCount"].as_str(),
+        Some("1")
+    );
+    assert_eq!(data["bindings"]["hasTenantDefault"], true);
+    assert_eq!(data["bindings"]["tenantDefaultProviderId"], "provider-init");
+
     let default_provider: String = sqlx::query_scalar(
         "SELECT provider_id FROM dr_drive_storage_provider_binding
          WHERE id = 'default:tenant:tenant-provider-init' AND lifecycle_status = 'active'",

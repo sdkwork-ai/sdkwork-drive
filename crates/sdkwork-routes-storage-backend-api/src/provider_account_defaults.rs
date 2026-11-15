@@ -1331,8 +1331,9 @@ pub(crate) async fn initialize_storage_provider(
                 Some("logical storage plane is incomplete; re-run initialization".to_string());
         }
     }
-    if let Some(routing_provider_id) = routing_provider_id.as_deref() {
-        if routing_provider_id != provider.id.as_str() {
+    match routing_provider_id.as_deref() {
+        Some(routing_provider_id) if routing_provider_id == provider.id.as_str() => {}
+        Some(routing_provider_id) => {
             ready = false;
             if readiness_error.is_none() {
                 readiness_error = Some(format!(
@@ -1340,11 +1341,24 @@ pub(crate) async fn initialize_storage_provider(
                 ));
             }
         }
+        None => {
+            ready = false;
+            if readiness_error.is_none() {
+                readiness_error = Some(
+                    "logical storage plane has no active provider route; re-run initialization"
+                        .to_string(),
+                );
+            }
+        }
     }
 
     record_storage_provider_audit(
         &state,
-        admin_audit::storage_provider::INITIALIZED,
+        if ready {
+            admin_audit::storage_provider::INITIALIZED
+        } else {
+            admin_audit::storage_provider::INITIALIZATION_FAILED
+        },
         &provider.id,
         &operator_id,
         &tenant_id,

@@ -61,6 +61,21 @@ The production implementation uses the official Rust AWS S3 SDK through `aws-sdk
      deletes a tiny probe object, so `ready: true` means the operations every
      storage workflow depends on actually work with the configured account.
 
+4.2 Admin safety constraints.
+   - Every route under `/backend/v3/api/drive/storage` requires
+     `drive.storage.admin`; tenant identity comes from the verified context and
+     every provider lookup is tenant-scoped.
+   - `local_filesystem` endpoints are confined to
+     `SDKWORK_DRIVE_LOCAL_STORAGE_ROOT` (default `/var/lib/sdkwork-drive`);
+     pointing a provider at `/` or outside that root is rejected so the admin
+     object APIs cannot be used to read arbitrary host files.
+   - Cloud endpoints reject link-local and known cloud-metadata addresses.
+     Loopback/private endpoints stay available for self-hosted object stores; a
+     SaaS deployment should additionally enforce outbound egress policy.
+   - Browser direct uploads use vendor presigned URLs; the bucket must allow the
+     console origin through CORS. Server-side write/read/multipart/presign
+     readiness is covered by the initialization probe above.
+
 5. Object keys are internal.
    - App APIs should avoid exposing object keys as durable business identifiers.
    - Backend object-management APIs may expose object keys because they are administrative storage tools.
