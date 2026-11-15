@@ -612,9 +612,16 @@ export function StorageBindingsAdminPage({
         */}
         {!loading && logicalBuckets.length > 0 && (
           <div className={`${CARD_CLASS} mb-4`} data-testid="logical-storage-buckets">
-            <div className="border-b border-neutral-100 px-5 py-3 dark:border-neutral-800">
-              <h3 className="text-sm font-semibold">{t('bindingsLogicalBucketsTitle')}</h3>
-              <p className="mt-0.5 text-[11px] text-neutral-500">{t('bindingsLogicalBucketsDesc')}</p>
+            <div className="flex flex-wrap items-start justify-between gap-3 border-b border-neutral-100 px-5 py-3 dark:border-neutral-800">
+              <div>
+                <h3 className="text-sm font-semibold">{t('bindingsLogicalBucketsTitle')}</h3>
+                <p className="mt-0.5 text-[11px] text-neutral-500">{t('bindingsLogicalBucketsDesc')}</p>
+              </div>
+              {onManageProviders ? (
+                <button type="button" className={SECONDARY_BUTTON_CLASS} onClick={onManageProviders}>
+                  {t('bindingsTenantConfigManage')}
+                </button>
+              ) : null}
             </div>
             <div className="divide-y divide-neutral-100 dark:divide-neutral-800">
               {logicalBuckets.map((bucket) => {

@@ -460,3 +460,64 @@ describe('StorageBindingsAdminPage file browsing', () => {
     });
   });
 });
+
+  it('shows the logical plane and routes a space type through a logical bucket', async () => {
+    const request = createRequest([], {
+      businessBindings: [
+        {
+          id: 'business-storage:tenant-100:space_type:personal',
+          tenantId: 'tenant-100',
+          scopeType: 'space_type',
+          scopeId: 'personal',
+          logicalBucketId: LOGICAL_BUCKET.id,
+          logicalBucketKey: LOGICAL_BUCKET.bucketKey,
+          logicalBucketName: LOGICAL_BUCKET.displayName,
+          writePrefix: 'space-types/personal',
+          lifecycleStatus: 'active',
+          version: '1',
+          providerId: ACTIVE_PROVIDER.id,
+          storageRootPrefix: 'sdkwork-drive/v1/tenants/tenant-100',
+        },
+      ],
+    });
+    render(
+      <StorageBindingsAdminPage
+        adminStorageSdkClient={createFakeClient(request)}
+        getSession={getSession}
+      />,
+    );
+
+    const logicalCard = await waitFor(() => screen.getByTestId('logical-storage-buckets'));
+    expect(within(logicalCard).getByText('Business Content')).toBeTruthy();
+    expect(within(logicalCard).getByRole('combobox')).toBeTruthy();
+
+    // The personal row resolves through the logical bucket, not a direct provider.
+    const personalRow = (await screen.findByText('spaceTypePersonalLabel')).closest('tr');
+    expect(within(personalRow as HTMLElement).getByText('Business Content')).toBeTruthy();
+    expect(
+      within(personalRow as HTMLElement).getByText(/OSS Hangzhou/),
+    ).toBeTruthy();
+    expect(
+      within(personalRow as HTMLElement).getByText(
+        'sdkwork-drive/v1/tenants/tenant-100/logical/business/space-types/personal',
+      ),
+    ).toBeTruthy();
+
+    // Saving keeps the provider out of the business row.
+    fireEvent.click(within(personalRow as HTMLElement).getByRole('button', { name: 'bindingsChange' }));
+    const saveButton = await screen.findByRole('button', { name: 'save' });
+    await waitFor(() => expect((saveButton as HTMLButtonElement).disabled).toBe(false));
+    fireEvent.click(saveButton);
+    await waitFor(() =>
+      expect(
+        request.mock.calls.some(
+          (call) =>
+            call[0].operationId === 'storageBusinessBindings.update'
+            && call[0].pathParams?.scopeType === 'space_type'
+            && call[0].pathParams?.scopeId === 'personal'
+            && call[0].body?.logicalBucketId === LOGICAL_BUCKET.id
+            && call[0].body?.providerId === undefined,
+        ),
+      ).toBe(true),
+    );
+  });
