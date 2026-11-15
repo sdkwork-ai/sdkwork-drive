@@ -434,6 +434,11 @@ async fn prepare_anonymous_upload_uses_app_owned_upload_space() {
         prepared.retention_expires_at_epoch_ms,
         Some(1_800_000_060_000)
     );
+    assert_eq!(
+        prepared.hard_delete_after_epoch_ms,
+        Some(1_800_000_180_000),
+        "hard-delete grace must be measured from retention expiry"
+    );
 
     let owner: (String, String, String) = sqlx::query_as(
         "SELECT owner_subject_type, owner_subject_id, space_type
@@ -989,6 +994,11 @@ async fn prepare_video_upload_selects_video_profile_and_temporary_retention() {
         Some(1_800_000_007_000)
     );
     assert_eq!(prepared.cleanup_action.as_deref(), Some("hard_delete"));
+    assert_eq!(
+        prepared.hard_delete_after_epoch_ms,
+        Some(1_800_086_407_000),
+        "hard delete must keep a default recycle-bin grace window"
+    );
 }
 
 #[tokio::test]

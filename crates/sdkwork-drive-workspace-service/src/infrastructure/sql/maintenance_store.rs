@@ -160,7 +160,7 @@ impl DriveMaintenanceStore for SqlMaintenanceStore {
         })?;
         let scanned_count = total.min(query.limit);
 
-        if query.dry_run || scanned_count == 0 {
+        if query.dry_run {
             return Ok(DriveSweepResult {
                 scanned_count,
                 affected_count: 0,
@@ -215,13 +215,11 @@ impl DriveMaintenanceStore for SqlMaintenanceStore {
             let tenant_id: String = row.get("tenant_id");
             let node_id: String = row.get("node_id");
             let before_lifecycle_status: String = row.get("node_lifecycle_status");
-            let cleanup_action: String = row.get("cleanup_action");
+            // Every retention expiry enters the recycle bin first. `hard_delete`
+            // only decides what happens *after* the grace window, not whether
+            // the user gets a restore opportunity.
             let (operation_type, node_lifecycle_status, cleanup_status) =
-                if cleanup_action == "hard_delete" {
-                    ("hard_delete", "deleted", "hard_deleted")
-                } else {
-                    ("soft_delete", "trashed", "soft_deleted")
-                };
+                ("soft_delete", "trashed", "soft_deleted");
 
             let mut connection = self.pool.acquire().await.map_err(|error| {
                 DriveServiceError::Internal(format!(
@@ -245,35 +243,7 @@ impl DriveMaintenanceStore for SqlMaintenanceStore {
                 )
                 .await?;
 
-                let object_delete_status = if cleanup_action == "hard_delete" {
-                    let object_rows = sqlx::query(
-                        "UPDATE dr_drive_storage_object
-                         SET lifecycle_status='deleted',
-                             updated_by=$1,
-                             updated_at=CURRENT_TIMESTAMP
-                         WHERE tenant_id=$2
-                           AND node_id=$3
-                           AND lifecycle_status='active'",
-                    )
-                    .bind(&query.operator_id)
-                    .bind(&tenant_id)
-                    .bind(&node_id)
-                    .execute(&mut *connection)
-                    .await
-                    .map_err(|error| {
-                        DriveServiceError::Internal(format!(
-                            "hard delete expired upload storage object failed: {error}"
-                        ))
-                    })?
-                    .rows_affected();
-                    if object_rows == 0 {
-                        "missing"
-                    } else {
-                        "deleted"
-                    }
-                } else {
-                    "not_required"
-                };
+                let object_delete_status = "not_required";
 
                 let node_rows = sqlx::query(
                     "UPDATE dr_drive_node
@@ -406,6 +376,229 @@ impl DriveMaintenanceStore for SqlMaintenanceStore {
                 Err(error) => {
                     let _ = sqlx::query("ROLLBACK").execute(&mut *connection).await;
                     return Err(error);
+                }
+            }
+        }
+
+        // Second stage: hard-delete items whose recycle-bin grace window has
+        // elapsed. Provider bytes are removed by the install-worker object purge
+        // sweep after these rows become `deleted`, so this transaction only
+        // retires metadata and never loses the locator needed for the byte
+        // deletion.
+        let purge_rows = sqlx::query(
+            "SELECT
+                ui.id AS upload_item_id,
+                ui.tenant_id,
+                ui.organization_id,
+                ui.user_id,
+                ui.space_id,
+                ui.node_id,
+                ui.content_type,
+                ui.content_type_group,
+                ui.content_length,
+                ui.checksum_sha256_hex,
+                n.lifecycle_status AS node_lifecycle_status,
+                so.id AS storage_object_id,
+                so.bucket AS object_bucket,
+                so.object_key
+             FROM dr_drive_upload_item ui
+             INNER JOIN dr_drive_node n
+               ON n.id = ui.node_id AND n.tenant_id = ui.tenant_id
+             LEFT JOIN dr_drive_storage_object so
+               ON so.node_id = ui.node_id
+              AND so.tenant_id = ui.tenant_id
+              AND so.lifecycle_status = 'active'
+             WHERE ui.cleanup_status = 'soft_deleted'
+               AND ui.cleanup_action = 'hard_delete'
+               AND COALESCE(ui.hard_delete_after_epoch_ms, ui.retention_expires_at_epoch_ms) <= $1
+               AND n.lifecycle_status = 'trashed'
+             ORDER BY COALESCE(ui.hard_delete_after_epoch_ms, ui.retention_expires_at_epoch_ms) ASC,
+                      ui.id ASC, so.version_no DESC
+             LIMIT $2",
+        )
+        .bind(query.now_epoch_ms)
+        .bind(query.limit)
+        .fetch_all(&self.pool)
+        .await
+        .map_err(|error| {
+            DriveServiceError::Internal(format!(
+                "list hard-delete expired upload content failed: {error}"
+            ))
+        })?;
+
+        if !query.dry_run {
+            for row in purge_rows {
+                let upload_item_id: String = row.get("upload_item_id");
+                let tenant_id: String = row.get("tenant_id");
+                let node_id: String = row.get("node_id");
+                let before_lifecycle_status: String = row.get("node_lifecycle_status");
+
+                let mut connection = self.pool.acquire().await.map_err(|error| {
+                    DriveServiceError::Internal(format!(
+                        "acquire expired content purge transaction failed: {error}"
+                    ))
+                })?;
+                sqlx::query(begin_transaction_sql())
+                    .execute(&mut *connection)
+                    .await
+                    .map_err(|error| {
+                        DriveServiceError::Internal(format!(
+                            "begin expired content purge transaction failed: {error}"
+                        ))
+                    })?;
+
+                let tx_result: Result<bool, DriveServiceError> = async {
+                    ensure_managed_website_node_mutation_allowed(
+                        &mut connection,
+                        &tenant_id,
+                        &node_id,
+                    )
+                    .await?;
+
+                    let item_rows = sqlx::query(
+                        "UPDATE dr_drive_upload_item
+                         SET cleanup_status = 'hard_deleted',
+                             updated_by = $1,
+                             updated_at = CURRENT_TIMESTAMP
+                         WHERE tenant_id = $2
+                           AND id = $3
+                           AND cleanup_status = 'soft_deleted'",
+                    )
+                    .bind(&query.operator_id)
+                    .bind(&tenant_id)
+                    .bind(&upload_item_id)
+                    .execute(&mut *connection)
+                    .await
+                    .map_err(|error| {
+                        DriveServiceError::Internal(format!(
+                            "mark expired upload item hard deleted failed: {error}"
+                        ))
+                    })?
+                    .rows_affected();
+                    if item_rows == 0 {
+                        return Ok(false);
+                    }
+
+                    let node_rows = sqlx::query(
+                        "UPDATE dr_drive_node
+                         SET lifecycle_status = 'deleted',
+                             version = version + 1,
+                             updated_by = $1,
+                             updated_at = CURRENT_TIMESTAMP
+                         WHERE tenant_id = $2
+                           AND id = $3
+                           AND lifecycle_status = 'trashed'",
+                    )
+                    .bind(&query.operator_id)
+                    .bind(&tenant_id)
+                    .bind(&node_id)
+                    .execute(&mut *connection)
+                    .await
+                    .map_err(|error| {
+                        DriveServiceError::Internal(format!(
+                            "hard delete expired upload node failed: {error}"
+                        ))
+                    })?
+                    .rows_affected();
+
+                    sqlx::query(
+                        "UPDATE dr_drive_storage_object
+                         SET lifecycle_status = 'deleted',
+                             updated_by = $1,
+                             updated_at = CURRENT_TIMESTAMP
+                         WHERE tenant_id = $2
+                           AND node_id = $3
+                           AND lifecycle_status = 'active'",
+                    )
+                    .bind(&query.operator_id)
+                    .bind(&tenant_id)
+                    .bind(&node_id)
+                    .execute(&mut *connection)
+                    .await
+                    .map_err(|error| {
+                        DriveServiceError::Internal(format!(
+                            "retire expired upload storage object failed: {error}"
+                        ))
+                    })?;
+
+                    sqlx::query(
+                        "INSERT INTO dr_drive_file_sensitive_operation (
+                            id, tenant_id, organization_id, user_id, space_id, node_id,
+                            storage_object_id, upload_item_id, operation_type, operation_reason,
+                            content_type, content_type_group, content_length, checksum_sha256_hex,
+                            object_bucket, object_key, before_lifecycle_status, after_lifecycle_status,
+                            operator_id, maintenance_job_id, request_id, trace_id, object_delete_status
+                        ) VALUES (
+                            $1, $2, $3, $4, $5, $6,
+                            $7, $8, 'hard_delete', 'retention_expired',
+                            $9, $10, $11, $12,
+                            $13, $14, $15, 'deleted',
+                            $16, NULL, $17, $18, 'not_required'
+                        )",
+                    )
+                    .bind(format!("fso-expired-upload-purge-{upload_item_id}"))
+                    .bind(&tenant_id)
+                    .bind(row.get::<Option<String>, _>("organization_id").as_deref().unwrap_or("0"))
+                    .bind(row.get::<Option<String>, _>("user_id"))
+                    .bind(row.get::<String, _>("space_id"))
+                    .bind(&node_id)
+                    .bind(row.get::<Option<String>, _>("storage_object_id"))
+                    .bind(&upload_item_id)
+                    .bind(row.get::<String, _>("content_type"))
+                    .bind(row.get::<String, _>("content_type_group"))
+                    .bind(row.get::<i64, _>("content_length"))
+                    .bind(row.get::<Option<String>, _>("checksum_sha256_hex"))
+                    .bind(row.get::<Option<String>, _>("object_bucket"))
+                    .bind(row.get::<Option<String>, _>("object_key"))
+                    .bind(&before_lifecycle_status)
+                    .bind(&query.operator_id)
+                    .bind(query.request_id.as_deref())
+                    .bind(query.trace_id.as_deref())
+                    .execute(&mut *connection)
+                    .await
+                    .map_err(|error| {
+                        DriveServiceError::Internal(format!(
+                            "insert hard-delete sensitive operation failed: {error}"
+                        ))
+                    })?;
+
+                    if node_rows > 0 {
+                        let space_id: String = row.get("space_id");
+                        record_drive_change_on_connection(
+                            &mut connection,
+                            RecordDriveChangeCommand {
+                                tenant_id: &tenant_id,
+                                space_id: &space_id,
+                                node_id: Some(&node_id),
+                                event_type: drive_events::uploader::CONTENT_PURGED,
+                                actor_id: &query.operator_id,
+                            },
+                        )
+                        .await?;
+                    }
+
+                    Ok(node_rows > 0)
+                }
+                .await;
+
+                match tx_result {
+                    Ok(committed) => {
+                        sqlx::query("COMMIT")
+                            .execute(&mut *connection)
+                            .await
+                            .map_err(|error| {
+                                DriveServiceError::Internal(format!(
+                                    "commit expired content purge transaction failed: {error}"
+                                ))
+                            })?;
+                        if committed {
+                            affected_count += 1;
+                        }
+                    }
+                    Err(error) => {
+                        let _ = sqlx::query("ROLLBACK").execute(&mut *connection).await;
+                        return Err(error);
+                    }
                 }
             }
         }

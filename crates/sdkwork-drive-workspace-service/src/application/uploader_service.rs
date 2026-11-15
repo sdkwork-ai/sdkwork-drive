@@ -775,18 +775,26 @@ fn resolve_retention(
                 ));
             }
             let cleanup_action = require_cleanup_action(cleanup_action)?;
-            let hard_delete_after_epoch_ms = hard_delete_after_seconds
-                .map(|seconds| {
-                    add_seconds_to_epoch_ms(now_epoch_ms, seconds, "hard_delete_after_seconds")
-                })
-                .transpose()?;
+            let expires_at_epoch_ms =
+                add_seconds_to_epoch_ms(now_epoch_ms, ttl_seconds, "ttl_seconds")?;
+            // The grace window starts at retention expiry, not at upload time.
+            // Otherwise a 7-day hard-delete grace on a 30-day TTL purges the
+            // content on day 7 while it is still inside its retention window.
+            // A hard-delete policy without an explicit grace still keeps one
+            // day in the recycle bin so an accidental expiry is restorable.
+            let hard_delete_after_epoch_ms = if cleanup_action == "hard_delete" {
+                let grace_seconds = hard_delete_after_seconds.unwrap_or(86_400);
+                Some(add_seconds_to_epoch_ms(
+                    expires_at_epoch_ms,
+                    grace_seconds,
+                    "hard_delete_after_seconds",
+                )?)
+            } else {
+                None
+            };
             Ok(ResolvedRetention {
                 mode: "temporary".to_string(),
-                expires_at_epoch_ms: Some(add_seconds_to_epoch_ms(
-                    now_epoch_ms,
-                    ttl_seconds,
-                    "ttl_seconds",
-                )?),
+                expires_at_epoch_ms: Some(expires_at_epoch_ms),
                 cleanup_action: Some(cleanup_action),
                 hard_delete_after_epoch_ms,
             })
@@ -986,9 +994,9 @@ fn total_parts(content_length: i64, chunk_size_bytes: i64) -> Result<i64, DriveS
             )
         })?
         / chunk_size_bytes;
-    if parts > i64::from(i32::MAX) {
+    if parts > 10_000 {
         return Err(DriveServiceError::Validation(
-            "content_length and chunk_size_bytes produce too many upload parts".to_string(),
+            "content_length and chunk_size_bytes produce more than 10000 upload parts".to_string(),
         ));
     }
     Ok(parts)

@@ -104,6 +104,7 @@ pub mod uploader {
     pub const PART_UPLOADED: &str = "drive.uploader.part_uploaded";
     pub const UPLOAD_COMPLETED: &str = "drive.uploader.upload_completed";
     pub const CONTENT_EXPIRED: &str = "drive.uploader.content_expired";
+    pub const CONTENT_PURGED: &str = "drive.uploader.content_purged";
 }
 
 /// Download grant events (DRIVE_SPEC §13).
