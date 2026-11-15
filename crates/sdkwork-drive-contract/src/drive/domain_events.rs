@@ -141,6 +141,7 @@ pub mod admin_audit {
         pub const DEACTIVATED: &str = "drive.storage_provider.deactivated";
         pub const STATUS_CHANGED: &str = "drive.storage_provider.status_changed";
         pub const TESTED: &str = "drive.storage_provider.tested";
+        pub const INITIALIZED: &str = "drive.storage_provider.initialized";
         pub const DELETED: &str = "drive.storage_provider.deleted";
         pub const BUCKET_CREATED: &str = "drive.storage_provider.bucket_created";
         pub const BUCKET_DELETED: &str = "drive.storage_provider.bucket_deleted";
@@ -299,6 +300,7 @@ mod tests {
         admin_audit::storage_provider::DEACTIVATED,
         admin_audit::storage_provider::STATUS_CHANGED,
         admin_audit::storage_provider::TESTED,
+        admin_audit::storage_provider::INITIALIZED,
         admin_audit::storage_provider::DELETED,
         admin_audit::storage_provider::BUCKET_CREATED,
         admin_audit::storage_provider::BUCKET_DELETED,

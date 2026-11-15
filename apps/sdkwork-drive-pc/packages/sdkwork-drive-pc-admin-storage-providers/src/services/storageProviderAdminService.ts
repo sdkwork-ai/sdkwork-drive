@@ -34,6 +34,7 @@ import type {
   StorageProviderBucketListItemView,
   StorageProviderBucketView,
   StorageProviderCapabilitiesView,
+  StorageProviderInitializationView,
   StorageProviderKindView,
   StorageProviderMutationOptions,
   StorageProviderMultipartUploadView,
@@ -203,6 +204,17 @@ export interface StorageProviderAdminService {
   listBuckets(providerId: string, options?: StorageProviderMutationOptions): Promise<StorageProviderBucketListItemView[]>;
   /** Idempotent initialization: ensures the configured bucket exists on the vendor. */
   initializeBucket(providerId: string, options?: StorageProviderMutationOptions): Promise<StorageProviderBucketInitializeView>;
+  /**
+   * One-click initialization after the operator stores the cloud account.
+   *
+   * Creates the configured bucket when missing, establishes the tenant default
+   * binding when none exists, and materializes the logical bucket/business
+   * binding plane. Every step is idempotent.
+   */
+  initializeProvider(
+    providerId: string,
+    options?: StorageProviderMutationOptions,
+  ): Promise<StorageProviderInitializationView>;
   deleteBucket(providerId: string, options?: StorageProviderMutationOptions): Promise<boolean>;
   listObjects(
     providerId: string,
@@ -718,6 +730,25 @@ export function createStorageProviderAdminService({
         bucket: stringField(record, 'bucket') ?? '',
         changed: booleanField(record, 'changed') ?? false,
       } satisfies StorageProviderBucketInitializeView;
+    },
+    async initializeProvider(providerId, options) {
+      assertAdminWriteSession(getSession);
+      const response = await adminStorageSdkClient.request<unknown>({
+        operationId: 'storageProviders.initialize',
+        signal: options?.signal,
+        pathParams: { providerId },
+      });
+      const record = resourceRecord(response);
+      return {
+        providerId: stringField(record, 'providerId') ?? providerId,
+        bucket: stringField(record, 'bucket') ?? '',
+        bucketCreated: booleanField(record, 'bucketCreated') ?? false,
+        bucketVerified: booleanField(record, 'bucketVerified') ?? false,
+        defaultBindingCreated: booleanField(record, 'defaultBindingCreated') ?? false,
+        logicalPlaneCreated: booleanField(record, 'logicalPlaneCreated') ?? false,
+        logicalBucketCount: stringField(record, 'logicalBucketCount') ?? '0',
+        businessBindingCount: stringField(record, 'businessBindingCount') ?? '0',
+      } satisfies StorageProviderInitializationView;
     },
     async deleteBucket(providerId, options) {
       const response = await adminStorageSdkClient.request<unknown>({
@@ -1378,6 +1409,7 @@ function responseToBucketListItem(item: unknown): StorageProviderBucketListItemV
   return {
     bucket: stringField(record, 'bucket') ?? '',
     configured: booleanField(record, 'configured') ?? false,
+    exists: booleanField(record, 'exists') ?? true,
     // 时间原样带走（ISO），由知道宿主语言的显示层格式化：服务层一旦调
     // `toLocaleDateString()`，读到的是浏览器区域而不是控制台语言。
     creationDateIso: creationDateEpochMs

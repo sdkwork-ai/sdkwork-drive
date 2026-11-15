@@ -57,24 +57,31 @@
 //! get a sealed placeholder account attached to it.
 
 use crate::app_context::DriveRequestContext;
-use crate::audit::record_audit_event;
+use crate::audit::{record_audit_event, record_storage_provider_audit};
 use crate::config::AdminStorageConfig;
 use crate::dto::{
-    OffsetPage, StorageProviderAccountDefaultResponse, VendorCapabilityDefaultsResponse,
-    VendorCredentialFieldResponse,
+    OffsetPage, StorageProviderAccountDefaultResponse, StorageProviderInitializeResponse,
+    VendorCapabilityDefaultsResponse, VendorCredentialFieldResponse,
 };
-use crate::error::{map_provider_account_error, map_service_error, ProblemDetail};
+use crate::error::{
+    map_object_store_route_error, map_provider_account_error, map_service_error, ProblemDetail,
+};
+use crate::object_store::build_bucket_store_for_provider;
+use crate::provider_lookup::get_active_provider;
 use crate::provider_mappers::parse_storage_provider_kind;
-use crate::response::{success_list_page_simple, StorageListHttpResponse};
+use crate::response::{
+    success_item, success_list_page_simple, StorageItemHttpResponse, StorageListHttpResponse,
+};
 use crate::state::AdminStorageState;
 use crate::validators::{
     default_storage_provider_binding_id, default_storage_root_prefix,
     storage_provider_binding_purpose, storage_provider_binding_scope, StorageProviderBindingTarget,
 };
-use axum::extract::{Extension, State};
+use axum::extract::{Extension, Path, State};
 use axum::http::StatusCode;
 use axum::Json;
 use sdkwork_drive_contract::drive::domain_events::admin_audit;
+use sdkwork_drive_storage_contract::CreateBucketRequest;
 use sdkwork_drive_workspace_service::application::storage_provider_kind_service::DriveStorageProviderKindService;
 use sdkwork_drive_workspace_service::application::storage_provider_service::{
     CreateStorageProviderCommand, DriveStorageProviderService, GetStorageProviderCommand,
@@ -977,7 +984,7 @@ async fn ensure_provider(
 /// Ensure the tenant default binding exists, without disturbing an existing one.
 ///
 /// Returns whether this run wrote the binding.
-async fn ensure_default_binding(
+pub(crate) async fn ensure_default_binding(
     state: &AdminStorageState,
     tenant_id: &str,
     operator_id: &str,
@@ -1060,14 +1067,15 @@ async fn ensure_default_binding(
 /// provider account credentials are edited. The inserts are `ON CONFLICT DO
 /// NOTHING` on deterministic ids: a re-run never rewrites an operator's choice
 /// of logical bucket, prefix, or provider.
-async fn ensure_default_logical_plane(
+pub(crate) async fn ensure_default_logical_plane(
     state: &AdminStorageState,
     tenant_id: &str,
     operator_id: &str,
     provider_id: &str,
-) -> Result<(), (StatusCode, Json<ProblemDetail>)> {
+) -> Result<bool, (StatusCode, Json<ProblemDetail>)> {
     let provider_root_prefix =
         default_storage_root_prefix(tenant_id, &StorageProviderBindingTarget::Tenant);
+    let before = count_logical_plane_rows(state, tenant_id).await?;
 
     for (bucket_key, display_name, object_prefix) in [
         ("business", "Business Content", "logical/business"),
@@ -1179,7 +1187,116 @@ async fn ensure_default_logical_plane(
         )))
     })?;
 
-    Ok(())
+    let after = count_logical_plane_rows(state, tenant_id).await?;
+    Ok(after > before)
+}
+
+async fn count_logical_plane_rows(
+    state: &AdminStorageState,
+    tenant_id: &str,
+) -> Result<i64, (StatusCode, Json<ProblemDetail>)> {
+    sqlx::query_scalar(
+        "SELECT
+           (SELECT COUNT(*) FROM dr_drive_logical_bucket WHERE tenant_id = $1)
+         + (SELECT COUNT(*) FROM dr_drive_business_storage_binding WHERE tenant_id = $1)",
+    )
+    .bind(tenant_id)
+    .fetch_one(&state.pool)
+    .await
+    .map_err(|error| {
+        map_service_error(DriveServiceError::Internal(format!(
+            "count logical storage plane rows failed: {error}"
+        )))
+    })
+}
+
+/// One-click initialization for a single provider configuration.
+///
+/// This is the completion action after the operator stores real cloud account
+/// credentials. It makes the configured bucket exist on the vendor, establishes
+/// the tenant default binding when the tenant has none, and materializes the
+/// logical bucket/business binding plane. Re-running is safe: every step is
+/// idempotent and never rewrites an operator choice.
+pub(crate) async fn initialize_storage_provider(
+    State(state): State<AdminStorageState>,
+    Extension(ctx): Extension<DriveRequestContext>,
+    Path(provider_id): Path<String>,
+) -> Result<
+    StorageItemHttpResponse<StorageProviderInitializeResponse>,
+    (StatusCode, Json<ProblemDetail>),
+> {
+    let tenant_id = ctx.resolve_tenant_id()?;
+    let operator_id = ctx.resolve_operator_id()?;
+    let provider_id = crate::validators::require_non_empty_text(provider_id, "providerId")?;
+    let provider = get_active_provider(&state, &tenant_id, &provider_id).await?;
+
+    let object_store = build_bucket_store_for_provider(&state, &provider).await?;
+    let created = object_store
+        .create_bucket(CreateBucketRequest {
+            bucket: provider.bucket.clone(),
+        })
+        .await
+        .map_err(map_object_store_route_error)?;
+    if created.created {
+        record_storage_provider_audit(
+            &state,
+            admin_audit::storage_provider::BUCKET_CREATED,
+            &provider.id,
+            &operator_id,
+            &tenant_id,
+        )
+        .await?;
+    }
+
+    let default_binding_created =
+        ensure_default_binding(&state, &tenant_id, &operator_id, &provider.id).await?;
+    let logical_plane_created =
+        ensure_default_logical_plane(&state, &tenant_id, &operator_id, &provider.id).await?;
+
+    let logical_bucket_count: i64 = sqlx::query_scalar(
+        "SELECT COUNT(*) FROM dr_drive_logical_bucket
+         WHERE tenant_id = $1 AND lifecycle_status = 'active'",
+    )
+    .bind(&tenant_id)
+    .fetch_one(&state.pool)
+    .await
+    .map_err(|error| {
+        map_service_error(DriveServiceError::Internal(format!(
+            "count initialized logical buckets failed: {error}"
+        )))
+    })?;
+    let business_binding_count: i64 = sqlx::query_scalar(
+        "SELECT COUNT(*) FROM dr_drive_business_storage_binding
+         WHERE tenant_id = $1 AND lifecycle_status = 'active'",
+    )
+    .bind(&tenant_id)
+    .fetch_one(&state.pool)
+    .await
+    .map_err(|error| {
+        map_service_error(DriveServiceError::Internal(format!(
+            "count initialized business bindings failed: {error}"
+        )))
+    })?;
+
+    record_storage_provider_audit(
+        &state,
+        admin_audit::storage_provider::INITIALIZED,
+        &provider.id,
+        &operator_id,
+        &tenant_id,
+    )
+    .await?;
+
+    Ok(success_item(StorageProviderInitializeResponse {
+        provider_id: provider.id,
+        bucket: created.bucket,
+        bucket_created: created.created,
+        bucket_verified: true,
+        default_binding_created,
+        logical_plane_created,
+        logical_bucket_count,
+        business_binding_count,
+    }))
 }
 
 /// Bootstrap the built-in storage plane: an account per cloud provider kind, its
@@ -1335,8 +1452,9 @@ pub(crate) async fn initialize_storage_provider_account_defaults(
     // the preferred-provider branch is already existence-checked above.
     if default_provider_id != local_provider_id || local_provider_available {
         ensure_default_binding(&state, &tenant_id, &operator_id, &default_provider_id).await?;
-        ensure_default_logical_plane(&state, &tenant_id, &operator_id, &default_provider_id)
-            .await?;
+        let _ =
+            ensure_default_logical_plane(&state, &tenant_id, &operator_id, &default_provider_id)
+                .await?;
     }
 
     items.push(StorageProviderAccountDefaultResponse {
@@ -1656,7 +1774,7 @@ pub async fn bootstrap_storage_provider_defaults(
         ensure_default_binding(&state, tenant_id, operator_id, &default_provider_id)
             .await
             .map_err(bootstrap_problem)?;
-        ensure_default_logical_plane(&state, tenant_id, operator_id, &default_provider_id)
+        let _ = ensure_default_logical_plane(&state, tenant_id, operator_id, &default_provider_id)
             .await
             .map_err(bootstrap_problem)?;
     }

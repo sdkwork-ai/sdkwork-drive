@@ -5891,6 +5891,114 @@
         "x-sdkwork-api-surface": "backend-api",
         "x-sdkwork-permission": "drive.storage.admin"
       }
+    },
+    "/backend/v3/api/drive/storage/providers/{providerId}/initialize": {
+      "post": {
+        "tags": [
+          "storageAdmin"
+        ],
+        "summary": "One-click initialize a storage provider",
+        "operationId": "storageProviders.initialize",
+        "description": "Completion action after the operator stores real cloud account credentials: creates the configured bucket on the vendor when missing, establishes the tenant default binding when none exists, and materializes the logical bucket/business binding plane. Every step is idempotent and never rewrites an operator choice.",
+        "parameters": [
+          {
+            "name": "providerId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Provider content initialized.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SdkWorkApiResponse"
+                    },
+                    {
+                      "type": "object",
+                      "required": [
+                        "data"
+                      ],
+                      "properties": {
+                        "data": {
+                          "type": "object",
+                          "required": [
+                            "item"
+                          ],
+                          "properties": {
+                            "item": {
+                              "$ref": "#/components/schemas/StorageProviderInitialization"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "AuthToken": [],
+            "AccessToken": []
+          }
+        ],
+        "x-sdkwork-owner": "sdkwork-drive",
+        "x-sdkwork-api-authority": "sdkwork-drive.admin.storage",
+        "x-sdkwork-request-context": "WebRequestContext",
+        "x-sdkwork-api-surface": "backend-api",
+        "x-sdkwork-permission": "drive.storage.admin"
+      }
     }
   },
   "components": {
@@ -6807,7 +6915,8 @@
         "type": "object",
         "required": [
           "bucket",
-          "configured"
+          "configured",
+          "exists"
         ],
         "properties": {
           "bucket": {
@@ -6829,6 +6938,10 @@
             "minLength": 1,
             "maxLength": 63,
             "description": "Region the vendor reports for this bucket on its account bucket inventory (`Location`). The inventory is an account-level read that spans regions, so the region belongs to the row rather than to the provider configuration; omitted for vendors that report none."
+          },
+          "exists": {
+            "type": "boolean",
+            "description": "Whether the vendor inventory contains the bucket. The configured bucket is always listed; `false` means it still has to be created by the one-click initialization."
           }
         }
       },
@@ -8179,6 +8292,56 @@
             "maxLength": 512
           }
         }
+      },
+      "StorageProviderInitialization": {
+        "type": "object",
+        "required": [
+          "providerId",
+          "bucket",
+          "bucketCreated",
+          "bucketVerified",
+          "defaultBindingCreated",
+          "logicalPlaneCreated",
+          "logicalBucketCount",
+          "businessBindingCount"
+        ],
+        "properties": {
+          "providerId": {
+            "type": "string"
+          },
+          "bucket": {
+            "type": "string"
+          },
+          "bucketCreated": {
+            "type": "boolean",
+            "description": "The configured bucket was created by this run."
+          },
+          "bucketVerified": {
+            "type": "boolean",
+            "description": "The bucket is known to exist after the run."
+          },
+          "defaultBindingCreated": {
+            "type": "boolean",
+            "description": "A tenant default binding was created by this run."
+          },
+          "logicalPlaneCreated": {
+            "type": "boolean",
+            "description": "The logical bucket/business binding plane was created by this run."
+          },
+          "logicalBucketCount": {
+            "type": "string",
+            "format": "int64",
+            "pattern": "^-?[0-9]+$",
+            "x-sdkwork-int64-string": true
+          },
+          "businessBindingCount": {
+            "type": "string",
+            "format": "int64",
+            "pattern": "^-?[0-9]+$",
+            "x-sdkwork-int64-string": true
+          }
+        },
+        "additionalProperties": false
       },
       "SdkWorkResourceData": {
         "type": "object",

@@ -52,6 +52,7 @@ export type { StorageLogicalBucket } from './storage-logical-bucket';
 export type { UpdateStorageLogicalBucketRequest } from './update-storage-logical-bucket-request';
 export type { BusinessStorageBinding } from './business-storage-binding';
 export type { UpdateBusinessStorageBindingRequest } from './update-business-storage-binding-request';
+export type { StorageProviderInitialization } from './storage-provider-initialization';
 export type { SdkWorkResourceData } from './sdk-work-resource-data';
 export type { SdkWorkPageData } from './sdk-work-page-data';
 export type { SdkWorkCommandData } from './sdk-work-command-data';
@@ -98,3 +99,4 @@ export type { StorageLogicalBucketsListResponse } from './storage-logical-bucket
 export type { StorageLogicalBucketsUpdateResponse } from './storage-logical-buckets-update-response';
 export type { StorageBusinessBindingsListResponse } from './storage-business-bindings-list-response';
 export type { StorageBusinessBindingsUpdateResponse } from './storage-business-bindings-update-response';
+export type { StorageProvidersInitializeResponse } from './storage-providers-initialize-response';

@@ -197,6 +197,18 @@ export interface StorageProviderBucketInitializeView {
   changed: boolean;
 }
 
+/** Result of the one-click provider initialization (bucket + routing plane). */
+export interface StorageProviderInitializationView {
+  providerId: string;
+  bucket: string;
+  bucketCreated: boolean;
+  bucketVerified: boolean;
+  defaultBindingCreated: boolean;
+  logicalPlaneCreated: boolean;
+  logicalBucketCount: string;
+  businessBindingCount: string;
+}
+
 export interface CreateStorageProviderInput {
   id: string;
   providerKind: StorageProviderKind;
@@ -275,6 +287,13 @@ export interface SetDefaultStorageProviderBindingInput {
 export interface StorageProviderBucketListItemView {
   bucket: string;
   configured: boolean;
+  /**
+   * 厂商桶清单里是否真的有这个桶。
+   *
+   * 配置桶即使还没创建也会出现在清单里（`configured: true, exists: false`），
+   * 这样控制台才有"一键初始化"的目标，而不是显示一个空表。
+   */
+  exists: boolean;
   /**
    * 桶的创建时间，ISO 8601（服务端下发 epoch 毫秒）。
    *

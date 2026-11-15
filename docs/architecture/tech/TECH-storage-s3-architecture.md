@@ -52,6 +52,11 @@ The production implementation uses the official Rust AWS S3 SDK through `aws-sdk
      business bound to it follows. `003_logical_storage_buckets.sql` seeds all
      space types and the tenant fallback against the default provider so a fresh
      install is fully routable before the operator edits the provider account.
+   - The admin bucket list always includes the configured bucket, with
+     `exists: false` until the vendor inventory contains it. After the operator
+     stores the cloud account, `POST /storage/providers/{id}/initialize` creates
+     the configured bucket, establishes the tenant default binding when missing,
+     and materializes the logical plane in one idempotent call.
 
 5. Object keys are internal.
    - App APIs should avoid exposing object keys as durable business identifiers.

@@ -90,6 +90,10 @@ pub(crate) fn storage_drive_routes(prefix: &str) -> Router<AdminStorageState> {
             get(get_storage_provider_capabilities),
         )
         .route(
+            &format!("{prefix}/drive/storage/providers/{{provider_id}}/initialize"),
+            post(initialize_storage_provider),
+        )
+        .route(
             &format!("{prefix}/drive/storage/providers/{{provider_id}}/test"),
             post(test_storage_provider),
         )

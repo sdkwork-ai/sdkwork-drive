@@ -29,6 +29,7 @@ const requiredOperations = [
   "storageProviders.credentials.rotate",
   "storageProviders.deactivate",
   "storageProviders.delete",
+  "storageProviders.initialize",
   "storageProviders.list",
   "storageProviders.objects.copy",
   "storageProviders.objects.delete",

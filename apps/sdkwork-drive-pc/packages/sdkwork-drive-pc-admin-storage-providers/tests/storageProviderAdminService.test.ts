@@ -408,6 +408,18 @@ describe('storage provider admin service', () => {
       'storageProviders.bucket.update': {
         item: { providerId: 'provider-cos', bucket: 'drive-prod', changed: true },
       },
+      'storageProviders.initialize': {
+        item: {
+          providerId: 'provider-cos',
+          bucket: 'drive-prod',
+          bucketCreated: true,
+          bucketVerified: true,
+          defaultBindingCreated: false,
+          logicalPlaneCreated: true,
+          logicalBucketCount: '4',
+          businessBindingCount: '12',
+        },
+      },
       'storageProviders.create': {
         item: {
           id: 'provider-new',
@@ -444,6 +456,13 @@ describe('storage provider admin service', () => {
     await expect(service.initializeBucket('provider-cos')).resolves.toMatchObject({
       bucket: 'drive-prod',
       changed: true,
+    });
+    await expect(service.initializeProvider('provider-cos')).resolves.toMatchObject({
+      bucket: 'drive-prod',
+      bucketCreated: true,
+      bucketVerified: true,
+      logicalBucketCount: '4',
+      businessBindingCount: '12',
     });
     await expect(
       service.createProvider({

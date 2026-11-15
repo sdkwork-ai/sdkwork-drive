@@ -214,6 +214,12 @@ const HTTP_ROUTES: &[HttpRoute] = &[
         "storageProviders.deactivate",
     ),
     HttpRoute::dual_token(
+        HttpMethod::Post,
+        "/backend/v3/api/drive/storage/providers/{providerId}/initialize",
+        "drive-admin-storage-api",
+        "storageProviders.initialize",
+    ),
+    HttpRoute::dual_token(
         HttpMethod::Get,
         "/backend/v3/api/drive/storage/providers/{providerId}/object-contents/{objectKey}",
         "drive-admin-storage-api",

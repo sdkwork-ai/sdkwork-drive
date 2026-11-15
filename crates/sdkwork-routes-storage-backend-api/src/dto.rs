@@ -381,10 +381,35 @@ pub(crate) struct ProviderBucketResponse {
 pub(crate) struct ProviderBucketListItemResponse {
     pub(crate) bucket: String,
     pub(crate) configured: bool,
+    /// Whether the vendor inventory actually contains the bucket.
+    ///
+    /// The configured bucket is always listed, even before it exists, so the
+    /// console can offer the one-click initialization that creates it.
+    pub(crate) exists: bool,
     pub(crate) creation_date_epoch_ms: Option<i64>,
     /// 厂商为该桶报告的地域。桶清单是账号级读取，地域属于每一行，而不是配置。
     #[serde(skip_serializing_if = "Option::is_none")]
     pub(crate) region: Option<String>,
+}
+
+/// Result of the one-click provider initialization.
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct StorageProviderInitializeResponse {
+    pub(crate) provider_id: String,
+    pub(crate) bucket: String,
+    /// The configured bucket was created by this run.
+    pub(crate) bucket_created: bool,
+    /// The bucket is known to exist after the run (created or already present).
+    pub(crate) bucket_verified: bool,
+    /// A tenant default binding was created by this run.
+    pub(crate) default_binding_created: bool,
+    /// The logical bucket/business binding plane was created by this run.
+    pub(crate) logical_plane_created: bool,
+    #[serde(with = "sdkwork_utils_rust::serde_int64")]
+    pub(crate) logical_bucket_count: i64,
+    #[serde(with = "sdkwork_utils_rust::serde_int64")]
+    pub(crate) business_binding_count: i64,
 }
 
 #[derive(Debug, Serialize)]
