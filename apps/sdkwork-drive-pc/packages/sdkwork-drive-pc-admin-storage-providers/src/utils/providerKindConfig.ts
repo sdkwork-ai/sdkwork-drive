@@ -1333,7 +1333,19 @@ const REGION_ENDPOINT_BUILDERS: Record<string, (region: string) => string> = {
   google_cloud_storage: () => 'https://storage.googleapis.com',
   // --- Mainland China ---------------------------------------------------
   baidu_bos: (region) => `https://s3.${region}.bcebos.com`,
-  kingsoft_ks3: (region) => `https://ks3-${region.toLowerCase()}.ksyuncs.com`,
+  kingsoft_ks3: (region) => {
+    // KS3's mainland endpoint always carries the `cn-` market prefix, and its
+    // overseas endpoints use short codes rather than the region label.
+    const normalized = region.trim().toLowerCase();
+    const hostRegion = normalized === 'singapore'
+      ? 'sgp'
+      : normalized === 'russia'
+        ? 'rus'
+        : normalized.startsWith('cn-')
+          ? normalized
+          : `cn-${normalized}`;
+    return `https://ks3-${hostRegion}.ksyuncs.com`;
+  },
   qiniu_kodo: (region) => `https://s3-${region}.qiniucs.com`,
   china_mobile_ecloud: (region) => `https://eos-${region}.cmecloud.cn`,
   china_telecom_eos: (region) => `https://ooscn-${region}.ctyunapi.cn`,
@@ -1371,6 +1383,34 @@ export function getProviderKindMeta(kind: string): ProviderKindMeta {
     return { ...CUSTOM_PROVIDER_META, label: `Custom: ${kind.substring(7)}`, shortLabel: kind.substring(7) };
   }
   return PROVIDER_KIND_META.find((m) => m.value === kind) ?? CUSTOM_PROVIDER_META;
+}
+
+/**
+ * Path-style default per vendor, mirroring Rust's `default_force_path_style`.
+ *
+ * The editor must pre-select the same addressing style the server will use when
+ * the field is omitted. Without this, creating MinIO/R2/China Mobile/etc. left
+ * the toggle on virtual-host style and the first bucket operation failed against
+ * the vendor endpoint.
+ */
+const PATH_STYLE_DEFAULT_KINDS = new Set([
+  'local_filesystem',
+  's3_compatible',
+  'minio',
+  'cloudflare_r2',
+  'china_mobile_ecloud',
+  'china_telecom_eos',
+  'china_unicom_wo',
+  'linode_object_storage',
+  'vultr_object_storage',
+  'ibm_cos',
+]);
+
+export function providerKindDefaultPathStyle(kind: string): boolean {
+  // Unknown/custom vendors default to path style on the server because it is
+  // the permissive addressing mode for arbitrary S3 gateways.
+  if (kind.startsWith('custom:')) return true;
+  return PATH_STYLE_DEFAULT_KINDS.has(kind);
 }
 
 export function getAllProviderKindMeta(): ProviderKindMeta[] {

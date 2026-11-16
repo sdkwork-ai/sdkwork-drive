@@ -172,7 +172,7 @@ where
         if current_status == "deleted" || target_status != "deleted" {
             return Ok(());
         }
-        self.ensure_provider_holds_no_live_objects(provider_id, "delete")
+        self.ensure_provider_holds_no_live_objects(provider_id, "delete", true)
             .await?;
         if self
             .store
@@ -198,16 +198,27 @@ where
         &self,
         provider_id: &str,
         action: &str,
+        include_retired: bool,
     ) -> Result<(), DriveServiceError> {
-        let live_objects = self
-            .store
-            .count_active_storage_provider_objects(provider_id)
-            .await?;
-        if live_objects == 0 {
+        let object_count = if include_retired {
+            self.store
+                .count_storage_provider_objects(provider_id)
+                .await?
+        } else {
+            self.store
+                .count_active_storage_provider_objects(provider_id)
+                .await?
+        };
+        if object_count == 0 {
             return Ok(());
         }
+        let qualifier = if include_retired {
+            "object(s) (active or pending cleanup)"
+        } else {
+            "active object(s)"
+        };
         Err(DriveServiceError::Conflict(format!(
-            "storage provider still holds {live_objects} active object(s); migrate or delete them before you {action} it"
+            "storage provider still holds {object_count} {qualifier}; migrate or delete them before you {action} it"
         )))
     }
 
@@ -227,14 +238,19 @@ where
         provider_id: &str,
         current: &DriveStorageProvider,
         endpoint_url: &str,
-        bucket: &str,
+        region: Option<&str>,
         path_style: bool,
         strict_tls: bool,
     ) -> Result<(), DriveServiceError> {
+        // The configured bucket is a write target, not an access path: every
+        // stored object carries its own bucket locator, so switching the target
+        // bucket leaves existing bytes readable through the same provider.
+        // Endpoint/region/path/TLS changes alter how those bytes are reached and
+        // stay blocked until bindings are drained.
         let changed_field = if current.endpoint_url != endpoint_url {
             Some("endpoint_url")
-        } else if current.bucket != bucket {
-            Some("bucket")
+        } else if current.region.as_deref() != region {
+            Some("region")
         } else if current.path_style != path_style {
             Some("path_style")
         } else if current.strict_tls != strict_tls {
@@ -252,6 +268,19 @@ where
         {
             return Err(DriveServiceError::Conflict(format!(
                 "{field_name} cannot be changed while storage provider has active bindings"
+            )));
+        }
+        // A retired (`deleted`) object may still be waiting for the physical
+        // purge sweep. Moving the provider endpoint/bucket before that sweep
+        // would make the old locator unresolvable and leak the bytes.
+        if self
+            .store
+            .count_storage_provider_objects(provider_id)
+            .await?
+            > 0
+        {
+            return Err(DriveServiceError::Conflict(format!(
+                "{field_name} cannot be changed while storage provider still holds objects pending cleanup"
             )));
         }
         Ok(())
@@ -449,21 +478,21 @@ where
         .await?;
         let path_style = command.path_style.unwrap_or(current.path_style);
         let strict_tls = command.strict_tls.unwrap_or(current.strict_tls);
+        let region = match command.region {
+            Some(region) if region.trim().is_empty() => None,
+            Some(region) => Some(region.trim().to_string()),
+            None => current.region.clone(),
+        };
         self.ensure_active_bindings_allow_location_update(
             provider_id,
             &current,
             &endpoint_url,
-            &bucket,
+            region.as_deref(),
             path_style,
             strict_tls,
         )
         .await?;
         validate_strict_tls_endpoint(strict_tls, &endpoint_url)?;
-        let region = match command.region {
-            Some(region) if region.trim().is_empty() => None,
-            Some(region) => Some(region.trim().to_string()),
-            None => current.region,
-        };
         let server_side_encryption_mode = match command.server_side_encryption_mode {
             Some(mode) if mode.trim().is_empty() => None,
             Some(mode) => Some(mode.trim().to_string()),
@@ -583,7 +612,7 @@ where
         // rule applies. Re-enabling (`disabled` -> `active`) is always allowed
         // and is the supported recovery path out of a mistaken disable.
         if status == "disabled" && current.status != "disabled" {
-            self.ensure_provider_holds_no_live_objects(provider_id, "disable")
+            self.ensure_provider_holds_no_live_objects(provider_id, "disable", false)
                 .await?;
         }
         self.store
@@ -803,6 +832,41 @@ fn normalize_provider_account_id(raw: Option<String>) -> Result<Option<String>, 
     Ok(Some(account_id.to_string()))
 }
 
+fn local_storage_root() -> String {
+    std::env::var("SDKWORK_DRIVE_LOCAL_STORAGE_ROOT")
+        .ok()
+        .map(|value| value.trim().to_string())
+        .filter(|value| !value.is_empty())
+        .unwrap_or_else(|| "/var/lib/sdkwork-drive".to_string())
+}
+
+/// Normalize an absolute Unix path lexically (`/a/./b/../c` -> `/a/c`).
+fn normalize_absolute_path(raw: &str) -> Result<String, DriveServiceError> {
+    if !raw.starts_with('/') {
+        return Err(DriveServiceError::Validation(
+            "local filesystem endpoint must be an absolute path".to_string(),
+        ));
+    }
+    let mut segments: Vec<&str> = Vec::new();
+    for segment in raw.split('/') {
+        match segment {
+            "" | "." => {}
+            ".." => {
+                if segments.pop().is_none() {
+                    return Err(DriveServiceError::Validation(
+                        "local filesystem endpoint escapes its root".to_string(),
+                    ));
+                }
+            }
+            value => segments.push(value),
+        }
+    }
+    if segments.is_empty() {
+        return Ok("/".to_string());
+    }
+    Ok(format!("/{}", segments.join("/")))
+}
+
 fn validate_endpoint_url(
     provider_kind: &DriveStorageProviderKind,
     raw: &str,
@@ -830,6 +894,33 @@ fn validate_endpoint_url(
                 "endpoint_url must include a local filesystem path".to_string(),
             ));
         }
+        // A tenant admin must not be able to point the local adapter at `/` (or
+        // any host directory) and read/write files outside the Drive data root.
+        // The allowed root is deployment-owned, not tenant-controlled.
+        let raw_path = &endpoint_url[7..];
+        if raw_path.contains('\\') || raw_path.contains('\0') {
+            return Err(DriveServiceError::Validation(
+                "endpoint_url contains an invalid local path".to_string(),
+            ));
+        }
+        let allowed_root = local_storage_root();
+        let allowed = normalize_absolute_path(&allowed_root)?;
+        if allowed == "/" {
+            return Err(DriveServiceError::Validation(
+                "SDKWORK_DRIVE_LOCAL_STORAGE_ROOT must be a dedicated data directory, not the filesystem root"
+                    .to_string(),
+            ));
+        }
+        let requested = normalize_absolute_path(raw_path)?;
+        let inside_root = requested == allowed
+            || requested
+                .strip_prefix(&allowed)
+                .is_some_and(|suffix| suffix.starts_with('/'));
+        if !inside_root {
+            return Err(DriveServiceError::Validation(format!(
+                "endpoint_url must stay inside the deployment local storage root ({allowed_root}); set SDKWORK_DRIVE_LOCAL_STORAGE_ROOT to a dedicated data directory"
+            )));
+        }
         return Ok(endpoint_url.to_string());
     }
     let Some(after_scheme) = lower
@@ -840,18 +931,83 @@ fn validate_endpoint_url(
             "endpoint_url must use http or https scheme".to_string(),
         ));
     };
-    let host = after_scheme
+    let authority = after_scheme
         .split(['/', '?', '#'])
         .next()
-        .unwrap_or_default()
-        .trim_matches('[')
-        .trim_matches(']');
+        .unwrap_or_default();
+    let host = if let Some(rest) = authority.strip_prefix('[') {
+        rest.split(']').next().unwrap_or_default()
+    } else {
+        authority.split(':').next().unwrap_or_default()
+    };
     if host.is_empty() || host.starts_with(':') || host.contains('@') {
         return Err(DriveServiceError::Validation(
             "endpoint_url must include a valid host".to_string(),
         ));
     }
+    if storage_host_is_forbidden(host) {
+        return Err(DriveServiceError::Validation(
+            "endpoint_url must not target a cloud metadata or link-local address".to_string(),
+        ));
+    }
+    if lower.starts_with("http://") && !storage_host_is_private(host) {
+        return Err(DriveServiceError::Validation(
+            "endpoint_url must use https for public hosts; plain http is only allowed for loopback, private, or single-label service hosts"
+                .to_string(),
+        ));
+    }
     Ok(endpoint_url.to_string())
+}
+
+fn storage_host_is_private(host: &str) -> bool {
+    let normalized = host.trim().trim_matches('.').to_ascii_lowercase();
+    if normalized == "localhost" || normalized.ends_with(".local") || !normalized.contains('.') {
+        return true;
+    }
+    match normalized.parse::<std::net::IpAddr>() {
+        Ok(std::net::IpAddr::V4(address)) => address.is_loopback() || address.is_private(),
+        Ok(std::net::IpAddr::V6(address)) => {
+            address.is_loopback()
+                || address.is_unique_local()
+                || address
+                    .to_ipv4_mapped()
+                    .is_some_and(|mapped| mapped.is_loopback() || mapped.is_private())
+        }
+        Err(_) => false,
+    }
+}
+
+/// Reject the addresses cloud SDKs are most often abused to reach through a
+/// tenant-controlled endpoint. Private and loopback hosts remain allowed so
+/// self-hosted MinIO/object stores keep working; a SaaS deployment still needs
+/// egress policy for DNS rebinding and internal service exposure.
+fn storage_host_is_forbidden(host: &str) -> bool {
+    let normalized = host.trim().trim_matches('.').to_ascii_lowercase();
+    if matches!(
+        normalized.as_str(),
+        "metadata"
+            | "metadata.google.internal"
+            | "instance-data"
+            | "instance-data.ec2.internal"
+            | "100.100.100.200"
+            | "169.254.169.254"
+            | "fd00:ec2::254"
+    ) {
+        return true;
+    }
+    match normalized.parse::<std::net::IpAddr>() {
+        Ok(std::net::IpAddr::V4(address)) => {
+            address.is_link_local() || address.is_unspecified() || address.is_multicast()
+        }
+        Ok(std::net::IpAddr::V6(address)) => {
+            address.to_ipv4_mapped().is_some_and(|mapped| {
+                mapped.is_link_local() || mapped.is_unspecified() || mapped.is_multicast()
+            }) || address.is_unicast_link_local()
+                || address.is_unspecified()
+                || address.is_multicast()
+        }
+        Err(_) => false,
+    }
 }
 
 fn validate_strict_tls_endpoint(
@@ -1101,4 +1257,61 @@ pub async fn ensure_space_storage_provider_binding(
         DriveServiceError::Internal(format!("ensure storage provider binding failed: {error}"))
     })?;
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{
+        local_storage_root, normalize_absolute_path, storage_host_is_forbidden,
+        validate_endpoint_url,
+    };
+    use crate::domain::storage_provider::DriveStorageProviderKind;
+
+    #[test]
+    fn local_endpoint_must_stay_inside_the_deployment_root() {
+        let root = local_storage_root();
+        let kind = DriveStorageProviderKind::LocalFilesystem;
+        assert!(
+            validate_endpoint_url(&kind, &format!("file://{root}/drive")).is_ok(),
+            "the deployment data root must be accepted"
+        );
+        assert!(validate_endpoint_url(&kind, "file:///etc").is_err());
+        assert!(validate_endpoint_url(&kind, "file:///var/lib/sdkwork-drive/../../etc").is_err());
+    }
+
+    #[test]
+    fn cloud_endpoint_rejects_link_local_metadata_hosts() {
+        let kind = DriveStorageProviderKind::S3Compatible;
+        assert!(validate_endpoint_url(&kind, "https://169.254.169.254").is_err());
+        assert!(validate_endpoint_url(&kind, "http://metadata.google.internal").is_err());
+        assert!(validate_endpoint_url(&kind, "http://127.0.0.1:9000").is_ok());
+        assert!(validate_endpoint_url(&kind, "http://minio:9000").is_ok());
+        assert!(validate_endpoint_url(&kind, "http://s3.example.com").is_err());
+        assert!(validate_endpoint_url(&kind, "https://s3.example.com").is_ok());
+    }
+
+    #[test]
+    fn local_path_normalization_stays_within_the_root() {
+        assert_eq!(
+            normalize_absolute_path("/var/lib/sdkwork-drive/a/./b/../c").expect("normalizes"),
+            "/var/lib/sdkwork-drive/a/c"
+        );
+        assert_eq!(
+            normalize_absolute_path("/var/lib/sdkwork-drive/../../etc").expect("normalizes"),
+            "/var/etc"
+        );
+        assert!(normalize_absolute_path("/../etc").is_err());
+        assert!(normalize_absolute_path("relative/path").is_err());
+    }
+
+    #[test]
+    fn storage_endpoint_rejects_cloud_metadata_addresses() {
+        assert!(storage_host_is_forbidden("169.254.169.254"));
+        assert!(storage_host_is_forbidden("fd00:ec2::254"));
+        assert!(storage_host_is_forbidden("metadata.google.internal"));
+        assert!(storage_host_is_forbidden("100.100.100.200"));
+        assert!(!storage_host_is_forbidden("127.0.0.1"));
+        assert!(!storage_host_is_forbidden("10.0.0.5"));
+        assert!(!storage_host_is_forbidden("s3.example.com"));
+    }
 }

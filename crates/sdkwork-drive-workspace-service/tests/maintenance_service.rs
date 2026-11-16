@@ -565,7 +565,7 @@ async fn expired_upload_content_sweep_hard_deletes_objects_and_records_sensitive
             'text/plain', 32,
             'sha256:2222222222222222222222222222222222222222222222222222222222222222',
             8, 4, 4, 32, 'completed', 'temporary', 1700000000000,
-            'hard_delete', NULL, 'active', 'not_required',
+            'hard_delete', 1800000060000, 'active', 'not_required',
             'user-expired-hard-upload', 'user-expired-hard-upload'
         )",
     )
@@ -594,6 +594,46 @@ async fn expired_upload_content_sweep_hard_deletes_objects_and_records_sensitive
     .fetch_one(&pool)
     .await
     .expect("node status should be queryable");
+    assert_eq!(
+        node_status, "trashed",
+        "retention expiry must enter the recycle bin first"
+    );
+
+    let object_status: String = sqlx::query_scalar(
+        "SELECT lifecycle_status FROM dr_drive_storage_object WHERE id='object-expired-hard-upload'",
+    )
+    .fetch_one(&pool)
+    .await
+    .expect("object status should be queryable");
+    assert_eq!(object_status, "active");
+
+    let cleanup_status: String = sqlx::query_scalar(
+        "SELECT cleanup_status FROM dr_drive_upload_item WHERE id='upload-item-expired-hard'",
+    )
+    .fetch_one(&pool)
+    .await
+    .expect("cleanup status should be queryable");
+    assert_eq!(cleanup_status, "soft_deleted");
+
+    let purge_result = service
+        .sweep_expired_upload_content(SweepExpiredUploadContentCommand {
+            now_epoch_ms: 1_800_000_060_000,
+            dry_run: false,
+            limit: Some(100),
+            operator_id: "admin-ops".to_string(),
+            request_id: Some("req-expired-hard-upload-purge".to_string()),
+            trace_id: Some("trace-expired-hard-upload-purge".to_string()),
+        })
+        .await
+        .expect("expired upload content purge sweep should succeed");
+    assert_eq!(purge_result.affected_count, 1);
+
+    let node_status: String = sqlx::query_scalar(
+        "SELECT lifecycle_status FROM dr_drive_node WHERE id='node-expired-hard-upload'",
+    )
+    .fetch_one(&pool)
+    .await
+    .expect("node status should be queryable");
     assert_eq!(node_status, "deleted");
 
     let object_status: String = sqlx::query_scalar(
@@ -615,7 +655,9 @@ async fn expired_upload_content_sweep_hard_deletes_objects_and_records_sensitive
     let sensitive_operation: (String, String, String, Option<String>) = sqlx::query_as(
         "SELECT operation_type, operation_reason, object_delete_status, object_key
          FROM dr_drive_file_sensitive_operation
-         WHERE upload_item_id='upload-item-expired-hard'",
+         WHERE upload_item_id='upload-item-expired-hard'
+         ORDER BY created_at DESC, id DESC
+         LIMIT 1",
     )
     .fetch_one(&pool)
     .await
@@ -625,7 +667,7 @@ async fn expired_upload_content_sweep_hard_deletes_objects_and_records_sensitive
         (
             "hard_delete".to_string(),
             "retention_expired".to_string(),
-            "deleted".to_string(),
+            "not_required".to_string(),
             Some("objects/expired-hard.txt".to_string())
         )
     );

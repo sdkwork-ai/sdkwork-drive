@@ -100,6 +100,65 @@ export interface StorageProviderBindingView {
 }
 
 /**
+ * Logical bucket: the business-facing storage layer.
+ *
+ * Business scopes bind to this record, and the record resolves to a provider
+ * configuration. Changing `providerId` here re-points every business bound to
+ * the bucket, which is why an install can be completed by editing only the
+ * provider account credentials.
+ */
+export interface StorageLogicalBucketView {
+  id: string;
+  tenantId: string;
+  bucketKey: string;
+  displayName: string;
+  objectPrefix: string;
+  lifecycleStatus: string;
+  version: string;
+  providerId?: string;
+  providerBindingId?: string;
+  storageRootPrefix?: string;
+}
+
+export interface UpdateStorageLogicalBucketInput {
+  displayName?: string;
+  objectPrefix?: string;
+  lifecycleStatus?: 'active' | 'archived';
+  providerId?: string;
+  storageRootPrefix?: string;
+  signal?: AbortSignal;
+}
+
+/** A business scope bound to a logical bucket, with the resolved provider. */
+export interface BusinessStorageBindingView {
+  id: string;
+  tenantId: string;
+  scopeType: 'tenant' | 'space_type' | 'logical_scope';
+  scopeId: string;
+  logicalBucketId: string;
+  logicalBucketKey: string;
+  logicalBucketName: string;
+  writePrefix: string;
+  lifecycleStatus: string;
+  version: string;
+  providerId?: string;
+  storageRootPrefix?: string;
+}
+
+export interface ListBusinessStorageBindingsInput {
+  scopeType?: BusinessStorageBindingView['scopeType'];
+  pageSize?: number;
+  pageToken?: string;
+  signal?: AbortSignal;
+}
+
+export interface UpdateBusinessStorageBindingInput {
+  logicalBucketId: string;
+  writePrefix?: string;
+  signal?: AbortSignal;
+}
+
+/**
  * One step of the storage resolution chain.
  *
  * The writer resolves a target in this order, so the console shows one section
@@ -136,6 +195,31 @@ export interface StorageProviderBucketInitializeView {
   bucket: string;
   /** True when this call created the bucket; false when it already existed. */
   changed: boolean;
+}
+
+/** Result of the one-click provider initialization (bucket + routing plane). */
+export interface StorageProviderInitializationView {
+  providerId: string;
+  bucket: string;
+  bucketCreated: boolean;
+  bucketVerified: boolean;
+  defaultBindingCreated: boolean;
+  logicalPlaneCreated: boolean;
+  /** The logical plane and tenant fallback now route to this provider. */
+  routingSwitched: boolean;
+  logicalBucketCount: string;
+  businessBindingCount: string;
+  objectWriteVerified: boolean;
+  objectReadVerified: boolean;
+  objectDeleteVerified: boolean;
+  multipartVerified: boolean;
+  presignedUploadVerified: boolean;
+  presignedDownloadVerified: boolean;
+  /** Every operation Drive storage workflows depend on passed. */
+  ready: boolean;
+  /** Provider the tenant logical plane currently routes to. */
+  routingProviderId?: string;
+  readinessError?: string;
 }
 
 export interface CreateStorageProviderInput {
@@ -216,6 +300,13 @@ export interface SetDefaultStorageProviderBindingInput {
 export interface StorageProviderBucketListItemView {
   bucket: string;
   configured: boolean;
+  /**
+   * 厂商桶清单里是否真的有这个桶。
+   *
+   * 配置桶即使还没创建也会出现在清单里（`configured: true, exists: false`），
+   * 这样控制台才有"一键初始化"的目标，而不是显示一个空表。
+   */
+  exists: boolean;
   /**
    * 桶的创建时间，ISO 8601（服务端下发 epoch 毫秒）。
    *

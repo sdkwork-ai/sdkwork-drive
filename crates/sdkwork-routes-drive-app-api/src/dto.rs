@@ -1305,6 +1305,7 @@ pub struct StorageTarget {
     pub provider_id: String,
     pub bucket: String,
     pub object_key: String,
+    pub storage_root_prefix: String,
 }
 
 #[derive(Debug, Clone)]

@@ -255,6 +255,15 @@ pub(crate) async fn complete_upload_session(
             SdkWorkResultCode::ValidationError,
         ));
     }
+    // Upload sessions carry their own content length; without this check a
+    // client could presign and complete arbitrary bytes past the tenant quota.
+    ensure_tenant_can_allocate_bytes(
+        &SqlQuotaStore::new(state.pool.clone()),
+        &tenant_id,
+        content_length,
+    )
+    .await
+    .map_err(map_service_error)?;
 
     let updated = upload_session_service(&state)
         .complete(CompleteDriveUploadSessionCommand {
@@ -372,7 +381,7 @@ pub(crate) async fn prepare_uploader_upload(
             &upload_item.tenant_id,
             &upload_item.space_id,
             None,
-            Some(&upload_session.bucket),
+            None,
             &upload_item.node_id,
             &upload_item.id,
             target_version_no,
@@ -380,10 +389,12 @@ pub(crate) async fn prepare_uploader_upload(
         .await?;
         if let Some(object_key) = uploader_final_object_key(
             upload_session.object_key.as_str(),
+            storage_target.storage_root_prefix.as_str(),
             storage_target.object_key.as_str(),
         )? {
             storage_target.object_key = object_key;
         }
+        ensure_upload_provider_supports_multipart(&state, &storage_target.provider_id).await?;
         let created_storage_upload =
             initiate_storage_multipart_upload(&state, &storage_target).await?;
         update_uploader_storage_target(

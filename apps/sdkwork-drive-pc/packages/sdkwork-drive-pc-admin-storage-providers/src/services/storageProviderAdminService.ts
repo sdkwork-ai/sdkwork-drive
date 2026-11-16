@@ -5,12 +5,14 @@ import {
 import type { SessionSnapshot } from 'sdkwork-drive-pc-core';
 import type {
   AbortStorageProviderMultipartUploadInput,
+  BusinessStorageBindingView,
   CompleteStorageProviderMultipartUploadInput,
   CopyStorageProviderObjectInput,
   CreateStorageProviderAccountInput,
   CreateStorageProviderInput,
   CreateStorageProviderMultipartUploadInput,
   GetStorageOverviewInput,
+  ListBusinessStorageBindingsInput,
   ListStorageProviderAccountsInput,
   ListStorageProviderBindingsInput,
   ListStorageProviderBindingsPageResult,
@@ -22,6 +24,7 @@ import type {
   ListStorageProviderObjectsResult,
   PresignStorageProviderUploadPartsInput,
   SetDefaultStorageProviderBindingInput,
+  StorageLogicalBucketView,
   StorageOverviewView,
   StorageProviderAccountDefaultView,
   StorageProviderAccountScope,
@@ -31,6 +34,7 @@ import type {
   StorageProviderBucketListItemView,
   StorageProviderBucketView,
   StorageProviderCapabilitiesView,
+  StorageProviderInitializationView,
   StorageProviderKindView,
   StorageProviderMutationOptions,
   StorageProviderMultipartUploadView,
@@ -42,6 +46,8 @@ import type {
   StorageProviderVendorCredentialFields,
   StorageProviderView,
   StorageProviderUploadPartGrantsView,
+  UpdateBusinessStorageBindingInput,
+  UpdateStorageLogicalBucketInput,
   UpdateStorageProviderInput,
   WriteStorageProviderObjectContentInput,
 } from '../types/storageProviderAdminTypes';
@@ -163,6 +169,32 @@ export interface StorageProviderAdminService {
     input?: ListStorageProviderBindingsInput,
   ): Promise<ListStorageProviderBindingsPageResult>;
   /**
+   * Tenant logical buckets, the business-facing storage layer.
+   *
+   * Each bucket resolves to a provider configuration; business scopes bind to
+   * these records instead of a provider, so a vendor/account change is one
+   * logical-bucket update.
+   */
+  listLogicalBuckets(options?: StorageProviderMutationOptions): Promise<StorageLogicalBucketView[]>;
+  updateLogicalBucket(
+    logicalBucketId: string,
+    input: UpdateStorageLogicalBucketInput,
+  ): Promise<StorageLogicalBucketView>;
+  /** Business scope -> logical bucket assignments with the resolved provider. */
+  listBusinessBindings(
+    input?: ListBusinessStorageBindingsInput,
+  ): Promise<BusinessStorageBindingView[]>;
+  updateBusinessBinding(
+    scopeType: BusinessStorageBindingView['scopeType'],
+    scopeId: string,
+    input: UpdateBusinessStorageBindingInput,
+  ): Promise<BusinessStorageBindingView>;
+  deleteBusinessBinding(
+    scopeType: BusinessStorageBindingView['scopeType'],
+    scopeId: string,
+    options?: StorageProviderMutationOptions,
+  ): Promise<void>;
+  /**
    * 该服务商账号下**全部**可见的存储桶。
    *
    * 厂商 ListBuckets 本来就是整份账号清单，接口的 offset 分页只是限制单次响应大小；
@@ -172,6 +204,17 @@ export interface StorageProviderAdminService {
   listBuckets(providerId: string, options?: StorageProviderMutationOptions): Promise<StorageProviderBucketListItemView[]>;
   /** Idempotent initialization: ensures the configured bucket exists on the vendor. */
   initializeBucket(providerId: string, options?: StorageProviderMutationOptions): Promise<StorageProviderBucketInitializeView>;
+  /**
+   * One-click initialization after the operator stores the cloud account.
+   *
+   * Creates the configured bucket when missing, establishes the tenant default
+   * binding when none exists, and materializes the logical bucket/business
+   * binding plane. Every step is idempotent.
+   */
+  initializeProvider(
+    providerId: string,
+    options?: StorageProviderMutationOptions & { adoptAsDefault?: boolean },
+  ): Promise<StorageProviderInitializationView>;
   deleteBucket(providerId: string, options?: StorageProviderMutationOptions): Promise<boolean>;
   listObjects(
     providerId: string,
@@ -574,6 +617,65 @@ export function createStorageProviderAdminService({
         hasMore: booleanField(pageInfo, 'hasMore') ?? Boolean(nextPageToken),
       };
     },
+    async listLogicalBuckets(options = {}) {
+      const response = await adminStorageSdkClient.request<unknown>({
+        operationId: 'storageLogicalBuckets.list',
+        signal: options.signal,
+        query: {
+          page_size: 200,
+        },
+      });
+      return extractItems(response).map(responseToLogicalBucket);
+    },
+    async updateLogicalBucket(logicalBucketId, input) {
+      assertAdminWriteSession(getSession);
+      const response = await adminStorageSdkClient.request<unknown>({
+        operationId: 'storageLogicalBuckets.update',
+        signal: input.signal,
+        pathParams: { logicalBucketId },
+        body: {
+          displayName: input.displayName,
+          objectPrefix: input.objectPrefix,
+          lifecycleStatus: input.lifecycleStatus,
+          providerId: input.providerId,
+          storageRootPrefix: input.storageRootPrefix,
+        },
+      });
+      return responseToLogicalBucket(response);
+    },
+    async listBusinessBindings(input = {}) {
+      const response = await adminStorageSdkClient.request<unknown>({
+        operationId: 'storageBusinessBindings.list',
+        signal: input.signal,
+        query: {
+          scope_type: input.scopeType,
+          page_size: input.pageSize ?? 200,
+          cursor: input.pageToken,
+        },
+      });
+      return extractItems(response).map(responseToBusinessBinding);
+    },
+    async updateBusinessBinding(scopeType, scopeId, input) {
+      assertAdminWriteSession(getSession);
+      const response = await adminStorageSdkClient.request<unknown>({
+        operationId: 'storageBusinessBindings.update',
+        signal: input.signal,
+        pathParams: { scopeType, scopeId },
+        body: {
+          logicalBucketId: input.logicalBucketId,
+          writePrefix: input.writePrefix,
+        },
+      });
+      return responseToBusinessBinding(response);
+    },
+    async deleteBusinessBinding(scopeType, scopeId, options = {}) {
+      assertAdminWriteSession(getSession);
+      await adminStorageSdkClient.request<unknown>({
+        operationId: 'storageBusinessBindings.delete',
+        signal: options.signal,
+        pathParams: { scopeType, scopeId },
+      });
+    },
     async listBuckets(providerId, options) {
       // 厂商清单本来就是全量的（S3 ListBuckets 一次返回账号下的所有桶），接口却按
       // offset 分页：只读第一页会把窗口之外的桶藏起来，而调用方把返回值当成"这个账号
@@ -628,6 +730,38 @@ export function createStorageProviderAdminService({
         bucket: stringField(record, 'bucket') ?? '',
         changed: booleanField(record, 'changed') ?? false,
       } satisfies StorageProviderBucketInitializeView;
+    },
+    async initializeProvider(providerId, options) {
+      assertAdminWriteSession(getSession);
+      const response = await adminStorageSdkClient.request<unknown>({
+        operationId: 'storageProviders.initialize',
+        signal: options?.signal,
+        pathParams: { providerId },
+        body: {
+          adoptAsDefault: options?.adoptAsDefault ?? false,
+        },
+      });
+      const record = resourceRecord(response);
+      return {
+        providerId: stringField(record, 'providerId') ?? providerId,
+        bucket: stringField(record, 'bucket') ?? '',
+        bucketCreated: booleanField(record, 'bucketCreated') ?? false,
+        bucketVerified: booleanField(record, 'bucketVerified') ?? false,
+        defaultBindingCreated: booleanField(record, 'defaultBindingCreated') ?? false,
+        logicalPlaneCreated: booleanField(record, 'logicalPlaneCreated') ?? false,
+        routingSwitched: booleanField(record, 'routingSwitched') ?? false,
+        logicalBucketCount: stringField(record, 'logicalBucketCount') ?? '0',
+        businessBindingCount: stringField(record, 'businessBindingCount') ?? '0',
+        objectWriteVerified: booleanField(record, 'objectWriteVerified') ?? false,
+        objectReadVerified: booleanField(record, 'objectReadVerified') ?? false,
+        objectDeleteVerified: booleanField(record, 'objectDeleteVerified') ?? false,
+        multipartVerified: booleanField(record, 'multipartVerified') ?? false,
+        presignedUploadVerified: booleanField(record, 'presignedUploadVerified') ?? false,
+        presignedDownloadVerified: booleanField(record, 'presignedDownloadVerified') ?? false,
+        ready: booleanField(record, 'ready') ?? false,
+        routingProviderId: stringField(record, 'routingProviderId'),
+        readinessError: stringField(record, 'readinessError'),
+      } satisfies StorageProviderInitializationView;
     },
     async deleteBucket(providerId, options) {
       const response = await adminStorageSdkClient.request<unknown>({
@@ -1242,6 +1376,45 @@ function responseToBinding(response: unknown): StorageProviderBindingView {
   };
 }
 
+function responseToLogicalBucket(response: unknown): StorageLogicalBucketView {
+  const record = resourceRecord(response);
+  return {
+    id: stringField(record, 'id') ?? '',
+    tenantId: stringField(record, 'tenantId') ?? '',
+    bucketKey: stringField(record, 'bucketKey') ?? '',
+    displayName: stringField(record, 'displayName') ?? '',
+    objectPrefix: stringField(record, 'objectPrefix') ?? '',
+    lifecycleStatus: stringField(record, 'lifecycleStatus') ?? '',
+    version: stringField(record, 'version') ?? '0',
+    providerId: stringField(record, 'providerId'),
+    providerBindingId: stringField(record, 'providerBindingId'),
+    storageRootPrefix: stringField(record, 'storageRootPrefix'),
+  };
+}
+
+function responseToBusinessBinding(response: unknown): BusinessStorageBindingView {
+  const record = resourceRecord(response);
+  const rawScopeType = stringField(record, 'scopeType');
+  const scopeType: BusinessStorageBindingView['scopeType'] =
+    rawScopeType === 'tenant' || rawScopeType === 'space_type' || rawScopeType === 'logical_scope'
+      ? rawScopeType
+      : 'space_type';
+  return {
+    id: stringField(record, 'id') ?? '',
+    tenantId: stringField(record, 'tenantId') ?? '',
+    scopeType,
+    scopeId: stringField(record, 'scopeId') ?? '',
+    logicalBucketId: stringField(record, 'logicalBucketId') ?? '',
+    logicalBucketKey: stringField(record, 'logicalBucketKey') ?? '',
+    logicalBucketName: stringField(record, 'logicalBucketName') ?? '',
+    writePrefix: stringField(record, 'writePrefix') ?? '',
+    lifecycleStatus: stringField(record, 'lifecycleStatus') ?? '',
+    version: stringField(record, 'version') ?? '0',
+    providerId: stringField(record, 'providerId'),
+    storageRootPrefix: stringField(record, 'storageRootPrefix'),
+  };
+}
+
 /** 厂商桶清单条目（list 的一行）→ 视图模型。 */
 function responseToBucketListItem(item: unknown): StorageProviderBucketListItemView {
   const record = recordOf(item);
@@ -1249,6 +1422,7 @@ function responseToBucketListItem(item: unknown): StorageProviderBucketListItemV
   return {
     bucket: stringField(record, 'bucket') ?? '',
     configured: booleanField(record, 'configured') ?? false,
+    exists: booleanField(record, 'exists') ?? true,
     // 时间原样带走（ISO），由知道宿主语言的显示层格式化：服务层一旦调
     // `toLocaleDateString()`，读到的是浏览器区域而不是控制台语言。
     creationDateIso: creationDateEpochMs

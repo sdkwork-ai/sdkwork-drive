@@ -3010,6 +3010,10 @@ async fn uploader_prepare_to_target_space_enforces_writer_permission_and_preserv
         .as_str()
         .expect("allowed response should include final object key");
     assert!(
+        object_key.starts_with("sdkwork-drive/v1/tenants/tenant-uploader-permission/"),
+        "uploader bytes must stay below the resolved storage root: {object_key}"
+    );
+    assert!(
         object_key.contains("sdkwork-drive/uploader/"),
         "final uploader object key should preserve upload locator prefix: {object_key}"
     );
@@ -20221,5 +20225,124 @@ async fn unset_favorite_on_deleted_node_is_idempotent_no_content() {
     assert!(
         !ids.iter().any(|id| id.starts_with("node-unset-")),
         "favorites of deleted nodes must be hidden from listings, got {ids:?}"
+    );
+}
+
+#[tokio::test]
+async fn create_download_package_writes_the_archive_below_the_logical_storage_root() {
+    let (s3_endpoint, captured_requests) = start_s3_mock_server().await;
+    let Some((pool, _database_guard)) = sdkwork_drive_test_support::postgres_test_database().await
+    else {
+        return;
+    };
+    seed_download_package_fixture(&pool, &s3_endpoint)
+        .await
+        .expect("download package fixture should be seeded");
+
+    sqlx::query(
+        "INSERT INTO dr_drive_storage_provider (
+            id, tenant_id, provider_kind, name, endpoint_url, region, bucket, path_style,
+            strict_tls, credential_ref, server_side_encryption_mode, default_storage_class,
+            status, version, created_by, updated_by
+        ) VALUES ('provider-logical-bulk', 'tenant-bulk', 's3_compatible', 'Logical Bulk S3',
+            $1, 'us-east-1', 'bucket-logical', TRUE, FALSE,
+            'plain:test-access-key:test-secret-key', 'AES256', 'STANDARD',
+            'active', 1, 'user-bulk', 'user-bulk')",
+    )
+    .bind(&s3_endpoint)
+    .execute(&pool)
+    .await
+    .expect("logical bulk provider should be seeded");
+    sqlx::query(
+        "INSERT INTO dr_drive_logical_bucket (
+            id, tenant_id, bucket_key, display_name, object_prefix,
+            lifecycle_status, version, created_by, updated_by
+        ) VALUES ('bucket-logical-bulk', 'tenant-bulk', 'business', 'Business Content',
+            'logical/business', 'active', 1, 'user-bulk', 'user-bulk')",
+    )
+    .execute(&pool)
+    .await
+    .expect("logical bulk bucket should be seeded");
+    sqlx::query(
+        "INSERT INTO dr_drive_logical_bucket_provider_binding (
+            id, tenant_id, logical_bucket_id, provider_id, storage_root_prefix,
+            lifecycle_status, version, created_by, updated_by
+        ) VALUES ('provider-binding-logical-bulk', 'tenant-bulk', 'bucket-logical-bulk',
+            'provider-logical-bulk', 'sdkwork-drive/v1/tenants/tenant-bulk',
+            'active', 1, 'user-bulk', 'user-bulk')",
+    )
+    .execute(&pool)
+    .await
+    .expect("logical bulk provider binding should be seeded");
+    sqlx::query(
+        "INSERT INTO dr_drive_business_storage_binding (
+            id, tenant_id, scope_type, scope_id, logical_bucket_id, write_prefix,
+            lifecycle_status, version, created_by, updated_by
+        ) VALUES ('business-logical-bulk', 'tenant-bulk', 'space_type', 'personal',
+            'bucket-logical-bulk', 'space-types/personal', 'active', 1, 'user-bulk', 'user-bulk')",
+    )
+    .execute(&pool)
+    .await
+    .expect("logical bulk business binding should be seeded");
+
+    let app = common::test_router_with_pool(pool.clone());
+    let response = app
+        .oneshot(
+            Request::builder()
+                .header(
+                    "authorization",
+                    format!(
+                        "Bearer {}",
+                        common::auth_token("tenant-bulk", "user-bulk", "appbase")
+                    ),
+                )
+                .header(
+                    "access-token",
+                    common::access_token("tenant-bulk", "user-bulk", "appbase"),
+                )
+                .method(Method::POST)
+                .uri("/app/v3/api/drive/download_packages")
+                .header("content-type", "application/json")
+                .body(Body::from(
+                    r#"{
+                        "nodeIds":["node-file-a"],
+                        "packageName":"Logical package",
+                        "requestedTtlSeconds":180
+                    }"#,
+                ))
+                .expect("request should be built"),
+        )
+        .await
+        .expect("create package request should be handled");
+    assert_eq!(response.status(), StatusCode::CREATED);
+    let payload: serde_json::Value = serde_json::from_slice(
+        &to_bytes(response.into_body(), usize::MAX)
+            .await
+            .expect("response body should be read"),
+    )
+    .expect("response json should be valid");
+    let package_data = common::envelope_data(&payload);
+    let archive_object_key = package_data["archiveObjectKey"]
+        .as_str()
+        .expect("response should include archive object key");
+    assert!(
+        archive_object_key.starts_with(
+            "sdkwork-drive/v1/tenants/tenant-bulk/logical/business/space-types/personal/download-packages/"
+        ),
+        "package archive must stay below the logical root: {archive_object_key}"
+    );
+
+    let requests = captured_requests
+        .lock()
+        .expect("captured s3 requests mutex should not be poisoned")
+        .clone();
+    assert!(
+        requests.iter().any(|request| {
+            request.method == "PUT"
+                && request
+                    .path
+                    .contains("/logical/business/space-types/personal/download-packages/")
+        }),
+        "archive PUT must target the logical root"
     );
 }

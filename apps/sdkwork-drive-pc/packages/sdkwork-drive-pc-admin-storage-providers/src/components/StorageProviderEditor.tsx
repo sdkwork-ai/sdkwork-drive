@@ -20,6 +20,7 @@ import {
   providerBucketHint,
   providerCredentialLabel,
   providerKindLabel,
+  providerKindDefaultPathStyle,
   providerRegionLabel,
   providerVendorCodeForKind,
   resolveProviderKindMeta,
@@ -126,7 +127,7 @@ function applyKindDefaults(
   const hint = getProviderKindMeta(kind);
   setRegion(hint.regionHint);
   setEndpointUrl(hint.features.isLocal ? hint.endpointHint : buildProviderEndpointUrl(String(kind), hint.regionHint) ?? hint.endpointHint);
-  setPathStyle(hint.features.isLocal);
+  setPathStyle(providerKindDefaultPathStyle(String(kind)));
   setStrictTls(!hint.features.isLocal);
   setSseMode('');
   setStorageClass('');
@@ -680,7 +681,15 @@ export function StorageProviderEditor({
                         <div className="flex flex-col gap-2 sm:flex-row sm:items-start">
                           <input
                             value={endpointUrl}
-                            onChange={(e) => setEndpointUrl(e.target.value)}
+                            onChange={(e) => {
+                              const value = e.target.value;
+                              setEndpointUrl(value);
+                              if (value.startsWith('http://')) {
+                                setStrictTls(false);
+                              } else if (value.startsWith('https://')) {
+                                setStrictTls(true);
+                              }
+                            }}
                             readOnly={endpointLocked && hasRegions}
                             className={`${INPUT_CLASS} min-w-0 flex-1 font-mono text-xs ${endpointLocked && hasRegions ? 'bg-neutral-50 dark:bg-neutral-800' : ''}`}
                             placeholder={meta.endpointHint}

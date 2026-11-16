@@ -108,6 +108,25 @@ async fn mock_s3_endpoint(
     if method == Method::HEAD && uri.path() == "/bucket-admin/objects/notes.txt" {
         return (StatusCode::OK, [("content-length", "11")], Body::empty()).into_response();
     }
+    // Initialization readiness probe: HEAD reports the probe length and GET
+    // returns the exact bytes, so the one-click self-test can verify a real
+    // write/read round trip instead of guessing from list output.
+    if uri.path().contains("/.sdkwork-initialization/") {
+        if method == Method::HEAD {
+            return (StatusCode::OK, [("content-length", "34")], Body::empty()).into_response();
+        }
+        if method == Method::GET {
+            return (
+                StatusCode::OK,
+                [
+                    ("content-type", "application/octet-stream"),
+                    ("content-length", "34"),
+                ],
+                Body::from("sdkwork-drive-initialization-probe"),
+            )
+                .into_response();
+        }
+    }
     if method == Method::HEAD {
         return (StatusCode::OK, [("content-length", "0")], Body::empty()).into_response();
     }
@@ -505,17 +524,17 @@ async fn admin_storage_delete_provider_rejects_active_provider_bindings() {
         )
         .await
         .expect("patch provider bucket request should be handled");
-    assert_eq!(patch_bucket_response.status(), StatusCode::CONFLICT);
+    assert_eq!(patch_bucket_response.status(), StatusCode::OK);
     let patch_bucket_payload: serde_json::Value = serde_json::from_slice(
         &to_bytes(patch_bucket_response.into_body(), usize::MAX)
             .await
-            .expect("patch provider bucket conflict response body should be read"),
+            .expect("patch provider bucket response body should be read"),
     )
-    .expect("patch provider bucket conflict response should be json");
-    assert_eq!(patch_bucket_payload["code"], 40901);
-    assert!(patch_bucket_payload["detail"]
-        .as_str()
-        .is_some_and(|detail| detail.contains("bucket cannot be changed")));
+    .expect("patch provider bucket response should be json");
+    assert_eq!(
+        patch_bucket_payload["data"]["item"]["bucket"],
+        "bound-delete-bucket-updated"
+    );
 
     let patch_deleted_response = app
         .clone()
@@ -3890,4 +3909,649 @@ async fn admin_storage_provider_account_list_reports_a_real_continuation() {
             .any(|(id, _)| id == account_ids.last().expect("three accounts were seeded")),
         "the console's vendor-scoped page must carry the newest account: {console_page}"
     );
+}
+
+#[tokio::test]
+async fn admin_storage_logical_plane_binds_business_through_logical_bucket_and_resolves() {
+    let Some((pool, _database_guard)) = sdkwork_drive_test_support::postgres_test_database().await
+    else {
+        return;
+    };
+    let tenant_id = "tenant-logical";
+
+    sqlx::query(
+        "INSERT INTO dr_drive_storage_provider (
+            id, tenant_id, provider_kind, name, endpoint_url, region, bucket, path_style,
+            credential_ref, status, version, created_by, updated_by
+        ) VALUES ('provider-logical', $1, 's3_compatible', 'Logical S3',
+            'https://s3.us-east-1.amazonaws.com', 'us-east-1', 'logical-bucket', false,
+            'plain:access-key:secret-key', 'active', 1, 'admin-storage', 'admin-storage')",
+    )
+    .bind(tenant_id)
+    .execute(&pool)
+    .await
+    .expect("logical provider should be seeded");
+
+    sqlx::query(
+        "INSERT INTO dr_drive_space (
+            id, tenant_id, owner_subject_type, owner_subject_id, display_name,
+            space_type, lifecycle_status, version, created_by, updated_by
+        ) VALUES ('space-logical', $1, 'user', 'user-logical', 'Logical Space',
+            'personal', 'active', 1, 'admin-storage', 'admin-storage')",
+    )
+    .bind(tenant_id)
+    .execute(&pool)
+    .await
+    .expect("logical space should be seeded");
+
+    sqlx::query(
+        "INSERT INTO dr_drive_logical_bucket (
+            id, tenant_id, bucket_key, display_name, object_prefix,
+            lifecycle_status, version, created_by, updated_by
+        ) VALUES ('bucket-logical', $1, 'business', 'Business Content', 'logical/business',
+            'active', 1, 'admin-storage', 'admin-storage')",
+    )
+    .bind(tenant_id)
+    .execute(&pool)
+    .await
+    .expect("logical bucket should be seeded");
+
+    sqlx::query(
+        "INSERT INTO dr_drive_logical_bucket_provider_binding (
+            id, tenant_id, logical_bucket_id, provider_id, storage_root_prefix,
+            lifecycle_status, version, created_by, updated_by
+        ) VALUES ('provider-binding-logical', $1, 'bucket-logical', 'provider-logical',
+            'sdkwork-drive/v1/tenants/tenant-logical', 'active', 1,
+            'admin-storage', 'admin-storage')",
+    )
+    .bind(tenant_id)
+    .execute(&pool)
+    .await
+    .expect("logical provider binding should be seeded");
+
+    sqlx::query(
+        "INSERT INTO dr_drive_business_storage_binding (
+            id, tenant_id, scope_type, scope_id, logical_bucket_id, write_prefix,
+            lifecycle_status, version, created_by, updated_by
+        ) VALUES ('business-logical', $1, 'space_type', 'personal', 'bucket-logical',
+            'space-types/personal', 'active', 1, 'admin-storage', 'admin-storage')",
+    )
+    .bind(tenant_id)
+    .execute(&pool)
+    .await
+    .expect("business binding should be seeded");
+
+    let app = build_router_with_pool_without_iam_and_test_tenant(pool.clone(), tenant_id);
+    let response = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method(Method::GET)
+                .uri("/backend/v3/api/drive/storage/logical-buckets")
+                .body(Body::empty())
+                .expect("logical bucket list request should be built"),
+        )
+        .await
+        .expect("logical bucket list request should be handled");
+    assert_eq!(response.status(), StatusCode::OK);
+    let payload: serde_json::Value = serde_json::from_slice(
+        &to_bytes(response.into_body(), usize::MAX)
+            .await
+            .expect("logical bucket list body should be read"),
+    )
+    .expect("logical bucket list should be json");
+    assert_eq!(payload["data"]["items"][0]["id"], "bucket-logical");
+    assert_eq!(
+        payload["data"]["items"][0]["providerId"],
+        "provider-logical"
+    );
+    assert_eq!(
+        payload["data"]["items"][0]["version"].as_str(),
+        Some("1"),
+        "int64 wire fields must be strings"
+    );
+
+    let response = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method(Method::PUT)
+                .uri("/backend/v3/api/drive/storage/logical-buckets/bucket-logical")
+                .header("content-type", "application/json")
+                .body(Body::from(r#"{"displayName":"Business Content 2"}"#))
+                .expect("logical bucket update request should be built"),
+        )
+        .await
+        .expect("logical bucket update request should be handled");
+    assert_eq!(response.status(), StatusCode::OK);
+    let payload: serde_json::Value = serde_json::from_slice(
+        &to_bytes(response.into_body(), usize::MAX)
+            .await
+            .expect("logical bucket update body should be read"),
+    )
+    .expect("logical bucket update should be json");
+    assert_eq!(payload["data"]["item"]["displayName"], "Business Content 2");
+
+    let response = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method(Method::PUT)
+                .uri("/backend/v3/api/drive/storage/business-bindings/space_type/team")
+                .header("content-type", "application/json")
+                .body(Body::from(
+                    r#"{"logicalBucketId":"bucket-logical","writePrefix":"space-types/team"}"#,
+                ))
+                .expect("business binding update request should be built"),
+        )
+        .await
+        .expect("business binding update request should be handled");
+    assert_eq!(response.status(), StatusCode::OK);
+    let payload: serde_json::Value = serde_json::from_slice(
+        &to_bytes(response.into_body(), usize::MAX)
+            .await
+            .expect("business binding update body should be read"),
+    )
+    .expect("business binding update should be json");
+    assert_eq!(payload["data"]["item"]["scopeId"], "team");
+    assert_eq!(payload["data"]["item"]["logicalBucketKey"], "business");
+
+    let target =
+        sdkwork_drive_workspace_service::application::storage_target_service::resolve_default_provider_target(
+            &pool,
+            tenant_id,
+            "space-logical",
+        )
+        .await
+        .expect("logical business binding should resolve a storage target");
+    assert_eq!(target.provider_id, "provider-logical");
+    assert_eq!(target.bucket, "logical-bucket");
+    assert_eq!(
+        target.storage_root_prefix,
+        "sdkwork-drive/v1/tenants/tenant-logical/logical/business/space-types/personal"
+    );
+
+    sqlx::query(
+        "INSERT INTO dr_drive_storage_provider (
+            id, tenant_id, provider_kind, name, endpoint_url, region, bucket, path_style,
+            credential_ref, status, version, created_by, updated_by
+        ) VALUES ('provider-logical-b', $1, 's3_compatible', 'Logical S3 B',
+            'https://s3.us-east-1.amazonaws.com', 'us-east-1', 'logical-bucket-b', false,
+            'plain:access-key:secret-key', 'active', 1, 'admin-storage', 'admin-storage')",
+    )
+    .bind(tenant_id)
+    .execute(&pool)
+    .await
+    .expect("second logical provider should be seeded");
+
+    let switch_provider = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method(Method::PUT)
+                .uri("/backend/v3/api/drive/storage/logical-buckets/bucket-logical")
+                .header("content-type", "application/json")
+                .body(Body::from(r#"{"providerId":"provider-logical-b"}"#))
+                .expect("logical bucket provider switch request should be built"),
+        )
+        .await
+        .expect("logical bucket provider switch request should be handled");
+    assert_eq!(switch_provider.status(), StatusCode::OK);
+    let switch_payload: serde_json::Value = serde_json::from_slice(
+        &to_bytes(switch_provider.into_body(), usize::MAX)
+            .await
+            .expect("logical bucket provider switch body should be read"),
+    )
+    .expect("logical bucket provider switch should be json");
+    assert_eq!(
+        switch_payload["data"]["item"]["providerId"],
+        "provider-logical-b"
+    );
+    assert_eq!(
+        switch_payload["data"]["item"]["storageRootPrefix"],
+        "sdkwork-drive/v1/tenants/tenant-logical",
+        "a provider switch must not inherit the previous provider root prefix"
+    );
+
+    let response = app
+        .oneshot(
+            Request::builder()
+                .method(Method::DELETE)
+                .uri("/backend/v3/api/drive/storage/business-bindings/space_type/team")
+                .body(Body::empty())
+                .expect("business binding delete request should be built"),
+        )
+        .await
+        .expect("business binding delete request should be handled");
+    assert_eq!(response.status(), StatusCode::NO_CONTENT);
+}
+
+#[tokio::test]
+async fn seed_logical_storage_buckets_routes_every_space_type_and_stays_idempotent() {
+    let Some((pool, _database_guard)) = sdkwork_drive_test_support::postgres_test_database().await
+    else {
+        return;
+    };
+
+    let provider_seed =
+        include_str!("../../../database/seeds/common/002_storage_provider_catalog.sql");
+    let logical_seed =
+        include_str!("../../../database/seeds/common/003_logical_storage_buckets.sql");
+
+    for _ in 0..2 {
+        sqlx::raw_sql(provider_seed)
+            .execute(&pool)
+            .await
+            .expect("storage provider catalog seed should apply");
+        sqlx::raw_sql(logical_seed)
+            .execute(&pool)
+            .await
+            .expect("logical storage bucket seed should apply");
+    }
+
+    let buckets: i64 = sqlx::query_scalar(
+        "SELECT COUNT(*) FROM dr_drive_logical_bucket
+         WHERE tenant_id = '100001' AND lifecycle_status = 'active'",
+    )
+    .fetch_one(&pool)
+    .await
+    .expect("logical bucket count should be readable");
+    assert_eq!(buckets, 4);
+
+    let business_bindings: i64 = sqlx::query_scalar(
+        "SELECT COUNT(*) FROM dr_drive_business_storage_binding
+         WHERE tenant_id = '100001' AND lifecycle_status = 'active'",
+    )
+    .fetch_one(&pool)
+    .await
+    .expect("business binding count should be readable");
+    assert_eq!(business_bindings, 12);
+
+    let unbound_space_types: i64 = sqlx::query_scalar(
+        "SELECT COUNT(*)
+         FROM (VALUES
+             ('personal'), ('team'), ('knowledge_base'), ('ai_generated'),
+             ('git_repository'), ('deployment'), ('app_upload'), ('im'),
+             ('rtc'), ('notary'), ('website')
+         ) AS expected(space_type)
+         WHERE NOT EXISTS (
+             SELECT 1 FROM dr_drive_business_storage_binding binding
+             WHERE binding.tenant_id = '100001'
+               AND binding.scope_type = 'space_type'
+               AND binding.scope_id = expected.space_type
+               AND binding.lifecycle_status = 'active'
+         )",
+    )
+    .fetch_one(&pool)
+    .await
+    .expect("space-type coverage should be readable");
+    assert_eq!(
+        unbound_space_types, 0,
+        "every space type must be routed by the seed"
+    );
+
+    let unresolved: i64 = sqlx::query_scalar(
+        "SELECT COUNT(*)
+         FROM dr_drive_business_storage_binding binding
+         INNER JOIN dr_drive_logical_bucket bucket
+           ON bucket.id = binding.logical_bucket_id
+          AND bucket.tenant_id = binding.tenant_id
+          AND bucket.lifecycle_status = 'active'
+         INNER JOIN dr_drive_logical_bucket_provider_binding provider_binding
+           ON provider_binding.logical_bucket_id = bucket.id
+          AND provider_binding.tenant_id = bucket.tenant_id
+          AND provider_binding.lifecycle_status = 'active'
+         WHERE binding.tenant_id = '100001'
+           AND binding.lifecycle_status = 'active'",
+    )
+    .fetch_one(&pool)
+    .await
+    .expect("logical resolution count should be readable");
+    assert_eq!(
+        unresolved, 12,
+        "every seeded business binding must resolve to a logical bucket provider"
+    );
+}
+
+#[tokio::test]
+async fn seed_storage_provider_catalog_is_complete_for_bucket_management() {
+    let Some((pool, _database_guard)) = sdkwork_drive_test_support::postgres_test_database().await
+    else {
+        return;
+    };
+
+    sqlx::raw_sql(include_str!(
+        "../../../database/seeds/common/002_storage_provider_catalog.sql"
+    ))
+    .execute(&pool)
+    .await
+    .expect("storage provider catalog seed should apply");
+
+    let incomplete_providers: i64 = sqlx::query_scalar(
+        "SELECT COUNT(*)
+         FROM dr_drive_storage_provider
+         WHERE tenant_id = '100001'
+           AND (btrim(bucket) = '' OR btrim(endpoint_url) = '')",
+    )
+    .fetch_one(&pool)
+    .await
+    .expect("provider completeness count should be readable");
+    assert_eq!(
+        incomplete_providers, 0,
+        "every seeded provider needs a bucket and endpoint before the console can initialize it"
+    );
+
+    let provider_count: i64 = sqlx::query_scalar(
+        "SELECT COUNT(*) FROM dr_drive_storage_provider WHERE tenant_id = '100001'",
+    )
+    .fetch_one(&pool)
+    .await
+    .expect("provider count should be readable");
+    assert!(
+        provider_count >= 20,
+        "the mainstream vendor catalog should be seeded"
+    );
+
+    let default_provider: String = sqlx::query_scalar(
+        "SELECT provider_id FROM dr_drive_storage_provider_binding
+         WHERE id = 'default:tenant:100001' AND lifecycle_status = 'active'",
+    )
+    .fetch_one(&pool)
+    .await
+    .expect("tenant default binding should exist");
+    assert_eq!(
+        default_provider, "builtin-storage-provider-100001-tencent-cos",
+        "the seeded tenant default must be Tencent Cloud COS"
+    );
+}
+
+#[tokio::test]
+async fn one_click_provider_initialize_creates_bucket_default_binding_and_logical_plane() {
+    let (s3_endpoint, captured_requests) = start_s3_mock_server().await;
+    let Some((pool, _database_guard)) = sdkwork_drive_test_support::postgres_test_database().await
+    else {
+        return;
+    };
+    let tenant_id = "tenant-provider-init";
+
+    sqlx::query(
+        "INSERT INTO dr_drive_storage_provider (
+            id, tenant_id, provider_kind, name, endpoint_url, region, bucket, path_style,
+            strict_tls, credential_ref, status, version, created_by, updated_by
+        ) VALUES ('provider-init', $1, 's3_compatible', 'Init S3', $2, 'us-east-1',
+            'init-bucket', TRUE, FALSE, 'plain:test-access-key:test-secret-key',
+            'active', 1, 'user-init', 'user-init')",
+    )
+    .bind(tenant_id)
+    .bind(&s3_endpoint)
+    .execute(&pool)
+    .await
+    .expect("provider should be seeded");
+
+    let app = build_router_with_pool_without_iam_and_test_tenant(pool.clone(), tenant_id);
+    for expected_first_run in [true, false] {
+        let response = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method(Method::POST)
+                    .uri("/backend/v3/api/drive/storage/providers/provider-init/initialize")
+                    .body(Body::empty())
+                    .expect("initialize request should be built"),
+            )
+            .await
+            .expect("initialize request should be handled");
+        assert_eq!(response.status(), StatusCode::OK);
+        let payload: serde_json::Value = serde_json::from_slice(
+            &to_bytes(response.into_body(), usize::MAX)
+                .await
+                .expect("initialize response should be read"),
+        )
+        .expect("initialize response should be json");
+        let item = &payload["data"]["item"];
+        assert_eq!(item["providerId"], "provider-init");
+        assert_eq!(item["bucket"], "init-bucket");
+        assert_eq!(item["bucketVerified"], true);
+        assert_eq!(item["logicalBucketCount"].as_str(), Some("4"));
+        assert_eq!(item["businessBindingCount"].as_str(), Some("12"));
+        assert_eq!(item["objectWriteVerified"], true);
+        assert_eq!(item["objectReadVerified"], true);
+        assert_eq!(item["objectDeleteVerified"], true);
+        assert_eq!(item["multipartVerified"], true);
+        assert_eq!(item["presignedUploadVerified"], true);
+        assert_eq!(item["presignedDownloadVerified"], true);
+        assert_eq!(item["routingProviderId"], "provider-init");
+        assert_eq!(item["ready"], true);
+        assert_eq!(
+            item["bucketCreated"], expected_first_run,
+            "second run must converge without creating the bucket again"
+        );
+        assert_eq!(
+            item["defaultBindingCreated"], expected_first_run,
+            "second run must not rewrite the tenant default"
+        );
+        assert_eq!(
+            item["logicalPlaneCreated"], expected_first_run,
+            "second run must not rewrite the logical plane"
+        );
+    }
+
+    // Archiving a logical bucket/binding must not make initialization a
+    // permanent no-op: re-running it has to revive the deterministic rows.
+    for statement in [
+        "UPDATE dr_drive_logical_bucket SET lifecycle_status = 'inactive'
+         WHERE id = 'logical-bucket:tenant-provider-init:business'",
+        "UPDATE dr_drive_logical_bucket_provider_binding SET lifecycle_status = 'inactive'
+         WHERE id = 'logical-bucket-provider:tenant-provider-init:business'",
+        "UPDATE dr_drive_business_storage_binding SET lifecycle_status = 'inactive'
+         WHERE id = 'business-storage:tenant-provider-init:space_type:personal'",
+    ] {
+        sqlx::query(statement)
+            .execute(&pool)
+            .await
+            .expect("logical plane row should be archivable");
+    }
+
+    let revive_response = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method(Method::POST)
+                .uri("/backend/v3/api/drive/storage/providers/provider-init/initialize")
+                .body(Body::empty())
+                .expect("revive initialization request should be built"),
+        )
+        .await
+        .expect("revive initialization request should be handled");
+    assert_eq!(revive_response.status(), StatusCode::OK);
+    let revive_payload: serde_json::Value = serde_json::from_slice(
+        &to_bytes(revive_response.into_body(), usize::MAX)
+            .await
+            .expect("revive initialization response should be read"),
+    )
+    .expect("revive initialization response should be json");
+    assert_eq!(
+        revive_payload["data"]["item"]["ready"], true,
+        "re-initialization must revive archived logical rows instead of leaving routing empty"
+    );
+    let revived_rows: i64 = sqlx::query_scalar(
+        "SELECT COUNT(*) FROM dr_drive_logical_bucket_provider_binding
+         WHERE tenant_id = 'tenant-provider-init' AND lifecycle_status = 'active'",
+    )
+    .fetch_one(&pool)
+    .await
+    .expect("revived logical bindings should be readable");
+    assert_eq!(revived_rows, 4);
+
+    let overview_response = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method(Method::GET)
+                .uri("/backend/v3/api/drive/storage/overview?trendMonths=1")
+                .body(Body::empty())
+                .expect("overview request should be built"),
+        )
+        .await
+        .expect("overview request should be handled");
+    assert_eq!(overview_response.status(), StatusCode::OK);
+    let overview: serde_json::Value = serde_json::from_slice(
+        &to_bytes(overview_response.into_body(), usize::MAX)
+            .await
+            .expect("overview response should be read"),
+    )
+    .expect("overview response should be json");
+    let data = &overview["data"];
+    assert_eq!(
+        data["bindings"]["byScope"]["spaceTypeCount"].as_str(),
+        Some("11")
+    );
+    assert_eq!(
+        data["bindings"]["byScope"]["tenantCount"].as_str(),
+        Some("1")
+    );
+    assert_eq!(data["bindings"]["hasTenantDefault"], true);
+    assert_eq!(data["bindings"]["tenantDefaultProviderId"], "provider-init");
+
+    let default_provider: String = sqlx::query_scalar(
+        "SELECT provider_id FROM dr_drive_storage_provider_binding
+         WHERE id = 'default:tenant:tenant-provider-init' AND lifecycle_status = 'active'",
+    )
+    .fetch_one(&pool)
+    .await
+    .expect("tenant default binding should exist");
+    assert_eq!(default_provider, "provider-init");
+
+    let logical_provider_bindings: i64 = sqlx::query_scalar(
+        "SELECT COUNT(*) FROM dr_drive_logical_bucket_provider_binding
+         WHERE tenant_id = 'tenant-provider-init' AND provider_id = 'provider-init'",
+    )
+    .fetch_one(&pool)
+    .await
+    .expect("logical provider bindings should be readable");
+    assert_eq!(logical_provider_bindings, 4);
+
+    sqlx::query(
+        "INSERT INTO dr_drive_storage_provider (
+            id, tenant_id, provider_kind, name, endpoint_url, region, bucket, path_style,
+            strict_tls, credential_ref, status, version, created_by, updated_by
+        ) VALUES ('provider-adopt', $1, 's3_compatible', 'Adopt S3', $2, 'us-east-1',
+            'init-bucket', TRUE, FALSE, 'plain:test-access-key:test-secret-key',
+            'active', 1, 'user-init', 'user-init')",
+    )
+    .bind(tenant_id)
+    .bind(&s3_endpoint)
+    .execute(&pool)
+    .await
+    .expect("adoptable provider should be seeded");
+
+    let adopt_response = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method(Method::POST)
+                .uri("/backend/v3/api/drive/storage/providers/provider-adopt/initialize")
+                .header("content-type", "application/json")
+                .body(Body::from(r#"{"adoptAsDefault":true}"#))
+                .expect("adopt provider request should be built"),
+        )
+        .await
+        .expect("adopt provider request should be handled");
+    assert_eq!(adopt_response.status(), StatusCode::OK);
+    let adopt_payload: serde_json::Value = serde_json::from_slice(
+        &to_bytes(adopt_response.into_body(), usize::MAX)
+            .await
+            .expect("adopt provider response should be read"),
+    )
+    .expect("adopt provider response should be json");
+    let adopt_item = &adopt_payload["data"]["item"];
+    assert_eq!(adopt_item["routingSwitched"], true);
+    assert_eq!(adopt_item["routingProviderId"], "provider-adopt");
+    assert_eq!(adopt_item["ready"], true);
+
+    let adopted_bindings: i64 = sqlx::query_scalar(
+        "SELECT COUNT(*) FROM dr_drive_logical_bucket_provider_binding
+         WHERE tenant_id = 'tenant-provider-init' AND provider_id = 'provider-adopt'
+           AND lifecycle_status = 'active'",
+    )
+    .fetch_one(&pool)
+    .await
+    .expect("adopted logical provider bindings should be readable");
+    assert_eq!(adopted_bindings, 4);
+
+    let adopted_default: String = sqlx::query_scalar(
+        "SELECT provider_id FROM dr_drive_storage_provider_binding
+         WHERE id = 'default:tenant:tenant-provider-init' AND lifecycle_status = 'active'",
+    )
+    .fetch_one(&pool)
+    .await
+    .expect("adopted legacy default binding should exist");
+    assert_eq!(adopted_default, "provider-adopt");
+
+    assert!(
+        captured_requests
+            .lock()
+            .expect("captured s3 requests mutex should not be poisoned")
+            .iter()
+            .any(|request| request.method == "PUT" && request.path.contains("/init-bucket")),
+        "initialization must create the configured bucket on the vendor"
+    );
+}
+
+#[tokio::test]
+async fn bucket_list_shows_the_configured_bucket_before_the_vendor_creates_it() {
+    let (s3_endpoint, _captured_requests) = start_s3_mock_server().await;
+    let Some((pool, _database_guard)) = sdkwork_drive_test_support::postgres_test_database().await
+    else {
+        return;
+    };
+    let tenant_id = "tenant-bucket-configured-only";
+
+    sqlx::query(
+        "INSERT INTO dr_drive_storage_provider (
+            id, tenant_id, provider_kind, name, endpoint_url, region, bucket, path_style,
+            strict_tls, credential_ref, status, version, created_by, updated_by
+        ) VALUES ('provider-configured-only', $1, 's3_compatible', 'Configured Only S3', $2,
+            'us-east-1', 'configured-not-in-list', TRUE, FALSE,
+            'plain:test-access-key:test-secret-key', 'active', 1, 'user-init', 'user-init')",
+    )
+    .bind(tenant_id)
+    .bind(&s3_endpoint)
+    .execute(&pool)
+    .await
+    .expect("provider should be seeded");
+
+    let app = build_router_with_pool_without_iam_and_test_tenant(pool.clone(), tenant_id);
+    let response = app
+        .oneshot(
+            Request::builder()
+                .method(Method::GET)
+                .uri("/backend/v3/api/drive/storage/providers/provider-configured-only/buckets?page_size=50")
+                .body(Body::empty())
+                .expect("bucket list request should be built"),
+        )
+        .await
+        .expect("bucket list request should be handled");
+    assert_eq!(response.status(), StatusCode::OK);
+    let payload: serde_json::Value = serde_json::from_slice(
+        &to_bytes(response.into_body(), usize::MAX)
+            .await
+            .expect("bucket list response should be read"),
+    )
+    .expect("bucket list response should be json");
+    let items = payload["data"]["items"]
+        .as_array()
+        .expect("bucket list items should be an array");
+    let configured = items
+        .iter()
+        .find(|item| item["bucket"] == "configured-not-in-list")
+        .expect("the configured bucket must be listed even before it exists");
+    assert_eq!(configured["configured"], true);
+    assert_eq!(configured["exists"], false);
+
+    let vendor_bucket = items
+        .iter()
+        .find(|item| item["bucket"] == "bucket-admin")
+        .expect("vendor inventory rows must still be listed");
+    assert_eq!(vendor_bucket["exists"], true);
 }

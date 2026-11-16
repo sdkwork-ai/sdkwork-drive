@@ -82,10 +82,27 @@ pub(crate) async fn list_storage_provider_buckets(
         .map(|item| ProviderBucketListItemResponse {
             configured: item.bucket == configured_bucket,
             bucket: item.bucket,
+            exists: true,
             creation_date_epoch_ms: item.creation_date_epoch_ms,
             region: item.region,
         })
         .collect();
+    // The configured bucket is the operator's initialization target, so it must
+    // be visible even before the vendor inventory contains it. Without this row
+    // a fresh account looks empty and there is nothing to create the bucket from.
+    if !configured_bucket.trim().is_empty()
+        && !mapped_items
+            .iter()
+            .any(|item| item.bucket == configured_bucket)
+    {
+        mapped_items.push(ProviderBucketListItemResponse {
+            bucket: configured_bucket,
+            configured: true,
+            exists: false,
+            creation_date_epoch_ms: None,
+            region: provider.region.clone(),
+        });
+    }
     mapped_items.sort_by(|left, right| left.bucket.cmp(&right.bucket));
     let start = page.offset as usize;
     let take = (page.limit as usize).saturating_add(1);

@@ -103,17 +103,91 @@ pub(crate) async fn create_download_package(
             SdkWorkResultCode::ValidationError,
         )
     })?;
-    let bucket = first_file.bucket.clone();
-    let provider = find_storage_provider_by_id(&state.pool, &first_file.storage_provider_id)
+
+    // Package archives are derived content, but they are still written by Drive.
+    // Route them through the same business -> logical bucket -> provider chain
+    // as user uploads; fall back to the source file's provider only when the
+    // tenant has no binding chain at all (older installations).
+    let package_space_id: Option<String> = if let Some(first_node_id) = requested_node_ids.first() {
+        sqlx::query_scalar(
+            "SELECT space_id
+             FROM dr_drive_node
+             WHERE tenant_id = $1 AND id = $2 AND lifecycle_status = 'active'",
+        )
+        .bind(&tenant_id)
+        .bind(first_node_id)
+        .fetch_optional(&state.pool)
         .await
-        .map_err(map_service_error)?
-        .ok_or_else(|| map_service_error(missing_signing_provider_error(&bucket)))?;
-    let provider = require_active_storage_provider(provider, &bucket).map_err(map_service_error)?;
-    let object_store = build_s3_object_store_for_provider(&state, &provider.to_domain_provider())
-        .await
-        .map_err(map_service_error)?
-        .ok_or_else(|| map_service_error(unsupported_signing_provider_error(&bucket)))?;
-    let archive_object_key = build_download_package_object_key(&tenant_id, &package_id);
+        .map_err(internal_sql_error(
+            "read download package source space failed",
+        ))?
+    } else {
+        None
+    };
+    let logical_target = match package_space_id.as_deref() {
+        Some(space_id) => {
+            sdkwork_drive_workspace_service::application::storage_target_service::try_resolve_default_provider_target(
+                &state.pool,
+                &tenant_id,
+                space_id,
+            )
+            .await
+            .map_err(map_service_error)?
+        }
+        None => None,
+    };
+    let logical_archive = if let Some(target) = logical_target {
+        let provider = find_storage_provider_by_id(&state.pool, &target.provider_id)
+            .await
+            .map_err(map_service_error)?
+            .ok_or_else(|| map_service_error(missing_signing_provider_error(&target.bucket)))?;
+        let provider =
+            require_active_storage_provider(provider, &target.bucket).map_err(map_service_error)?;
+        // A logical target on a non-S3 provider cannot host the archive; keep
+        // the source-provider fallback instead of failing the whole package.
+        let store = build_s3_object_store_for_provider(&state, &provider.to_domain_provider())
+            .await
+            .map_err(map_service_error)?;
+        store.map(|store| {
+            (
+                provider,
+                target.bucket,
+                format!(
+                    "{}/download-packages/{package_id}/archive.zip",
+                    target.storage_root_prefix
+                ),
+                store,
+            )
+        })
+    } else {
+        None
+    };
+    let (provider, bucket, archive_object_key, object_store) =
+        if let Some((provider, bucket, archive_object_key, object_store)) = logical_archive {
+            (provider, bucket, archive_object_key, object_store)
+        } else {
+            let bucket = first_file.bucket.clone();
+            let provider =
+                find_storage_provider_by_id(&state.pool, &first_file.storage_provider_id)
+                    .await
+                    .map_err(map_service_error)?
+                    .ok_or_else(|| map_service_error(missing_signing_provider_error(&bucket)))?;
+            let provider =
+                require_active_storage_provider(provider, &bucket).map_err(map_service_error)?;
+            let object_store =
+                build_s3_object_store_for_provider(&state, &provider.to_domain_provider())
+                    .await
+                    .map_err(map_service_error)?
+                    .ok_or_else(|| {
+                        map_service_error(unsupported_signing_provider_error(&bucket))
+                    })?;
+            (
+                provider,
+                bucket,
+                build_download_package_object_key(&tenant_id, &package_id),
+                object_store,
+            )
+        };
     let total_bytes = package_files.iter().map(|item| item.content_length).sum();
     let built_archive = build_download_package_zip(&state, &package_files, total_bytes).await?;
     let archive_size_bytes = built_archive.size_bytes();

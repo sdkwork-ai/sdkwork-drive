@@ -162,11 +162,15 @@ async fn load_provider_counts(
          WHERE EXISTS (
              SELECT 1 FROM dr_drive_storage_provider_binding pb
              WHERE pb.provider_id = p.id AND pb.tenant_id = $1
-           )
-           OR EXISTS (
-             SELECT 1 FROM dr_drive_storage_object po
-             WHERE po.storage_provider_id = p.id AND po.tenant_id = $1
-           )",
+            )
+            OR EXISTS (
+             SELECT 1 FROM dr_drive_logical_bucket_provider_binding lpb
+             WHERE lpb.provider_id = p.id AND lpb.tenant_id = $1
+            )
+            OR EXISTS (
+              SELECT 1 FROM dr_drive_storage_object po
+              WHERE po.storage_provider_id = p.id AND po.tenant_id = $1
+            )",
     )
     .bind(tenant_id)
     .fetch_one(&state.pool)
@@ -212,19 +216,32 @@ async fn load_provider_usage(
            GROUP BY storage_provider_id
          ) usage ON usage.storage_provider_id = p.id
          LEFT JOIN (
-           SELECT provider_id, count(*)::bigint AS binding_count
-           FROM dr_drive_storage_provider_binding
-           WHERE tenant_id = $1 AND lifecycle_status = 'active'
+           SELECT provider_id, sum(binding_count)::bigint AS binding_count
+           FROM (
+             SELECT provider_id, count(*)::bigint AS binding_count
+             FROM dr_drive_storage_provider_binding
+             WHERE tenant_id = $1 AND lifecycle_status = 'active'
+             GROUP BY provider_id
+             UNION ALL
+             SELECT provider_id, count(*)::bigint AS binding_count
+             FROM dr_drive_logical_bucket_provider_binding
+             WHERE tenant_id = $1 AND lifecycle_status = 'active'
+             GROUP BY provider_id
+           ) all_bindings
            GROUP BY provider_id
          ) active_bindings ON active_bindings.provider_id = p.id
          WHERE EXISTS (
              SELECT 1 FROM dr_drive_storage_provider_binding pb
              WHERE pb.provider_id = p.id AND pb.tenant_id = $1
-           )
-           OR EXISTS (
-             SELECT 1 FROM dr_drive_storage_object po
-             WHERE po.storage_provider_id = p.id AND po.tenant_id = $1
-           )
+            )
+            OR EXISTS (
+             SELECT 1 FROM dr_drive_logical_bucket_provider_binding lpb
+             WHERE lpb.provider_id = p.id AND lpb.tenant_id = $1
+            )
+            OR EXISTS (
+              SELECT 1 FROM dr_drive_storage_object po
+              WHERE po.storage_provider_id = p.id AND po.tenant_id = $1
+            )
          ORDER BY coalesce(usage.used_bytes, 0) DESC, p.id ASC",
     )
     .bind(tenant_id)
@@ -261,28 +278,60 @@ async fn load_bindings(
 ) -> Result<StorageOverviewBindingsResponse, (StatusCode, Json<ProblemDetail>)> {
     let row = sqlx::query(
         "SELECT
-           count(*)::bigint AS total_count,
-           count(*) FILTER (WHERE lifecycle_status = 'active')::bigint AS active_count,
-           count(*) FILTER (WHERE lifecycle_status <> 'active')::bigint AS inactive_count,
-           count(*) FILTER (WHERE binding_scope = 'tenant')::bigint AS tenant_count,
-           count(*) FILTER (WHERE binding_scope = 'space')::bigint AS space_count,
-           count(*) FILTER (WHERE binding_scope = 'space_type')::bigint AS space_type_count
-         FROM dr_drive_storage_provider_binding
-         WHERE tenant_id = $1",
+           (SELECT count(*) FROM dr_drive_storage_provider_binding
+            WHERE tenant_id = $1 AND lifecycle_status <> 'active')::bigint AS inactive_count,
+           (SELECT count(*) FROM dr_drive_business_storage_binding
+            WHERE tenant_id = $1 AND lifecycle_status = 'disabled')::bigint AS inactive_logical_count,
+           (SELECT count(*) FROM dr_drive_storage_provider_binding
+            WHERE tenant_id = $1 AND binding_scope = 'tenant')::bigint AS legacy_tenant_count,
+           (SELECT count(*) FROM dr_drive_storage_provider_binding
+            WHERE tenant_id = $1 AND binding_scope = 'space')::bigint AS space_count,
+           (SELECT count(*) FROM dr_drive_storage_provider_binding
+            WHERE tenant_id = $1 AND binding_scope = 'space'
+              AND lifecycle_status = 'active')::bigint AS active_space_count,
+           (SELECT count(*) FROM dr_drive_storage_provider_binding
+            WHERE tenant_id = $1 AND binding_scope = 'space_type')::bigint AS legacy_space_type_count,
+           (SELECT count(*) FROM dr_drive_business_storage_binding
+            WHERE tenant_id = $1 AND scope_type = 'tenant'
+              AND lifecycle_status = 'active')::bigint AS logical_tenant_count,
+           (SELECT count(*) FROM dr_drive_business_storage_binding
+            WHERE tenant_id = $1 AND scope_type = 'space_type'
+              AND lifecycle_status = 'active')::bigint AS logical_space_type_count",
     )
     .bind(tenant_id)
     .fetch_one(&state.pool)
     .await
     .map_err(map_storage_overview_error("binding counts"))?;
 
+    // Logical business bindings are the effective space-type/tenant routing
+    // rules. Counting only the legacy provider-binding rows made a fully seeded
+    // logical plane read as "1 tenant binding, 0 space-type bindings" on the
+    // dashboard while every upload was routed.
+    let logical_tenant_count = row.get::<i64, _>("logical_tenant_count");
+    let logical_space_type_count = row.get::<i64, _>("logical_space_type_count");
+    let tenant_count = if logical_tenant_count > 0 {
+        logical_tenant_count
+    } else {
+        row.get::<i64, _>("legacy_tenant_count")
+    };
+    let space_type_count = if logical_space_type_count > 0 {
+        logical_space_type_count
+    } else {
+        row.get::<i64, _>("legacy_space_type_count")
+    };
+    let space_count = row.get::<i64, _>("space_count");
+    let active_count = row.get::<i64, _>("active_space_count") + tenant_count + space_type_count;
+    let inactive_count =
+        row.get::<i64, _>("inactive_count") + row.get::<i64, _>("inactive_logical_count");
+
     Ok(StorageOverviewBindingsResponse {
-        total_count: row.get::<i64, _>("total_count"),
-        active_count: row.get::<i64, _>("active_count"),
-        inactive_count: row.get::<i64, _>("inactive_count"),
+        total_count: active_count + inactive_count,
+        active_count,
+        inactive_count,
         by_scope: StorageOverviewBindingScopeCountsResponse {
-            tenant_count: row.get::<i64, _>("tenant_count"),
-            space_count: row.get::<i64, _>("space_count"),
-            space_type_count: row.get::<i64, _>("space_type_count"),
+            tenant_count,
+            space_count,
+            space_type_count,
         },
         has_tenant_default: tenant_default.provider_id.is_some(),
         tenant_default_binding_id: tenant_default
@@ -293,19 +342,55 @@ async fn load_bindings(
     })
 }
 
-/// The tenant default binding, addressed by its deterministic id — the same
-/// string `storageProviderBindings.default.retrieve` resolves — so the
-/// dashboard cannot disagree with the binding page about whether one exists.
+/// The tenant default binding as the routing chain sees it.
+///
+/// A logical tenant business binding is the effective rule and outranks the
+/// legacy provider-binding row; reading only the legacy row made the dashboard
+/// report "no tenant default" for a fully seeded logical plane.
 async fn load_tenant_default_binding(
     state: &AdminStorageState,
     tenant_id: &str,
 ) -> Result<TenantDefaultBinding, (StatusCode, Json<ProblemDetail>)> {
+    let logical = sqlx::query(
+        "SELECT binding.id AS binding_id, provider_binding.provider_id
+         FROM dr_drive_business_storage_binding binding
+         INNER JOIN dr_drive_logical_bucket bucket
+           ON bucket.id = binding.logical_bucket_id
+          AND bucket.tenant_id = binding.tenant_id
+          AND bucket.lifecycle_status = 'active'
+         INNER JOIN dr_drive_logical_bucket_provider_binding provider_binding
+           ON provider_binding.logical_bucket_id = bucket.id
+          AND provider_binding.tenant_id = bucket.tenant_id
+          AND provider_binding.lifecycle_status = 'active'
+         INNER JOIN dr_drive_storage_provider provider
+           ON provider.id = provider_binding.provider_id
+          AND provider.status = 'active'
+         WHERE binding.tenant_id = $1
+           AND binding.scope_type = 'tenant'
+           AND binding.lifecycle_status = 'active'
+         LIMIT 1",
+    )
+    .bind(tenant_id)
+    .fetch_optional(&state.pool)
+    .await
+    .map_err(map_storage_overview_error("logical tenant default binding"))?;
+    if let Some(row) = logical {
+        return Ok(TenantDefaultBinding {
+            binding_id: row.get::<String, _>("binding_id"),
+            provider_id: Some(row.get::<String, _>("provider_id")),
+        });
+    }
+
     let binding_id =
         default_storage_provider_binding_id(tenant_id, &StorageProviderBindingTarget::Tenant);
     let provider_id = sqlx::query_scalar::<_, String>(
-        "SELECT provider_id
-         FROM dr_drive_storage_provider_binding
-         WHERE id = $1 AND tenant_id = $2 AND lifecycle_status = 'active'
+        "SELECT binding.provider_id
+         FROM dr_drive_storage_provider_binding binding
+         INNER JOIN dr_drive_storage_provider provider
+           ON provider.id = binding.provider_id
+          AND provider.status = 'active'
+         WHERE binding.id = $1 AND binding.tenant_id = $2
+           AND binding.lifecycle_status = 'active'
          LIMIT 1",
     )
     .bind(&binding_id)

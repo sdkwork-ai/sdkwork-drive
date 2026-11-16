@@ -381,10 +381,65 @@ pub(crate) struct ProviderBucketResponse {
 pub(crate) struct ProviderBucketListItemResponse {
     pub(crate) bucket: String,
     pub(crate) configured: bool,
+    /// Whether the vendor inventory actually contains the bucket.
+    ///
+    /// The configured bucket is always listed, even before it exists, so the
+    /// console can offer the one-click initialization that creates it.
+    pub(crate) exists: bool,
     pub(crate) creation_date_epoch_ms: Option<i64>,
     /// 厂商为该桶报告的地域。桶清单是账号级读取，地域属于每一行，而不是配置。
     #[serde(skip_serializing_if = "Option::is_none")]
     pub(crate) region: Option<String>,
+}
+
+/// Optional controls for the one-click provider initialization.
+#[derive(Debug, Default, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub(crate) struct InitializeStorageProviderRequest {
+    /// Re-point every active logical bucket (and the legacy tenant fallback) at
+    /// this provider after the readiness probe passes.
+    pub(crate) adopt_as_default: Option<bool>,
+}
+
+/// Result of the one-click provider initialization.
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct StorageProviderInitializeResponse {
+    pub(crate) provider_id: String,
+    pub(crate) bucket: String,
+    /// The configured bucket was created by this run.
+    pub(crate) bucket_created: bool,
+    /// The bucket is known to exist after the run (created or already present).
+    pub(crate) bucket_verified: bool,
+    /// A tenant default binding was created by this run.
+    pub(crate) default_binding_created: bool,
+    /// The logical bucket/business binding plane was created by this run.
+    pub(crate) logical_plane_created: bool,
+    /// The logical plane and tenant fallback now route to this provider.
+    pub(crate) routing_switched: bool,
+    #[serde(with = "sdkwork_utils_rust::serde_int64")]
+    pub(crate) logical_bucket_count: i64,
+    #[serde(with = "sdkwork_utils_rust::serde_int64")]
+    pub(crate) business_binding_count: i64,
+    /// A probe object was written with the configured account.
+    pub(crate) object_write_verified: bool,
+    /// The probe object was read back with the expected bytes.
+    pub(crate) object_read_verified: bool,
+    /// The probe object was deleted.
+    pub(crate) object_delete_verified: bool,
+    /// A multipart upload was created and aborted.
+    pub(crate) multipart_verified: bool,
+    /// A presigned upload-part URL was signed.
+    pub(crate) presigned_upload_verified: bool,
+    /// A presigned download URL was signed.
+    pub(crate) presigned_download_verified: bool,
+    /// Every operation Drive storage workflows depend on passed.
+    pub(crate) ready: bool,
+    /// Provider the tenant logical plane currently routes to, when one exists.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) routing_provider_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) readiness_error: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -538,6 +593,85 @@ pub(crate) struct StorageProviderBindingResponse {
     pub(crate) lifecycle_status: String,
     pub(crate) version: i64,
     pub(crate) storage_provider: StorageProviderResponse,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct ListStorageLogicalBucketsQuery {
+    #[serde(rename = "page_size")]
+    pub(crate) page_size: Option<i64>,
+    #[serde(rename = "cursor")]
+    pub(crate) page_token: Option<String>,
+}
+
+/// One logical bucket plus the provider configuration currently resolved for it.
+///
+/// `provider_id`/`storage_root_prefix` are absent until an operator (or the
+/// default seed) binds the logical bucket to a provider. Business routes never
+/// depend on that provider directly, so moving to another vendor is one update
+/// here and every business follows.
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct StorageLogicalBucketResponse {
+    pub(crate) id: String,
+    pub(crate) tenant_id: String,
+    pub(crate) bucket_key: String,
+    pub(crate) display_name: String,
+    pub(crate) object_prefix: String,
+    pub(crate) lifecycle_status: String,
+    #[serde(with = "sdkwork_utils_rust::serde_int64")]
+    pub(crate) version: i64,
+    pub(crate) provider_id: Option<String>,
+    pub(crate) provider_binding_id: Option<String>,
+    pub(crate) storage_root_prefix: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub(crate) struct UpdateStorageLogicalBucketRequest {
+    pub(crate) display_name: Option<String>,
+    pub(crate) object_prefix: Option<String>,
+    pub(crate) lifecycle_status: Option<String>,
+    pub(crate) provider_id: Option<String>,
+    pub(crate) storage_root_prefix: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct ListBusinessStorageBindingsQuery {
+    #[serde(rename = "scope_type")]
+    pub(crate) scope_type: Option<String>,
+    #[serde(rename = "page_size")]
+    pub(crate) page_size: Option<i64>,
+    #[serde(rename = "cursor")]
+    pub(crate) page_token: Option<String>,
+}
+
+/// One business scope bound to a logical bucket, with the provider the former
+/// currently resolves to (read-only projection for the console).
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct BusinessStorageBindingResponse {
+    pub(crate) id: String,
+    pub(crate) tenant_id: String,
+    pub(crate) scope_type: String,
+    pub(crate) scope_id: String,
+    pub(crate) logical_bucket_id: String,
+    pub(crate) logical_bucket_key: String,
+    pub(crate) logical_bucket_name: String,
+    pub(crate) write_prefix: String,
+    pub(crate) lifecycle_status: String,
+    #[serde(with = "sdkwork_utils_rust::serde_int64")]
+    pub(crate) version: i64,
+    pub(crate) provider_id: Option<String>,
+    pub(crate) storage_root_prefix: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub(crate) struct UpdateBusinessStorageBindingRequest {
+    pub(crate) logical_bucket_id: String,
+    pub(crate) write_prefix: Option<String>,
 }
 
 #[derive(Debug, Clone, Copy)]

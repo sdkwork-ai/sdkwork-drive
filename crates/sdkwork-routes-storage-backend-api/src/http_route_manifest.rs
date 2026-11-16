@@ -29,6 +29,36 @@ const HTTP_ROUTES: &[HttpRoute] = &[
     ),
     HttpRoute::dual_token(
         HttpMethod::Get,
+        "/backend/v3/api/drive/storage/business-bindings",
+        "drive-admin-storage-api",
+        "storageBusinessBindings.list",
+    ),
+    HttpRoute::dual_token(
+        HttpMethod::Delete,
+        "/backend/v3/api/drive/storage/business-bindings/{scopeType}/{scopeId}",
+        "drive-admin-storage-api",
+        "storageBusinessBindings.delete",
+    ),
+    HttpRoute::dual_token(
+        HttpMethod::Put,
+        "/backend/v3/api/drive/storage/business-bindings/{scopeType}/{scopeId}",
+        "drive-admin-storage-api",
+        "storageBusinessBindings.update",
+    ),
+    HttpRoute::dual_token(
+        HttpMethod::Get,
+        "/backend/v3/api/drive/storage/logical-buckets",
+        "drive-admin-storage-api",
+        "storageLogicalBuckets.list",
+    ),
+    HttpRoute::dual_token(
+        HttpMethod::Put,
+        "/backend/v3/api/drive/storage/logical-buckets/{logicalBucketId}",
+        "drive-admin-storage-api",
+        "storageLogicalBuckets.update",
+    ),
+    HttpRoute::dual_token(
+        HttpMethod::Get,
         "/backend/v3/api/drive/storage/migrations",
         "drive-admin-storage-api",
         "storageMigrations.list",
@@ -182,6 +212,12 @@ const HTTP_ROUTES: &[HttpRoute] = &[
         "/backend/v3/api/drive/storage/providers/{providerId}/deactivate",
         "drive-admin-storage-api",
         "storageProviders.deactivate",
+    ),
+    HttpRoute::dual_token(
+        HttpMethod::Post,
+        "/backend/v3/api/drive/storage/providers/{providerId}/initialize",
+        "drive-admin-storage-api",
+        "storageProviders.initialize",
     ),
     HttpRoute::dual_token(
         HttpMethod::Get,

@@ -6,4 +6,5 @@ type ProviderBucketListItem struct {
 	Configured bool `json:"configured"`
 	CreationDateEpochMs string `json:"creationDateEpochMs"`
 	Region string `json:"region"`
+	Exists bool `json:"exists"`
 }

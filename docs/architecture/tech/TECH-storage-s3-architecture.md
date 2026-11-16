@@ -37,12 +37,82 @@ The production implementation uses the official Rust AWS S3 SDK through `aws-sdk
    - Backend admins and dedicated admin modules manage provider accounts, provider bindings, bucket existence, and low-level objects.
    - Provider, bucket, object, and binding administration is not part of normal end-user file workflows.
 
+4.1 Business routing uses a logical storage plane.
+   - `dr_drive_business_storage_binding` binds a business scope (`tenant`,
+     `space_type`, `logical_scope`) to a logical bucket, never directly to a
+     provider.
+   - `dr_drive_logical_bucket` owns the business-facing bucket identity and its
+     object prefix; `dr_drive_logical_bucket_provider_binding` maps that bucket
+     to one provider configuration plus the physical root prefix.
+   - Write resolution reads: a space-level binding, then the business binding for
+     the space type, then the tenant business binding, then the legacy
+     provider-binding rows. The resolved object root is
+     `providerRootPrefix/logicalBucket.objectPrefix/business.writePrefix`.
+   - Switching vendor or account is therefore one logical-bucket update; every
+     business bound to it follows. `003_logical_storage_buckets.sql` seeds all
+     space types and the tenant fallback against the default provider so a fresh
+     install is fully routable before the operator edits the provider account.
+   - The admin bucket list always includes the configured bucket, with
+     `exists: false` until the vendor inventory contains it. After the operator
+     stores the cloud account, `POST /storage/providers/{id}/initialize` creates
+     the configured bucket, establishes the tenant default binding when missing,
+     and materializes the logical plane in one idempotent call. The response's
+     readiness probe writes, heads, range-reads, presigns, multipart-creates and
+     deletes a tiny probe object, so `ready: true` means the operations every
+     storage workflow depends on actually work with the configured account.
+   - `initialize` accepts `adoptAsDefault`. When true and the probe passes, the
+     active logical bucket bindings and the legacy tenant fallback are
+     re-pointed to this provider in one transaction; existing objects keep their
+     own provider/bucket locators and only new writes move. A failed probe never
+     changes routing, so a bad account cannot take over production.
+
+4.2 Admin safety constraints.
+   - Every route under `/backend/v3/api/drive/storage` requires
+     `drive.storage.admin`; tenant identity comes from the verified context and
+     every provider lookup is tenant-scoped.
+   - `local_filesystem` endpoints are confined to
+     `SDKWORK_DRIVE_LOCAL_STORAGE_ROOT` (default `/var/lib/sdkwork-drive`);
+     pointing a provider at `/` or outside that root is rejected so the admin
+     object APIs cannot be used to read arbitrary host files.
+   - Cloud endpoints reject link-local and known cloud-metadata addresses.
+     Loopback/private endpoints stay available for self-hosted object stores; a
+     SaaS deployment should additionally enforce outbound egress policy.
+   - Browser direct uploads use vendor presigned URLs; the bucket must allow the
+     console origin through CORS. Server-side write/read/multipart/presign
+     readiness is covered by the initialization probe above.
+   - `local_filesystem` supports bucket/object administration, but not the
+     multipart/presigned upload sessions or cross-origin presigned downloads that
+     app uploads and download URLs require. Those paths fail closed with an
+     actionable 409; production app content needs an S3-compatible provider.
+
+4.3 Retention, recycle bin and cleanup.
+   - Every temporary uploader retention expiry first moves its node to
+     `trashed` (`cleanup_status=soft_deleted`), so the user gets a restore
+     window even when the policy is `hard_delete`.
+   - `hard_delete` grace is measured from retention expiry. Once
+     `hard_delete_after_epoch_ms` (or the expiry itself when no grace was
+     supplied) passes, a second sweep retires the node/objects and records the
+     sensitive operation; the install-worker then deletes the provider bytes and
+     removes the storage-object metadata. A provider failure keeps the metadata
+     for retry instead of silently leaking the object.
+   - Expired upload sessions are aborted at the vendor before their multipart
+     metadata is discarded, expired download-package archives are deleted, and
+     empty-trash/hard-delete objects are physically purged by the same worker.
+   - Maintenance intervals:
+     `SDKWORK_DRIVE_WORKER_EXPIRED_UPLOAD_CLEANUP_INTERVAL_SECONDS` (900),
+     `SDKWORK_DRIVE_WORKER_ABANDONED_UPLOAD_SWEEP_INTERVAL_SECONDS` (900),
+     `SDKWORK_DRIVE_WORKER_STORAGE_OBJECT_PURGE_INTERVAL_SECONDS` (900),
+     `SDKWORK_DRIVE_WORKER_EXPIRED_MULTIPART_ABORT_INTERVAL_SECONDS` (1800),
+     `SDKWORK_DRIVE_WORKER_DOWNLOAD_PACKAGE_CLEANUP_INTERVAL_SECONDS` (900).
+
 5. Object keys are internal.
    - App APIs should avoid exposing object keys as durable business identifiers.
    - Backend object-management APIs may expose object keys because they are administrative storage tools.
    - App upload workflows must generate object keys through the Drive storage key service.
    - The stored key is `{storageRootPrefix}/{standardContentKey}`. The standard content key remains `sdkwork-drive/v1/t/{tenantShard}/tenants/{tenantId}/spaces/{spaceId}/nodes/n/{nodeShard}/{nodeId}/versions/{versionNo}/{objectId}/content`.
    - Completion/version validation must parse and validate the standard content key suffix even when it is nested below a binding root.
+   - Every writer applies the resolved root to its own layout: uploader keys and generated download-package archives are `{resolvedRoot}/{layoutSuffix}`, and must never start at `sdkwork-drive/...` independently of the resolved root.
+   - Explicit `storageProviderId`/`bucket` hints select the physical destination for one request, not a different key namespace: the key still starts at the space's business root when one exists.
    - Client-supplied object keys are compatibility inputs only and must not control physical storage layout.
 
 6. Upload sessions store both Drive id and provider multipart id.

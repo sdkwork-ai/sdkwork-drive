@@ -10,6 +10,12 @@ Locale-agnostic seed SQL referenced from `seeds/seed.manifest.json` profiles.
   platform bootstrap tenant, and the tenant default binding pointing at Tencent
   Cloud COS. Every row is `ON CONFLICT DO NOTHING`, so an install or upgrade
   only adds what is missing and never rewrites an operator edit.
+- `003_logical_storage_buckets.sql` — the logical storage plane on top of the
+  physical one: `business`/`system`/`archive`/`temp` logical buckets, their
+  provider bindings (all pointing at the default Tencent COS provider), and the
+  business bindings for every space type plus the tenant fallback. A fresh
+  install is fully routed before an operator changes anything; completing setup
+  only requires editing the provider account/credential.
 
 The file is registered in the `standard` seed profile, which
 `database.manifest.json` selects by default (`seedOnBoot = true`). The Drive

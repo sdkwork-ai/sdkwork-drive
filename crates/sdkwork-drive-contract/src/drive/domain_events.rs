@@ -104,6 +104,7 @@ pub mod uploader {
     pub const PART_UPLOADED: &str = "drive.uploader.part_uploaded";
     pub const UPLOAD_COMPLETED: &str = "drive.uploader.upload_completed";
     pub const CONTENT_EXPIRED: &str = "drive.uploader.content_expired";
+    pub const CONTENT_PURGED: &str = "drive.uploader.content_purged";
 }
 
 /// Download grant events (DRIVE_SPEC §13).
@@ -141,6 +142,8 @@ pub mod admin_audit {
         pub const DEACTIVATED: &str = "drive.storage_provider.deactivated";
         pub const STATUS_CHANGED: &str = "drive.storage_provider.status_changed";
         pub const TESTED: &str = "drive.storage_provider.tested";
+        pub const INITIALIZED: &str = "drive.storage_provider.initialized";
+        pub const INITIALIZATION_FAILED: &str = "drive.storage_provider.initialization_failed";
         pub const DELETED: &str = "drive.storage_provider.deleted";
         pub const BUCKET_CREATED: &str = "drive.storage_provider.bucket_created";
         pub const BUCKET_DELETED: &str = "drive.storage_provider.bucket_deleted";
@@ -180,6 +183,17 @@ pub mod admin_audit {
     pub mod storage_provider_binding {
         pub const DEFAULT_SET: &str = "drive.storage_provider_binding.default_set";
         pub const DEFAULT_DELETED: &str = "drive.storage_provider_binding.default_deleted";
+    }
+
+    /// Logical storage bucket mutations (backend-api).
+    pub mod logical_bucket {
+        pub const UPDATED: &str = "drive.storage_logical_bucket.updated";
+    }
+
+    /// Business scope -> logical bucket binding mutations (backend-api).
+    pub mod business_storage_binding {
+        pub const UPDATED: &str = "drive.business_storage_binding.updated";
+        pub const DELETED: &str = "drive.business_storage_binding.deleted";
     }
 
     /// Maintenance job executions (backend-api).
@@ -288,6 +302,8 @@ mod tests {
         admin_audit::storage_provider::DEACTIVATED,
         admin_audit::storage_provider::STATUS_CHANGED,
         admin_audit::storage_provider::TESTED,
+        admin_audit::storage_provider::INITIALIZED,
+        admin_audit::storage_provider::INITIALIZATION_FAILED,
         admin_audit::storage_provider::DELETED,
         admin_audit::storage_provider::BUCKET_CREATED,
         admin_audit::storage_provider::BUCKET_DELETED,
@@ -302,6 +318,9 @@ mod tests {
         admin_audit::storage_provider_account::INITIALIZED,
         admin_audit::storage_provider_binding::DEFAULT_SET,
         admin_audit::storage_provider_binding::DEFAULT_DELETED,
+        admin_audit::logical_bucket::UPDATED,
+        admin_audit::business_storage_binding::UPDATED,
+        admin_audit::business_storage_binding::DELETED,
         admin_audit::maintenance::OBJECT_SWEEP_EXECUTED,
         admin_audit::maintenance::OBJECT_SWEEP_FAILED,
         admin_audit::maintenance::UPLOAD_SESSION_SWEEP_EXECUTED,

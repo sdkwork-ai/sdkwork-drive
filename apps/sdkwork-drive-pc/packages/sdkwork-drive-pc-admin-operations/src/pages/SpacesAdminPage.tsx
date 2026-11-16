@@ -194,14 +194,14 @@ export function SpacesAdminPage({ backendSdkClient, getSession, onOpenFiles }: S
             </span>
           </div>
           <div className="overflow-x-auto">
-            <table className={`${TABLE_CLASS} min-w-[760px]`}>
+            <table className={`${TABLE_CLASS} min-w-[880px]`}>
               <thead className={TABLE_HEAD_CLASS}>
                 <tr>
-                  <th className="w-[34%] px-5 py-3 text-left">{t('colSpaceName')}</th>
-                  <th className="w-[18%] px-5 py-3 text-left">{t('colSpaceType')}</th>
+                  <th className="w-[30%] px-5 py-3 text-left">{t('colSpaceName')}</th>
+                  <th className="w-[16%] px-5 py-3 text-left">{t('colSpaceType')}</th>
                   <th className="w-[30%] px-5 py-3 text-left">{t('colOwner')}</th>
-                  <th className="w-[14%] px-5 py-3 text-left">{t('colStatus')}</th>
-                  {onOpenFiles ? <th className="w-[4%] px-5 py-3 text-right">{t('colActions')}</th> : null}
+                  <th className="w-[12%] px-5 py-3 text-left">{t('colStatus')}</th>
+                  {onOpenFiles ? <th className="w-[9rem] whitespace-nowrap px-5 py-3 text-right">{t('colActions')}</th> : null}
                 </tr>
               </thead>
               <tbody>
@@ -267,10 +267,10 @@ export function SpacesAdminPage({ backendSdkClient, getSession, onOpenFiles }: S
                         </span>
                       </td>
                       {onOpenFiles ? (
-                        <td className="px-5 py-3.5 text-right align-top">
+                        <td className="whitespace-nowrap px-5 py-3.5 text-right align-top">
                           <button
                             aria-label={t('viewFilesAction')}
-                            className={GHOST_BUTTON_CLASS}
+                            className={`${GHOST_BUTTON_CLASS} whitespace-nowrap`}
                             onClick={() => onOpenFiles(space)}
                             title={t('viewFilesAction')}
                             type="button"

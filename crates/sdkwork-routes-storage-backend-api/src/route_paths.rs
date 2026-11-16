@@ -1,5 +1,5 @@
 use axum::extract::DefaultBodyLimit;
-use axum::routing::{get, patch, post};
+use axum::routing::{get, patch, post, put};
 use axum::Router;
 
 use crate::handlers::*;
@@ -90,6 +90,10 @@ pub(crate) fn storage_drive_routes(prefix: &str) -> Router<AdminStorageState> {
             get(get_storage_provider_capabilities),
         )
         .route(
+            &format!("{prefix}/drive/storage/providers/{{provider_id}}/initialize"),
+            post(initialize_storage_provider),
+        )
+        .route(
             &format!("{prefix}/drive/storage/providers/{{provider_id}}/test"),
             post(test_storage_provider),
         )
@@ -140,6 +144,24 @@ pub(crate) fn storage_drive_routes(prefix: &str) -> Router<AdminStorageState> {
         .route(
             &format!("{prefix}/drive/storage/bindings"),
             get(list_storage_provider_bindings),
+        )
+        .route(
+            &format!("{prefix}/drive/storage/logical-buckets"),
+            get(list_storage_logical_buckets),
+        )
+        .route(
+            &format!("{prefix}/drive/storage/logical-buckets/{{logical_bucket_id}}"),
+            put(update_storage_logical_bucket),
+        )
+        .route(
+            &format!("{prefix}/drive/storage/business-bindings"),
+            get(list_business_storage_bindings),
+        )
+        .route(
+            &format!(
+                "{prefix}/drive/storage/business-bindings/{{scope_type}}/{{scope_id}}"
+            ),
+            put(update_business_storage_binding).delete(delete_business_storage_binding),
         )
         // Cross-provider migration. The batch endpoint (`/run`) is the only
         // writable one: a client drives the loop and polls `/migrations/{id}`

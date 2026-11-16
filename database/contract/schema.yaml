@@ -141,3 +141,12 @@ tables:
   - name: dr_drive_storage_provider_kind_translation
     lifecycle_status: active
     owner: drive-platform
+  - name: dr_drive_logical_bucket
+    lifecycle_status: active
+    owner: drive-platform
+  - name: dr_drive_logical_bucket_provider_binding
+    lifecycle_status: active
+    owner: drive-platform
+  - name: dr_drive_business_storage_binding
+    lifecycle_status: active
+    owner: drive-platform
