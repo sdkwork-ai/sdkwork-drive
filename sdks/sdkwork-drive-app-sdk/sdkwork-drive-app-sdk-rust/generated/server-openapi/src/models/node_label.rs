@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::models::DriveLabelSummary;
+use crate::models::{DriveLabelSummary};
 
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]
 pub struct NodeLabel {

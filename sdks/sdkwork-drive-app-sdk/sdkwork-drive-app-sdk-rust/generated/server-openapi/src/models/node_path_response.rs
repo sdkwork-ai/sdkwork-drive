@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::models::DriveNode;
+use crate::models::{DriveNode};
 
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]
 pub struct NodePathResponse {

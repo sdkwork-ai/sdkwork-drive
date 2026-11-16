@@ -13,7 +13,7 @@ export interface DriveNode {
   scene?: string;
   /** Drive uploader usage context identifier. Optional semantic context for idempotency, ownership, and cleanup scoping. */
   source?: string;
-  spaceType: 'personal' | 'team' | 'knowledge_base' | 'ai_generated' | 'git_repository' | 'deployment' | 'app_upload' | 'im' | 'rtc' | 'notary' | 'website';
+  spaceType: 'personal' | 'team' | 'knowledge_base' | 'ai_generated' | 'git_repository' | 'deployment' | 'app_upload' | 'im' | 'rtc' | 'notary' | 'website' | 'documents';
   /** File content lifecycle on the node. Folders and shortcuts remain empty. */
   contentState?: 'empty' | 'uploading' | 'ready' | 'failed';
   /** Normalized file extension without a leading dot. */

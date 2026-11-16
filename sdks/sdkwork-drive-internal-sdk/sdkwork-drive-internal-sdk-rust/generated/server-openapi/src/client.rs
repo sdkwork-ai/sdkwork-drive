@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use crate::api::DriveInternalPublishingApi;
+use crate::api::{DriveInternalPublishingApi};
 use crate::http::{SdkworkConfig, SdkworkError, SdkworkHttpClient};
 
 #[derive(Clone)]
@@ -34,6 +34,7 @@ impl SdkworkCustomClient {
         self
     }
 
+
     pub fn set_header(&self, key: impl Into<String>, value: impl Into<String>) -> &Self {
         self.http.set_header(key, value);
         self
@@ -44,6 +45,6 @@ impl SdkworkCustomClient {
     }
 
     pub fn drive_internal_publishing(&self) -> DriveInternalPublishingApi {
-        DriveInternalPublishingApi::new(Arc::clone(&self.http))
-    }
+            DriveInternalPublishingApi::new(Arc::clone(&self.http))
+        }
 }

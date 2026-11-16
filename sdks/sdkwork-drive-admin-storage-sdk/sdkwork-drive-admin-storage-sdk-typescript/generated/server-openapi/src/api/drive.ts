@@ -457,12 +457,12 @@ async test(providerId: string, requestOptions?: ApiRequestOptions): Promise<Stor
 
 export interface DriveStorageProviderBindingsDefaultRetrieveParams {
   spaceId?: string;
-  spaceType?: 'personal' | 'team' | 'knowledge_base' | 'ai_generated' | 'git_repository' | 'deployment' | 'app_upload' | 'im' | 'rtc' | 'notary' | 'website';
+  spaceType?: 'personal' | 'team' | 'knowledge_base' | 'ai_generated' | 'git_repository' | 'deployment' | 'app_upload' | 'im' | 'rtc' | 'notary' | 'website' | 'documents';
 }
 
 export interface DriveStorageProviderBindingsDefaultDeleteParams {
   spaceId?: string;
-  spaceType?: 'personal' | 'team' | 'knowledge_base' | 'ai_generated' | 'git_repository' | 'deployment' | 'app_upload' | 'im' | 'rtc' | 'notary' | 'website';
+  spaceType?: 'personal' | 'team' | 'knowledge_base' | 'ai_generated' | 'git_repository' | 'deployment' | 'app_upload' | 'im' | 'rtc' | 'notary' | 'website' | 'documents';
 }
 
 export class DriveStorageProviderBindingsDefaultApi {

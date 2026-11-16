@@ -260,7 +260,7 @@ async list(spaceId: string, params?: DriveMoveDestinationsListParams, requestOpt
 }
 
 export interface DriveSpacesListParams {
-  spaceType?: 'personal' | 'team' | 'knowledge_base' | 'ai_generated' | 'git_repository' | 'deployment' | 'app_upload' | 'im' | 'rtc' | 'notary' | 'website';
+  spaceType?: 'personal' | 'team' | 'knowledge_base' | 'ai_generated' | 'git_repository' | 'deployment' | 'app_upload' | 'im' | 'rtc' | 'notary' | 'website' | 'documents';
   pageSize?: number;
   cursor?: string;
 }
