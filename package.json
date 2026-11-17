@@ -103,10 +103,10 @@
     "release:plan": "pnpm exec sdkwork-app release:plan",
     "release:plan:standalone": "pnpm exec sdkwork-app release:plan --deployment-profile standalone",
     "release:plan:cloud": "pnpm exec sdkwork-app release:plan --deployment-profile cloud",
-    "release:build": "pnpm exec sdkwork-app release:build",
+    "release:build": "pnpm run check:release-access-token:require-anchor && pnpm exec sdkwork-app release:build",
     "release:build:standalone": "pnpm exec sdkwork-app release:build --deployment-profile standalone",
     "release:build:cloud": "pnpm exec sdkwork-app release:build --deployment-profile cloud",
-    "release:package": "pnpm exec sdkwork-app release:package",
+    "release:package": "pnpm run check:release-access-token:require-anchor && pnpm exec sdkwork-app release:package",
     "release:package:standalone": "pnpm exec sdkwork-app release:package --deployment-profile standalone",
     "release:package:cloud": "pnpm exec sdkwork-app release:package --deployment-profile cloud",
     "release:validate": "pnpm exec sdkwork-app release:validate",
@@ -156,7 +156,8 @@
     "build:pc:test:cloud": "node ../sdkwork-specs/tools/build-browser-client.mjs --root . --architecture pc --environment test --deployment-profile cloud",
     "build:pc:staging:cloud": "node ../sdkwork-specs/tools/build-browser-client.mjs --root . --architecture pc --environment staging --deployment-profile cloud",
     "build:pc:demo:cloud": "node ../sdkwork-specs/tools/build-browser-client.mjs --root . --architecture pc --environment demo --deployment-profile cloud",
-    "build:pc:prod:cloud": "node ../sdkwork-specs/tools/build-browser-client.mjs --root . --architecture pc --environment prod --deployment-profile cloud"
+    "build:pc:prod:cloud": "node ../sdkwork-specs/tools/build-browser-client.mjs --root . --architecture pc --environment prod --deployment-profile cloud",
+    "check:release-access-token:require-anchor": "node ../sdkwork-specs/tools/check-release-access-token-env.mjs --root . --require-anchor"
   },
   "exports": {
     ".": {
