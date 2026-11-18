@@ -41,7 +41,7 @@
         ]
       },
       "accessToken": {
-        "appId": "sdkwork-drive-pc",
+        "appIdEnv": "SDKWORK_DEPLOY_APPLICATION_ID",
         "tenantId": "100001",
         "organizationId": "0",
         "permissionScope": [
