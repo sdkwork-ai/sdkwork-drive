@@ -14,6 +14,7 @@ This module is in **initialization state** for greenfield deployments:
 2. **Migrations** — `database/migrations/{engine}/` is reserved for post-GA incremental schema changes only. It is intentionally empty at initialization.
 3. **Drift** — run `pnpm db:drift:check` before release.
 
+
 ## Seed data
 
 `database.manifest.json` declares `seedOnBoot = true` and the `standard` seed
