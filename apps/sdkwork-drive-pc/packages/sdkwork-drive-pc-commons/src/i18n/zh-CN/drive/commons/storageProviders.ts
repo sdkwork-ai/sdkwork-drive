@@ -166,6 +166,12 @@ export default {
   endpointAutoFilled: '根据所选区域自动生成，可手动覆盖',
   endpointOverride: '手动编辑',
   endpointAuto: '自动填充',
+  endpointManualOverride: '已手动填写端点：切换区域不会改写此地址。',
+  endpointMismatch: '当前端点与所选区域不匹配，该区域自动生成的是 {endpoint}。',
+  endpointMismatchError: '端点 URL 与所选区域不匹配：请使用「按区域对齐」，或切换为手动编辑。',
+  endpointAlignRegion: '按区域对齐',
+  endpointOperatorHost: '该供应商的端点包含账号 ID、命名空间或部署主机，请从云厂商控制台复制填写。',
+  regionFreeTextHint: '按厂商区域代码填写；上方端点不会据此自动生成。',
 
   // 详情就绪检查
   readinessTitle: '就绪检查',
@@ -350,6 +356,10 @@ export default {
   spaceTypeNotaryDesc: '公证文档与存证材料',
   spaceTypeWebsiteLabel: '网站',
   spaceTypeWebsiteDesc: '已发布网站内容与静态资源',
+  spaceTypeDocumentsLabel: '文档',
+  spaceTypeDocumentsDesc: 'SDKWork 文档正文与富文本内容',
+  spaceTypeCertificateLabel: '证书',
+  spaceTypeCertificateDesc: '托管 TLS 证书与签发材料归档',
 
   // 绑定管理
   bindingsPageTitle: '存储绑定',

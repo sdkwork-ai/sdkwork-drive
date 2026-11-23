@@ -36,6 +36,12 @@ export interface ProviderKindMeta {
   endpointHint: string;
   regionHint: string;
   regions: ProviderRegion[];
+  /**
+   * The region is a protocol constant the vendor does not let the operator
+   * choose (Cloudflare R2 accepts nothing but `auto`). The editor renders it as
+   * a read-only value instead of a selector or a free-text field.
+   */
+  fixedRegion?: boolean;
   credentialHint: string;
   credentialLabel: string;
   credentialFields?: ProviderCredentialFieldMeta;
@@ -60,7 +66,12 @@ const PROVIDER_KIND_META: ProviderKindMeta[] = [
     color: '#FF9900',
     bgClass: 'bg-orange-50 dark:bg-orange-950/30',
     textClass: 'text-orange-700 dark:text-orange-300',
-    endpointHint: 'https://s3.amazonaws.com',
+    // Regional host, including `us-east-1`: a bucket addressed through the
+    // global `s3.amazonaws.com` host still lives in a region, and the server's
+    // own bootstrap row (`provider_account_defaults.rs`) writes the regional
+    // form. Auto-filling the global host here made the editor disagree with the
+    // row it was editing.
+    endpointHint: 'https://s3.us-east-1.amazonaws.com',
     regionHint: 'us-east-1',
     regions: [
       { value: 'us-east-1', label: 'US East (N. Virginia) us-east-1' },
@@ -714,7 +725,9 @@ const PROVIDER_KIND_META: ProviderKindMeta[] = [
     regionHint: 'auto',
     // R2 accepts only the literal `auto`, and its host carries the Cloudflare
     // account id, so there is no region selector to offer and no endpoint to
-    // derive. The operator supplies the endpoint; the region field stays `auto`.
+    // derive. The operator supplies the endpoint; the region field stays `auto`
+    // and is shown read-only.
+    fixedRegion: true,
     regions: [],
     credentialHint: 'env:R2_ACCESS_KEY_ID:R2_SECRET_ACCESS_KEY or plain:access_key:secret_key',
     credentialLabel: 'R2 API Token',
@@ -1320,8 +1333,12 @@ export const BUILTIN_PROVIDER_DISPLAY_NAMES: Readonly<Record<string, string>> = 
 };
 
 const REGION_ENDPOINT_BUILDERS: Record<string, (region: string) => string> = {
-  s3_compatible: (region) =>
-    region === 'us-east-1' ? 'https://s3.amazonaws.com' : `https://s3.${region}.amazonaws.com`,
+  // Every AWS region uses the regional host, `us-east-1` included. The global
+  // `s3.amazonaws.com` alias resolves to the same endpoint, but the server's
+  // bootstrap row stores the regional form, so deriving the global one made the
+  // console rewrite a row it had just read (and made "region → endpoint"
+  // disagree with the region it names).
+  s3_compatible: (region) => `https://s3.${region}.amazonaws.com`,
   aliyun_oss: (region) => `https://oss-${region}.aliyuncs.com`,
   tencent_cos: (region) => `https://cos.${region}.myqcloud.com`,
   huawei_obs: (region) => `https://obs.${region}.myhuaweicloud.com`,
@@ -1376,6 +1393,69 @@ export function buildProviderEndpointUrl(kind: string, region: string): string |
     return undefined;
   }
   return builder(region.trim());
+}
+
+/**
+ * Whether this kind's endpoint is a pure function of its region.
+ *
+ * The editor is allowed to auto-fill the endpoint only when it is: a builder
+ * that guessed at an identifier the region cannot supply would write a host
+ * that only fails once the operator tries to reach the bucket. Kinds left out
+ * of `REGION_ENDPOINT_BUILDERS` are exactly those whose host embeds an account
+ * id, tenancy namespace, or deployment-specific hostname.
+ */
+export function providerEndpointIsDerivable(kind: string): boolean {
+  const normalizedKind = kind.startsWith('custom:') ? 'custom' : kind;
+  return Object.prototype.hasOwnProperty.call(REGION_ENDPOINT_BUILDERS, normalizedKind);
+}
+
+/**
+ * How the editor presents the region for a kind.
+ *
+ * - `select`: the vendor publishes a closed region list (every region-driven
+ *   vendor in the catalog).
+ * - `text`: the vendor takes a region code but this catalog does not enumerate
+ *   it (custom S3 gateways, MinIO, Oracle Cloud), so the operator types it.
+ * - `fixed`: the region is a protocol constant rather than a data-centre choice
+ *   (`auto` for Cloudflare R2), shown read-only.
+ * - `hidden`: the kind has no region at all (local filesystem).
+ */
+export type ProviderRegionInputMode = 'select' | 'text' | 'fixed' | 'hidden';
+
+export function providerRegionInputMode(meta: ProviderKindMeta): ProviderRegionInputMode {
+  if (meta.features.isLocal || !meta.features.hasRegion) {
+    return 'hidden';
+  }
+  if (meta.regions.length > 0) {
+    return 'select';
+  }
+  return meta.fixedRegion ? 'fixed' : 'text';
+}
+
+function normalizeEndpointForCompare(value: string): string {
+  return value.trim().replace(/\/+$/, '').toLowerCase();
+}
+
+/**
+ * Whether a stored endpoint is still the one its region derives.
+ *
+ * This is what tells "the row is still region-consistent" from "an operator
+ * pinned a custom host". Both are legitimate — a tencent_cos provider pointed at
+ * a self-hosted gateway is a choice, not a defect — but only the first may be
+ * rewritten when the operator picks another region, and only the second leaves
+ * the region code and the host disagreeing. Compared after trimming trailing
+ * slashes and folding case, because the same host is stored either way.
+ */
+export function providerEndpointMatchesRegion(
+  kind: string,
+  region: string,
+  endpointUrl: string,
+): boolean {
+  const derived = buildProviderEndpointUrl(kind, region);
+  if (!derived) {
+    return false;
+  }
+  return normalizeEndpointForCompare(endpointUrl) === normalizeEndpointForCompare(derived);
 }
 
 export function getProviderKindMeta(kind: string): ProviderKindMeta {

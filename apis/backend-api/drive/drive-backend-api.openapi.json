@@ -1467,7 +1467,8 @@
                 "rtc",
                 "notary",
                 "website",
-                "documents"
+                "documents",
+                "certificate"
               ]
             }
           },
@@ -2964,7 +2965,8 @@
               "rtc",
               "notary",
               "website",
-        "documents"
+        "documents",
+                "certificate"
             ]
           },
           "lifecycleStatus": {
@@ -3026,7 +3028,8 @@
               "rtc",
               "notary",
               "website",
-              "documents"
+              "documents",
+              "certificate"
             ]
           },
           "ownerSubjectType": {

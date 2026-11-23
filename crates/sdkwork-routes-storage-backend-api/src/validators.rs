@@ -330,7 +330,8 @@ pub(crate) fn validate_storage_binding_space_type(
 ) -> Result<(), (StatusCode, Json<ProblemDetail>)> {
     match space_type {
         "personal" | "team" | "knowledge_base" | "ai_generated" | "git_repository"
-        | "deployment" | "app_upload" | "im" | "rtc" | "notary" | "website" => Ok(()),
+        | "deployment" | "app_upload" | "im" | "rtc" | "notary" | "website" | "documents"
+        | "certificate" => Ok(()),
         _ => Err(validation_problem("spaceType is invalid")),
     }
 }

@@ -172,6 +172,8 @@ const DRIVE_SPACE_TYPE_ENUM = [
   "rtc",
   "notary",
   "website",
+  "documents",
+  "certificate",
 ];
 const STORAGE_PROVIDER_KIND_PATTERN =
   "^(local_filesystem|s3_compatible|google_cloud_storage|aliyun_oss|tencent_cos|huawei_obs|volcengine_tos|custom:[a-z0-9_-]{2,32})$";

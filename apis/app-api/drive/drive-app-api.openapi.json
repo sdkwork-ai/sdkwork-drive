@@ -8358,7 +8358,8 @@
                 "rtc",
                 "notary",
                 "website",
-        "documents"
+        "documents",
+                "certificate"
               ]
             }
           },
@@ -11889,7 +11890,8 @@
               "rtc",
               "notary",
               "website",
-        "documents"
+        "documents",
+                "certificate"
             ]
           },
           "presentationIcon": {
@@ -12429,7 +12431,8 @@
               "rtc",
               "notary",
               "website",
-        "documents"
+        "documents",
+                "certificate"
             ]
           },
           "contentState": {
@@ -14058,7 +14061,8 @@
               "rtc",
               "notary",
               "website",
-        "documents"
+        "documents",
+                "certificate"
             ]
           },
           "presentationIcon": {

@@ -61,7 +61,12 @@ describe('buildProviderEndpointUrl', () => {
   });
 
   it('builds AWS S3 endpoints from region', () => {
-    expect(buildProviderEndpointUrl('s3_compatible', 'us-east-1')).toBe('https://s3.amazonaws.com');
+    // Every region keeps its regional host, `us-east-1` included: the server's
+    // bootstrap row stores the regional form, so deriving the global alias would
+    // make the editor disagree with the row it just read.
+    expect(buildProviderEndpointUrl('s3_compatible', 'us-east-1')).toBe(
+      'https://s3.us-east-1.amazonaws.com',
+    );
     expect(buildProviderEndpointUrl('s3_compatible', 'ap-southeast-1')).toBe(
       'https://s3.ap-southeast-1.amazonaws.com',
     );

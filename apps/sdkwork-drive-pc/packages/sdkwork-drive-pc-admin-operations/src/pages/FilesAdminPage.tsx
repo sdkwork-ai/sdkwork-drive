@@ -60,6 +60,7 @@ const SPACE_TYPE_TONE: Record<string, string> = {
   notary: 'bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300',
   website: 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300',
   documents: 'bg-orange-50 text-orange-700 dark:bg-orange-950/40 dark:text-orange-300',
+  certificate: 'bg-lime-50 text-lime-700 dark:bg-lime-950/40 dark:text-lime-300',
 };
 
 const LIFECYCLE_TONE: Record<string, string> = {
@@ -81,6 +82,7 @@ const SPACE_TYPES = [
   'notary',
   'website',
   'documents',
+  'certificate',
 ] as const;
 
 const NODE_TYPES = ['file', 'folder', 'shortcut', 'virtual_reference'] as const;

@@ -30,6 +30,8 @@ const BACKEND_SPACE_TYPES = [
   'rtc',
   'notary',
   'website',
+  'documents',
+  'certificate',
 ] as const;
 
 describe('space type catalog', () => {

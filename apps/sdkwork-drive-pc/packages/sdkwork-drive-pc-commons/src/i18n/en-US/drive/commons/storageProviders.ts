@@ -162,6 +162,12 @@ export default {
   endpointAutoFilled: 'Auto-filled from selected region; override if needed',
   endpointOverride: 'Edit manually',
   endpointAuto: 'Auto-fill',
+  endpointManualOverride: 'Manual URL in effect; changing the region will not rewrite it.',
+  endpointMismatch: 'This endpoint does not match the selected region. That region derives {endpoint}.',
+  endpointMismatchError: 'The endpoint does not match the selected region. Align it to the region, or switch the field to manual editing.',
+  endpointAlignRegion: 'Use the region endpoint',
+  endpointOperatorHost: 'This vendor builds its host from an account id, namespace, or deployment host. Enter the URL from the vendor console.',
+  regionFreeTextHint: 'Vendor region code; the endpoint URL above is not derived from it.',
 
   // Detail readiness
   readinessTitle: 'Readiness checks',
@@ -353,6 +359,10 @@ export default {
   spaceTypeNotaryDesc: 'Notary documents and attestations',
   spaceTypeWebsiteLabel: 'Website',
   spaceTypeWebsiteDesc: 'Published website content and static assets',
+  spaceTypeDocumentsLabel: 'Documents',
+  spaceTypeDocumentsDesc: 'SDKWork document bodies and rich-text content',
+  spaceTypeCertificateLabel: 'Certificates',
+  spaceTypeCertificateDesc: 'Managed TLS certificates and issued bundle archives',
 
   // Bindings admin
   bindingsPageTitle: 'Storage bindings',

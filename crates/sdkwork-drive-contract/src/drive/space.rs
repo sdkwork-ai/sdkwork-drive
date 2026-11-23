@@ -26,6 +26,19 @@ pub enum DriveSpaceType {
     Notary,
     /// Directory-faithful static website projects.
     Website,
+    /// Document bodies owned by the documents product.
+    ///
+    /// Present in the storage vocabulary since migration 0008; the contract enum
+    /// had drifted and could not name it, which is why a `documents` space could
+    /// be created through the workspace service yet never described by a client.
+    Documents,
+    /// Managed TLS certificate bundles owned by the deploying control plane.
+    ///
+    /// A first-class type rather than a folder convention: a certificate space
+    /// holds private key material in the `FULL` bundle policy, so it must have
+    /// its own ACL surface and storage binding instead of sharing the generic
+    /// app upload space with unrelated files.
+    Certificate,
 }
 
 impl DriveSpaceType {
@@ -42,6 +55,8 @@ impl DriveSpaceType {
             Self::Rtc => "rtc",
             Self::Notary => "notary",
             Self::Website => "website",
+            Self::Documents => "documents",
+            Self::Certificate => "certificate",
         }
     }
 
@@ -58,6 +73,8 @@ impl DriveSpaceType {
             "rtc" => Some(Self::Rtc),
             "notary" => Some(Self::Notary),
             "website" => Some(Self::Website),
+            "documents" => Some(Self::Documents),
+            "certificate" => Some(Self::Certificate),
             _ => None,
         }
     }

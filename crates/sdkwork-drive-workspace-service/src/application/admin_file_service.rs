@@ -22,6 +22,7 @@ const SPACE_TYPES: &[&str] = &[
     "notary",
     "website",
     "documents",
+    "certificate",
 ];
 
 const NODE_TYPES: &[&str] = &["file", "folder", "shortcut", "virtual_reference"];

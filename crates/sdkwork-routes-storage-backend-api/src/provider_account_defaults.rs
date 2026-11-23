@@ -1143,20 +1143,7 @@ pub(crate) async fn ensure_default_logical_plane(
         })?;
     }
 
-    let business_scopes = [
-        ("personal", "business"),
-        ("team", "business"),
-        ("knowledge_base", "business"),
-        ("ai_generated", "business"),
-        ("im", "business"),
-        ("rtc", "business"),
-        ("git_repository", "system"),
-        ("deployment", "system"),
-        ("app_upload", "system"),
-        ("notary", "system"),
-        ("website", "system"),
-    ];
-    for (scope_id, bucket_key) in business_scopes {
+    for (scope_id, bucket_key) in BUSINESS_SPACE_TYPE_SCOPES {
         let binding_id = format!("business-storage:{tenant_id}:space_type:{scope_id}");
         let bucket_id = format!("logical-bucket:{tenant_id}:{bucket_key}");
         sqlx::query(
@@ -1719,6 +1706,31 @@ const STORAGE_BOOTSTRAP_OPERATOR_ID: &str = "sdkwork-storage-bootstrap";
 /// the console sees its own providers. The platform sentinel `0` is normalized
 /// to the platform tenant, because providers are read by the caller's tenant and
 /// rows written under the sentinel are invisible to every console.
+/// Space-type scope → logical bucket key pairs the runtime bootstrap writes.
+///
+/// This is the runtime twin of `seeds/common/003_logical_storage_buckets.sql`,
+/// and it has the same hazard: a type missing here is not an error, it is a
+/// silent fallback to the tenant bucket. Keeping the list at module scope is
+/// what makes the coverage test below possible, so a new space type cannot be
+/// added to the vocabulary without this list being considered.
+const BUSINESS_SPACE_TYPE_SCOPES: [(&str, &str); 13] = [
+    ("personal", "business"),
+    ("team", "business"),
+    ("knowledge_base", "business"),
+    ("ai_generated", "business"),
+    ("im", "business"),
+    ("rtc", "business"),
+    ("git_repository", "system"),
+    ("deployment", "system"),
+    ("app_upload", "system"),
+    ("notary", "system"),
+    ("website", "system"),
+    // Documents and certificate bundles are platform-managed content, so the
+    // runtime bootstrap routes them exactly like the seed does.
+    ("documents", "system"),
+    ("certificate", "system"),
+];
+
 const BOOTSTRAP_TENANT_ID_ENV: &str = "SDKWORK_DRIVE_BOOTSTRAP_TENANT_ID";
 
 /// Environment inputs for the fresh-deployment storage bootstrap.
@@ -2017,6 +2029,34 @@ mod tests {
     use super::*;
     use sdkwork_drive_workspace_service::application::storage_provider_kind_service::BUILTIN_STORAGE_PROVIDER_KIND_CATALOG;
     use std::collections::HashMap;
+
+    /// Every bindable space type must have a runtime default route.
+    ///
+    /// The vocabulary itself lives in the space/node DDL checks, the binding
+    /// purpose check, `validate_storage_binding_space_type` and the console
+    /// catalog. This list is the sixth copy, and it is the only one whose
+    /// absence is silent rather than a rejection: a type with no row here writes
+    /// to the tenant bucket instead of its own route. The count is asserted on
+    /// purpose — adding a space type is supposed to make this test fail until the
+    /// route is decided.
+    #[test]
+    fn bootstrap_routes_every_bindable_space_type() {
+        let mut seen = std::collections::BTreeSet::new();
+        for (scope, bucket) in BUSINESS_SPACE_TYPE_SCOPES {
+            assert!(seen.insert(scope), "duplicate space type in bootstrap: {scope}");
+            assert!(
+                bucket == "business" || bucket == "system",
+                "{scope} routes to unknown logical bucket {bucket}"
+            );
+        }
+        assert_eq!(seen.len(), 13, "every space type needs a bootstrap route");
+        for required in ["documents", "certificate"] {
+            assert!(
+                seen.contains(required),
+                "{required} has no runtime default storage route"
+            );
+        }
+    }
 
     fn env_map(pairs: &[(&str, &str)]) -> impl FnMut(&str) -> Option<String> {
         let map = pairs

@@ -32,7 +32,7 @@ CREATE TABLE IF NOT EXISTS dr_drive_space (
     CONSTRAINT ck_dr_drive_space_owner_subject_type
         CHECK (owner_subject_type IN ('user', 'group', 'organization', 'app')),
     CONSTRAINT ck_dr_drive_space_space_type
-        CHECK (space_type IN ('personal', 'team', 'knowledge_base', 'ai_generated', 'git_repository', 'deployment', 'app_upload', 'im', 'rtc', 'notary', 'website', 'documents')),
+        CHECK (space_type IN ('personal', 'team', 'knowledge_base', 'ai_generated', 'git_repository', 'deployment', 'app_upload', 'im', 'rtc', 'notary', 'website', 'documents', 'certificate')),
     CONSTRAINT ck_dr_drive_space_git_repository_owner_user
         CHECK (space_type != 'git_repository' OR owner_subject_type = 'user'),
     CONSTRAINT ck_dr_drive_space_rtc_owner_user
@@ -147,7 +147,7 @@ CREATE TABLE IF NOT EXISTS dr_drive_node (
     CONSTRAINT ck_dr_drive_node_node_type
         CHECK (node_type IN ('file', 'folder', 'shortcut', 'virtual_reference')),
     CONSTRAINT ck_dr_drive_node_space_type
-        CHECK (space_type IN ('personal', 'team', 'knowledge_base', 'ai_generated', 'git_repository', 'deployment', 'app_upload', 'im', 'rtc', 'notary', 'website', 'documents')),
+        CHECK (space_type IN ('personal', 'team', 'knowledge_base', 'ai_generated', 'git_repository', 'deployment', 'app_upload', 'im', 'rtc', 'notary', 'website', 'documents', 'certificate')),
     CONSTRAINT ck_dr_drive_node_scene
         CHECK (scene IS NULL OR (
             scene = btrim(scene)
@@ -1047,7 +1047,8 @@ CREATE TABLE IF NOT EXISTS dr_drive_storage_provider_binding (
                 binding_scope = 'space_type'
                 AND purpose IN (
                     'personal', 'team', 'knowledge_base', 'ai_generated', 'git_repository',
-                    'deployment', 'app_upload', 'im', 'rtc', 'notary', 'website'
+                    'deployment', 'app_upload', 'im', 'rtc', 'notary', 'website', 'documents',
+                    'certificate'
                 )
             )
         ),
@@ -2803,3 +2804,73 @@ CREATE UNIQUE INDEX IF NOT EXISTS ux_dr_drive_business_storage_binding_scope_act
     WHERE lifecycle_status = 'active';
 CREATE INDEX IF NOT EXISTS ix_dr_drive_business_storage_binding_bucket
     ON dr_drive_business_storage_binding (logical_bucket_id, lifecycle_status);
+
+-- folded migration: migrations/postgres/0011_drive_space_type_certificate.up.sql
+-- sdkwork:migration
+-- id: 0011_drive_space_type_certificate
+-- engine: postgres
+-- module: sdkwork-drive
+-- purpose: Allow the dedicated certificate bundle space used by the deploy control plane.
+-- reversible: true
+-- rollback: 0011_drive_space_type_certificate.down.sql
+-- transactional: true
+-- lock: exclusive
+-- lock_timeout: 2s
+-- statement_timeout: 30s
+
+ALTER TABLE dr_drive_space
+    DROP CONSTRAINT IF EXISTS ck_dr_drive_space_space_type;
+
+ALTER TABLE dr_drive_space
+    ADD CONSTRAINT ck_dr_drive_space_space_type
+    CHECK (space_type IN ('personal', 'team', 'knowledge_base', 'ai_generated', 'git_repository', 'deployment', 'app_upload', 'im', 'rtc', 'notary', 'website', 'documents', 'certificate'));
+
+-- folded migration: migrations/postgres/0012_drive_node_space_type_certificate.up.sql
+-- sdkwork:migration
+-- id: 0012_drive_node_space_type_certificate
+-- engine: postgres
+-- module: sdkwork-drive
+-- purpose: Allow nodes inside the dedicated certificate bundle space.
+-- reversible: true
+-- rollback: 0012_drive_node_space_type_certificate.down.sql
+-- transactional: true
+-- lock: exclusive
+-- lock_timeout: 2s
+-- statement_timeout: 30s
+
+ALTER TABLE dr_drive_node
+    DROP CONSTRAINT IF EXISTS ck_dr_drive_node_space_type;
+
+ALTER TABLE dr_drive_node
+    ADD CONSTRAINT ck_dr_drive_node_space_type
+    CHECK (space_type IN ('personal', 'team', 'knowledge_base', 'ai_generated', 'git_repository', 'deployment', 'app_upload', 'im', 'rtc', 'notary', 'website', 'documents', 'certificate'));
+
+-- folded migration: migrations/postgres/0013_drive_storage_provider_binding_documents_certificate_space_types.up.sql
+-- sdkwork:migration
+-- id: 0013_drive_storage_provider_binding_documents_certificate_space_types
+-- engine: postgres
+-- module: sdkwork-drive
+-- purpose: Let a storage binding target the documents and certificate space types.
+-- reversible: true
+-- rollback: 0013_drive_storage_provider_binding_documents_certificate_space_types.down.sql
+-- transactional: true
+-- lock: exclusive
+-- lock_timeout: 2s
+-- statement_timeout: 30s
+
+ALTER TABLE dr_drive_storage_provider_binding
+    DROP CONSTRAINT IF EXISTS ck_dr_drive_storage_provider_binding_purpose;
+
+ALTER TABLE dr_drive_storage_provider_binding
+    ADD CONSTRAINT ck_dr_drive_storage_provider_binding_purpose
+    CHECK (
+        (binding_scope IN ('tenant', 'space') AND purpose = 'primary')
+        OR (
+            binding_scope = 'space_type'
+            AND purpose IN (
+                'personal', 'team', 'knowledge_base', 'ai_generated', 'git_repository',
+                'deployment', 'app_upload', 'im', 'rtc', 'notary', 'website', 'documents',
+                'certificate'
+            )
+        )
+    );

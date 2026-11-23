@@ -19,8 +19,11 @@ import {
   getProviderKindMeta,
   providerBucketHint,
   providerCredentialLabel,
+  providerEndpointIsDerivable,
+  providerEndpointMatchesRegion,
   providerKindLabel,
   providerKindDefaultPathStyle,
+  providerRegionInputMode,
   providerRegionLabel,
   providerVendorCodeForKind,
   resolveProviderKindMeta,
@@ -115,22 +118,39 @@ interface StorageProviderEditorProps {
   ) => Promise<StorageProviderAccountView>;
 }
 
-function applyKindDefaults(
-  kind: StorageProviderKind,
-  setRegion: (value: string) => void,
-  setEndpointUrl: (value: string) => void,
-  setPathStyle: (value: boolean) => void,
-  setStrictTls: (value: boolean) => void,
-  setSseMode: (value: string) => void,
-  setStorageClass: (value: string) => void,
-) {
+/**
+ * Whether the endpoint URL is derived from the region (`auto`) or supplied by
+ * the operator (`manual`).
+ *
+ * `auto` is not a UI flag stored anywhere: it is the statement "this row's host
+ * is exactly what the selected region derives". The editor re-derives it on
+ * every region change, and drops to `manual` the moment the operator asks to
+ * type their own — which is what keeps a self-hosted gateway behind a known
+ * vendor from being overwritten by the next region click.
+ */
+type EndpointMode = 'auto' | 'manual';
+
+/**
+ * Form defaults a kind preselects when it is picked on a new provider.
+ *
+ * The endpoint mode travels with the value: a vendor whose host is a pure
+ * function of its region starts in `auto`, so the very first region choice
+ * rewrites the URL; a vendor whose host embeds an identifier starts in `manual`
+ * with an empty field, because there is nothing the region could derive and a
+ * fabricated placeholder would only fail at request time.
+ */
+function providerKindDefaults(kind: StorageProviderKind) {
   const hint = getProviderKindMeta(kind);
-  setRegion(hint.regionHint);
-  setEndpointUrl(hint.features.isLocal ? hint.endpointHint : buildProviderEndpointUrl(String(kind), hint.regionHint) ?? hint.endpointHint);
-  setPathStyle(providerKindDefaultPathStyle(String(kind)));
-  setStrictTls(!hint.features.isLocal);
-  setSseMode('');
-  setStorageClass('');
+  const derived = buildProviderEndpointUrl(String(kind), hint.regionHint);
+  return {
+    region: hint.regionHint,
+    endpointUrl: hint.features.isLocal ? hint.endpointHint : derived ?? '',
+    endpointMode: (derived ? 'auto' : 'manual') as EndpointMode,
+    pathStyle: providerKindDefaultPathStyle(String(kind)),
+    strictTls: !hint.features.isLocal,
+    sseMode: '',
+    storageClass: '',
+  };
 }
 
 export function StorageProviderEditor({
@@ -155,7 +175,7 @@ export function StorageProviderEditor({
   const [region, setRegion] = useState('');
   const [bucket, setBucket] = useState('');
   const [endpointUrl, setEndpointUrl] = useState('');
-  const [endpointLocked, setEndpointLocked] = useState(true);
+  const [endpointMode, setEndpointMode] = useState<EndpointMode>('auto');
   const [pathStyle, setPathStyle] = useState(false);
   const [credentialRef, setCredentialRef] = useState('');
   const [providerAccountId, setProviderAccountId] = useState('');
@@ -187,6 +207,30 @@ export function StorageProviderEditor({
   const [modalNotice, setModalNotice] = useState<ModalNotice | undefined>();
 
   const meta = useMemo(() => resolveProviderKindMeta(providerKind), [providerKind]);
+  /**
+   * Kind string the endpoint/region derivation is keyed on.
+   *
+   * `custom:<name>` is the wire value for the free-form escape hatch, and it is
+   * what the server stores; the catalog resolves it back to the generic custom
+   * metadata, which has no region-derived host.
+   */
+  const effectiveEndpointKind = providerKind === 'custom' ? `custom:${customKind}` : String(providerKind);
+  /**
+   * The URL the selected region derives, or `undefined` for a vendor whose host
+   * embeds an identifier the region cannot supply (MinIO, R2, Oracle, custom).
+   */
+  const derivedEndpoint = buildProviderEndpointUrl(effectiveEndpointKind, region);
+  const endpointDerivable = providerEndpointIsDerivable(effectiveEndpointKind);
+  /**
+   * The row disagrees with itself: a region-derived vendor in `auto` mode whose
+   * stored or typed host is not the one that region produces. Editing a
+   * provider the bootstrap seeded, or one an operator retargeted by hand, lands
+   * here until the region is changed or the endpoint is aligned.
+   */
+  const endpointMismatch = endpointDerivable
+    && endpointMode === 'auto'
+    && Boolean(derivedEndpoint)
+    && !providerEndpointMatchesRegion(effectiveEndpointKind, region, endpointUrl);
   // The server's vocabulary wins where it exists: it is what named the account
   // the bootstrap already minted. Merged rather than replaced so the console's
   // own placeholders / console link / bucket hint survive — the server only
@@ -311,51 +355,81 @@ export function StorageProviderEditor({
     return buildProviderIdWithUuid(kindSlug, providerIdUuid, existingIdSet);
   }, [isEditing, provider?.id, kindSlug, providerIdUuid, existingIdSet]);
 
-  useEffect(() => {
-    if (provider) {
-      const kind = provider.providerKind as StorageProviderKind;
-      if (kind?.startsWith('custom:')) {
-        setProviderKind('custom');
-        setCustomKind(kind.substring(7));
-      } else {
-        setProviderKind(kind ?? 's3_compatible');
-        setCustomKind('');
-      }
-      setName(provider.displayName ?? '');
-      setRegion(provider.region ?? '');
-      setBucket(provider.bucket ?? '');
-      setEndpointUrl(provider.endpointUrl ?? '');
-      setEndpointLocked(false);
-      setPathStyle(provider.pathStyle ?? false);
-      setCredentialRef(provider.credentialRef ?? '');
-      setProviderAccountId(provider.providerAccountId ?? '');
-      setSseMode(provider.serverSideEncryptionMode ?? '');
-      setStorageClass(provider.defaultStorageClass ?? '');
-      setStrictTls(provider.strictTls ?? true);
-    }
-  }, [provider]);
+  /**
+   * Provider id whose stored state has already been loaded into this form.
+   *
+   * Hydration is keyed on the id, not on the `provider` object: a host that maps
+   * its own record into a fresh view on every parent render (Cloud Router does
+   * exactly that) otherwise re-runs hydration on unrelated renders and quietly
+   * reverts what the operator had just typed. The id is the row's stable
+   * identity; a different id is a different provider and does reset the form.
+   */
+  const hydratedProviderIdRef = useRef<string | undefined>(undefined);
 
   useEffect(() => {
     if (!provider) {
-      applyKindDefaults(
-        's3_compatible',
-        setRegion,
-        setEndpointUrl,
-        setPathStyle,
-        setStrictTls,
-        setSseMode,
-        setStorageClass,
-      );
-      setEndpointLocked(true);
+      return;
     }
+    if (hydratedProviderIdRef.current === provider.id) {
+      return;
+    }
+    hydratedProviderIdRef.current = provider.id;
+    const kind = provider.providerKind as StorageProviderKind;
+    if (kind?.startsWith('custom:')) {
+      setProviderKind('custom');
+      setCustomKind(kind.substring(7));
+    } else {
+      setProviderKind(kind ?? 's3_compatible');
+      setCustomKind('');
+    }
+    setName(provider.displayName ?? '');
+    setRegion(provider.region ?? '');
+    setBucket(provider.bucket ?? '');
+    setEndpointUrl(provider.endpointUrl ?? '');
+    /*
+     * A row whose host is a pure function of its region re-derives it on the
+     * next region change, exactly like a new provider would. A row pinned at a
+     * host the region cannot produce (an operator's own gateway, or a vendor
+     * whose host embeds an identifier) stays `manual` so a region click cannot
+     * silently repoint it.
+     */
+    setEndpointMode(
+      providerEndpointIsDerivable(String(kind ?? 's3_compatible')) ? 'auto' : 'manual',
+    );
+    setPathStyle(provider.pathStyle ?? false);
+    setCredentialRef(provider.credentialRef ?? '');
+    setProviderAccountId(provider.providerAccountId ?? '');
+    setSseMode(provider.serverSideEncryptionMode ?? '');
+    setStorageClass(provider.defaultStorageClass ?? '');
+    setStrictTls(provider.strictTls ?? true);
+  }, [provider]);
+
+  useEffect(() => {
+    if (provider) {
+      return;
+    }
+    const defaults = providerKindDefaults('s3_compatible');
+    setRegion(defaults.region);
+    setEndpointUrl(defaults.endpointUrl);
+    setEndpointMode(defaults.endpointMode);
+    setPathStyle(defaults.pathStyle);
+    setStrictTls(defaults.strictTls);
+    setSseMode(defaults.sseMode);
+    setStorageClass(defaults.storageClass);
   }, [provider]);
 
   const handleKindChange = (kind: StorageProviderKind) => {
     setProviderKind(kind);
     if (!provider) {
       setProviderIdUuid(createProviderUuidSuffix());
-      applyKindDefaults(kind, setRegion, setEndpointUrl, setPathStyle, setStrictTls, setSseMode, setStorageClass);
-      setEndpointLocked(true);
+      const defaults = providerKindDefaults(kind);
+      setRegion(defaults.region);
+      setEndpointUrl(defaults.endpointUrl);
+      setEndpointMode(defaults.endpointMode);
+      setPathStyle(defaults.pathStyle);
+      setStrictTls(defaults.strictTls);
+      setSseMode(defaults.sseMode);
+      setStorageClass(defaults.storageClass);
       setCredentialRef('');
       // The account picker is scoped to the kind's vendor, so an account chosen
       // for the previous vendor is not in the new vendor's list — keeping it
@@ -368,14 +442,76 @@ export function StorageProviderEditor({
     }
   };
 
-  const handleRegionChange = (newRegion: string) => {
-    setRegion(newRegion);
-    if (!isEditing && endpointLocked) {
-      const nextEndpoint = buildProviderEndpointUrl(String(providerKind), newRegion);
-      if (nextEndpoint) {
-        setEndpointUrl(nextEndpoint);
+  /**
+   * Drop a validation error on the endpoint once the operator has acted on the
+   * field. Leaving a red "does not match the selected region" under a row that
+   * was just aligned reads as a live defect rather than a stale one.
+   */
+  const clearEndpointError = useCallback(() => {
+    setErrors((current) => {
+      if (!current.endpointUrl) {
+        return current;
       }
+      const next = { ...current };
+      delete next.endpointUrl;
+      return next;
+    });
+  }, []);
+
+  /**
+   * Region selection is the one field that cascades into the endpoint.
+   *
+   * This runs for an edited provider too — that is the defect this handler used
+   * to carry: in edit mode the region select moved while the endpoint kept the
+   * old host, so a provider showed `ap-beijing` next to a `guangzhou` URL and the
+   * save wrote that disagreement to the server. `manual` mode is the operator's
+   * explicit opt-out: once they ask to type their own URL, the region no longer
+   * rewrites it.
+   */
+  const handleRegionChange = (nextRegion: string) => {
+    clearEndpointError();
+    setRegion(nextRegion);
+    if (endpointMode !== 'auto') {
+      return;
     }
+    const nextEndpoint = buildProviderEndpointUrl(effectiveEndpointKind, nextRegion);
+    if (!nextEndpoint) {
+      return;
+    }
+    setEndpointUrl(nextEndpoint);
+    setStrictTls(nextEndpoint.startsWith('https://'));
+  };
+
+  /**
+   * Flip between the region-derived URL and an operator-supplied one.
+   *
+   * Returning to `auto` re-derives immediately instead of merely unlocking the
+   * field: the old code only flipped a flag, so a manually edited value survived
+   * as "auto" until the next region change and the form could be submitted with
+   * a host that no state claimed.
+   */
+  const handleEndpointModeToggle = () => {
+    clearEndpointError();
+    if (endpointMode === 'auto') {
+      setEndpointMode('manual');
+      return;
+    }
+    if (derivedEndpoint) {
+      setEndpointUrl(derivedEndpoint);
+      setStrictTls(derivedEndpoint.startsWith('https://'));
+    }
+    setEndpointMode(endpointDerivable ? 'auto' : 'manual');
+  };
+
+  /** Accept the region-derived host for a row that currently disagrees with it. */
+  const handleAlignEndpointToRegion = () => {
+    if (!derivedEndpoint) {
+      return;
+    }
+    clearEndpointError();
+    setEndpointUrl(derivedEndpoint);
+    setStrictTls(derivedEndpoint.startsWith('https://'));
+    setEndpointMode('auto');
   };
 
   const handleCredentialRefChange = useCallback((value: string) => {
@@ -396,6 +532,15 @@ export function StorageProviderEditor({
     if (!name.trim()) e.name = t('required');
     if (!bucket.trim()) e.bucket = t('required');
     if (!meta.features.isLocal && !endpointUrl.trim()) e.endpointUrl = t('required');
+    /*
+     * A region-derived vendor in `auto` mode must not be saved contradicting
+     * itself: the host would be the one the previous region produced while the
+     * stored region names a new one, and every request against that provider
+     * would go to the wrong endpoint. Both ways out are one click — align to the
+     * region, or declare the host manual — so this refuses rather than silently
+     * picking one.
+     */
+    if (endpointMismatch) e.endpointUrl = t('endpointMismatchError');
     if (providerKind === 'custom' && !customKind.trim()) e.customKind = t('required');
     if (!isEditing && !generatedId.trim()) {
       return false;
@@ -429,6 +574,11 @@ export function StorageProviderEditor({
     setRegion(next.region ?? '');
     setBucket(next.bucket ?? '');
     setEndpointUrl(next.endpointUrl ?? '');
+    // The saved row is the new truth: a region-derived vendor follows its region
+    // again, anything else is an operator-supplied host by definition.
+    setEndpointMode(
+      providerEndpointIsDerivable(String(kind ?? 's3_compatible')) ? 'auto' : 'manual',
+    );
     setPathStyle(next.pathStyle ?? false);
     setCredentialRef(next.credentialRef ?? '');
     setSseMode(next.serverSideEncryptionMode ?? '');
@@ -540,7 +690,35 @@ export function StorageProviderEditor({
   const submit = (e: React.FormEvent) => { e.preventDefault(); doSubmit(); };
 
   const isLocalFs = meta.features.isLocal;
-  const hasRegions = meta.regions.length > 0;
+  const regionInputMode = providerRegionInputMode(meta);
+  /**
+   * Region options actually rendered: the vendor's published list, plus the
+   * row's own stored code when that list no longer carries it.
+   *
+   * A `<select>` whose value matches no option renders as if the first option
+   * were selected while the form still holds the old code — so a vendor that
+   * dropped a region would show the operator a region the form is not going to
+   * save. Keeping the stored code as an extra option means what is visible is
+   * always what is submitted.
+   */
+  const regionOptions = useMemo(() => {
+    if (regionInputMode !== 'select') {
+      return meta.regions;
+    }
+    if (region && meta.regions.some((option) => option.value === region)) {
+      return meta.regions;
+    }
+    // Unknown or empty stored code: keep it visible as its own option so the
+    // selector shows the value the form will submit, rather than silently
+    // displaying the first option of a list the row is not on.
+    return [{ value: region, label: region || t('none') }, ...meta.regions];
+  }, [meta.regions, region, regionInputMode, t]);
+  /**
+   * The endpoint may be typed only when nothing derives it: a manually chosen
+   * host, or an `auto` row whose region is still empty (so there is no derived
+   * value to show yet, and a read-only empty field would be a dead end).
+   */
+  const endpointReadOnly = endpointDerivable && endpointMode === 'auto' && Boolean(derivedEndpoint);
   // The server's contract table wins where the bootstrap settled this kind: it
   // is the same source `capabilities_for_provider` reports, so the dropdown can
   // no longer offer a token the vendor rejects (the "Tencent's editor shows
@@ -667,22 +845,39 @@ export function StorageProviderEditor({
                   </Field>
                 ) : (
                   <>
-                    {hasRegions && (
+                    {regionInputMode !== 'hidden' && (
                       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                         <Field label={t('region')}>
-                          <select value={region} onChange={(e) => handleRegionChange(e.target.value)} className={SELECT_CLASS}>
-                            {meta.regions.map((r) => <option key={r.value} value={r.value}>{providerRegionLabel(t, String(meta.value), r)}</option>)}
-                          </select>
+                          {regionInputMode === 'select' ? (
+                            <select data-testid="storage-provider-region" value={region} onChange={(e) => handleRegionChange(e.target.value)} className={SELECT_CLASS}>
+                              {regionOptions.map((r) => <option key={r.value} value={r.value}>{providerRegionLabel(t, String(meta.value), r)}</option>)}
+                            </select>
+                          ) : (
+                            <input
+                              data-testid="storage-provider-region"
+                              value={region}
+                              onChange={(e) => handleRegionChange(e.target.value)}
+                              readOnly={regionInputMode === 'fixed'}
+                              className={`${INPUT_CLASS} font-mono text-xs ${regionInputMode === 'fixed' ? 'bg-neutral-50 dark:bg-neutral-800' : ''}`}
+                              placeholder={meta.regionHint}
+                              spellCheck={false}
+                            />
+                          )}
+                          {regionInputMode === 'text' && (
+                            <span className="mt-0.5 text-[10px] text-neutral-400">{t('regionFreeTextHint')}</span>
+                          )}
                         </Field>
                       </div>
                     )}
-                    <div className={hasRegions ? 'mt-3' : ''}>
+                    <div className={regionInputMode !== 'hidden' ? 'mt-3' : ''}>
                       <Field label={t('endpointUrl')} error={errors.endpointUrl}>
                         <div className="flex flex-col gap-2 sm:flex-row sm:items-start">
                           <input
+                            data-testid="storage-provider-endpoint"
                             value={endpointUrl}
                             onChange={(e) => {
                               const value = e.target.value;
+                              clearEndpointError();
                               setEndpointUrl(value);
                               if (value.startsWith('http://')) {
                                 setStrictTls(false);
@@ -690,23 +885,42 @@ export function StorageProviderEditor({
                                 setStrictTls(true);
                               }
                             }}
-                            readOnly={endpointLocked && hasRegions}
-                            className={`${INPUT_CLASS} min-w-0 flex-1 font-mono text-xs ${endpointLocked && hasRegions ? 'bg-neutral-50 dark:bg-neutral-800' : ''}`}
+                            readOnly={endpointReadOnly}
+                            className={`${INPUT_CLASS} min-w-0 flex-1 font-mono text-xs ${endpointReadOnly ? 'bg-neutral-50 dark:bg-neutral-800' : ''}`}
                             placeholder={meta.endpointHint}
                             spellCheck={false}
                           />
-                          {hasRegions && (
+                          {endpointDerivable && (
                             <button
                               type="button"
                               className={`${SECONDARY_BUTTON_CLASS} shrink-0`}
-                              onClick={() => setEndpointLocked(!endpointLocked)}
+                              onClick={handleEndpointModeToggle}
                             >
-                              {endpointLocked ? t('endpointOverride') : t('endpointAuto')}
+                              {endpointMode === 'auto' ? t('endpointOverride') : t('endpointAuto')}
                             </button>
                           )}
                         </div>
-                        {hasRegions && endpointLocked && (
-                          <span className="mt-0.5 text-[10px] text-neutral-400">{t('endpointAutoFilled')}</span>
+                        {endpointDerivable && endpointMode === 'auto' && (
+                          endpointMismatch && derivedEndpoint ? (
+                            <div className="mt-1 rounded-md border border-amber-200 bg-amber-50 px-2 py-1.5 text-[10px] leading-relaxed text-amber-700 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-300">
+                              <div>{t('endpointMismatch', { endpoint: derivedEndpoint })}</div>
+                              <button
+                                type="button"
+                                className="mt-1 font-semibold underline underline-offset-2 hover:no-underline"
+                                onClick={handleAlignEndpointToRegion}
+                              >
+                                {t('endpointAlignRegion')}
+                              </button>
+                            </div>
+                          ) : (
+                            <span className="mt-0.5 text-[10px] text-neutral-400">{t('endpointAutoFilled')}</span>
+                          )
+                        )}
+                        {endpointDerivable && endpointMode === 'manual' && (
+                          <span className="mt-0.5 text-[10px] text-neutral-400">{t('endpointManualOverride')}</span>
+                        )}
+                        {!endpointDerivable && (
+                          <span className="mt-0.5 text-[10px] text-neutral-400">{t('endpointOperatorHost')}</span>
                         )}
                       </Field>
                     </div>

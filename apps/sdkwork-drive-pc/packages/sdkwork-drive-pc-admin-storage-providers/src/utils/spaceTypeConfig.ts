@@ -2,11 +2,13 @@ import {
   BookOpen,
   Bot,
   CircleHelp,
+  FileText,
   GitBranch,
   Globe,
   MessageCircle,
   Package,
   Rocket,
+  ShieldCheck,
   Stamp,
   UserRound,
   UsersRound,
@@ -163,6 +165,38 @@ export const SPACE_TYPES: SpaceTypeMeta[] = [
     bgClass: 'bg-sky-50 dark:bg-sky-950/30',
     textClass: 'text-sky-700 dark:text-sky-300',
     description: 'Published website content and static assets',
+    isSystem: true,
+  },
+  {
+    // Document bodies live in their own space, so they need a bindable row for
+    // the same reason `website` does: without it their writes silently fall back
+    // to the tenant bucket, and an operator who wants document content on a
+    // cheaper or region-local bucket has no way to say so.
+    value: 'documents',
+    label: 'Documents',
+    shortLabel: 'Docs',
+    labelKey: 'spaceTypeDocumentsLabel',
+    descriptionKey: 'spaceTypeDocumentsDesc',
+    icon: FileText,
+    bgClass: 'bg-slate-50 dark:bg-slate-900/40',
+    textClass: 'text-slate-700 dark:text-slate-300',
+    description: 'Document bodies and rich-text content',
+    isSystem: true,
+  },
+  {
+    // Certificate bundles are written by the deploy control plane after an
+    // issuance. They get their own type because a `FULL` bundle policy can carry
+    // private key material, which must never share a bucket (or a lifecycle) with
+    // ordinary application uploads.
+    value: 'certificate',
+    label: 'Certificates',
+    shortLabel: 'Cert',
+    labelKey: 'spaceTypeCertificateLabel',
+    descriptionKey: 'spaceTypeCertificateDesc',
+    icon: ShieldCheck,
+    bgClass: 'bg-emerald-50 dark:bg-emerald-950/30',
+    textClass: 'text-emerald-700 dark:text-emerald-300',
+    description: 'Managed TLS certificates and issued bundle archives',
     isSystem: true,
   },
 ];

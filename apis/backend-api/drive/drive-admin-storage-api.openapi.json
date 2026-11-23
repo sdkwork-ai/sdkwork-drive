@@ -52,7 +52,8 @@
                 "rtc",
                 "notary",
                 "website",
-                "documents"
+                "documents",
+                "certificate"
               ]
             }
           }
@@ -322,7 +323,8 @@
                 "rtc",
                 "notary",
                 "website",
-                "documents"
+                "documents",
+                "certificate"
               ]
             }
           }
@@ -6150,7 +6152,8 @@
               "rtc",
               "notary",
               "website",
-              "documents"
+              "documents",
+              "certificate"
             ]
           },
           "providerId": {

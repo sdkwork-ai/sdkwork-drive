@@ -97,6 +97,8 @@ const DRIVE_SPACE_TYPE_ENUM = [
   "rtc",
   "notary",
   "website",
+  "documents",
+  "certificate",
 ];
 const SDK_OWNER = "sdkwork-drive";
 const SDK_AUTHORITIES = {

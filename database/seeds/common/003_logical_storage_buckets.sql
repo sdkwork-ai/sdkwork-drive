@@ -96,6 +96,16 @@ VALUES
     ('business-storage:100001:space_type:website', '100001', 'space_type', 'website',
      'logical-bucket:100001:system', 'space-types/website', 'active', 1,
      'sdkwork-storage-seed', 'sdkwork-storage-seed'),
+    -- Document bodies are product content written by the documents service, so
+    -- they route to the same system bucket as the other platform-managed types.
+    ('business-storage:100001:space_type:documents', '100001', 'space_type', 'documents',
+     'logical-bucket:100001:system', 'space-types/documents', 'active', 1,
+     'sdkwork-storage-seed', 'sdkwork-storage-seed'),
+    -- Certificate bundles are platform-managed artifacts, not user content, so
+    -- they route to the system bucket like deployment and website assets.
+    ('business-storage:100001:space_type:certificate', '100001', 'space_type', 'certificate',
+     'logical-bucket:100001:system', 'space-types/certificate', 'active', 1,
+     'sdkwork-storage-seed', 'sdkwork-storage-seed'),
     ('business-storage:100001:tenant:100001', '100001', 'tenant', '100001',
      'logical-bucket:100001:business', 'tenant', 'active', 1,
      'sdkwork-storage-seed', 'sdkwork-storage-seed')

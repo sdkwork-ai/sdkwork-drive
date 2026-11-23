@@ -4,6 +4,9 @@ import {
   BUILTIN_PROVIDER_DISPLAY_NAMES,
   getAllProviderKindMeta,
   getProviderKindMeta,
+  providerEndpointIsDerivable,
+  providerEndpointMatchesRegion,
+  providerRegionInputMode,
   providerVendorCodeForKind,
 } from '../src/utils/providerKindConfig';
 
@@ -132,7 +135,7 @@ describe('provider endpoint templates for the added vendors', () => {
       'https://oss-cn-hangzhou.wocloud.com',
     );
     expect(buildProviderEndpointUrl('kingsoft_ks3', 'BEIJING')).toBe(
-      'https://ks3-beijing.ksyuncs.com',
+      'https://ks3-cn-beijing.ksyuncs.com',
     );
     expect(buildProviderEndpointUrl('alibaba_cloud_international', 'ap-southeast-1')).toBe(
       'https://oss-ap-southeast-1.aliyuncs.com',
@@ -172,6 +175,106 @@ describe('provider endpoint templates for the added vendors', () => {
     expect(buildProviderEndpointUrl('minio', 'us-east-1')).toBeUndefined();
     expect(buildProviderEndpointUrl('cloudflare_r2', 'auto')).toBeUndefined();
     expect(buildProviderEndpointUrl('oracle_cloud_storage', 'us-ashburn-1')).toBeUndefined();
+  });
+});
+
+describe('provider endpoint/region cascade taxonomy', () => {
+  /**
+   * The editor's whole cascade rests on two claims per kind, and both are
+   * properties of the catalog rather than of one vendor:
+   *
+   * 1. a kind that publishes a region list can derive its endpoint from a
+   *    region, so picking a region is enough to finish the endpoint field;
+   * 2. the kind's own `endpointHint` (the placeholder and the value a new form
+   *    opens with) *is* what its `regionHint` derives, so the form never opens
+   *    in a state its own region contradicts.
+   *
+   * Asserting them over the catalog is what stops a newly added vendor from
+   * being offered with a region selector that silently does nothing.
+   */
+  it('derives the endpoint hint from the region hint for every region-driven kind', () => {
+    for (const meta of getAllProviderKindMeta()) {
+      if (meta.features.isLocal || !meta.features.hasRegion) {
+        continue;
+      }
+      const derived = buildProviderEndpointUrl(String(meta.value), meta.regionHint);
+      if (meta.regions.length > 0) {
+        expect(
+          derived,
+          `${meta.value} offers ${meta.regions.length} regions but cannot derive an endpoint from one`,
+        ).toBeDefined();
+        expect(
+          meta.endpointHint,
+          `${meta.value} endpoint hint disagrees with the endpoint its region hint derives`,
+        ).toBe(derived);
+      }
+    }
+  });
+
+  it('only derives endpoints for hosts the region alone can address', () => {
+    for (const meta of getAllProviderKindMeta()) {
+      const derivable = providerEndpointIsDerivable(String(meta.value));
+      if (meta.regions.length > 0) {
+        expect(derivable, `${meta.value} lists regions but derives no endpoint`).toBe(true);
+      }
+      if (derivable) {
+        for (const region of meta.regions.length > 0 ? meta.regions : [{ value: meta.regionHint, label: '' }]) {
+          const derived = buildProviderEndpointUrl(String(meta.value), region.value);
+          // A derived value is submitted as the real endpoint, so it must never
+          // be a placeholder the operator is expected to edit by hand.
+          expect(derived, `${meta.value}/${region.value} derived no endpoint`).toBeDefined();
+          expect(derived, `${meta.value}/${region.value} derived a placeholder host`).not.toContain('<');
+          expect(derived, `${meta.value}/${region.value} derived a non-TLS endpoint`).toMatch(/^https:\/\//);
+          expect(
+            providerEndpointMatchesRegion(String(meta.value), region.value, derived as string),
+            `${meta.value}/${region.value} does not recognize its own derived endpoint`,
+          ).toBe(true);
+        }
+      }
+    }
+  });
+
+  it('leaves the region field usable for every non-local kind', () => {
+    const modes = new Map<string, string>();
+    for (const meta of getAllProviderKindMeta()) {
+      modes.set(String(meta.value), providerRegionInputMode(meta));
+    }
+    // Hidden only where there is no region at all.
+    expect(modes.get('local_filesystem')).toBe('hidden');
+    // Selector where the vendor publishes a closed list.
+    expect(modes.get('tencent_cos')).toBe('select');
+    expect(modes.get('aliyun_oss')).toBe('select');
+    // Free text where the region is real but the catalog does not enumerate it,
+    // so a custom gateway is not stuck on one hard-coded region code.
+    expect(modes.get('custom')).toBe('text');
+    expect(modes.get('minio')).toBe('text');
+    expect(modes.get('oracle_cloud_storage')).toBe('text');
+    // A protocol constant (`auto`) is shown but not editable.
+    expect(modes.get('cloudflare_r2')).toBe('fixed');
+    for (const [kind, mode] of modes) {
+      if (kind === 'local_filesystem') {
+        continue;
+      }
+      expect(mode, `${kind} renders no region control at all`).not.toBe('hidden');
+    }
+  });
+
+  it('compares stored endpoints against the region without failing on cosmetic differences', () => {
+    // The same host is stored with a trailing slash, upper case, or a stray
+    // space by different clients; treating those as a manual override would
+    // make the editor warn about rows it would itself have written.
+    expect(
+      providerEndpointMatchesRegion('tencent_cos', 'ap-beijing', 'https://cos.ap-beijing.myqcloud.com/'),
+    ).toBe(true);
+    expect(
+      providerEndpointMatchesRegion('tencent_cos', 'ap-beijing', '  https://COS.AP-BEIJING.MYQCLOUD.COM  '),
+    ).toBe(true);
+    // A real disagreement is not normalized away.
+    expect(
+      providerEndpointMatchesRegion('tencent_cos', 'ap-beijing', 'https://cos.ap-guangzhou.myqcloud.com'),
+    ).toBe(false);
+    // A kind with no derivation never "matches" — there is nothing to match.
+    expect(providerEndpointMatchesRegion('oracle_cloud_storage', 'us-ashburn-1', 'https://x.oraclecloud.com')).toBe(false);
   });
 });
 
@@ -644,6 +747,85 @@ describe('built-in provider configuration names', () => {
         BUILTIN_PROVIDER_DISPLAY_NAMES[kind],
         `${kind} built-in name drifted from the server bootstrap`,
       ).toBe(name);
+    }
+  });
+});
+
+/**
+ * Endpoint and region the server's bootstrap writes per built-in kind,
+ * mirrored from `BUILTIN_CLOUD_PROVIDERS` in `provider_account_defaults.rs`.
+ *
+ * The console and the server each own a copy of the vendor defaults, and the
+ * console's copy is what a new form opens with. When they disagree the operator
+ * sees one endpoint in the editor and another in the saved row — the alias-vs-
+ * regional AWS host is exactly how that happened — so a divergence here is a
+ * defect, and mirroring the server table is what makes it red.
+ *
+ * The three identifier-embedding vendors (`minio`, `cloudflare_r2`,
+ * `oracle_cloud_storage`) intentionally differ: the server stores a placeholder
+ * host for its bootstrap row, while the console deliberately leaves the field to
+ * the operator and shows the placeholder only as a hint. Only their region is
+ * comparable.
+ */
+const BACKEND_BUILTIN_PROVIDER_DEFAULTS: Record<string, { endpointUrl: string; region: string }> = {
+  s3_compatible: { endpointUrl: 'https://s3.us-east-1.amazonaws.com', region: 'us-east-1' },
+  aliyun_oss: { endpointUrl: 'https://oss-cn-hangzhou.aliyuncs.com', region: 'cn-hangzhou' },
+  tencent_cos: { endpointUrl: 'https://cos.ap-guangzhou.myqcloud.com', region: 'ap-guangzhou' },
+  huawei_obs: { endpointUrl: 'https://obs.cn-north-1.myhuaweicloud.com', region: 'cn-north-1' },
+  volcengine_tos: { endpointUrl: 'https://tos-cn-beijing.volces.com', region: 'cn-beijing' },
+  google_cloud_storage: { endpointUrl: 'https://storage.googleapis.com', region: 'us-central1' },
+  baidu_bos: { endpointUrl: 'https://s3.bj.bcebos.com', region: 'bj' },
+  kingsoft_ks3: { endpointUrl: 'https://ks3-cn-beijing.ksyuncs.com', region: 'BEIJING' },
+  qiniu_kodo: { endpointUrl: 'https://s3-cn-east-1.qiniucs.com', region: 'cn-east-1' },
+  china_mobile_ecloud: { endpointUrl: 'https://eos-wuxi-1.cmecloud.cn', region: 'wuxi-1' },
+  china_telecom_eos: { endpointUrl: 'https://ooscn-shanghai.ctyunapi.cn', region: 'shanghai' },
+  china_unicom_wo: { endpointUrl: 'https://oss-cn-hangzhou.wocloud.com', region: 'hangzhou' },
+  minio: { endpointUrl: 'https://minio.internal.sdkwork.local', region: 'us-east-1' },
+  cloudflare_r2: { endpointUrl: 'https://placeholder.r2.cloudflarestorage.com', region: 'auto' },
+  backblaze_b2: { endpointUrl: 'https://s3.us-west-004.backblazeb2.com', region: 'us-west-004' },
+  wasabi: { endpointUrl: 'https://s3.us-east-1.wasabisys.com', region: 'us-east-1' },
+  digitalocean_spaces: { endpointUrl: 'https://nyc3.digitaloceanspaces.com', region: 'nyc3' },
+  linode_object_storage: { endpointUrl: 'https://us-east-1.linodeobjects.com', region: 'us-east-1' },
+  vultr_object_storage: { endpointUrl: 'https://ewr1.vultrobjects.com', region: 'ewr1' },
+  scaleway_object_storage: { endpointUrl: 'https://s3.fr-par.scw.cloud', region: 'fr-par' },
+  oracle_cloud_storage: {
+    endpointUrl: 'https://placeholder.oraclecloud.com',
+    region: 'us-ashburn-1',
+  },
+  ibm_cos: {
+    endpointUrl: 'https://s3.us-east.cloud-object-storage.appdomain.cloud',
+    region: 'us-east',
+  },
+  alibaba_cloud_international: {
+    endpointUrl: 'https://oss-ap-southeast-1.aliyuncs.com',
+    region: 'ap-southeast-1',
+  },
+  tencent_cloud_international: {
+    endpointUrl: 'https://cos.ap-singapore.myqcloud.com',
+    region: 'ap-singapore',
+  },
+};
+
+describe('built-in provider bootstrap endpoints and regions', () => {
+  it('covers exactly the cloud kinds the server bootstraps', () => {
+    expect(Object.keys(BACKEND_BUILTIN_PROVIDER_DEFAULTS).sort()).toEqual(
+      BACKEND_BUILTIN_PROVIDER_KINDS.filter((kind) => kind !== 'local_filesystem').sort(),
+    );
+  });
+
+  it('opens a new form on the endpoint and region the server would write', () => {
+    for (const [kind, expected] of Object.entries(BACKEND_BUILTIN_PROVIDER_DEFAULTS)) {
+      const meta = getProviderKindMeta(kind);
+      expect(meta.regionHint, `${kind} region hint drifted from the server bootstrap`).toBe(
+        expected.region,
+      );
+      // A kind the console derives must open on the very endpoint the server
+      // writes; only the identifier-embedding vendors are exempt.
+      if (providerEndpointIsDerivable(kind)) {
+        expect(meta.endpointHint, `${kind} endpoint hint drifted from the server bootstrap`).toBe(
+          expected.endpointUrl,
+        );
+      }
     }
   });
 });
