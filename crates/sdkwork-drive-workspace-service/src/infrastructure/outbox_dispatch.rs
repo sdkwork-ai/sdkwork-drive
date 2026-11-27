@@ -590,6 +590,10 @@ fn validate_embedded_targets(
         .collect())
 }
 
+// registry:allow §5.2.2 out-of-scope — this is an outbox **webhook delivery** to
+// a subscription address registered by a channel owner, not a base URL this
+// service resolves. The destination is data, and its integrity is enforced by
+// `validate_configured_knowledgebase_callback` (exact-match, https-only).
 #[allow(clippy::too_many_arguments)]
 fn build_webhook_request(
     client: &reqwest::Client,
